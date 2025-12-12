@@ -1,0 +1,105 @@
+version: '3.8'
+
+# Docker Compose for local testing of PeSIT server cluster with PostgreSQL
+#
+# Usage:
+#   docker-compose up -d      # Start the cluster
+#   docker-compose logs -f    # View logs
+#   docker-compose down -v    # Stop and cleanup
+
+services:
+  # PostgreSQL Database (central database for all nodes)
+  postgres:
+    image: postgres:15-alpine
+    container_name: pesit-postgres
+    environment:
+      POSTGRES_DB: pesit
+      POSTGRES_USER: pesit
+      POSTGRES_PASSWORD: pesit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U pesit -d pesit" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pesit-network
+
+  # PeSIT Server Node 1 (will be cluster leader)
+  pesit-node1:
+    build: .
+    container_name: pesit-node1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pesit
+      - SPRING_DATASOURCE_USERNAME=pesit
+      - SPRING_DATASOURCE_PASSWORD=pesit
+      - PESIT_CLUSTER_ENABLED=true
+      - PESIT_CLUSTER_NODE_NAME=node1
+      - PESIT_CLUSTER_CONFIG=tcp.xml
+      - JGROUPS_BIND_ADDR=pesit-node1
+      - JGROUPS_INITIAL_HOSTS=pesit-node1[7800],pesit-node2[7800]
+    ports:
+      - "8081:8080" # REST API
+      - "5001:5000" # PeSIT protocol
+    volumes:
+      - node1_data:/data
+    networks:
+      - pesit-network
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # PeSIT Server Node 2
+  pesit-node2:
+    build: .
+    container_name: pesit-node2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pesit-node1:
+        condition: service_started
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pesit
+      - SPRING_DATASOURCE_USERNAME=pesit
+      - SPRING_DATASOURCE_PASSWORD=pesit
+      - PESIT_CLUSTER_ENABLED=true
+      - PESIT_CLUSTER_NODE_NAME=node2
+      - PESIT_CLUSTER_CONFIG=tcp.xml
+      - JGROUPS_BIND_ADDR=pesit-node2
+      - JGROUPS_INITIAL_HOSTS=pesit-node1[7800],pesit-node2[7800]
+    ports:
+      - "8082:8080" # REST API
+      - "5002:5000" # PeSIT protocol
+    volumes:
+      - node2_data:/data
+    networks:
+      - pesit-network
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  node1_data:
+  node2_data:
+
+
+networks:
+  pesit-network:
+    driver: bridge

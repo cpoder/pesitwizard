@@ -1,0 +1,53 @@
+# Integration test profile configuration
+spring:
+  datasource:
+    url: jdbc:h2:mem:integrationdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+pesit:
+  server:
+    port: 15123
+    server-id: INTEGRATION_SERVER
+    protocol-version: 2
+    max-connections: 10
+    connection-timeout: 5000
+    read-timeout: 30000
+    receive-directory: ./target/integration-received
+    send-directory: ./target/integration-send
+    max-entity-size: 4096
+    sync-points-enabled: true
+    resync-enabled: true
+    strict-partner-check: false
+    strict-file-check: false
+    
+    partners:
+      TEST_CLIENT:
+        id: TEST_CLIENT
+        enabled: true
+        access-type: BOTH
+    
+    files:
+      TESTFILE:
+        id: TESTFILE
+        enabled: true
+        direction: BOTH
+        receive-directory: ./target/integration-received
+        send-directory: ./target/integration-send
+        receive-filename-pattern: "${filename}"
+        overwrite: true
+
+  cluster:
+    enabled: false
+
+  security:
+    enabled: false
+
+logging:
+  level:
+    com.pesit: DEBUG

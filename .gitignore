@@ -1,0 +1,18 @@
+# local / non-committable
+vectis-local/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Java / Maven
+**/target/
+*.log
+
+# Node
+**/node_modules/
+**/dist/
+
+# Env
+.env

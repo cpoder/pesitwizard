@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    JGroups TCP configuration for Docker/local testing.
+    Uses TCPPING for static discovery (no multicast).
+-->
+<config xmlns="urn:org:jgroups"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups.xsd">
+
+    <!-- TCP transport -->
+    <TCP bind_addr="${JGROUPS_BIND_ADDR:match-interface:eth0}"
+         bind_port="7800"
+         recv_buf_size="5M"
+         send_buf_size="1M"
+         
+         thread_pool.min_threads="0"
+         thread_pool.max_threads="20"
+         thread_pool.keep_alive_time="30000"/>
+
+    <!-- Static discovery using TCPPING -->
+    <TCPPING initial_hosts="${JGROUPS_INITIAL_HOSTS:localhost[7800]}"
+             port_range="0"/>
+
+    <!-- Merge protocol for handling network partitions -->
+    <MERGE3 max_interval="30000"
+            min_interval="10000"/>
+
+    <!-- Failure detection -->
+    <FD_SOCK/>
+    <FD_ALL timeout="30000" interval="5000"/>
+    <VERIFY_SUSPECT timeout="1500"/>
+
+    <!-- Reliable message delivery -->
+    <pbcast.NAKACK2 xmit_interval="500"
+                    xmit_table_num_rows="100"
+                    xmit_table_msgs_per_row="2000"
+                    xmit_table_max_compaction_time="30000"
+                    use_mcast_xmit="false"
+                    discard_delivered_msgs="true"/>
+
+    <!-- Unicast protocol -->
+    <UNICAST3 xmit_interval="500"
+              xmit_table_num_rows="100"
+              xmit_table_msgs_per_row="2000"
+              xmit_table_max_compaction_time="60000"
+              conn_expiry_timeout="0"/>
+
+    <!-- Stable message garbage collection -->
+    <pbcast.STABLE desired_avg_gossip="50000"
+                   max_bytes="4M"/>
+
+    <!-- Group membership protocol -->
+    <pbcast.GMS print_local_addr="true"
+                join_timeout="2000"/>
+
+    <!-- Flow control -->
+    <UFC max_credits="2M"
+         min_threshold="0.4"/>
+    <MFC max_credits="2M"
+         min_threshold="0.4"/>
+
+    <!-- Fragmentation -->
+    <FRAG2 frag_size="60K"/>
+
+    <!-- State transfer -->
+    <pbcast.STATE_TRANSFER/>
+</config>

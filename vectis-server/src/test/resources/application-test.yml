@@ -1,0 +1,78 @@
+# Test profile configuration
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+pesit:
+  server:
+    port: 5000
+    server-id: PESIT_SERVER
+    protocol-version: 2
+    max-connections: 10
+    connection-timeout: 5000
+    read-timeout: 5000
+    receive-directory: ./target/test-received
+    send-directory: ./target/test-send
+    max-entity-size: 4096
+    sync-points-enabled: true
+    resync-enabled: true
+    strict-partner-check: false
+    strict-file-check: false
+    
+    partners:
+      LOOP:
+        id: LOOP
+        enabled: true
+        access-type: BOTH
+    
+    files:
+      SYNCTEST:
+        id: SYNCTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./target/test-received
+      IDTTEST:
+        id: IDTTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./target/test-received
+      RESTARTTEST:
+        id: RESTARTTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./target/test-received
+
+# Enable security for security tests
+pesit.security:
+  enabled: true
+  mode: mixed
+  oauth2:
+    enabled: false
+  api-key:
+    enabled: true
+  basic-auth:
+    enabled: true
+    users:
+      admin:
+        password: admin
+        roles:
+          - ADMIN
+      operator:
+        password: operator
+        roles:
+          - OPERATOR
+      user:
+        password: user
+        roles:
+          - USER
+
+logging:
+  level:
+    com.pesit: DEBUG

@@ -1,0 +1,240 @@
+{
+  "id": "pesit",
+  "realm": "pesit",
+  "displayName": "PeSIT Server",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN",
+        "description": "Administrator role - full access"
+      },
+      {
+        "name": "OPERATOR",
+        "description": "Operator role - server management"
+      },
+      {
+        "name": "USER",
+        "description": "User role - basic access"
+      }
+    ],
+    "client": {
+      "pesit-server": [
+        {
+          "name": "admin",
+          "description": "Client admin role"
+        },
+        {
+          "name": "operator",
+          "description": "Client operator role"
+        },
+        {
+          "name": "user",
+          "description": "Client user role"
+        }
+      ]
+    }
+  },
+  "groups": [
+    {
+      "name": "admins",
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "name": "operators",
+      "realmRoles": ["OPERATOR"]
+    },
+    {
+      "name": "users",
+      "realmRoles": ["USER"]
+    }
+  ],
+  "defaultRoles": ["USER"],
+  "clients": [
+    {
+      "clientId": "pesit-server",
+      "name": "PeSIT Server",
+      "description": "PeSIT Server API Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pesit-secret",
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080",
+        "http://localhost:3000"
+      ],
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "client-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String",
+            "usermodel.clientRoleMapping.clientId": "pesit-server"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "pesit-cli",
+      "name": "PeSIT CLI",
+      "description": "PeSIT Command Line Client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@pesit.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ADMIN"],
+      "clientRoles": {
+        "pesit-server": ["admin"]
+      },
+      "groups": ["admins"]
+    },
+    {
+      "username": "operator",
+      "email": "operator@pesit.local",
+      "firstName": "Operator",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "operator",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["OPERATOR"],
+      "clientRoles": {
+        "pesit-server": ["operator"]
+      },
+      "groups": ["operators"]
+    },
+    {
+      "username": "user",
+      "email": "user@pesit.local",
+      "firstName": "Regular",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["USER"],
+      "clientRoles": {
+        "pesit-server": ["user"]
+      },
+      "groups": ["users"]
+    },
+    {
+      "username": "partner_admin",
+      "email": "partner@partner-a.com",
+      "firstName": "Partner",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "partner",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["USER"],
+      "attributes": {
+        "partner_id": ["PARTNER_A"]
+      }
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "pesit-server",
+      "roles": ["ADMIN", "OPERATOR", "USER"]
+    }
+  ],
+  "clientScopeMappings": {
+    "pesit-server": [
+      {
+        "client": "pesit-server",
+        "roles": ["admin", "operator", "user"]
+      }
+    ]
+  }
+}

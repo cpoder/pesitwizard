@@ -1,0 +1,381 @@
+# Vectis Server Configuration
+# Profile: Hors-SIT over TCP/IP
+#
+# Database profiles:
+#   - default (H2): For local development
+#   - postgres: For production with PostgreSQL (multi-tenant)
+#
+# Run with: --spring.profiles.active=postgres
+# Set PESIT_CLUSTER_ID for multi-tenant mode
+
+spring:
+  application:
+    name: vectis-server
+  
+  # Default: H2 Database configuration (for local development)
+  datasource:
+    url: jdbc:h2:file:./data/vectis-db;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+  
+  # H2 Console (for debugging, only in default profile)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Server configuration
+server:
+  port: 8080  # HTTP management port (REST API)
+
+# Vectis Protocol Configuration
+vectis:
+  # Multi-tenant cluster configuration
+  cluster:
+    # Cluster ID for multi-tenant mode (set via PESIT_CLUSTER_ID env var)
+    # When set, server uses cluster-specific schema in PostgreSQL
+    id: ${PESIT_CLUSTER_ID:}
+    
+    # Enable JGroups cluster mode for HA
+    enabled: false
+    # Node name (auto-generated if not set)
+    # node-name: node1
+    # JGroups configuration file (udp.xml for multicast, tcp.xml for unicast)
+    config: udp.xml
+  
+  # TLS/SSL Configuration
+  ssl:
+    # Enable TLS for Vectis protocol
+    enabled: false
+    # Keystore name (from database) - required if enabled
+    keystore-name: default-keystore
+    # Truststore name (from database) - optional, for mutual TLS
+    truststore-name: default-truststore
+    # Require client certificate (mutual TLS)
+    client-auth: false
+    # TLS protocol version (TLSv1.2, TLSv1.3)
+    protocol: TLSv1.3
+    # Enabled cipher suites (empty = use defaults)
+    cipher-suites: []
+  
+  server:
+    # TCP port for Vectis protocol
+    port: 5000
+    # TLS port for Vectis protocol (when SSL enabled)
+    tls-port: 5001
+    
+    # Server identifier (PI 4)
+    server-id: PESIT_SERVER
+    
+    # Protocol version (PI 6) - 2 for Hors-SIT
+    protocol-version: 2
+    
+    # Maximum concurrent connections
+    max-connections: 100
+    
+    # Connection timeout (ms)
+    connection-timeout: 30000
+    
+    # Read timeout (ms)
+    read-timeout: 60000
+    
+    # Default directory for received files (used if no logical file match)
+    receive-directory: ./received
+    
+    # Default directory for files to send (used if no logical file match)
+    send-directory: ./send
+    
+    # Maximum entity size (PI 25) in bytes
+    max-entity-size: 4096
+    
+    # Enable sync points (PI 7)
+    sync-points-enabled: true
+    
+    # Enable resynchronization (PI 23)
+    resync-enabled: true
+    
+    # Require partner to be configured (if false, unknown partners are allowed)
+    strict-partner-check: true
+    
+    # Require logical file to be configured (if false, any filename is allowed)
+    strict-file-check: true
+    
+    # ===== PARTNER CONFIGURATION =====
+    # Partners are remote systems that can connect to this server
+    # Key is used for lookup, 'id' field should match PI 3 (Demandeur)
+    partners:
+      # Integration test client
+      LOOP:
+        id: LOOP
+        description: Integration test client
+        enabled: true
+        password: ""
+        access-type: BOTH
+        max-connections: 10
+        allowed-files: []
+      
+      # Example partner: TEST_CLIENT
+      TEST_CLIENT:
+        id: TEST_CLIENT
+        description: Test client for development
+        enabled: true
+        password: ""  # Empty = no password required
+        access-type: BOTH  # READ, WRITE, or BOTH
+        max-connections: 10
+        allowed-files: []  # Empty = all files allowed
+      
+      # Example partner with password
+      SECURE_PARTNER:
+        id: SECURE_PARTNER
+        description: Partner requiring authentication
+        enabled: true
+        password: secret123
+        access-type: WRITE
+        max-connections: 5
+        allowed-files:
+          - INCOMING_*
+          - DATA_FILE
+      
+      # Example disabled partner
+      DISABLED_PARTNER:
+        id: DISABLED_PARTNER
+        description: Temporarily disabled partner
+        enabled: false
+    
+    # ===== LOGICAL FILE CONFIGURATION =====
+    # Logical files map virtual filenames to local paths
+    # Key is the filename pattern (supports * wildcard)
+    files:
+      # Integration test file (used by CompleteFileTransferTest)
+      FILE:
+        id: FILE
+        description: Integration test file
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/test
+        send-directory: ./send/test
+        receive-filename-pattern: "${filename}_${timestamp}"
+        overwrite: true
+      
+      # Alternative test file
+      TESTFILE:
+        id: TESTFILE
+        description: Alternative test file
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/test
+        send-directory: ./send/test
+        receive-filename-pattern: "${filename}_${timestamp}"
+        overwrite: true
+      
+      # Sync point test files
+      SYNCTEST:
+        id: SYNCTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/test
+      IDTTEST:
+        id: IDTTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/test
+      RESTARTTEST:
+        id: RESTARTTEST
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/test
+      
+      # Example: Incoming data files
+      INCOMING_DATA:
+        id: INCOMING_DATA
+        description: Incoming data files from partners
+        enabled: true
+        direction: RECEIVE  # RECEIVE, SEND, or BOTH
+        receive-directory: ./received/incoming
+        receive-filename-pattern: "${filename}_${timestamp}"
+        overwrite: false
+        max-file-size: 104857600  # 100 MB
+      
+      # Example: Outgoing reports
+      REPORT_*:
+        id: REPORT_*
+        description: Outgoing report files (wildcard pattern)
+        enabled: true
+        direction: SEND
+        send-directory: ./send/reports
+      
+      # Example: Bidirectional file
+      EXCHANGE_FILE:
+        id: EXCHANGE_FILE
+        description: Bidirectional exchange file
+        enabled: true
+        direction: BOTH
+        receive-directory: ./received/exchange
+        send-directory: ./send/exchange
+        receive-filename-pattern: "${filename}_${date}"
+        overwrite: true
+    
+    # Enable CRC checking (PI 1)
+    crc-enabled: false
+
+# Security Configuration
+vectis.security:
+  # Enable security (set to false to disable all authentication)
+  enabled: true
+  
+  # Authentication mode: oauth2, apikey, basic, or mixed
+  mode: mixed
+  
+  # OAuth2/OIDC configuration (for SSO with Keycloak, Okta, Azure AD, etc.)
+  oauth2:
+    enabled: false
+    # issuer-uri: https://your-idp.com/realms/your-realm
+    # jwk-set-uri: https://your-idp.com/realms/your-realm/protocol/openid-connect/certs
+    # audience: vectis-server
+    # client-id: vectis-server
+    username-claim: preferred_username
+    roles-claim: roles
+    alternative-roles-claims:
+      - realm_access.roles
+      - resource_access.${client_id}.roles
+      - groups
+  
+  # API key configuration
+  api-key:
+    enabled: true
+    header-name: X-API-Key
+    query-param: api_key
+  
+  # Basic auth (for development only - disable in production)
+  basic-auth:
+    enabled: true
+    users:
+      admin:
+        password: admin
+        roles:
+          - ADMIN
+      operator:
+        password: operator
+        roles:
+          - OPERATOR
+      user:
+        password: user
+        roles:
+          - USER
+  
+  # Public endpoints (no authentication required)
+  public-endpoints:
+    - /actuator/health
+    - /actuator/health/**
+    - /actuator/info
+    - /h2-console/**
+    - /api/v1/deployment/**
+  
+  # CORS configuration
+  cors:
+    enabled: true
+    allowed-origins:
+      - "*"
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    allow-credentials: false
+    max-age: 3600
+  
+  # Role mapping
+  role-mapping:
+    role-prefix: "ROLE_"
+    default-roles:
+      - USER
+    # mappings:
+    #   idp-admin: ADMIN
+    #   idp-operator: OPERATOR
+
+# Secrets Management
+vectis.secrets:
+  # Encryption key for secrets (Base64 encoded, 32 bytes for AES-256)
+  # Generate with: openssl rand -base64 32
+  # For production, set via environment variable: PESIT_SECRETS_ENCRYPTION_KEY
+  # encryption-key: ${PESIT_SECRETS_ENCRYPTION_KEY:}
+
+# Backup & Recovery
+vectis.backup:
+  # Directory for storing backups
+  directory: ./backups
+  # Retention period in days
+  retention-days: 30
+  # Maximum number of backups to keep
+  max-backups: 10
+  # Backup schedule (cron expression) - default: 1 AM daily
+  schedule: "0 0 1 * * ?"
+
+# File Integrity
+vectis.integrity:
+  # Hash algorithm: SHA-256, SHA-512, SHA-1, MD5
+  algorithm: SHA-256
+  # Re-verification interval in days
+  verification-interval-days: 7
+  # Buffer size for reading files (bytes)
+  buffer-size: 8192
+
+# Audit Logging
+vectis.audit:
+  # Retention period for audit events (days)
+  retention-days: 365
+  # Log audit events to console in JSON format (for SIEM integration)
+  log-to-console: true
+
+# Observability Configuration
+vectis.observability:
+  service-name: vectis-server
+  tracing:
+    # Disabled by default - enable via API or set OTEL_EXPORTER_OTLP_ENDPOINT env var
+    enabled: ${OTEL_ENABLED:false}
+    endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
+  metrics:
+    enabled: true
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${vectis.observability.service-name:vectis-server}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        vectis.transfers.duration: true
+  tracing:
+    # Only enable if endpoint is configured
+    enabled: ${vectis.observability.tracing.enabled:false}
+    sampling:
+      probability: 1.0
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.vectis: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

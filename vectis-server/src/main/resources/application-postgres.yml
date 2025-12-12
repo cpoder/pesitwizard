@@ -1,0 +1,49 @@
+# PostgreSQL Database Configuration (Multi-Tenant)
+# Activate with: --spring.profiles.active=postgres
+#
+# Environment variables (for Kubernetes/Docker):
+#   SPRING_DATASOURCE_URL: jdbc:postgresql://host:port/database
+#   SPRING_DATASOURCE_USERNAME: username
+#   SPRING_DATASOURCE_PASSWORD: password
+#   PESIT_CLUSTER_ID: cluster UUID (for multi-tenant schema isolation)
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vectis}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:vectis}
+    password: ${SPRING_DATASOURCE_PASSWORD:vectis}
+    
+    # Connection pool settings (HikariCP)
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+      pool-name: PesitHikariPool
+  
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      # Don't auto-create tables - schema is managed by vectis-admin
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        format_sql: false
+  
+  # Disable H2 console in production
+  h2:
+    console:
+      enabled: false
+
+# Disable YAML-based partner/file import in multi-tenant mode
+# Configuration is managed via vectis-admin
+vectis:
+  server:
+    # Don't import from YAML when using PostgreSQL multi-tenant
+    partners: {}
+    files: {}
