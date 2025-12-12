@@ -315,9 +315,9 @@ run_file_transfer_test() {
     PF_PID=$!
     sleep 3
     
-    # Run the integration test from pesit-java-library
+    # Run the integration test from vectis-protocol
     log_info "Running PeSIT file transfer test..."
-    cd "$PROJECT_DIR/../pesit-java-library"
+    cd "$PROJECT_DIR/../vectis-protocol"
     
     if mvn test -Dtest=CompleteFileTransferTest \
         -Dpesit.integration.enabled=true \

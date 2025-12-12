@@ -1,6 +1,6 @@
-# PeSIT Server
+# Vectis Server
 
-Serveur PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécompensation) implémenté en Spring Boot. Conçu pour être déployé sur Kubernetes avec support du clustering.
+Serveur Vectis implémentant le protocole PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécompensation) en Spring Boot. Conçu pour être déployé sur Kubernetes avec support du clustering.
 
 ## Fonctionnalités
 
@@ -20,19 +20,19 @@ Serveur PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécomp
 ## Build
 
 ```bash
-# Installer d'abord la bibliothèque PeSIT
-cd ../pesit-java-library
+# Installer d'abord la bibliothèque protocole
+cd ../vectis-protocol
 mvn install -DskipTests
 
 # Builder le serveur
-cd ../pesit-server
+cd ../vectis-server
 mvn package -DskipTests
 ```
 
 ## Exécution locale
 
 ```bash
-java -jar target/pesit-server-1.0.0-SNAPSHOT.jar
+java -jar target/vectis-server-1.0.0-SNAPSHOT.jar
 ```
 
 - Port PeSIT : **5000**
