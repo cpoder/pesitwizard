@@ -2,6 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { Calendar, Trash2, RefreshCw, Plus, Edit, X } from 'lucide-vue-next'
 import api from '@/api'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 interface BusinessCalendar {
   id?: string
@@ -60,16 +64,27 @@ async function loadCalendars() {
   }
 }
 
-async function deleteCalendar(cal: BusinessCalendar) {
-  if (!confirm(`Delete calendar "${cal.name}"?`)) return
-  deleting.value = cal.id!
+const showDeleteModal = ref(false)
+const calendarToDelete = ref<BusinessCalendar | null>(null)
+
+function confirmDelete(cal: BusinessCalendar) {
+  calendarToDelete.value = cal
+  showDeleteModal.value = true
+}
+
+async function deleteCalendar() {
+  if (!calendarToDelete.value) return
+  deleting.value = calendarToDelete.value.id!
   try {
-    await api.delete(`/calendars/${cal.id}`)
+    await api.delete(`/calendars/${calendarToDelete.value.id}`)
+    toast.success(`Calendar "${calendarToDelete.value.name}" deleted`)
     await loadCalendars()
   } catch (e: any) {
-    alert('Failed to delete: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to delete: ' + (e.response?.data?.message || e.message))
   } finally {
     deleting.value = null
+    showDeleteModal.value = false
+    calendarToDelete.value = null
   }
 }
 
@@ -135,20 +150,22 @@ function removeHoliday(date: string) {
 
 async function saveCalendar() {
   if (!form.value.name.trim()) {
-    alert('Name is required')
+    toast.warning('Name is required')
     return
   }
   saving.value = true
   try {
     if (isEditing.value && editingCalendar.value?.id) {
       await api.put(`/calendars/${editingCalendar.value.id}`, form.value)
+      toast.success('Calendar updated')
     } else {
       await api.post('/calendars', form.value)
+      toast.success('Calendar created')
     }
     closeModal()
     await loadCalendars()
   } catch (e: any) {
-    alert('Failed to save: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to save: ' + (e.response?.data?.message || e.message))
   } finally {
     saving.value = false
   }
@@ -198,7 +215,7 @@ async function saveCalendar() {
             <button @click="openEditModal(cal)" class="p-2 text-gray-400 hover:text-blue-600 rounded-lg" title="Edit">
               <Edit class="h-4 w-4" />
             </button>
-            <button @click="deleteCalendar(cal)" :disabled="deleting === cal.id" class="p-2 text-gray-400 hover:text-red-600 rounded-lg" title="Delete">
+            <button @click="confirmDelete(cal)" :disabled="deleting === cal.id" class="p-2 text-gray-400 hover:text-red-600 rounded-lg" title="Delete">
               <RefreshCw v-if="deleting === cal.id" class="h-4 w-4 animate-spin" />
               <Trash2 v-else class="h-4 w-4" />
             </button>
@@ -322,5 +339,15 @@ async function saveCalendar() {
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Calendar"
+      :message="`Are you sure you want to delete '${calendarToDelete?.name}'? This action cannot be undone.`"
+      confirm-text="Delete"
+      @confirm="deleteCalendar"
+      @cancel="showDeleteModal = false"
+    />
   </div>
 </template>

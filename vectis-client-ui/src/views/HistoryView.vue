@@ -12,6 +12,9 @@ import {
   Star
 } from 'lucide-vue-next'
 import api from '@/api'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const transfers = ref<any[]>([])
 const loading = ref(true)
@@ -62,15 +65,16 @@ function formatDate(dateStr: string) {
 
 async function replayTransfer(transfer: any) {
   if (transfer.direction === 'MESSAGE') {
-    alert('MESSAGE transfers cannot be replayed')
+    toast.warning('MESSAGE transfers cannot be replayed')
     return
   }
   replaying.value = transfer.id
   try {
     await api.post(`/transfers/${transfer.id}/replay`)
+    toast.success('Transfer replay started')
     await loadTransfers(currentPage.value)
   } catch (e: any) {
-    alert('Replay failed: ' + (e.response?.data?.message || e.message))
+    toast.error('Replay failed: ' + (e.response?.data?.message || e.message))
   } finally {
     replaying.value = null
   }
@@ -78,7 +82,7 @@ async function replayTransfer(transfer: any) {
 
 function openFavoriteModal(transfer: any) {
   if (transfer.direction === 'MESSAGE') {
-    alert('MESSAGE transfers cannot be added to favorites')
+    toast.warning('MESSAGE transfers cannot be added to favorites')
     return
   }
   selectedForFavorite.value = transfer
@@ -104,9 +108,9 @@ async function addToFavorites() {
   try {
     await api.post(`/favorites/from-history/${selectedForFavorite.value.id}?name=${encodeURIComponent(favoriteName.value)}`)
     showFavoriteModal.value = false
-    alert('Added to favorites!')
+    toast.success('Added to favorites!')
   } catch (e: any) {
-    alert('Failed to add to favorites: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to add to favorites: ' + (e.response?.data?.message || e.message))
   } finally {
     addingFavorite.value = null
   }

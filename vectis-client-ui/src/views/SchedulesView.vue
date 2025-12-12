@@ -14,6 +14,10 @@ import {
   PlayCircle
 } from 'lucide-vue-next'
 import api from '@/api'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 interface Schedule {
   id: string
@@ -66,8 +70,9 @@ async function toggleSchedule(schedule: Schedule) {
     if (index !== -1) {
       schedules.value[index] = response.data
     }
+    toast.success(response.data.enabled ? 'Schedule enabled' : 'Schedule disabled')
   } catch (e: any) {
-    alert('Failed to toggle: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to toggle: ' + (e.response?.data?.message || e.message))
   } finally {
     toggling.value = null
   }
@@ -81,23 +86,35 @@ async function runNow(schedule: Schedule) {
     if (index !== -1) {
       schedules.value[index] = response.data
     }
+    toast.success('Schedule executed')
   } catch (e: any) {
-    alert('Failed to run: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to run: ' + (e.response?.data?.message || e.message))
   } finally {
     running.value = null
   }
 }
 
-async function deleteSchedule(schedule: Schedule) {
-  if (!confirm(`Delete schedule "${schedule.name}"?`)) return
-  deleting.value = schedule.id
+const showDeleteModal = ref(false)
+const scheduleToDelete = ref<Schedule | null>(null)
+
+function confirmDelete(schedule: Schedule) {
+  scheduleToDelete.value = schedule
+  showDeleteModal.value = true
+}
+
+async function deleteSchedule() {
+  if (!scheduleToDelete.value) return
+  deleting.value = scheduleToDelete.value.id
   try {
-    await api.delete(`/schedules/${schedule.id}`)
-    schedules.value = schedules.value.filter(s => s.id !== schedule.id)
+    await api.delete(`/schedules/${scheduleToDelete.value.id}`)
+    schedules.value = schedules.value.filter(s => s.id !== scheduleToDelete.value!.id)
+    toast.success(`Schedule "${scheduleToDelete.value.name}" deleted`)
   } catch (e: any) {
-    alert('Failed to delete: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to delete: ' + (e.response?.data?.message || e.message))
   } finally {
     deleting.value = null
+    showDeleteModal.value = false
+    scheduleToDelete.value = null
   }
 }
 
@@ -233,7 +250,7 @@ function formatScheduleType(schedule: Schedule) {
               <Play v-else class="h-5 w-5" />
             </button>
             <button 
-              @click="deleteSchedule(schedule)"
+              @click="confirmDelete(schedule)"
               :disabled="deleting === schedule.id"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="Delete"
@@ -245,5 +262,15 @@ function formatScheduleType(schedule: Schedule) {
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Schedule"
+      :message="`Are you sure you want to delete '${scheduleToDelete?.name}'? This action cannot be undone.`"
+      confirm-text="Delete"
+      @confirm="deleteSchedule"
+      @cancel="showDeleteModal = false"
+    />
   </div>
 </template>

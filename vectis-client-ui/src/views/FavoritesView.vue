@@ -15,6 +15,10 @@ import {
 } from 'lucide-vue-next'
 import api from '@/api'
 import PathPlaceholderInput from '@/components/PathPlaceholderInput.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 interface Favorite {
   id: string
@@ -129,17 +133,28 @@ async function executeFavorite(favorite: Favorite) {
   }
 }
 
-async function deleteFavorite(favorite: Favorite) {
-  if (!confirm(`Delete favorite "${favorite.name}"?`)) return
-  deleting.value = favorite.id
+const showDeleteModal = ref(false)
+const favoriteToDelete = ref<Favorite | null>(null)
+
+function confirmDelete(favorite: Favorite) {
+  favoriteToDelete.value = favorite
+  showDeleteModal.value = true
+}
+
+async function deleteFavorite() {
+  if (!favoriteToDelete.value) return
+  deleting.value = favoriteToDelete.value.id
   try {
-    await api.delete(`/favorites/${favorite.id}`)
-    favorites.value = favorites.value.filter(f => f.id !== favorite.id)
-    delete executionStates[favorite.id]
+    await api.delete(`/favorites/${favoriteToDelete.value.id}`)
+    favorites.value = favorites.value.filter(f => f.id !== favoriteToDelete.value!.id)
+    delete executionStates[favoriteToDelete.value.id]
+    toast.success(`Favorite "${favoriteToDelete.value.name}" deleted`)
   } catch (e: any) {
-    alert('Failed to delete: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to delete: ' + (e.response?.data?.message || e.message))
   } finally {
     deleting.value = null
+    showDeleteModal.value = false
+    favoriteToDelete.value = null
   }
 }
 
@@ -199,8 +214,9 @@ async function saveFavorite() {
     }
     
     showEditModal.value = false
+    toast.success('Favorite updated')
   } catch (e: any) {
-    alert('Failed to save: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to save: ' + (e.response?.data?.message || e.message))
   } finally {
     saving.value = false
   }
@@ -251,9 +267,9 @@ async function createSchedule() {
     
     await api.post('/schedules', schedule)
     showScheduleModal.value = false
-    alert('Schedule created! View it in the Schedules page.')
+    toast.success('Schedule created! View it in the Schedules page.')
   } catch (e: any) {
-    alert('Failed to create schedule: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to create schedule: ' + (e.response?.data?.message || e.message))
   } finally {
     creatingSchedule.value = false
   }
@@ -313,7 +329,7 @@ async function createSchedule() {
               <Edit class="h-4 w-4" />
             </button>
             <button 
-              @click="deleteFavorite(favorite)"
+              @click="confirmDelete(favorite)"
               :disabled="deleting === favorite.id"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="Delete"
@@ -638,5 +654,15 @@ async function createSchedule() {
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Delete Favorite"
+      :message="`Are you sure you want to delete '${favoriteToDelete?.name}'? This action cannot be undone.`"
+      confirm-text="Delete"
+      @confirm="deleteFavorite"
+      @cancel="showDeleteModal = false"
+    />
   </div>
 </template>
