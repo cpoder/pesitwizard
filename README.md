@@ -113,8 +113,8 @@ kubectl port-forward svc/vectis-server-api 8080:8080 -n default &
 |----------|-------------|--------|
 | `DATABASE_URL` | URL JDBC PostgreSQL | `jdbc:postgresql://localhost:5435/vectis` |
 | `SERVER_PORT` | Port du backend admin | `9080` |
-| `PESIT_ADMIN_USERNAME` | Utilisateur admin | `admin` |
-| `PESIT_ADMIN_PASSWORD` | Mot de passe admin | `admin` |
+| `VECTIS_ADMIN_USERNAME` | Utilisateur admin | `admin` |
+| `VECTIS_ADMIN_PASSWORD` | Mot de passe admin | `admin` |
 
 ### Configuration du cluster
 

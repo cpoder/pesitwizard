@@ -165,9 +165,9 @@ spec:
       - name: vectis-server
         image: ghcr.io/cpoder/vectis/vectis-server:latest
         env:
-        - name: PESIT_SERVER_ID
+        - name: VECTIS_SERVER_ID
           value: "MY_VECTIS_SERVER"
-        - name: PESIT_SERVER_PORT
+        - name: VECTIS_SERVER_PORT
           value: "5000"
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vectis"
@@ -177,7 +177,7 @@ spec:
           value: "vectis"
         ports:
         - containerPort: 5000
-          name: pesit
+          name: vectis
         - containerPort: 8080
           name: http
         - containerPort: 7800
@@ -193,7 +193,7 @@ spec:
   selector:
     app: vectis-server
   ports:
-  - name: pesit
+  - name: vectis
     port: 5000
     targetPort: 5000
 EOF

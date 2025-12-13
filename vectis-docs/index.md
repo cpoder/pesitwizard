@@ -19,7 +19,7 @@ features:
     details: À partir de 199€/mois, soit 10 fois moins cher que les solutions traditionnelles (Axway, IBM).
   - icon: ⚡
     title: Déploiement en 24h
-    details: Interface web moderne, configuration simple. Pas besoin d'expert Vectis pour démarrer.
+    details: Interface web moderne, configuration simple. Pas besoin d'expert PeSIT pour démarrer.
   - icon: 🔌
     title: API REST
     details: Intégrez facilement vos ERP et logiciels comptables via notre API REST documentée.
@@ -36,9 +36,9 @@ features:
 
 ## Pourquoi Vectis Cloud ?
 
-Le protocole **Vectis** (Protocole d'Échange pour un Système Interbancaire de Télécompensation) est le standard utilisé par les banques françaises pour les échanges de fichiers sécurisés.
+Le protocole **PeSIT** (Protocole d'Échange pour un Système Interbancaire de Télécompensation) est le standard utilisé par les banques françaises pour les échanges de fichiers sécurisés.
 
-Jusqu'à présent, les solutions Vectis étaient réservées aux grandes entreprises en raison de leur coût prohibitif (plusieurs milliers d'euros par mois) et de leur complexité.
+Jusqu'à présent, les solutions PeSIT étaient réservées aux grandes entreprises en raison de leur coût prohibitif (plusieurs milliers d'euros par mois) et de leur complexité.
 
 **Vectis Cloud** change la donne en proposant une solution :
 - **Accessible** : tarifs adaptés aux PME/ETI
