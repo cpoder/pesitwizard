@@ -1,207 +1,135 @@
-# Vectis Server - Enterprise File Transfer Solution
+# Vectis - Open Source PeSIT File Transfer
 
-Solution complète de transfert de fichiers basée sur le protocole Vectis, déployable sur Kubernetes avec une console d'administration web.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://openjdk.org/)
 
-## Architecture
+Solution open source de transfert de fichiers basée sur le protocole **PeSIT** (Protocole d'Échange pour un Système Interbancaire de Télécompensation).
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Admin Console (UI)                           │
-│                     http://localhost:3000                           │
-└─────────────────────────────────────────────────────────────────────┘
-                                 │
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Admin Backend (API)                            │
-│                     http://localhost:9080                           │
-│  - Gestion des clusters                                             │
-│  - Déploiement Kubernetes                                           │
-│  - Proxy vers les serveurs Vectis                                    │
-└─────────────────────────────────────────────────────────────────────┘
-           │                                    │
-           │ (port-forward)                     │ (direct K8s API)
-           ▼                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Kubernetes Cluster                              │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │              Vectis Server Deployment (3 replicas)            │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │   │
-│  │  │   Pod 1     │  │   Pod 2     │  │   Pod 3     │          │   │
-│  │  │  (Leader)   │  │  (Standby)  │  │  (Standby)  │          │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘          │   │
-│  │                    JGroups Cluster                           │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                   PostgreSQL (Shared DB)                     │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+## Qu'est-ce que PeSIT ?
+
+PeSIT est le protocole standard utilisé par les banques françaises pour les échanges de fichiers sécurisés :
+- Virements SEPA
+- Relevés de compte
+- Prélèvements
+- Échanges interbancaires
 
 ## Composants
 
-| Composant | Description | Port |
-|-----------|-------------|------|
-| `vectis-server` | Serveur Vectis (protocole de transfert) | 5000 (Vectis), 8080 (API) |
-| `vectis-admin` | Backend d'administration | 9080 |
-| `vectis-admin-ui` | Interface web d'administration | 3000 |
-| `vectis-client` | Client Vectis pour tests/intégration | 9081 |
-| PostgreSQL | Base de données | 5435 |
-
-## Prérequis
-
-- **Java 21+**
-- **Maven 3.9+**
-- **Node.js 18+** (pour l'UI)
-- **Podman** ou Docker (pour PostgreSQL)
-- **kubectl** configuré avec accès au cluster Kubernetes
-- **Cluster Kubernetes** (K3s, Minikube, ou cloud)
+| Module | Description |
+|--------|-------------|
+| `vectis-server` | Serveur PeSIT complet avec API REST |
+| `vectis-client` | Client Java pour envoyer/recevoir des fichiers |
+| `vectis-client-ui` | Interface graphique pour le client |
+| `vectis-pesit` | Bibliothèque d'implémentation du protocole PeSIT |
+| `vectis-docs` | Documentation |
 
 ## Démarrage rapide
 
-### 1. Démarrer l'environnement de développement
+### Prérequis
+
+- Java 21+
+- Maven 3.9+
+
+### Installation
 
 ```bash
-# Démarrer tous les services (PostgreSQL, Admin Backend, Admin UI)
-./scripts/start-admin.sh
+# Cloner le repo
+git clone https://github.com/cpoder/vectis.git
+cd vectis
 
-# Vérifier le statut
-./scripts/status.sh
+# Builder le serveur
+cd vectis-server
+mvn package -DskipTests
+
+# Lancer le serveur
+java -jar target/vectis-server-1.0.0-SNAPSHOT.jar
 ```
 
-### 2. Accéder à l'interface
+Le serveur démarre sur :
+- **Port 5000** : Protocole PeSIT
+- **Port 8080** : API REST
 
-- **Admin UI** : http://localhost:3000
-- **Identifiants** : `admin` / `admin`
-
-### 3. Créer et déployer un cluster Vectis
-
-1. Aller dans "Clusters" > "New Cluster"
-2. Configurer le cluster (nom, namespace, replicas)
-3. Cliquer sur "Deploy"
-
-### 4. Configurer le port-forwarding (IMPORTANT)
-
-Pour que l'admin puisse communiquer avec les serveurs Vectis déployés, un port-forwarding est nécessaire :
+### Envoyer un fichier
 
 ```bash
-# Démarrer le port-forwarding vers l'API du serveur Vectis
-kubectl port-forward svc/vectis-server-api 8080:8080 -n default &
+# Avec le client Java
+cd vectis-client
+mvn exec:java -Dexec.args="send -h localhost -p 5000 -f /path/to/file.txt"
 ```
 
-**Note** : Sans ce port-forwarding, les fonctionnalités suivantes ne fonctionneront pas :
-- Gestion des partenaires
-- Gestion des fichiers virtuels
-- Consultation des transferts
-- Audit logs du serveur
+### API REST
 
-## Scripts disponibles
+```bash
+# Statut du serveur
+curl http://localhost:8080/actuator/health
 
-| Script | Description |
-|--------|-------------|
-| `./scripts/start-admin.sh` | Démarre PostgreSQL, Admin Backend et Admin UI |
-| `./scripts/start-client.sh` | Démarre le client Vectis |
-| `./scripts/start-all.sh` | Démarre tous les composants |
-| `./scripts/stop-all.sh` | Arrête tous les composants |
-| `./scripts/status.sh` | Affiche le statut des services |
+# Liste des transferts
+curl http://localhost:8080/api/v1/transfers
+```
 
 ## Configuration
+
+### Fichier `application.yml`
+
+```yaml
+vectis:
+  server:
+    port: 5000
+    ssl:
+      enabled: false
+  
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/vectis-db
+```
 
 ### Variables d'environnement
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
-| `DATABASE_URL` | URL JDBC PostgreSQL | `jdbc:postgresql://localhost:5435/vectis` |
-| `SERVER_PORT` | Port du backend admin | `9080` |
-| `VECTIS_ADMIN_USERNAME` | Utilisateur admin | `admin` |
-| `VECTIS_ADMIN_PASSWORD` | Mot de passe admin | `admin` |
+| `VECTIS_SERVER_PORT` | Port PeSIT | `5000` |
+| `SERVER_PORT` | Port API REST | `8080` |
 
-### Configuration du cluster
-
-Dans l'UI, lors de la création d'un cluster :
-
-- **API URL** : URL pour accéder à l'API du serveur Vectis
-  - En développement avec port-forward : `http://localhost:8080`
-  - En production : URL du LoadBalancer ou Ingress
-
-## Développement
-
-### Build complet
+## Docker
 
 ```bash
-# Backend admin
-cd vectis-admin && mvn package -DskipTests
+# Builder l'image
+docker build -t vectis-server ./vectis-server
 
-# Serveur Vectis
-cd vectis-server && mvn package -DskipTests
-
-# UI admin
-cd vectis-admin-ui && npm install && npm run build
+# Lancer
+docker run -p 5000:5000 -p 8080:8080 vectis-server
 ```
 
-### Logs
+## Documentation
 
-```bash
-# Admin backend
-tail -f /tmp/vectis-admin.log
-
-# Admin UI
-tail -f /tmp/vectis-admin-ui.log
-
-# Serveur Vectis (Kubernetes)
-kubectl logs -f deployment/vectis-server -n default
-```
-
-## Dépannage
-
-### L'admin ne peut pas communiquer avec le serveur Vectis
-
-1. Vérifier que le port-forwarding est actif :
-   ```bash
-   ps aux | grep port-forward
-   ```
-
-2. Démarrer le port-forwarding si nécessaire :
-   ```bash
-   kubectl port-forward svc/vectis-server-api 8080:8080 -n default &
-   ```
-
-3. Vérifier l'API URL du cluster dans l'UI (doit être `http://localhost:8080`)
-
-### PostgreSQL ne démarre pas
-
-```bash
-# Vérifier le conteneur
-podman ps -a | grep postgres
-
-# Redémarrer
-podman start vectis-postgres
-```
-
-### Le backend admin ne démarre pas
-
-```bash
-# Vérifier les logs
-tail -50 /tmp/vectis-admin.log
-
-# Vérifier que PostgreSQL est accessible
-psql -h localhost -p 5435 -U vectis -d vectis -c "SELECT 1"
-```
+- [Guide de démarrage](https://docs.vectis.cloud/guide/quickstart)
+- [Configuration serveur](https://docs.vectis.cloud/guide/server/configuration)
+- [API REST](https://docs.vectis.cloud/api/)
 
 ## Structure du projet
 
 ```
 vectis/
-├── vectis-server/        # Serveur Vectis (déployé sur K8s)
-├── vectis-admin/         # Backend d'administration
-├── vectis-admin-ui/      # Interface web Vue.js
-├── vectis-client/        # Client Vectis
-├── vectis-common/        # Code partagé
-├── vectis-fpdu/          # Parseur protocole Vectis
-├── vectis-docs/          # Documentation
-└── scripts/             # Scripts de démarrage
+├── vectis-server/       # Serveur PeSIT
+├── vectis-client/       # Client Java
+├── vectis-client-ui/    # Interface client (Vue.js)
+├── vectis-pesit/        # Bibliothèque protocole
+├── vectis-docs/         # Documentation (VitePress)
+└── scripts/             # Scripts utilitaires
 ```
+
+## Contribuer
+
+Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Enterprise
+
+Pour les fonctionnalités entreprise (clustering HA, console d'administration, support), voir [Vectis Enterprise](https://vectis.cloud).
 
 ## Licence
 
-Propriétaire - Tous droits réservés
+[Apache License 2.0](LICENSE)
+
+---
+
+**Vectis** - Solution PeSIT moderne et open source.
