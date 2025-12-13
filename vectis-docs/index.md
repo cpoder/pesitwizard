@@ -15,8 +15,8 @@ hero:
 
 features:
   - icon: 💰
-    title: 5x moins cher
-    details: À partir de 299€/mois, soit 5 à 10 fois moins cher que les solutions traditionnelles (Axway, IBM).
+    title: 10x moins cher
+    details: À partir de 199€/mois, soit 10 fois moins cher que les solutions traditionnelles (Axway, IBM).
   - icon: ⚡
     title: Déploiement en 24h
     details: Interface web moderne, configuration simple. Pas besoin d'expert Vectis pour démarrer.
@@ -56,15 +56,22 @@ Récupérez automatiquement vos relevés de compte chaque matin pour les intégr
 ### Centralisation multi-banques
 Gérez tous vos échanges avec plusieurs banques depuis une seule interface.
 
-## Ils nous font confiance
+## Open Source + Enterprise
 
-> "Nous avons divisé par 10 le coût de nos transferts bancaires tout en gagnant en fiabilité."
-> — *DAF, PME industrielle*
+Vectis adopte le modèle **Open Core** :
+
+- **Community** (gratuit) : Serveur mono-instance, client, protocole — open source Apache 2.0
+- **Pro** : Clustering HA, console d'administration, support — à partir de 199€/mois
+
+> "Le cœur est open source, auditable. Les fonctionnalités entreprise sont payantes mais accessibles."
 
 ---
 
 <div style="text-align: center; margin-top: 2rem;">
-  <a href="/guide/quickstart" style="display: inline-block; padding: 12px 24px; background: #3451b2; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
-    Commencer gratuitement
+  <a href="/guide/quickstart" style="display: inline-block; padding: 12px 24px; background: #3451b2; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; margin-right: 1rem;">
+    Essayer gratuitement
+  </a>
+  <a href="https://github.com/cpoder/vectis" style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
+    GitHub
   </a>
 </div>

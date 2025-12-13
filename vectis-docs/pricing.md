@@ -1,33 +1,49 @@
 # Tarifs
 
-## Client Vectis
+## Modèle Open Core
 
-Pour les entreprises souhaitant envoyer/recevoir des fichiers vers leurs banques.
+Vectis adopte le modèle **Open Core** : le cœur est open source, les fonctionnalités entreprise sont payantes.
 
 <div class="pricing-grid">
 
+### Community
+**Gratuit**
+
+- Serveur mono-instance
+- Client Vectis complet
+- Protocole PeSIT D/E
+- Documentation
+- Support communauté (GitHub)
+- **Licence Apache 2.0**
+
+[Télécharger →](https://github.com/cpoder/vectis)
+
+---
+
 ### Starter
-**299€** /mois
+**199€** /mois
 
-- 1 connexion bancaire
-- 1 000 transferts/mois
-- Support email
-- Interface web
-- Historique 30 jours
+- 1 cluster (3 pods)
+- Console d'administration
+- Clustering haute disponibilité
+- 5 000 transferts/mois
+- Support email (48h)
+- Historique 90 jours
 
-[Commencer →](/guide/quickstart)
+[Essai gratuit 14 jours →](/guide/quickstart)
 
 ---
 
 ### Business
 **499€** /mois
 
-- 3 connexions bancaires
+- 3 clusters
 - Transferts illimités
-- Support prioritaire
+- Support prioritaire (24h)
 - API REST complète
 - Historique 1 an
-- Webhooks
+- Webhooks & alertes
+- Multi-tenant
 
 [Contacter →](mailto:contact@vectis.cloud)
 
@@ -36,43 +52,12 @@ Pour les entreprises souhaitant envoyer/recevoir des fichiers vers leurs banques
 ### Enterprise
 **Sur devis**
 
-- Connexions illimitées
+- Clusters illimités
 - SLA 99.9%
-- Support dédié
+- Support dédié 24/7
 - On-premise possible
 - Formation incluse
 - Intégration ERP
-
-[Contacter →](mailto:contact@vectis.cloud)
-
-</div>
-
-## Serveur Vectis
-
-Pour les entreprises souhaitant recevoir des fichiers de partenaires.
-
-<div class="pricing-grid">
-
-### Standard
-**799€** /mois
-
-- 3 pods inclus
-- Console d'administration
-- Clustering HA
-- Support email
-- Monitoring
-
-[Contacter →](mailto:contact@vectis.cloud)
-
----
-
-### Enterprise
-**Sur devis**
-
-- Pods illimités
-- SLA 99.9%
-- Support 24/7
-- Multi-datacenter
 - Audit & compliance
 
 [Contacter →](mailto:contact@vectis.cloud)
@@ -83,17 +68,19 @@ Pour les entreprises souhaitant recevoir des fichiers de partenaires.
 
 | Option | Prix |
 |--------|------|
-| Connexion bancaire supplémentaire | +100€/mois |
-| Module réconciliation automatique | +200€/mois |
+| Cluster supplémentaire | +150€/mois |
+| Pod supplémentaire (au-delà de 3) | +50€/mois |
+| Support téléphonique | +100€/mois |
+| Managed Cloud (infra gérée) | +200€/mois |
 | Setup / Onboarding | 500€ (one-shot) |
 | Formation (1 journée) | 1 500€ |
 | Support premium (réponse < 4h) | +300€/mois |
 
 ## Comparaison
 
-| | Vectis Cloud | Axway CFT | IBM Connect:Direct |
+| | Vectis | Axway CFT | IBM Connect:Direct |
 |---|---|---|---|
-| **Prix entrée** | 299€/mois | ~2 000€/mois | ~1 500€/mois |
+| **Prix entrée** | Gratuit (Community) / 199€ (Pro) | ~2 000€/mois | ~1 500€/mois |
 | **Licence** | SaaS | Perpétuelle + maintenance | Perpétuelle + maintenance |
 | **Déploiement** | 24h | Semaines | Semaines |
 | **Interface** | Web moderne | Legacy | Ligne de commande |
