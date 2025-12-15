@@ -14,11 +14,15 @@ spring:
     password:
   
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
     show-sql: false
     open-in-view: false
+    properties:
+      jakarta:
+        persistence:
+          jdbc:
+            url: jdbc:h2:file:./data/vectis-client;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
 
   # H2 Console
   h2:
