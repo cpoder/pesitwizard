@@ -7,9 +7,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
-import java.util.Date;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +37,7 @@ import com.vectis.client.repository.TransferHistoryRepository;
 import com.vectis.client.transport.TlsTransportChannel;
 import com.vectis.connector.ConnectorException;
 import com.vectis.connector.StorageConnector;
+import com.vectis.fpdu.CreateMessageBuilder;
 import com.vectis.fpdu.Fpdu;
 import com.vectis.fpdu.FpduType;
 import com.vectis.fpdu.ParameterGroupIdentifier;
@@ -472,43 +471,16 @@ public class TransferService {
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
                 int serverConnectionId = aconnect.getIdSrc();
 
-                // CREATE - Build required PGIs
-                // PGI 9 (File Identification) - PI_11_TYPE_FICHIER, PI_12_NOM_FICHIER
-                ParameterValue pgi9 = new ParameterValue(
-                                ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                                new ParameterValue(PI_11_TYPE_FICHIER, fileType),
-                                new ParameterValue(PI_12_NOM_FICHIER, virtualFile));
-
-                // PGI 30 (Logical Attributes) - PI_31_FORMAT_ARTICLE + PI_32_LONG_ARTICLE
-                ParameterValue pgi30 = new ParameterValue(
-                                ParameterGroupIdentifier.PGI_30_ATTR_LOGIQUES,
-                                new ParameterValue(PI_31_FORMAT_ARTICLE, 0x80), // 0x80 = variable format
-                                new ParameterValue(PI_32_LONG_ARTICLE, recordLength));
-
-                // PGI 40 (Physical Attributes) - PI_41_UNITE_RESERVATION +
-                // PI_42_MAX_RESERVATION
-                ParameterValue pgi40 = new ParameterValue(
-                                ParameterGroupIdentifier.PGI_40_ATTR_PHYSIQUES,
-                                new ParameterValue(PI_41_UNITE_RESERVATION, 0), // 0 = Koctets
-                                new ParameterValue(PI_42_MAX_RESERVATION, 0)); // 0 = no limit
-
-                // PGI 50 (Historical Attributes) - PI_51_DATE_CREATION (format: yyMMddHHmmss)
-                String creationDate = new SimpleDateFormat("yyMMddHHmmss").format(new Date());
-                ParameterValue pgi50 = new ParameterValue(
-                                ParameterGroupIdentifier.PGI_50_ATTR_HISTORIQUES,
-                                new ParameterValue(PI_51_DATE_CREATION, creationDate));
-
-                Fpdu createFpdu = new Fpdu(FpduType.CREATE)
-                                .withIdDst(serverConnectionId)
-                                .withParameter(pgi9)
-                                .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, 1))
-                                .withParameter(new ParameterValue(PI_15_TRANSFERT_RELANCE, 0)) // 0 = not a restart
-                                .withParameter(new ParameterValue(PI_16_CODE_DONNEES, 2)) // 0=ASCII, 1=EBCDIC, 2=binary
-                                .withParameter(new ParameterValue(PI_17_PRIORITE, priority))
-                                .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, chunkSize))
-                                .withParameter(pgi30)
-                                .withParameter(pgi40)
-                                .withParameter(pgi50);
+                // CREATE - use CreateMessageBuilder for correct structure
+                Fpdu createFpdu = new CreateMessageBuilder()
+                                .filename(virtualFile)
+                                .transferId(1)
+                                .priority(priority)
+                                .dataCode(2) // 0=ASCII, 1=EBCDIC, 2=binary
+                                .variableFormat()
+                                .recordLength(recordLength)
+                                .maxEntitySize(chunkSize)
+                                .build(serverConnectionId);
 
                 session.sendFpduWithAck(createFpdu);
 
