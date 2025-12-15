@@ -36,11 +36,6 @@ public class PesitServerDto {
 
     private String description;
 
-    @NotBlank(message = "Client ID is required")
-    private String clientId;
-
-    private String password;
-
     @Builder.Default
     private boolean tlsEnabled = false;
 

@@ -251,11 +251,14 @@ public class TransferService {
 
                         try (PesitSession session = new PesitSession(channel, false)) {
                                 switch (request.getMode()) {
-                                        case FPDU -> executeMessageFpdu(session, server, request.getMessage());
-                                        case PI99 -> executeMessagePi99(session, server, request.getMessage(),
+                                        case FPDU -> executeMessageFpdu(session, server, request.getPartnerId(),
+                                                        request.getMessage());
+                                        case PI99 -> executeMessagePi99(session, server, request.getPartnerId(),
+                                                        request.getMessage(),
                                                         request.isUsePi91());
                                         case FILE ->
-                                                executeMessageAsFile(session, server, request.getMessage(),
+                                                executeMessageAsFile(session, server, request.getPartnerId(),
+                                                                request.getMessage(),
                                                                 request.getMessageName());
                                 }
                         }
@@ -460,8 +463,8 @@ public class TransferService {
                                 .withParameter(new ParameterValue(PI_06_VERSION, 2))
                                 .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
 
-                if (server.getPassword() != null && !server.getPassword().isEmpty()) {
-                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, server.getPassword()));
+                if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, request.getPassword()));
                 }
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
@@ -597,8 +600,8 @@ public class TransferService {
                                 .withParameter(new ParameterValue(PI_06_VERSION, 2))
                                 .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 1)); // Read access
 
-                if (server.getPassword() != null && !server.getPassword().isEmpty()) {
-                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, server.getPassword()));
+                if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, request.getPassword()));
                 }
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
@@ -722,8 +725,8 @@ public class TransferService {
                                 .withParameter(new ParameterValue(PI_06_VERSION, 2))
                                 .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 1));
 
-                if (server.getPassword() != null && !server.getPassword().isEmpty()) {
-                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, server.getPassword()));
+                if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+                        connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, request.getPassword()));
                 }
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
@@ -797,14 +800,14 @@ public class TransferService {
                 return totalBytes;
         }
 
-        private void executeMessageFpdu(PesitSession session, PesitServer server, String message)
+        private void executeMessageFpdu(PesitSession session, PesitServer server, String partnerId, String message)
                         throws IOException, InterruptedException {
                 int connectionId = 1;
 
                 // CONNECT
                 Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
                                 .withIdSrc(connectionId)
-                                .withParameter(new ParameterValue(PI_03_DEMANDEUR, server.getClientId()))
+                                .withParameter(new ParameterValue(PI_03_DEMANDEUR, partnerId))
                                 .withParameter(new ParameterValue(PI_04_SERVEUR, server.getServerId()))
                                 .withParameter(new ParameterValue(PI_06_VERSION, 2))
                                 .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
@@ -834,13 +837,13 @@ public class TransferService {
                 session.sendFpduWithAck(releaseFpdu);
         }
 
-        private void executeMessagePi99(PesitSession session, PesitServer server,
+        private void executeMessagePi99(PesitSession session, PesitServer server, String partnerId,
                         String message, boolean usePi91) throws IOException, InterruptedException {
                 int connectionId = 1;
 
                 Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
                                 .withIdSrc(connectionId)
-                                .withParameter(new ParameterValue(PI_03_DEMANDEUR, server.getClientId()))
+                                .withParameter(new ParameterValue(PI_03_DEMANDEUR, partnerId))
                                 .withParameter(new ParameterValue(PI_04_SERVEUR, server.getServerId()))
                                 .withParameter(new ParameterValue(PI_06_VERSION, 2))
                                 .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
@@ -861,13 +864,14 @@ public class TransferService {
                 session.sendFpduWithAck(releaseFpdu);
         }
 
-        private void executeMessageAsFile(PesitSession session, PesitServer server,
+        private void executeMessageAsFile(PesitSession session, PesitServer server, String partnerId,
                         String message, String messageName) throws IOException, InterruptedException {
                 byte[] data = message.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 String filename = messageName != null ? messageName : "message_" + System.currentTimeMillis() + ".txt";
 
                 TransferConfig config = createDefaultConfig();
                 TransferRequest request = TransferRequest.builder()
+                                .partnerId(partnerId)
                                 .remoteFilename(filename)
                                 .build();
                 executeSendTransfer(session, server, request, data, config);

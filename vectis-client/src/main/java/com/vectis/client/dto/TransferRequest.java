@@ -23,6 +23,9 @@ public class TransferRequest {
     @NotBlank(message = "Partner ID is required")
     private String partnerId;
 
+    /** Password for authentication (PI_05 CONTROLE_ACCES) - optional */
+    private String password;
+
     /**
      * Source connection ID for reading the file (null = local filesystem).
      * For SEND: where to read the file from.

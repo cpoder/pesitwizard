@@ -138,8 +138,6 @@ public class PesitServerService {
                 .port(dto.getPort())
                 .serverId(dto.getServerId())
                 .description(dto.getDescription())
-                .clientId(dto.getClientId())
-                .password(dto.getPassword()) // TODO: encrypt
                 .tlsEnabled(dto.isTlsEnabled())
                 .truststorePath(dto.getTruststorePath())
                 .truststorePassword(dto.getTruststorePassword()) // TODO: encrypt
@@ -158,10 +156,6 @@ public class PesitServerService {
         server.setPort(dto.getPort());
         server.setServerId(dto.getServerId());
         server.setDescription(dto.getDescription());
-        server.setClientId(dto.getClientId());
-        if (dto.getPassword() != null) {
-            server.setPassword(dto.getPassword()); // TODO: encrypt
-        }
         server.setTlsEnabled(dto.isTlsEnabled());
         server.setTruststorePath(dto.getTruststorePath());
         if (dto.getTruststorePassword() != null) {
@@ -185,8 +179,6 @@ public class PesitServerService {
                 .port(server.getPort())
                 .serverId(server.getServerId())
                 .description(server.getDescription())
-                .clientId(server.getClientId())
-                // Don't expose password in DTO
                 .tlsEnabled(server.isTlsEnabled())
                 .truststorePath(server.getTruststorePath())
                 // Don't expose truststore password

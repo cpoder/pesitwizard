@@ -20,6 +20,10 @@ public class MessageRequest {
     @NotBlank(message = "Server is required")
     private String server;
 
+    /** Partner ID (PI_03 DEMANDEUR) - identifies the client */
+    @NotBlank(message = "Partner ID is required")
+    private String partnerId;
+
     /** Message content */
     @NotBlank(message = "Message is required")
     @Size(max = 4096, message = "Message must not exceed 4096 characters")

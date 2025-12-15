@@ -51,13 +51,6 @@ public class PesitServer {
 
     private String description;
 
-    /** Client identifier to use when connecting */
-    @NotBlank
-    private String clientId;
-
-    /** Password for authentication (encrypted) */
-    private String password;
-
     /** Enable TLS/SSL */
     @Builder.Default
     private boolean tlsEnabled = false;
