@@ -27,6 +27,8 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "kubernetes"
+            - name: SERVER_PORT
+              value: "8080"
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
