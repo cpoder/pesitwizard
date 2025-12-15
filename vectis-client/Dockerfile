@@ -8,7 +8,7 @@ RUN addgroup -g 1000 pesit && \
 WORKDIR /app
 
 # Copy the pre-built JAR
-COPY target/pesit-client-*.jar app.jar
+COPY target/vectis-client-*.jar app.jar
 
 # Create directories for data
 RUN mkdir -p /data && \
