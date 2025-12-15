@@ -470,7 +470,6 @@ public class TransferService {
                                 .filename(virtualFile)
                                 .transferId(transferId)
                                 .priority(priority)
-                                .dataCode(2) // 0=ASCII, 1=EBCDIC, 2=binary
                                 .variableFormat()
                                 .recordLength(recordLength)
                                 .maxEntitySize(chunkSize)

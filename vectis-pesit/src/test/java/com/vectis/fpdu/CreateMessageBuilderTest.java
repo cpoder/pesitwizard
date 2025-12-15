@@ -1,9 +1,7 @@
 package com.vectis.fpdu;
 
-import static com.vectis.fpdu.ParameterGroupIdentifier.PGI_09_ID_FICHIER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.vectis.fpdu.ParameterGroupIdentifier.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.Date;
@@ -137,20 +135,6 @@ public class CreateMessageBuilderTest {
     }
 
     @Test
-    @DisplayName("Verify CREATE FPDU with restart flag")
-    void testWithRestartFlag() throws IOException {
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .restart(true);
-
-        Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
-        byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
-        assertNotNull(fpdu);
-        // PI 15 (0x15) should be present with value 1
-        String fpduHex = bytesToHex(fpduBytes);
-        assertTrue(fpduHex.contains("15"), "FPDU should contain PI 15 (Restart)");
-    }
-
-    @Test
     @DisplayName("Verify CREATE FPDU with variable format")
     void testWithVariableFormat() throws IOException {
         CreateMessageBuilder builder = new CreateMessageBuilder()
@@ -209,20 +193,6 @@ public class CreateMessageBuilderTest {
 
         assertNotNull(fpdu);
         assertTrue(fpduBytes.length > 0);
-    }
-
-    @Test
-    @DisplayName("Verify data code parameter")
-    void testDataCodeParameter() throws IOException {
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .dataCode('F'); // Fixed format
-
-        Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
-        byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
-
-        // PI 16 (0x16) should be present
-        String fpduHex = bytesToHex(fpduBytes);
-        assertTrue(fpduHex.contains("10"), "FPDU should contain PI 16 (Data Code)");
     }
 
     @Test

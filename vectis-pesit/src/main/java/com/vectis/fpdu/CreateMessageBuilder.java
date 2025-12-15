@@ -16,8 +16,6 @@ public class CreateMessageBuilder {
     private String filename = "FILE";
     private int fileType = 0; // 0 for Hors-SIT profile
     private int transferId = 1;
-    private boolean restart = false;
-    private int dataCode = 2; // 0=ASCII, 1=EBCDIC, 2=binary
     private int priority = 0; // 0=normal
     private int maxEntitySize = 4096;
     private int articleFormat = 0x80; // 0x80=variable, 0x00=fixed
@@ -33,16 +31,6 @@ public class CreateMessageBuilder {
 
     public CreateMessageBuilder transferId(int transferId) {
         this.transferId = transferId;
-        return this;
-    }
-
-    public CreateMessageBuilder restart(boolean restart) {
-        this.restart = restart;
-        return this;
-    }
-
-    public CreateMessageBuilder dataCode(int dataCode) {
-        this.dataCode = dataCode;
         return this;
     }
 
@@ -107,22 +95,12 @@ public class CreateMessageBuilder {
         ParameterValue pgi50 = new ParameterValue(PGI_50_ATTR_HISTORIQUES,
                 new ParameterValue(PI_51_DATE_CREATION, creationDate));
         // Individual PIs (not wrapped in PGI)
-        // PI 13: Transfer Identifier (mandatory) - 3 bytes
         ParameterValue pi13 = new ParameterValue(PI_13_ID_TRANSFERT, transferId);
-
-        // PI 15: Transfer Restarted (optional)
-        ParameterValue pi15 = new ParameterValue(PI_15_TRANSFERT_RELANCE, restart ? 1 : 0);
-
-        // PI 16: Data Code (optional)
-        ParameterValue pi16 = new ParameterValue(PI_16_CODE_DONNEES, dataCode);
-
-        // PI 17: Transfer Priority (mandatory)
         ParameterValue pi17 = new ParameterValue(PI_17_PRIORITE, priority);
-
-        // PI 25: Max Entity Size (mandatory) - 2 bytes
         ParameterValue pi25 = new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize);
 
-        return new Fpdu(FpduType.CREATE).withParameter(pgi9).withParameter(pi13).withParameter(pi15).withParameter(pi16)
+        // Note: PI_15 and PI_16 not included - not in CREATE parameter requirements
+        return new Fpdu(FpduType.CREATE).withParameter(pgi9).withParameter(pi13)
                 .withParameter(pi17).withParameter(pi25).withParameter(pgi30).withParameter(pgi40).withParameter(pgi50)
                 .withIdDst(serverConnectionId);
     }
