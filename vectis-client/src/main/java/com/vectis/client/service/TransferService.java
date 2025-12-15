@@ -494,7 +494,6 @@ public class TransferService {
 
                 Fpdu createFpdu = new Fpdu(FpduType.CREATE)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(pgi9)
                                 .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, 1))
                                 .withParameter(new ParameterValue(PI_17_PRIORITE, priority))
@@ -507,14 +506,12 @@ public class TransferService {
 
                 // OPEN (ORF) - open file for writing
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
-                                .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId);
+                                .withIdDst(serverConnectionId);
                 session.sendFpduWithAck(openFpdu);
 
                 // WRITE (signals start of data transfer, no data payload)
                 Fpdu writeFpdu = new Fpdu(FpduType.WRITE)
-                                .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId);
+                                .withIdDst(serverConnectionId);
                 session.sendFpduWithAck(writeFpdu);
 
                 // DTF - send data in chunks using configured chunk size
@@ -531,8 +528,7 @@ public class TransferService {
                         System.arraycopy(data, offset, chunk, 0, currentChunkSize);
 
                         Fpdu dtfFpdu = new Fpdu(FpduType.DTF)
-                                        .withIdDst(serverConnectionId)
-                                        .withIdSrc(connectionId);
+                                        .withIdDst(serverConnectionId);
                         session.sendFpduWithData(dtfFpdu, chunk);
                         offset += currentChunkSize;
                         chunkCount++;
@@ -543,7 +539,6 @@ public class TransferService {
                                 syncPointNumber++;
                                 Fpdu synFpdu = new Fpdu(FpduType.SYN)
                                                 .withIdDst(serverConnectionId)
-                                                .withIdSrc(connectionId)
                                                 .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncPointNumber));
                                 session.sendFpduWithAck(synFpdu);
                                 log.info("Sync point {} acknowledged at {} bytes", syncPointNumber, offset);
@@ -553,31 +548,27 @@ public class TransferService {
                 // DTF_END - signal end of data transfer (no ACK expected)
                 Fpdu dtfEndFpdu = new Fpdu(FpduType.DTF_END)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
                 session.sendFpdu(dtfEndFpdu);
 
                 // TRANS_END
                 Fpdu transendFpdu = new Fpdu(FpduType.TRANS_END)
-                                .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId);
+                                .withIdDst(serverConnectionId);
                 session.sendFpduWithAck(transendFpdu);
 
                 // CLOSE (CRF) - close file
                 Fpdu closeFpdu = new Fpdu(FpduType.CLOSE)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
                 session.sendFpduWithAck(closeFpdu);
 
                 // DESELECT
                 Fpdu deselectFpdu = new Fpdu(FpduType.DESELECT)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
                 session.sendFpduWithAck(deselectFpdu);
 
-                // RELEASE
+                // RELEASE (session-level FPDU - keeps idSrc)
                 Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
                                 .withIdDst(serverConnectionId)
                                 .withIdSrc(connectionId)
@@ -617,7 +608,6 @@ public class TransferService {
 
                 Fpdu selectFpdu = new Fpdu(FpduType.SELECT)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(pgi9)
                                 .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, 1))
                                 .withParameter(new ParameterValue(PI_17_PRIORITE, config.getPriority()))
@@ -626,16 +616,14 @@ public class TransferService {
                 session.sendFpduWithAck(selectFpdu);
                 log.info("File selected: {}", remoteFilename);
 
-                // OPEN - open file for reading
+                // OPEN - open file for reading (file-level - no idSrc)
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
-                                .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId);
+                                .withIdDst(serverConnectionId);
                 session.sendFpduWithAck(openFpdu);
 
-                // READ - request file data
+                // READ - request file data (file-level - no idSrc)
                 Fpdu readFpdu = new Fpdu(FpduType.READ)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_18_POINT_RELANCE, 0));
                 session.sendFpduWithAck(readFpdu);
                 log.info("Read request sent, receiving data...");
@@ -679,27 +667,24 @@ public class TransferService {
                 }
                 log.info("File data received: {} bytes in {} chunks", totalBytes, chunkCount);
 
-                // TRANS_END
+                // TRANS_END (file-level - no idSrc)
                 Fpdu transendFpdu = new Fpdu(FpduType.TRANS_END)
-                                .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId);
+                                .withIdDst(serverConnectionId);
                 session.sendFpduWithAck(transendFpdu);
 
-                // CLOSE
+                // CLOSE (file-level - no idSrc)
                 Fpdu closeFpdu = new Fpdu(FpduType.CLOSE)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
                 session.sendFpduWithAck(closeFpdu);
 
-                // DESELECT
+                // DESELECT (file-level - no idSrc)
                 Fpdu deselectFpdu = new Fpdu(FpduType.DESELECT)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
                 session.sendFpduWithAck(deselectFpdu);
 
-                // RELEASE
+                // RELEASE (session-level - keeps idSrc)
                 Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
                                 .withIdDst(serverConnectionId)
                                 .withIdSrc(connectionId)
@@ -741,20 +726,18 @@ public class TransferService {
 
                 Fpdu selectFpdu = new Fpdu(FpduType.SELECT)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(pgi9)
                                 .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, 1))
                                 .withParameter(new ParameterValue(PI_17_PRIORITE, config.getPriority()))
                                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, chunkSize));
                 session.sendFpduWithAck(selectFpdu);
 
-                // OPEN
-                session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnectionId).withIdSrc(connectionId));
+                // OPEN (file-level - no idSrc)
+                session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnectionId));
 
-                // READ
+                // READ (file-level - no idSrc)
                 session.sendFpduWithAck(new Fpdu(FpduType.READ)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_18_POINT_RELANCE, 0)));
 
                 // Receive DTF chunks and write to connector
@@ -786,13 +769,13 @@ public class TransferService {
                 }
                 log.info("Wrote {} bytes to connector in {} chunks", totalBytes, chunkCount);
 
-                // Cleanup: TRANS_END, CLOSE, DESELECT, RELEASE
+                // Cleanup: TRANS_END, CLOSE, DESELECT (file-level - no idSrc), RELEASE
+                // (session-level - with idSrc)
                 session.sendFpduWithAck(
-                                new Fpdu(FpduType.TRANS_END).withIdDst(serverConnectionId).withIdSrc(connectionId));
-                session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnectionId).withIdSrc(connectionId)
+                                new Fpdu(FpduType.TRANS_END).withIdDst(serverConnectionId));
+                session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 })));
                 session.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 })));
                 session.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(serverConnectionId).withIdSrc(connectionId)
                                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 })));
@@ -815,21 +798,20 @@ public class TransferService {
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
                 int serverConnectionId = aconnect.getIdSrc();
 
-                // MSG
+                // MSG (file-level - no idSrc)
                 ParameterValue pgi9 = new ParameterValue(
                                 ParameterGroupIdentifier.PGI_09_ID_FICHIER,
                                 new ParameterValue(PI_12_NOM_FICHIER, "MESSAGE"));
 
                 Fpdu msgFpdu = new Fpdu(FpduType.MSG)
                                 .withIdDst(serverConnectionId)
-                                .withIdSrc(connectionId)
                                 .withParameter(pgi9)
                                 .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, 1))
                                 .withParameter(new ParameterValue(PI_91_MESSAGE, message));
 
                 session.sendFpduWithAck(msgFpdu);
 
-                // RELEASE
+                // RELEASE (session-level - keeps idSrc)
                 Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
                                 .withIdDst(serverConnectionId)
                                 .withIdSrc(connectionId)
