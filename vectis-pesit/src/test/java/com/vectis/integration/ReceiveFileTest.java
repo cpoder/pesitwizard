@@ -64,7 +64,7 @@ public class ReceiveFileTest {
 
             // Step 2: SELECT - request existing file
             System.out.println("\nStep 2: SELECT");
-            String filename = "FILE";
+            String filename = System.getProperty("pesit.test.file", "FOUT");
 
             SelectMessageBuilder selectBuilder = new SelectMessageBuilder()
                     .filename(filename)
@@ -80,9 +80,11 @@ public class ReceiveFileTest {
             assertEquals(FpduType.ACK_OPEN, ackOpen.getFpduType(), "Expected ACK_OPEN");
             System.out.println("  ✓ File opened");
 
-            // Step 4: READ - request data
+            // Step 4: READ - request data (PI_18 restart point = 0 for start)
             System.out.println("\nStep 4: READ");
-            Fpdu ackRead = session.sendFpduWithAck(new Fpdu(FpduType.READ).withIdDst(serverConnectionId));
+            Fpdu ackRead = session.sendFpduWithAck(new Fpdu(FpduType.READ)
+                    .withIdDst(serverConnectionId)
+                    .withParameter(new ParameterValue(PI_18_POINT_RELANCE, 0)));
             assertEquals(FpduType.ACK_READ, ackRead.getFpduType(), "Expected ACK_READ");
             System.out.println("  ✓ Read initiated");
 
