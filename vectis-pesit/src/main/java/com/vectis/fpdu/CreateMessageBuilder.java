@@ -1,21 +1,7 @@
 package com.vectis.fpdu;
 
-import static com.vectis.fpdu.ParameterGroupIdentifier.PGI_09_ID_FICHIER;
-import static com.vectis.fpdu.ParameterGroupIdentifier.PGI_30_ATTR_LOGIQUES;
-import static com.vectis.fpdu.ParameterGroupIdentifier.PGI_40_ATTR_PHYSIQUES;
-import static com.vectis.fpdu.ParameterGroupIdentifier.PGI_50_ATTR_HISTORIQUES;
-import static com.vectis.fpdu.ParameterIdentifier.PI_11_TYPE_FICHIER;
-import static com.vectis.fpdu.ParameterIdentifier.PI_12_NOM_FICHIER;
-import static com.vectis.fpdu.ParameterIdentifier.PI_13_ID_TRANSFERT;
-import static com.vectis.fpdu.ParameterIdentifier.PI_15_TRANSFERT_RELANCE;
-import static com.vectis.fpdu.ParameterIdentifier.PI_16_CODE_DONNEES;
-import static com.vectis.fpdu.ParameterIdentifier.PI_17_PRIORITE;
-import static com.vectis.fpdu.ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE;
-import static com.vectis.fpdu.ParameterIdentifier.PI_31_FORMAT_ARTICLE;
-import static com.vectis.fpdu.ParameterIdentifier.PI_32_LONG_ARTICLE;
-import static com.vectis.fpdu.ParameterIdentifier.PI_41_UNITE_RESERVATION;
-import static com.vectis.fpdu.ParameterIdentifier.PI_42_MAX_RESERVATION;
-import static com.vectis.fpdu.ParameterIdentifier.PI_51_DATE_CREATION;
+import static com.vectis.fpdu.ParameterGroupIdentifier.*;
+import static com.vectis.fpdu.ParameterIdentifier.*;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -31,7 +17,7 @@ public class CreateMessageBuilder {
     private int fileType = 0; // 0 for Hors-SIT profile
     private int transferId = 1;
     private boolean restart = false;
-    private char dataCode = 'V'; // V=variable, F=fixed
+    private int dataCode = 2; // 0=ASCII, 1=EBCDIC, 2=binary
     private int priority = 0; // 0=normal
     private int maxEntitySize = 4096;
     private int articleFormat = 0x80; // 0x80=variable, 0x00=fixed
@@ -55,7 +41,7 @@ public class CreateMessageBuilder {
         return this;
     }
 
-    public CreateMessageBuilder dataCode(char dataCode) {
+    public CreateMessageBuilder dataCode(int dataCode) {
         this.dataCode = dataCode;
         return this;
     }
