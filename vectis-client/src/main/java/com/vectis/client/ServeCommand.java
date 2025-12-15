@@ -17,8 +17,8 @@ import picocli.CommandLine.Option;
 @Command(name = "serve", description = "Run as REST API server", mixinStandardHelpOptions = true)
 public class ServeCommand implements Callable<Integer> {
 
-    @Option(names = { "-p", "--port" }, description = "Server port (default: 8081)")
-    private Integer port = 8081;
+    @Option(names = { "-p", "--port" }, description = "Server port (default: 8080)")
+    private Integer port = 8080;
 
     private final CountDownLatch shutdownLatch = new CountDownLatch(1);
 
