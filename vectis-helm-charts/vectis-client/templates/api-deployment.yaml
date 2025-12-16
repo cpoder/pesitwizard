@@ -21,7 +21,7 @@ spec:
       initContainers:
         - name: init-permissions
           image: busybox:latest
-          command: ['sh', '-c', 'chown -R 1000:1000 /app/data /app/files && chmod 755 /app/data /app/files']
+          command: ['sh', '-c', 'chown -R 1000:1000 /app/data && chmod 755 /app/data && chmod 777 /app/files']
           volumeMounts:
             - name: store
               mountPath: /app/data

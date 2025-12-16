@@ -289,13 +289,16 @@ configure_storage() {
     DATA_PATH="${DATA_PATH/#\~/$HOME}"
     
     # Create directories if they don't exist
-    for path in "$STORE_PATH" "$DATA_PATH"; do
-        if [ ! -d "$path" ]; then
-            echo -e "${YELLOW}Creating directory: $path${NC}"
-            mkdir -p "$path"
-            chmod 755 "$path"
-        fi
-    done
+    if [ ! -d "$STORE_PATH" ]; then
+        echo -e "${YELLOW}Creating directory: $STORE_PATH${NC}"
+        mkdir -p "$STORE_PATH"
+        chmod 755 "$STORE_PATH"
+    fi
+    if [ ! -d "$DATA_PATH" ]; then
+        echo -e "${YELLOW}Creating directory: $DATA_PATH${NC}"
+        mkdir -p "$DATA_PATH"
+        chmod 777 "$DATA_PATH"  # Allow user + app read/write
+    fi
     
     echo -e "${GREEN}✓ Store path: $STORE_PATH${NC}"
     echo -e "${GREEN}✓ Data path: $DATA_PATH${NC}"
