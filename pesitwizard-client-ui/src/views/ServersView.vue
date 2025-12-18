@@ -11,7 +11,7 @@ import {
 } from 'lucide-vue-next'
 import api from '@/api'
 
-interface VectisServer {
+interface PesitServer {
   id?: string
   name: string
   host: string
@@ -25,14 +25,14 @@ interface VectisServer {
   defaultServer: boolean
 }
 
-const servers = ref<VectisServer[]>([])
+const servers = ref<PesitServer[]>([])
 const loading = ref(true)
 const showModal = ref(false)
-const editingServer = ref<VectisServer | null>(null)
+const editingServer = ref<PesitServer | null>(null)
 const saving = ref(false)
 const error = ref('')
 
-const defaultForm: VectisServer = {
+const defaultForm: PesitServer = {
   name: '',
   host: 'localhost',
   port: 5000,
@@ -45,7 +45,7 @@ const defaultForm: VectisServer = {
   defaultServer: false
 }
 
-const form = ref<VectisServer>({ ...defaultForm })
+const form = ref<PesitServer>({ ...defaultForm })
 
 onMounted(() => loadServers())
 
@@ -68,7 +68,7 @@ function openAddModal() {
   showModal.value = true
 }
 
-function openEditModal(server: VectisServer) {
+function openEditModal(server: PesitServer) {
   editingServer.value = server
   form.value = { ...server }
   error.value = ''
@@ -93,7 +93,7 @@ async function saveServer() {
   }
 }
 
-async function deleteServer(server: VectisServer) {
+async function deleteServer(server: PesitServer) {
   if (!confirm(`Delete server "${server.name}"?`)) return
   try {
     await api.delete(`/servers/${server.id}`)
@@ -103,7 +103,7 @@ async function deleteServer(server: VectisServer) {
   }
 }
 
-async function setDefault(server: VectisServer) {
+async function setDefault(server: PesitServer) {
   try {
     await api.post(`/servers/${server.id}/default`)
     await loadServers()
@@ -116,7 +116,7 @@ async function setDefault(server: VectisServer) {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Vectis Servers</h1>
+      <h1 class="text-2xl font-bold text-gray-900">PeSIT Servers</h1>
       <div class="flex gap-3">
         <button @click="loadServers" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
@@ -136,7 +136,7 @@ async function setDefault(server: VectisServer) {
     <div v-else-if="servers.length === 0" class="card text-center py-12">
       <Server class="h-16 w-16 mx-auto mb-4 text-gray-400" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No servers configured</h3>
-      <p class="text-gray-500 mb-4">Add a Vectis server to start transferring files</p>
+      <p class="text-gray-500 mb-4">Add a PeSIT server to start transferring files</p>
       <button @click="openAddModal" class="btn btn-primary">Add Server</button>
     </div>
 
@@ -229,7 +229,7 @@ async function setDefault(server: VectisServer) {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Server ID *</label>
               <input v-model="form.serverId" type="text" class="input" required placeholder="PESIT-SERVER" />
-              <p class="text-xs text-gray-500 mt-1">The Vectis server identifier to connect to</p>
+              <p class="text-xs text-gray-500 mt-1">The PeSIT server identifier to connect to</p>
             </div>
 
             <div>

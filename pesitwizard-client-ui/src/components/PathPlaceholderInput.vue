@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const inputRef = ref<HTMLInputElement | null>(null)
 
 // Available placeholders with descriptions
-// Note: Vectis only transmits virtual file IDs, not physical filenames
+// Note: PeSIT only transmits virtual file IDs, not physical filenames
 const placeholders = computed(() => {
   const common = [
     { tag: '${partner}', label: 'Partner', desc: 'Partner ID' },

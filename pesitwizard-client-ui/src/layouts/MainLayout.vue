@@ -48,7 +48,7 @@ function isActive(item: { href: string; exact: boolean }) {
       ]"
     >
       <div class="flex h-16 items-center justify-between px-6 border-b border-gray-800">
-        <span class="text-xl font-bold text-white">Vectis Client</span>
+        <span class="text-xl font-bold text-white">PeSIT Wizard Client</span>
         <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
           <X class="h-6 w-6" />
         </button>
@@ -83,7 +83,7 @@ function isActive(item: { href: string; exact: boolean }) {
           >
             <Menu class="h-6 w-6" />
           </button>
-          <h1 class="text-lg font-semibold text-gray-900">Vectis File Transfer Client</h1>
+          <h1 class="text-lg font-semibold text-gray-900">PeSIT Wizard Client</h1>
         </div>
       </header>
 

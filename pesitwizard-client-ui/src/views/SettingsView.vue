@@ -128,9 +128,9 @@ async function saveOtlpSettings() {
         </div>
 
         <div class="space-y-2 text-sm">
-          <p><strong>Vectis Client UI</strong></p>
+          <p><strong>PeSIT Wizard Client</strong></p>
           <p class="text-gray-600">Version: 1.0.0</p>
-          <p class="text-gray-600">A web interface for Vectis file transfers.</p>
+          <p class="text-gray-600">A web interface for PeSIT file transfers.</p>
         </div>
       </div>
     </div>
