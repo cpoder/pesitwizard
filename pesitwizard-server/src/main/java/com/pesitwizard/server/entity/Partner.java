@@ -107,7 +107,8 @@ public class Partner {
     }
 
     /**
-     * Check if partner can access a specific file
+     * Check if partner can access a specific file.
+     * Patterns use glob-style wildcards: * matches any characters.
      */
     public boolean canAccessFile(String filename) {
         if (allowedFiles == null || allowedFiles.isEmpty()) {
@@ -116,7 +117,11 @@ public class Partner {
         String[] patterns = allowedFiles.split(",");
         for (String pattern : patterns) {
             pattern = pattern.trim();
-            if (pattern.equals(filename) || filename.matches(pattern.replace("*", ".*"))) {
+            if (pattern.isEmpty())
+                continue;
+            // Convert glob pattern to regex: escape dots, * -> .*
+            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+            if (pattern.equals(filename) || filename.matches(regex)) {
                 return true;
             }
         }

@@ -61,11 +61,11 @@ public class PesitServerConfig {
 
     @Column
     @Builder.Default
-    private String receiveDirectory = "./received";
+    private String receiveDirectory = "/data/received";
 
     @Column
     @Builder.Default
-    private String sendDirectory = "./send";
+    private String sendDirectory = "/data/send";
 
     @Column
     @Builder.Default

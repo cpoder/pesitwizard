@@ -38,10 +38,10 @@ public class PesitServerProperties {
     private int readTimeout = 60000;
 
     /** Default directory for received files (used if no logical file match) */
-    private String receiveDirectory = "./received";
+    private String receiveDirectory = "/data/received";
 
     /** Default directory for files to send (used if no logical file match) */
-    private String sendDirectory = "./send";
+    private String sendDirectory = "/data/send";
 
     /** Maximum entity size (PI 25) */
     private int maxEntitySize = 4096;

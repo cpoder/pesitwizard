@@ -480,7 +480,19 @@ public class PesitSessionHandler {
                     + "_" + System.currentTimeMillis();
         }
 
-        Files.createDirectories(receiveDir);
+        try {
+            Files.createDirectories(receiveDir);
+        } catch (java.nio.file.AccessDeniedException e) {
+            log.error("[{}] Access denied to receive directory '{}': {}",
+                    ctx.getSessionId(), receiveDir, e.getMessage());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_211,
+                    "Access denied to receive directory: " + receiveDir);
+        } catch (java.io.IOException e) {
+            log.error("[{}] Cannot create receive directory '{}': {}",
+                    ctx.getSessionId(), receiveDir, e.getMessage());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_211,
+                    "Cannot create receive directory: " + e.getMessage());
+        }
         transfer.setLocalPath(receiveDir.resolve(localFilename));
 
         log.info("[{}] CREATE: file='{}', transferId={}, priority={}, localPath={}",
@@ -562,13 +574,20 @@ public class PesitSessionHandler {
             filePath = Paths.get(properties.getSendDirectory()).resolve(transfer.getFilename());
         }
 
-        // Check if file exists for sending
+        // Check if file exists and is readable
         if (!Files.exists(filePath)) {
             log.warn("[{}] SELECT: file '{}' not found at {}",
                     ctx.getSessionId(), transfer.getFilename(), filePath);
             ctx.endTransfer();
             return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_205,
                     "File '" + transfer.getFilename() + "' not found");
+        }
+        if (!Files.isReadable(filePath)) {
+            log.error("[{}] SELECT: access denied to file '{}' at {}",
+                    ctx.getSessionId(), transfer.getFilename(), filePath);
+            ctx.endTransfer();
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_211,
+                    "Access denied to file: " + transfer.getFilename());
         }
 
         transfer.setLocalPath(filePath);
