@@ -66,10 +66,9 @@ jobs:
           update-comment: true
 
   # Build Docker images (only on main branch)
-  # Disabled until ghcr.io permissions are configured
   build-docker:
     needs: build-and-test
-    if: false && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     
     steps:
@@ -126,10 +125,9 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Deploy coverage report to GitHub Pages
-  # Disabled until GitHub Pages is enabled in repository settings
   deploy-coverage:
     needs: build-and-test
-    if: false && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       pages: write
