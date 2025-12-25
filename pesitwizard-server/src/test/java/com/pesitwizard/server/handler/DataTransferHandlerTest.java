@@ -205,4 +205,97 @@ class DataTransferHandlerTest {
         assertNotNull(response);
         assertEquals(FpduType.ACK_TRANS_END, response.getFpduType());
     }
+
+    @Test
+    @DisplayName("handleTDE02B should handle DTFDA correctly")
+    void handleTDE02BShouldHandleDtfda() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setRecordsTransferred(0);
+
+        Fpdu fpdu = new Fpdu(FpduType.DTFDA);
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNull(response);
+        assertEquals(1, transfer.getRecordsTransferred());
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should handle DTFMA correctly")
+    void handleTDE02BShouldHandleDtfma() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setRecordsTransferred(0);
+
+        Fpdu fpdu = new Fpdu(FpduType.DTFMA);
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNull(response);
+        assertEquals(1, transfer.getRecordsTransferred());
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should handle DTFFA correctly")
+    void handleTDE02BShouldHandleDtffa() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setRecordsTransferred(0);
+
+        Fpdu fpdu = new Fpdu(FpduType.DTFFA);
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNull(response);
+        assertEquals(1, transfer.getRecordsTransferred());
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should handle SYN without sync point number")
+    void handleTDE02BShouldHandleSynWithoutNumber() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setBytesTransferred(500);
+
+        Fpdu fpdu = new Fpdu(FpduType.SYN);
+        // No PI_20 parameter
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ACK_SYN, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleTDL02B should handle null transfer gracefully")
+    void handleTDL02BShouldHandleNullTransfer() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.TDL02B_SENDING_DATA);
+        // No transfer started
+
+        Fpdu fpdu = new Fpdu(FpduType.TRANS_END);
+
+        Fpdu response = handler.handleTDL02B(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ACK_TRANS_END, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleDtf should increment record count")
+    void handleDtfShouldIncrementRecordCount() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setRecordsTransferred(5);
+
+        Fpdu fpdu = new Fpdu(FpduType.DTF);
+        byte[] data = new byte[100];
+        fpdu.setData(data);
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNull(response);
+        assertEquals(6, transfer.getRecordsTransferred());
+    }
 }
