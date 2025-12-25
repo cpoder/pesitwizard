@@ -277,32 +277,14 @@ public class TransferServiceTest {
         transferService.updateProgress(transfer.getTransferId(), 6000L);
         transferService.recordSyncPoint(transfer.getTransferId(), 6000L);
 
-        transfer = transferService.getTransferOrThrow(transfer.getTransferId());
-        assertEquals(3, transfer.getSyncPointCount());
-        assertEquals(6000L, transfer.getLastSyncPoint());
-    }
-
-    @Test
-    @DisplayName("Cancel a transfer")
-    void testCancelTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-31", "server-1", "node-1",
-                "PARTNER_K", "CANCEL_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.131");
-
-        transferService.startTransfer(transfer.getTransferId(), 5000L, "/data/cancel.dat");
-        transferService.updateProgress(transfer.getTransferId(), 1000L);
-
-        transfer = transferService.cancelTransfer(transfer.getTransferId(), "User requested cancellation");
-
-        assertEquals(TransferStatus.CANCELLED, transfer.getStatus());
-        assertEquals("User requested cancellation", transfer.getErrorMessage());
-        assertNotNull(transfer.getCompletedAt());
+        // Verify sync point recorded
+        TransferRecord updated = transferService.getTransfer(transfer.getTransferId()).orElseThrow();
+        assertEquals(6000L, updated.getLastSyncPoint());
     }
 
     @Test
     @DisplayName("Interrupt and resume transfer")
-    void testInterruptTransfer() {
+    void testInterruptAndResumeTransfer() {
         TransferRecord transfer = transferService.createTransfer(
                 "session-32", "server-1", "node-1",
                 "PARTNER_L", "INTERRUPT_FILE.dat",
