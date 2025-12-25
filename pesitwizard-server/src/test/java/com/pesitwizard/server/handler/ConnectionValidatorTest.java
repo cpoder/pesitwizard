@@ -289,6 +289,102 @@ class ConnectionValidatorTest {
         assertArrayEquals(new String[] { "FILE1", "FILE2" }, config.getAllowedFiles());
     }
 
+    @Test
+    @DisplayName("validateServerName should use properties serverId when ourServerId is null")
+    void validateServerNameShouldUsePropertiesWhenOurServerIdNull() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setServerIdentifier("PROP_SERVER");
+        ctx.setOurServerId(null);
+        when(properties.getServerId()).thenReturn("PROP_SERVER");
+
+        ValidationResult result = validator.validateServerName(ctx);
+
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    @DisplayName("validateServerName should return ok for empty server identifier")
+    void validateServerNameShouldReturnOkForEmptyServerIdentifier() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setServerIdentifier("");
+
+        ValidationResult result = validator.validateServerName(ctx);
+
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    @DisplayName("validatePartner should handle empty password in partner config")
+    void validatePartnerShouldHandleEmptyPasswordInConfig() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setClientIdentifier("PARTNER1");
+        ctx.setAccessType(0);
+        Fpdu fpdu = new Fpdu(FpduType.CONNECT);
+
+        Partner partner = createPartner("PARTNER1", true);
+        partner.setPassword(""); // Empty password - should not require authentication
+        partner.setAccessType(Partner.AccessType.BOTH);
+        when(configService.findPartner("PARTNER1")).thenReturn(Optional.of(partner));
+
+        ValidationResult result = validator.validatePartner(ctx, fpdu);
+
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    @DisplayName("validatePartner should handle missing PI_05 when password required")
+    void validatePartnerShouldHandleMissingPi05() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setClientIdentifier("PARTNER1");
+        Fpdu fpdu = new Fpdu(FpduType.CONNECT);
+        // No PI_05 parameter added
+
+        Partner partner = createPartner("PARTNER1", true);
+        partner.setPassword("secret");
+        when(configService.findPartner("PARTNER1")).thenReturn(Optional.of(partner));
+
+        ValidationResult result = validator.validatePartner(ctx, fpdu);
+
+        assertFalse(result.isValid());
+        assertEquals(DiagnosticCode.D3_304, result.getDiagCode());
+    }
+
+    @Test
+    @DisplayName("convertToPartnerConfig should handle null allowedFiles")
+    void convertToPartnerConfigShouldHandleNullAllowedFiles() {
+        Partner partner = createPartner("PARTNER1", true);
+        partner.setAllowedFiles(null);
+
+        PartnerConfig config = validator.convertToPartnerConfig(partner);
+
+        // When allowedFiles is null, no files are set (null or empty array)
+        assertTrue(config.getAllowedFiles() == null || config.getAllowedFiles().length == 0);
+    }
+
+    @Test
+    @DisplayName("convertToPartnerConfig should handle empty allowedFiles")
+    void convertToPartnerConfigShouldHandleEmptyAllowedFiles() {
+        Partner partner = createPartner("PARTNER1", true);
+        partner.setAllowedFiles("");
+
+        PartnerConfig config = validator.convertToPartnerConfig(partner);
+
+        // When allowedFiles is empty, no files are set (null or empty array)
+        assertTrue(config.getAllowedFiles() == null || config.getAllowedFiles().length == 0);
+    }
+
+    @Test
+    @DisplayName("validateProtocolVersion should return ok when client version < server version")
+    void validateProtocolVersionShouldReturnOkWhenLowerVersion() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setProtocolVersion(1);
+        when(properties.getProtocolVersion()).thenReturn(2);
+
+        ValidationResult result = validator.validateProtocolVersion(ctx);
+
+        assertTrue(result.isValid());
+    }
+
     private Partner createPartner(String id, boolean enabled) {
         Partner partner = new Partner();
         partner.setId(id);
