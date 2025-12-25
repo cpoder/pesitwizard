@@ -286,4 +286,55 @@ class MessageHandlerTest {
         assertNotNull(response);
         assertEquals(FpduType.ACK_MSG, response.getFpduType());
     }
+
+    @Test
+    @DisplayName("handleMsgReceiving should return ABORT for unexpected FPDU type")
+    void handleMsgReceivingShouldReturnAbortForUnexpectedFpdu() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setMessageBuffer(new StringBuilder());
+
+        Fpdu fpdu = new Fpdu(FpduType.DTF); // Wrong type
+
+        Fpdu response = handler.handleMsgReceiving(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleMsgMm should append segment to buffer")
+    void handleMsgMmShouldAppendSegment() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setMessageBuffer(new StringBuilder("Initial"));
+
+        Fpdu fpdu = new Fpdu(FpduType.MSGMM);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, " More content".getBytes()));
+
+        Fpdu response = handler.handleMsgMm(ctx, fpdu);
+
+        // MSGMM returns null (no ack needed for middle segments)
+        assertNull(response);
+        // Verify buffer was appended
+        assertEquals("Initial More content", ctx.getMessageBuffer().toString());
+    }
+
+    @Test
+    @DisplayName("handleMsgDm should initialize message buffer")
+    void handleMsgDmShouldInitializeBuffer() {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.MSGDM);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Start of message".getBytes()));
+
+        Fpdu response = handler.handleMsgDm(ctx, fpdu);
+
+        // MSGDM returns null (no ack needed until MSGFM)
+        assertNull(response);
+        assertEquals(ServerState.MSG_RECEIVING, ctx.getState());
+        assertNotNull(ctx.getMessageBuffer());
+        assertEquals("Start of message", ctx.getMessageBuffer().toString());
+    }
 }
