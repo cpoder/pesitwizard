@@ -246,4 +246,14 @@ class PesitSessionHandlerTest {
         assertEquals("Test message", ctx.getMessageBuffer().toString());
         assertEquals("test.dat", ctx.getMessageFilename());
     }
+
+    @Test
+    @DisplayName("session should track transfer record ID")
+    void sessionShouldTrackTransferRecordId() {
+        SessionContext ctx = handler.createSession("192.168.1.100");
+
+        assertNull(ctx.getTransferRecordId());
+        ctx.setTransferRecordId("transfer-123");
+        assertEquals("transfer-123", ctx.getTransferRecordId());
+    }
 }
