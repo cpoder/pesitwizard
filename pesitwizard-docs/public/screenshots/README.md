@@ -55,6 +55,18 @@ screenshots/
 | `schedules.png` | Schedules | Liste des planifications |
 | `schedule-create.png` | Favorites | Modal de création de planification |
 | `calendars.png` | Calendars | Liste des calendriers métier |
+| `certificates-nav.png` | Navigation | Menu latéral avec Certificates surligné |
+| `ca-init.png` | Certificates | CA non initialisée avec bouton Initialize |
+| `ca-initialized.png` | Certificates | CA initialisée avec statut vert |
+| `generate-partner-cert.png` | Certificates | Cards d'actions CA |
+| `generate-form.png` | Certificates | Modal de génération certificat partenaire |
+| `download-ca-cert.png` | Certificates | Modal téléchargement certificat CA |
+| `sign-csr.png` | Certificates | Modal signature CSR vide |
+| `signed-cert-result.png` | Certificates | Modal avec certificat signé |
+| `certificates-list.png` | Certificates | Liste keystores/truststores |
+| `client-download-ca.png` | Certificates | Téléchargement CA pour client |
+| `sign-client-csr.png` | Certificates | Signature du CSR client |
+| `workflow-generated-cert.png` | Certificates | Diagramme workflow Option 1 |
 
 #### Admin UI (http://localhost:3000)
 

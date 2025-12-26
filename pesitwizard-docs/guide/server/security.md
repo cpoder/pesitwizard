@@ -61,29 +61,95 @@ PeSIT Wizard intègre une **Autorité de Certification (CA) privée** pour simpl
      └─────────────┘   └─────────────┘   └─────────────┘
 ```
 
-## Configuration mTLS sur le serveur
+## Gestion des certificats via l'interface utilisateur
+
+L'interface PeSIT Wizard Client permet de gérer l'ensemble de l'infrastructure de certificats de manière visuelle.
+
+### Accéder à la gestion des certificats
+
+Dans le menu latéral, cliquez sur **Certificates** pour accéder à l'interface de gestion :
+
+![Navigation vers Certificates](/screenshots/certificates-nav.png)
 
 ### 1. Initialiser la CA privée
 
+Lors du premier accès, la CA n'est pas initialisée. Cliquez sur le bouton **Initialize CA** :
+
+![Initialisation de la CA](/screenshots/ca-init.png)
+
+Une fois initialisée, vous verrez le statut de la CA avec son DN (Distinguished Name) :
+
+![CA initialisée](/screenshots/ca-initialized.png)
+
+### 2. Générer un certificat pour un partenaire
+
+Cliquez sur **Generate Partner Cert** ou sur la carte "Generate Partner Certificate" :
+
+![Générer un certificat partenaire](/screenshots/generate-partner-cert.png)
+
+Remplissez le formulaire :
+- **Partner ID** : Identifiant unique du partenaire (ex: `BANQUE_XYZ`)
+- **Common Name** : FQDN ou nom du certificat (ex: `banque-xyz.example.com`)
+- **Purpose** : `Client (mTLS)` pour l'authentification client
+- **Validity** : Durée de validité en jours (défaut: 365)
+
+![Formulaire de génération](/screenshots/generate-form.png)
+
+### 3. Télécharger le certificat CA
+
+Pour que les clients puissent faire confiance au serveur, ils doivent importer le certificat CA dans leur truststore.
+
+Cliquez sur **Download CA Cert** :
+
+![Télécharger le certificat CA](/screenshots/download-ca-cert.png)
+
+Vous pouvez :
+- **Copier** le certificat dans le presse-papiers
+- **Télécharger** le fichier `pesit-ca.pem`
+
+### 4. Signer un CSR (Certificate Signing Request)
+
+Si un client préfère générer sa propre clé privée, il peut vous envoyer un CSR à signer.
+
+Cliquez sur **Sign CSR** :
+
+![Signer un CSR](/screenshots/sign-csr.png)
+
+1. Collez le CSR (format PEM) fourni par le client
+2. Sélectionnez le **Purpose** et la **Validity**
+3. Optionnellement, associez un **Partner ID**
+4. Cliquez sur **Sign CSR**
+
+Le certificat signé sera affiché et téléchargeable :
+
+![Certificat signé](/screenshots/signed-cert-result.png)
+
+### 5. Visualiser les certificats
+
+L'interface affiche tous les keystores et truststores configurés :
+
+![Liste des certificats](/screenshots/certificates-list.png)
+
+Pour chaque certificat, vous pouvez voir :
+- Le nom et le type (Keystore/Truststore)
+- Le DN du sujet
+- La date d'expiration (en rouge si < 30 jours)
+- Le partenaire associé
+
+---
+
+## Configuration mTLS via fichier (avancé)
+
+Pour les déploiements automatisés, vous pouvez également utiliser l'API REST ou le fichier de configuration.
+
+### Initialiser la CA via API
+
 ```bash
-# Initialiser la CA (crée le certificat CA auto-signé)
 curl -X POST http://localhost:8080/api/v1/certificates/ca/initialize \
   -u admin:admin
 ```
 
-Réponse :
-```json
-{
-  "id": 1,
-  "name": "pesit-ca-keystore",
-  "subjectDn": "CN=PeSIT Private CA, OU=Certificate Authority, O=PeSIT Wizard, L=Paris, ST=IDF, C=FR",
-  "expiresAt": "2035-12-26T22:00:00Z",
-  "storeType": "KEYSTORE",
-  "purpose": "CA"
-}
-```
-
-### 2. Configurer mTLS
+### Configurer mTLS
 
 ```yaml
 pesitwizard:
@@ -116,37 +182,17 @@ pesitwizard:
 
 Les clients PeSIT doivent obtenir un certificat signé par la CA du serveur pour se connecter en mTLS.
 
-### Option 1 : Certificat généré par le serveur (recommandé)
+### Option 1 : Certificat généré par l'administrateur (recommandé)
 
-Le serveur peut générer un certificat complet pour le partenaire :
+L'administrateur du serveur PeSIT Wizard génère un certificat pour le partenaire via l'interface :
 
-```bash
-# Demander au serveur de générer un certificat pour le partenaire
-curl -X POST "http://localhost:8080/api/v1/certificates/ca/partner/BANQUE_XYZ/generate?commonName=banque-xyz.example.com&purpose=CLIENT&validityDays=365" \
-  -u admin:admin
-```
+1. **Administrateur** : Génère le certificat via l'UI (voir section "Générer un certificat pour un partenaire")
+2. **Administrateur** : Exporte et transmet le keystore au client de manière sécurisée
+3. **Client** : Importe le keystore reçu dans sa configuration
 
-Réponse :
-```json
-{
-  "id": 5,
-  "name": "partner-BANQUE_XYZ-keystore",
-  "partnerId": "BANQUE_XYZ",
-  "subjectDn": "CN=banque-xyz.example.com, OU=Partners, O=PeSIT Wizard, C=FR",
-  "expiresAt": "2026-12-26T22:00:00Z",
-  "storeType": "KEYSTORE",
-  "purpose": "CLIENT"
-}
-```
+![Workflow certificat généré](/screenshots/workflow-generated-cert.png)
 
-**Exporter le keystore pour le client :**
-
-```bash
-# Télécharger le keystore du partenaire (à implémenter selon vos besoins)
-# Le keystore est stocké dans la base de données et peut être exporté via l'API
-```
-
-### Option 2 : CSR fourni par le client
+### Option 2 : CSR fourni par le client (plus sécurisé)
 
 Si le client préfère générer sa propre clé privée (plus sécurisé) :
 
@@ -166,27 +212,26 @@ openssl req -new \
 cat client.csr
 ```
 
-#### Côté serveur : Signer le CSR
+#### Côté serveur : Signer le CSR via l'UI
+
+L'administrateur signe le CSR via l'interface **Certificates > Sign CSR** :
+
+![Signer le CSR du client](/screenshots/sign-client-csr.png)
+
+1. Collez le CSR reçu du client
+2. Sélectionnez **Client (mTLS)** comme purpose
+3. Cliquez sur **Sign CSR**
+4. Téléchargez le certificat signé et envoyez-le au client
+
+Alternativement, via API :
 
 ```bash
-# Signer le CSR avec la CA
 curl -X POST "http://localhost:8080/api/v1/certificates/ca/sign" \
   -u admin:admin \
   -d "csrPem=$(cat client.csr)" \
   -d "purpose=CLIENT" \
   -d "validityDays=365" \
   -d "partnerId=BANQUE_XYZ"
-```
-
-Réponse :
-```json
-{
-  "certificatePem": "-----BEGIN CERTIFICATE-----\nMIID....\n-----END CERTIFICATE-----",
-  "subjectDn": "CN=banque-xyz.example.com, O=Banque XYZ, C=FR",
-  "issuerDn": "CN=PeSIT Private CA, OU=Certificate Authority, O=PeSIT Wizard",
-  "serialNumber": "123456789",
-  "expiresAt": "2026-12-26T22:00:00Z"
-}
 ```
 
 #### Côté client : Créer le keystore
@@ -225,10 +270,15 @@ keytool -importcert \
 
 Pour que le client fasse confiance au serveur PeSIT Wizard, il doit importer le certificat CA dans son truststore.
 
-### Télécharger le certificat CA
+### Télécharger le certificat CA via l'UI
+
+Le certificat CA peut être téléchargé via l'interface **Certificates > Download CA Cert** :
+
+![Téléchargement du certificat CA](/screenshots/client-download-ca.png)
+
+Le client peut également le télécharger via l'API publique :
 
 ```bash
-# Télécharger le certificat CA au format PEM
 curl -o pesit-ca.pem \
   http://localhost:8080/api/v1/certificates/ca/certificate \
   -u admin:admin

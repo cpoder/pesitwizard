@@ -10,6 +10,7 @@ import {
   Calendar,
   CalendarDays,
   Plug,
+  Shield,
   Settings,
   Menu,
   X
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Favorites', href: '/favorites', icon: Star, exact: false },
   { name: 'Schedules', href: '/schedules', icon: Calendar, exact: false },
   { name: 'Calendars', href: '/calendars', icon: CalendarDays, exact: false },
+  { name: 'Certificates', href: '/certificates', icon: Shield, exact: false },
   { name: 'Settings', href: '/settings', icon: Settings, exact: false },
 ]
 
