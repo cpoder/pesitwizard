@@ -140,4 +140,67 @@ class TcpConnectionHandlerTest {
 
         assertDoesNotThrow(() -> handler.run());
     }
+
+    @Test
+    @DisplayName("getSessionContext should return null before run")
+    void getSessionContextShouldReturnNullBeforeRun() {
+        assertNull(handler.getSessionContext());
+    }
+
+    @Test
+    @DisplayName("getSessionContext should return context after run starts")
+    void getSessionContextShouldReturnContextAfterRun() throws Exception {
+        when(socket.getRemoteSocketAddress()).thenReturn(socketAddress);
+        when(socketAddress.toString()).thenReturn("127.0.0.1:12345");
+        when(properties.getReadTimeout()).thenReturn(30000);
+
+        SessionContext ctx = new SessionContext("test-session");
+        when(sessionHandler.createSession(anyString(), anyString())).thenReturn(ctx);
+
+        when(socket.isClosed()).thenReturn(true);
+        ByteArrayInputStream emptyInput = new ByteArrayInputStream(new byte[0]);
+        when(socket.getInputStream()).thenReturn(emptyInput);
+        when(socket.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+
+        handler.run();
+
+        assertEquals(ctx, handler.getSessionContext());
+    }
+
+    @Test
+    @DisplayName("run should close socket when not already closed")
+    void runShouldCloseSocketWhenNotAlreadyClosed() throws Exception {
+        when(socket.getRemoteSocketAddress()).thenReturn(socketAddress);
+        when(socketAddress.toString()).thenReturn("127.0.0.1:12345");
+        when(properties.getReadTimeout()).thenReturn(30000);
+
+        SessionContext ctx = new SessionContext("test-session");
+        when(sessionHandler.createSession(anyString(), anyString())).thenReturn(ctx);
+
+        // First call in loop returns false, then true for isClosed check in
+        // closeConnection
+        when(socket.isClosed()).thenReturn(true, false);
+        ByteArrayInputStream emptyInput = new ByteArrayInputStream(new byte[0]);
+        when(socket.getInputStream()).thenReturn(emptyInput);
+        when(socket.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+
+        handler.run();
+
+        verify(socket).close();
+    }
+
+    @Test
+    @DisplayName("run should handle IOException gracefully")
+    void runShouldHandleIOException() throws Exception {
+        when(socket.getRemoteSocketAddress()).thenReturn(socketAddress);
+        when(socketAddress.toString()).thenReturn("127.0.0.1:12345");
+        when(properties.getReadTimeout()).thenReturn(30000);
+        when(socket.getInputStream()).thenThrow(new java.io.IOException("Test IO error"));
+
+        SessionContext ctx = new SessionContext("test-session");
+        when(sessionHandler.createSession(anyString(), anyString())).thenReturn(ctx);
+
+        assertDoesNotThrow(() -> handler.run());
+    }
+
 }

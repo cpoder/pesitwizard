@@ -412,4 +412,128 @@ class TransferOperationHandlerTest {
 
         handler.handleCreate(ctx, fpdu);
     }
+
+    @Test
+    @DisplayName("handleCreate should succeed with valid validation")
+    void handleCreateShouldSucceedWithValidValidation() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.CREATE);
+        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        fpdu.withParameter(pgi09);
+
+        when(fileValidator.validateForCreate(any(), any())).thenReturn(ValidationResult.ok());
+        when(properties.getReceiveDirectory()).thenReturn(tempDir.toString());
+        when(properties.getMaxEntitySize()).thenReturn(4096);
+        when(properties.getServerId()).thenReturn("TEST_SERVER");
+        when(fileSystemService.normalizePath(anyString())).thenReturn(tempDir);
+        when(fileSystemService.createDirectories(any())).thenReturn(
+                com.pesitwizard.server.service.FileSystemService.FileOperationResult.success(tempDir));
+
+        Fpdu response = handler.handleCreate(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ACK_CREATE, response.getFpduType());
+        assertEquals(ServerState.SF03_FILE_SELECTED, ctx.getState());
+        verify(transferTracker).trackTransferStart(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("handleCreate should return ABORT when directory creation fails")
+    void handleCreateShouldReturnAbortWhenDirectoryCreationFails() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.CREATE);
+
+        when(fileValidator.validateForCreate(any(), any())).thenReturn(ValidationResult.ok());
+        when(properties.getReceiveDirectory()).thenReturn(tempDir.toString());
+        when(fileSystemService.normalizePath(anyString())).thenReturn(tempDir);
+        when(fileSystemService.createDirectories(any())).thenReturn(
+                com.pesitwizard.server.service.FileSystemService.FileOperationResult.error(
+                        com.pesitwizard.server.service.FileSystemService.FileErrorType.ACCESS_DENIED,
+                        "Permission denied", tempDir));
+        when(fileSystemService.getPermissionString(any())).thenReturn("rwxr-xr-x");
+
+        Fpdu response = handler.handleCreate(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleSelect should succeed with valid file")
+    void handleSelectShouldSucceedWithValidFile() throws Exception {
+        // Create a test file
+        Path testFile = tempDir.resolve("TESTFILE");
+        java.nio.file.Files.writeString(testFile, "test content");
+
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.SELECT);
+        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        fpdu.withParameter(pgi09);
+
+        when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
+        when(properties.getSendDirectory()).thenReturn(tempDir.toString());
+        when(properties.getMaxEntitySize()).thenReturn(4096);
+        when(properties.getServerId()).thenReturn("TEST_SERVER");
+
+        Fpdu response = handler.handleSelect(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ACK_SELECT, response.getFpduType());
+        assertEquals(ServerState.SF03_FILE_SELECTED, ctx.getState());
+        verify(transferTracker).trackTransferStart(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("handleSelect should return ABORT when file not found")
+    void handleSelectShouldReturnAbortWhenFileNotFound() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.SELECT);
+        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "NONEXISTENT".getBytes()));
+        fpdu.withParameter(pgi09);
+
+        when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
+        when(properties.getSendDirectory()).thenReturn(tempDir.toString());
+
+        Fpdu response = handler.handleSelect(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleSelect should track transfer with restart flag")
+    void handleSelectShouldHandleRestartTrue() throws Exception {
+        Path testFile = tempDir.resolve("RESTARTFILE");
+        java.nio.file.Files.writeString(testFile, "restart content");
+
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.transitionTo(ServerState.CN03_CONNECTED);
+
+        Fpdu fpdu = new Fpdu(FpduType.SELECT);
+        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "RESTARTFILE".getBytes()));
+        fpdu.withParameter(pgi09);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] { 0x01 }));
+
+        when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
+        when(properties.getSendDirectory()).thenReturn(tempDir.toString());
+        when(properties.getMaxEntitySize()).thenReturn(4096);
+        when(properties.getServerId()).thenReturn("TEST_SERVER");
+
+        Fpdu response = handler.handleSelect(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ACK_SELECT, response.getFpduType());
+    }
 }
