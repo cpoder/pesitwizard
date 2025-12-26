@@ -266,6 +266,51 @@ class SslContextFactoryTest {
         assertEquals(cause, ex.getCause());
     }
 
+    @Test
+    @DisplayName("createEmptyKeyStore should create PKCS12 keystore")
+    void createEmptyKeyStoreShouldCreatePkcs12() throws Exception {
+        byte[] data = factory.createEmptyKeyStore(StoreFormat.PKCS12, "password");
+
+        assertNotNull(data);
+        assertTrue(data.length > 0);
+    }
+
+    @Test
+    @DisplayName("createEmptyKeyStore should create JKS keystore")
+    void createEmptyKeyStoreShouldCreateJks() throws Exception {
+        byte[] data = factory.createEmptyKeyStore(StoreFormat.JKS, "password");
+
+        assertNotNull(data);
+        assertTrue(data.length > 0);
+    }
+
+    @Test
+    @DisplayName("createEmptyKeyStore should work with null password")
+    void createEmptyKeyStoreShouldWorkWithNullPassword() throws Exception {
+        byte[] data = factory.createEmptyKeyStore(StoreFormat.PKCS12, null);
+
+        assertNotNull(data);
+        assertTrue(data.length > 0);
+    }
+
+    @Test
+    @DisplayName("validateStore should throw for empty store data")
+    void validateStoreShouldThrowForEmptyData() {
+        CertificateStore store = createStore("empty-store", StoreType.KEYSTORE);
+        store.setStoreData(new byte[0]);
+
+        assertThrows(SslConfigurationException.class, () -> factory.validateStore(store));
+    }
+
+    @Test
+    @DisplayName("validateStore should throw for null store data")
+    void validateStoreShouldThrowForNullData() {
+        CertificateStore store = createStore("null-store", StoreType.KEYSTORE);
+        store.setStoreData(null);
+
+        assertThrows(SslConfigurationException.class, () -> factory.validateStore(store));
+    }
+
     private CertificateStore createStore(String name, StoreType type) {
         CertificateStore store = new CertificateStore();
         store.setName(name);
