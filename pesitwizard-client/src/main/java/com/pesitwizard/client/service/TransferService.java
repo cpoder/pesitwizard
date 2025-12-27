@@ -382,16 +382,20 @@ public class TransferService {
 
         private TransportChannel createChannel(PesitServer server) {
                 if (server.isTlsEnabled()) {
+                        TlsTransportChannel tlsChannel;
                         if (server.getTruststoreData() != null && server.getTruststoreData().length > 0) {
-                                return new TlsTransportChannel(
+                                tlsChannel = new TlsTransportChannel(
                                                 server.getHost(),
                                                 server.getPort(),
                                                 server.getTruststoreData(),
                                                 server.getTruststorePassword(),
                                                 server.getKeystoreData(),
                                                 server.getKeystorePassword());
+                        } else {
+                                tlsChannel = new TlsTransportChannel(server.getHost(), server.getPort());
                         }
-                        return new TlsTransportChannel(server.getHost(), server.getPort());
+                        tlsChannel.setReceiveTimeout(server.getReadTimeout());
+                        return tlsChannel;
                 }
                 TcpTransportChannel channel = new TcpTransportChannel(server.getHost(), server.getPort());
                 channel.setReceiveTimeout(server.getReadTimeout());
