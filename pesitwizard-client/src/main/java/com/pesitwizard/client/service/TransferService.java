@@ -35,7 +35,6 @@ import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
 import com.pesitwizard.client.repository.StorageConnectionRepository;
 import com.pesitwizard.client.repository.TransferConfigRepository;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
-import com.pesitwizard.client.transport.TlsTransportChannel;
 import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
@@ -46,6 +45,7 @@ import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TcpTransportChannel;
+import com.pesitwizard.transport.TlsTransportChannel;
 import com.pesitwizard.transport.TransportChannel;
 
 import io.micrometer.observation.Observation;
