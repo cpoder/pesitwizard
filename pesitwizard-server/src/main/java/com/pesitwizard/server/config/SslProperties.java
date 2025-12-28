@@ -32,6 +32,25 @@ public class SslProperties {
     private String truststoreName;
 
     /**
+     * Base64-encoded keystore data (from environment variable
+     * PESIT_TLS_KEYSTORE_DATA).
+     * When provided, this takes precedence over keystoreName.
+     */
+    private String keystoreData;
+
+    /**
+     * Keystore password (from environment variable PESIT_TLS_KEYSTORE_PASSWORD)
+     */
+    private String keystorePassword;
+
+    /**
+     * CA certificate in PEM format (from environment variable
+     * PESIT_TLS_CA_CERT_PEM).
+     * Used to build a truststore for validating client certificates.
+     */
+    private String caCertPem;
+
+    /**
      * Client authentication mode for mTLS.
      * NONE = no client cert required
      * WANT = request client cert but don't require it
