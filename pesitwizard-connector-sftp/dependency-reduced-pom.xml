@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.pesitwizard.connector</groupId>
   <artifactId>pesitwizard-connector-sftp</artifactId>
-  <name>Vectis SFTP Connector</name>
+  <name>PeSIT Wizard SFTP Connector</name>
   <version>1.0.0</version>
-  <description>SFTP storage connector for Vectis</description>
+  <description>SFTP storage connector for PeSIT Wizard</description>
   <build>
     <plugins>
       <plugin>

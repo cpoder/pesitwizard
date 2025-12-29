@@ -1,0 +1,55 @@
+# =============================================================================
+# Optimized Dockerfile using jlink for minimal JRE (~80MB total image)
+# =============================================================================
+
+# Stage 1: Build custom minimal JRE with jlink
+FROM eclipse-temurin:21-jdk-alpine AS jre-builder
+
+# Create minimal JRE with only required modules for Spring Boot + Netty + Security
+RUN jlink \
+    --module-path $JAVA_HOME/jmods \
+    --compress=zip-6 \
+    --strip-debug \
+    --no-header-files \
+    --no-man-pages \
+    --add-modules java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.sql.rowset,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.naming.dns,jdk.zipfs \
+    --output /opt/jre-minimal
+
+# Stage 2: Final minimal runtime image
+FROM alpine:3.19
+
+# Install minimal dependencies
+RUN apk add --no-cache ca-certificates tzdata
+
+# Copy custom JRE
+COPY --from=jre-builder /opt/jre-minimal /opt/java
+ENV JAVA_HOME=/opt/java
+ENV PATH="$JAVA_HOME/bin:$PATH"
+
+# Add non-root user
+RUN addgroup -g 1000 pesit && \
+    adduser -u 1000 -G pesit -s /bin/sh -D pesit
+
+WORKDIR /app
+
+# Copy the pre-built JAR
+COPY target/pesitwizard-server-*-exec.jar app.jar
+
+# Create directories
+RUN mkdir -p /data/db /data/received /data/send \
+    /app/received /app/send /app/config/jgroups && \
+    chown -R pesit:pesit /data /app
+
+USER pesit
+
+# Expose ports (REST API, PeSIT, JGroups)
+EXPOSE 8080 5000 7800
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
+
+# JVM options for containers
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC -XX:+UseStringDeduplication"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

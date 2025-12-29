@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.pesitwizard.connector</groupId>
   <artifactId>pesitwizard-connector-s3</artifactId>
-  <name>Vectis S3 Connector</name>
+  <name>PeSIT Wizard S3 Connector</name>
   <version>1.0.0</version>
-  <description>AWS S3 / MinIO storage connector for Vectis</description>
+  <description>AWS S3 / MinIO storage connector for PeSIT Wizard</description>
   <build>
     <plugins>
       <plugin>
