@@ -21,7 +21,7 @@ import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
 import com.pesitwizard.server.repository.PartnerRepository;
 import com.pesitwizard.server.repository.VirtualFileRepository;
-import com.pesitwizard.server.security.SecretsService;
+import com.pesitwizard.security.SecretsService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ConfigService Tests")

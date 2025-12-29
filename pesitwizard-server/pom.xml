@@ -33,6 +33,13 @@
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
+        <!-- PeSIT Wizard Security (AES, Vault) -->
+        <dependency>
+            <groupId>com.pesitwizard</groupId>
+            <artifactId>pesitwizard-security</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- Spring Boot Web for REST API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

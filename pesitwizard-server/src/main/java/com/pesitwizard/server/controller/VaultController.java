@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.server.security.SecretsService;
+import com.pesitwizard.security.SecretsProvider;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.service.ConfigService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VaultController {
 
     private final SecretsService secretsService;
+    private final SecretsProvider secretsProvider;
     private final ConfigService configService;
 
     /**
@@ -35,9 +37,10 @@ public class VaultController {
     public ResponseEntity<Map<String, Object>> getStatus() {
         var status = secretsService.getStatus();
         return ResponseEntity.ok(Map.of(
-                "enabled", status.enabled(),
-                "address", status.address() != null ? status.address() : "",
-                "path", status.path() != null ? status.path() : ""));
+                "enabled", secretsProvider.isAvailable(),
+                "providerType", status.providerType(),
+                "available", status.available(),
+                "message", status.message()));
     }
 
     /**
@@ -55,9 +58,12 @@ public class VaultController {
                     "message", "Vault address and token are required"));
         }
 
-        log.info("Configuring Vault from admin: {}", address);
+        log.info("Vault configuration request from admin: {}", address);
+        log.warn("Runtime Vault configuration not supported - configure via environment variables");
 
-        boolean success = secretsService.configureVault(address, token, path);
+        // Runtime configuration not supported with shared module
+        // Vault must be configured via environment variables at startup
+        boolean success = false;
 
         if (success) {
             return ResponseEntity.ok(Map.of(
@@ -75,7 +81,7 @@ public class VaultController {
      */
     @PostMapping("/encrypt-existing")
     public ResponseEntity<Map<String, Object>> encryptExisting() {
-        if (!secretsService.isAvailable()) {
+        if (!secretsProvider.isAvailable()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Vault not configured"));
@@ -89,7 +95,7 @@ public class VaultController {
         for (var partner : configService.getAllPartners()) {
             String password = partner.getPassword();
             if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
-                String encryptedPwd = secretsService.encrypt(password);
+                String encryptedPwd = secretsService.encryptForStorage(password);
                 partner.setPassword(encryptedPwd);
                 configService.savePartner(partner);
                 encrypted++;

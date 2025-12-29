@@ -6,12 +6,12 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
 import com.pesitwizard.server.repository.PartnerRepository;
 import com.pesitwizard.server.repository.VirtualFileRepository;
-import com.pesitwizard.server.security.SecretsService;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -115,10 +115,10 @@ public class ConfigService {
     public Partner savePartner(Partner partner) {
         log.info("Saving partner: {}", partner.getId());
 
-        // Encrypt password if Vault is available
+        // Encrypt password for storage
         String password = partner.getPassword();
         if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
-            String encrypted = secretsService.encrypt(password);
+            String encrypted = secretsService.encryptForStorage(password);
             partner.setPassword(encrypted);
             log.debug("Partner password encrypted for storage");
         }

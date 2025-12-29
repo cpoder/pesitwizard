@@ -16,6 +16,7 @@
 
     <modules>
         <module>pesitwizard-pesit</module>
+        <module>pesitwizard-security</module>
         <module>pesitwizard-connector-api</module>
         <module>pesitwizard-connector-local</module>
         <module>pesitwizard-connector-sftp</module>
