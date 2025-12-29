@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import api from '@/api'
 import { 
   LayoutDashboard, 
   Server, 
@@ -12,11 +13,23 @@ import {
   Plug,
   Settings,
   Menu,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const sidebarOpen = ref(true)
+const encryptionWarning = ref(false)
+
+onMounted(async () => {
+  try {
+    const response = await api.get('/security/status')
+    const encryption = response.data?.encryption
+    encryptionWarning.value = !encryption?.enabled || encryption?.mode === 'NONE'
+  } catch (e) {
+    console.debug('Could not fetch security status')
+  }
+})
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, exact: true },
@@ -86,6 +99,18 @@ function isActive(item: { href: string; exact: boolean }) {
           <h1 class="text-lg font-semibold text-gray-900">PeSIT Wizard Client</h1>
         </div>
       </header>
+
+      <!-- Encryption Warning Banner -->
+      <div v-if="encryptionWarning" class="bg-amber-500 text-white px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <AlertTriangle class="h-5 w-5" />
+          <span class="font-medium">⚠️ Encryption not configured!</span>
+          <span class="text-amber-100">Sensitive data (passwords, keys) is stored in plaintext.</span>
+        </div>
+        <RouterLink to="/settings" class="bg-amber-600 hover:bg-amber-700 px-3 py-1 rounded text-sm font-medium">
+          Configure Now
+        </RouterLink>
+      </div>
 
       <!-- Page content -->
       <main class="p-6">
