@@ -19,6 +19,7 @@ import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.TransferContext;
 import com.pesitwizard.server.model.ValidationResult;
+import com.pesitwizard.server.service.AuditService;
 import com.pesitwizard.server.service.FpduResponseBuilder;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
@@ -43,6 +44,7 @@ public class PesitSessionHandler {
     private final DataTransferHandler dataTransferHandler;
     private final MessageHandler messageHandler;
     private final TransferTracker transferTracker;
+    private final AuditService auditService;
 
     /**
      * Create a new session context
@@ -172,6 +174,12 @@ public class PesitSessionHandler {
         ValidationResult validation = connectionValidator.validatePartner(ctx, fpdu);
         if (!validation.isValid()) {
             log.warn("[{}] Partner validation failed: {}", ctx.getSessionId(), validation.getMessage());
+            // Log authentication failure to audit
+            auditService.logAuthFailure(
+                    ctx.getClientIdentifier(),
+                    "PESIT",
+                    ctx.getRemoteAddress(),
+                    validation.getMessage());
             return FpduResponseBuilder.buildRconnect(ctx, validation.getDiagCode(), validation.getMessage());
         }
 

@@ -34,6 +34,7 @@ import com.pesitwizard.server.handler.FileValidator;
 import com.pesitwizard.server.handler.MessageHandler;
 import com.pesitwizard.server.handler.PesitSessionHandler;
 import com.pesitwizard.server.handler.TransferOperationHandler;
+import com.pesitwizard.server.service.AuditService;
 import com.pesitwizard.server.service.ConfigService;
 import com.pesitwizard.server.service.PathPlaceholderService;
 import com.pesitwizard.server.service.PesitServerInstance;
@@ -322,9 +323,10 @@ public class E2EClusterTest {
                 properties, fileValidator, transferTracker, pathPlaceholderService, fileSystemService);
         DataTransferHandler dataTransferHandler = new DataTransferHandler(properties, transferTracker);
         MessageHandler messageHandler = new MessageHandler();
+        AuditService auditService = org.mockito.Mockito.mock(AuditService.class);
 
         PesitSessionHandler sessionHandler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker);
+                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService);
         PesitServerInstance instance = new PesitServerInstance(config, properties, sessionHandler, sslProperties,
                 sslContextFactory);
         instance.start();

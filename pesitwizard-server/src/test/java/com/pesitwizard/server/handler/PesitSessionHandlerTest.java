@@ -50,12 +50,15 @@ class PesitSessionHandlerTest {
     @Mock
     private TransferTracker transferTracker;
 
+    @Mock
+    private com.pesitwizard.server.service.AuditService auditService;
+
     private PesitSessionHandler handler;
 
     @BeforeEach
     void setUp() {
         handler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker);
+                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService);
         lenient().when(properties.getServerId()).thenReturn("TEST_SERVER");
     }
 
