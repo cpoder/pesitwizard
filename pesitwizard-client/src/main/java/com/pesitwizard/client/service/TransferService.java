@@ -568,7 +568,10 @@ public class TransferService {
                                 .syncPointsEnabled(syncPointsEnabled)
                                 .resyncEnabled(resyncEnabled);
                 if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-                        connectBuilder.password(request.getPassword());
+                        // Decrypt password if it's encrypted (vault: or ENC: prefix)
+                        String password = secretsService.decrypt(request.getPassword());
+                        connectBuilder.password(password);
+                        log.debug("Password provided for CONNECT (length: {})", password.length());
                 }
                 Fpdu connectFpdu = connectBuilder.build(connectionId);
 
@@ -686,7 +689,10 @@ public class TransferService {
                                 .syncPointsEnabled(syncPointsEnabled)
                                 .resyncEnabled(resyncEnabled);
                 if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-                        connectBuilder.password(request.getPassword());
+                        // Decrypt password if it's encrypted (vault: or ENC: prefix)
+                        String password = secretsService.decrypt(request.getPassword());
+                        connectBuilder.password(password);
+                        log.debug("Password provided for CONNECT (length: {})", password.length());
                 }
                 Fpdu connectFpdu = connectBuilder.build(connectionId);
 
