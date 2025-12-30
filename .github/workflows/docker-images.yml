@@ -28,6 +28,9 @@ jobs:
           cache: maven
 
       # Build all Maven modules in dependency order
+      - name: Install parent pom
+        run: mvn -B install -N
+
       - name: Build pesitwizard-pesit
         run: mvn -B install -DskipTests
         working-directory: pesitwizard-pesit
