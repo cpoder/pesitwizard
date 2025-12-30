@@ -12,7 +12,6 @@ import {
   FolderOpen,
   ChevronDown,
   RotateCcw,
-  StopCircle,
   Play
 } from 'lucide-vue-next'
 import api from '@/api'
