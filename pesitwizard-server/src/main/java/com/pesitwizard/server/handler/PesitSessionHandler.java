@@ -15,6 +15,7 @@ import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.TransferContext;
@@ -45,6 +46,7 @@ public class PesitSessionHandler {
     private final MessageHandler messageHandler;
     private final TransferTracker transferTracker;
     private final AuditService auditService;
+    private final ClusterProvider clusterProvider;
 
     /**
      * Create a new session context
@@ -184,7 +186,7 @@ public class PesitSessionHandler {
             transferTracker.trackAuthenticationFailure(
                     ctx,
                     properties.getServerId(),
-                    null, // nodeId determined by TransferService
+                    clusterProvider.getNodeName(),
                     String.format("0x%06X", validation.getDiagCode()),
                     validation.getMessage());
             return FpduResponseBuilder.buildRconnect(ctx, validation.getDiagCode(), validation.getMessage());

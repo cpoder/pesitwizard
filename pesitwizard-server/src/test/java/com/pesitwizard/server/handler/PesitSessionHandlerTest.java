@@ -53,12 +53,16 @@ class PesitSessionHandlerTest {
     @Mock
     private com.pesitwizard.server.service.AuditService auditService;
 
+    @Mock
+    private com.pesitwizard.server.cluster.ClusterProvider clusterProvider;
+
     private PesitSessionHandler handler;
 
     @BeforeEach
     void setUp() {
         handler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService);
+                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService,
+                clusterProvider);
         lenient().when(properties.getServerId()).thenReturn("TEST_SERVER");
     }
 

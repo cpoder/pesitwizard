@@ -270,9 +270,12 @@ public class ClusterFailoverTest {
         DataTransferHandler dataTransferHandler = new DataTransferHandler(properties, transferTracker);
         MessageHandler messageHandler = new MessageHandler();
         AuditService auditService = org.mockito.Mockito.mock(AuditService.class);
+        com.pesitwizard.server.cluster.ClusterProvider clusterProvider = org.mockito.Mockito
+                .mock(com.pesitwizard.server.cluster.ClusterProvider.class);
 
         PesitSessionHandler sessionHandler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService);
+                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService,
+                clusterProvider);
 
         return new PesitServerInstance(config, properties, sessionHandler, sslProperties, sslContextFactory);
     }
