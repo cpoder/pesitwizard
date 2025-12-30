@@ -216,4 +216,33 @@ public class TransferTracker {
     public int markInterruptedTransfers(String nodeId) {
         return transferService.markInterruptedTransfers(nodeId);
     }
+
+    /**
+     * Track authentication failure as a failed transfer.
+     * This creates a transfer record with FAILED status for connections that
+     * fail authentication before any transfer operation starts.
+     */
+    public void trackAuthenticationFailure(SessionContext ctx, String serverId, String nodeId,
+            String errorCode, String errorMessage) {
+        try {
+            // Create a transfer record for the failed authentication
+            TransferRecord record = transferService.createTransfer(
+                    ctx.getSessionId(),
+                    serverId,
+                    nodeId,
+                    ctx.getClientIdentifier(),
+                    "AUTH_FAILURE", // pseudo-filename to identify auth failures
+                    TransferDirection.RECEIVE, // default direction
+                    ctx.getRemoteAddress());
+
+            // Immediately fail it with the auth error
+            transferService.failTransfer(record.getTransferId(), errorCode, errorMessage);
+
+            log.info("[{}] Authentication failure tracked: {} - {}",
+                    ctx.getSessionId(), errorCode, errorMessage);
+
+        } catch (Exception e) {
+            log.error("[{}] Failed to track authentication failure: {}", ctx.getSessionId(), e.getMessage());
+        }
+    }
 }

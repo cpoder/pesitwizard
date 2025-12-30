@@ -180,6 +180,13 @@ public class PesitSessionHandler {
                     "PESIT",
                     ctx.getRemoteAddress(),
                     validation.getMessage());
+            // Track as failed transfer so it appears in transfer history
+            transferTracker.trackAuthenticationFailure(
+                    ctx,
+                    properties.getServerId(),
+                    properties.getNodeId(),
+                    String.format("0x%06X", validation.getDiagCode()),
+                    validation.getMessage());
             return FpduResponseBuilder.buildRconnect(ctx, validation.getDiagCode(), validation.getMessage());
         }
 
