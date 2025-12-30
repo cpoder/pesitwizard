@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import com.pesitwizard.client.config.ClientConfig;
 import com.pesitwizard.client.service.PesitClientService;
 import com.pesitwizard.client.service.PesitClientService.TransferResult;
+
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -40,6 +41,13 @@ public class SendCommand implements Callable<Integer> {
     @Option(names = { "-r", "--retries" }, description = "Number of retries (default: ${DEFAULT-VALUE})")
     private int retries = 3;
 
+    @Option(names = { "-u", "--user" }, description = "Partner/User ID for authentication")
+    private String userId;
+
+    @Option(names = { "-P",
+            "--password" }, description = "Partner password for authentication", interactive = true, arity = "0..1")
+    private String password;
+
     public SendCommand(PesitClientService clientService, ClientConfig config) {
         this.clientService = clientService;
         this.config = config;
@@ -49,6 +57,14 @@ public class SendCommand implements Callable<Integer> {
     public Integer call() throws Exception {
         String targetHost = host != null ? host : config.getHost();
         int targetPort = port != null ? port : config.getPort();
+
+        // Use command-line password if provided, otherwise fall back to config
+        if (password != null && !password.isEmpty()) {
+            config.setPassword(password);
+        }
+        if (userId != null && !userId.isEmpty()) {
+            config.setClientId(userId);
+        }
 
         System.out.println("Sending file: " + localFile);
         System.out.println("To: " + targetHost + ":" + targetPort);
