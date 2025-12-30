@@ -65,10 +65,10 @@ public class VirtualFile {
 
     /**
      * Filename pattern for received files (supports placeholders)
-     * Placeholders: ${filename}, ${timestamp}, ${date}, ${time}, ${transferId}
+     * Placeholders: ${virtualFile}, ${timestamp}, ${date}, ${time}, ${transferId}
      */
     @Builder.Default
-    private String receiveFilenamePattern = "${filename}_${timestamp}";
+    private String receiveFilenamePattern = "${virtualFile}_${timestamp}";
 
     /**
      * Whether to overwrite existing files
@@ -144,11 +144,11 @@ public class VirtualFile {
     public String generateReceiveFilename(String virtualFilename, long transferId) {
         String pattern = receiveFilenamePattern;
         if (pattern == null || pattern.isEmpty()) {
-            pattern = "${filename}_${timestamp}";
+            pattern = "${virtualFile}_${timestamp}";
         }
 
         return pattern
-                .replace("${filename}", virtualFilename != null ? virtualFilename : "file")
+                .replace("${virtualFile}", virtualFilename != null ? virtualFilename : "file")
                 .replace("${transferId}", String.valueOf(transferId))
                 .replace("${timestamp}", String.valueOf(System.currentTimeMillis()))
                 .replace("${date}", java.time.LocalDate.now().toString())
