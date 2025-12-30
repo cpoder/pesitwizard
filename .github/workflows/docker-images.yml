@@ -32,6 +32,10 @@ jobs:
         run: mvn -B install -DskipTests
         working-directory: pesitwizard-pesit
 
+      - name: Build pesitwizard-security
+        run: mvn -B install -DskipTests
+        working-directory: pesitwizard-security
+
       - name: Build pesitwizard-connector-api
         run: mvn -B install -DskipTests
         working-directory: pesitwizard-connector-api

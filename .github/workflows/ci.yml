@@ -32,6 +32,7 @@ jobs:
             pesitwizard-server/target/site/jacoco/
             pesitwizard-client/target/site/jacoco/
             pesitwizard-pesit/target/site/jacoco/
+            pesitwizard-security/target/site/jacoco/
           retention-days: 30
 
       - name: Generate coverage badge (server module)
@@ -58,7 +59,8 @@ jobs:
           paths: |
             pesitwizard-server/target/site/jacoco/jacoco.xml,
             pesitwizard-client/target/site/jacoco/jacoco.xml,
-            pesitwizard-pesit/target/site/jacoco/jacoco.xml
+            pesitwizard-pesit/target/site/jacoco/jacoco.xml,
+            pesitwizard-security/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 40
           min-coverage-changed-files: 60
@@ -152,6 +154,7 @@ jobs:
             <li><a href="pesitwizard-server/target/site/jacoco/index.html">pesitwizard-server</a></li>
             <li><a href="pesitwizard-client/target/site/jacoco/index.html">pesitwizard-client</a></li>
             <li><a href="pesitwizard-pesit/target/site/jacoco/index.html">pesitwizard-pesit</a></li>
+            <li><a href="pesitwizard-security/target/site/jacoco/index.html">pesitwizard-security</a></li>
           </ul>
           </body>
           </html>
