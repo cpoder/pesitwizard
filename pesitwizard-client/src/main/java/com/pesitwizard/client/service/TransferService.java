@@ -618,9 +618,10 @@ public class TransferService {
 
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF; // PI_13 is 3 bytes max
-                // Use small values known to work with Connect:Express
-                int effectiveRecordLength = recordLength > 0 ? Math.min(recordLength, 1024) : 30;
-                int effectiveMaxEntity = Math.min(chunkSize, 4096);
+                // Record length must be >= chunk size to avoid "article length exceeded" errors
+                // For variable format, this is the maximum article size
+                int effectiveRecordLength = recordLength > 0 ? recordLength : chunkSize;
+                int effectiveMaxEntity = chunkSize;
                 Fpdu createFpdu = new CreateMessageBuilder()
                                 .filename(virtualFile)
                                 .transferId(transferId)
@@ -762,8 +763,9 @@ public class TransferService {
 
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
-                int effectiveRecordLength = recordLength > 0 ? Math.min(recordLength, 1024) : 30;
-                int effectiveMaxEntity = Math.min(chunkSize, 4096);
+                // Record length must be >= chunk size to avoid "article length exceeded" errors
+                int effectiveRecordLength = recordLength > 0 ? recordLength : chunkSize;
+                int effectiveMaxEntity = chunkSize;
                 Fpdu createFpdu = new CreateMessageBuilder()
                                 .filename(virtualFile)
                                 .transferId(transferId)
