@@ -41,8 +41,6 @@ const resumableTransfers = ref<any[]>([])
 // WebSocket for real-time progress updates
 const { 
   progress: wsProgress, 
-  connected: wsConnected,
-  connect: wsConnect,
   subscribeToTransfer,
   unsubscribe: wsUnsubscribe,
   disconnect: wsDisconnect,

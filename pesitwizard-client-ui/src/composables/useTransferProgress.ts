@@ -25,7 +25,6 @@ export function useTransferProgress() {
     }
 
     const baseUrl = import.meta.env.VITE_API_URL || ''
-    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws'
     
     stompClient = new Client({
       webSocketFactory: () => new SockJS(baseUrl + '/ws'),
