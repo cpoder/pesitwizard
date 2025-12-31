@@ -178,11 +178,12 @@ public class DataTransferHandler {
             byteCount = transfer.getBytesTransferred();
             recordCount = transfer.getRecordsTransferred();
 
-            // Write received data to file
-            byte[] data = transfer.getData();
-            if (transfer.getLocalPath() != null && data != null && data.length > 0) {
-                writeReceivedData(ctx, transfer);
-            }
+            // With streaming, data is already on disk via appendData() calls
+            // Just ensure the output stream is closed and flushed
+            transfer.closeOutputStream();
+
+            log.info("[{}] TRANS.END: streaming transfer complete, {} bytes written to {}",
+                    ctx.getSessionId(), byteCount, transfer.getLocalPath());
         }
 
         log.info("[{}] TRANS.END: transfer complete, {} bytes, {} records",
