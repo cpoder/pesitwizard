@@ -124,9 +124,11 @@ public class LocalFileConnector implements StorageConnector {
             return files.map(p -> {
                 try {
                     BasicFileAttributes attrs = Files.readAttributes(p, BasicFileAttributes.class);
+                    // Use absolute path to preserve leading /
+                    String filePath = p.toAbsolutePath().toString();
                     return FileMetadata.builder()
                             .name(p.getFileName().toString())
-                            .path(basePath.relativize(p).toString())
+                            .path(filePath)
                             .size(attrs.size())
                             .lastModified(attrs.lastModifiedTime().toInstant())
                             .directory(attrs.isDirectory())
@@ -134,7 +136,7 @@ public class LocalFileConnector implements StorageConnector {
                 } catch (IOException e) {
                     return FileMetadata.builder()
                             .name(p.getFileName().toString())
-                            .path(basePath.relativize(p).toString())
+                            .path(p.toAbsolutePath().toString())
                             .build();
                 }
             }).toList();
