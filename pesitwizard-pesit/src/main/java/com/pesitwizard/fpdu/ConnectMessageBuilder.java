@@ -13,7 +13,7 @@ public class ConnectMessageBuilder {
     private String password = null;
     private int accessType = 0; // 0=write, 1=read, 2=mixed
     private boolean syncPointsEnabled = false;
-    private int syncIntervalKb = 0xFFFF; // Default: undefined interval (0xFFFF)
+    private int syncIntervalKb = 64; // Default: 64 KB interval (SIT minimum is 4 KB)
     private int syncAckWindow = 1; // Default: window of 1
     private boolean resyncEnabled = false;
 
