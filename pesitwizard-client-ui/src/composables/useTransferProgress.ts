@@ -9,6 +9,7 @@ export interface TransferProgress {
   percentage: number
   lastSyncPoint: number
   status: string
+  errorMessage?: string
 }
 
 export function useTransferProgress() {

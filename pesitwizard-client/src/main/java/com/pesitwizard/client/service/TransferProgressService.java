@@ -31,7 +31,8 @@ public class TransferProgressService {
                 fileSize,
                 fileSize > 0 ? (int) ((bytesTransferred * 100) / fileSize) : 0,
                 syncPoint,
-                "IN_PROGRESS");
+                "IN_PROGRESS",
+                null);
 
         String destination = "/topic/transfer/" + transferId + "/progress";
         messagingTemplate.convertAndSend(destination, message);
@@ -53,7 +54,8 @@ public class TransferProgressService {
                 fileSize,
                 100,
                 0,
-                "COMPLETED");
+                "COMPLETED",
+                null);
 
         String destination = "/topic/transfer/" + transferId + "/progress";
         messagingTemplate.convertAndSend(destination, message);
@@ -74,7 +76,8 @@ public class TransferProgressService {
                 0,
                 0,
                 0,
-                "FAILED");
+                "FAILED",
+                errorMessage);
 
         String destination = "/topic/transfer/" + transferId + "/progress";
         messagingTemplate.convertAndSend(destination, message);
@@ -90,6 +93,7 @@ public class TransferProgressService {
             long fileSize,
             int percentage,
             int lastSyncPoint,
-            String status) {
+            String status,
+            String errorMessage) {
     }
 }

@@ -58,12 +58,26 @@ watch(wsProgress, (newProgress) => {
     // Check if transfer is complete
     if (newProgress.status === 'COMPLETED' || newProgress.status === 'FAILED') {
       wsUnsubscribe()
+      
+      // Immediately update UI with WebSocket status in case API call fails
+      if (newProgress.status === 'FAILED') {
+        error.value = newProgress.errorMessage || 'Transfer failed'
+        transferring.value = false
+        // Update result status immediately
+        if (result.value) {
+          result.value = { ...result.value, status: 'FAILED', errorMessage: newProgress.errorMessage }
+        }
+      }
+      
       // Fetch final result from API
       if (currentTransferId.value) {
         api.get(`/transfers/${currentTransferId.value}`).then(response => {
           result.value = response.data
           transferring.value = false
-        }).catch(console.error)
+        }).catch(e => {
+          console.error('Failed to fetch transfer result:', e)
+          transferring.value = false
+        })
       }
     }
   }
