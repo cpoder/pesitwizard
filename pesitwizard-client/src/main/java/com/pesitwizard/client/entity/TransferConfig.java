@@ -43,7 +43,7 @@ public class TransferConfig {
     @Builder.Default
     @Min(56)
     @Max(1048576)
-    private Integer chunkSize = 256; // Small value for Connect:Express compatibility
+    private Integer chunkSize = 32768; // 32KB - good balance for performance and compatibility
 
     /** Enable compression (PI 21) */
     @Builder.Default
