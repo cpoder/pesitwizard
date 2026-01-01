@@ -93,9 +93,9 @@ public class TransferConfig {
     @Builder.Default
     private String recordFormat = "V";
 
-    /** Record length (for fixed format) */
+    /** Record length (for fixed format) - also used as max article size in DTF */
     @Builder.Default
-    private Integer recordLength = 1024;
+    private Integer recordLength = 4096; // Max PeSIT SIT standard for compatibility
 
     /** Data code: A=ASCII, E=EBCDIC, B=Binary */
     @Builder.Default
