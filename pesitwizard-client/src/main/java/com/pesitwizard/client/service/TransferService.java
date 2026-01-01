@@ -649,6 +649,21 @@ public class TransferService {
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
                 int serverConnectionId = aconnect.getIdSrc();
 
+                // Parse negotiated sync points from ACONNECT (PI 7)
+                ParameterValue pi7NonStreaming = aconnect.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
+                if (pi7NonStreaming != null && pi7NonStreaming.getValue() != null
+                                && pi7NonStreaming.getValue().length >= 3) {
+                        byte[] syncBytes = pi7NonStreaming.getValue();
+                        int negotiatedSyncIntervalKb = ((syncBytes[0] & 0xFF) << 8) | (syncBytes[1] & 0xFF);
+                        int negotiatedSyncWindow = syncBytes[2] & 0xFF;
+                        log.info("ACONNECT: Negotiated sync points - interval={}KB, window={}",
+                                        negotiatedSyncIntervalKb, negotiatedSyncWindow);
+                        if (negotiatedSyncIntervalKb == 0) {
+                                syncPointsEnabled = false;
+                                log.info("Server disabled sync points (interval=0)");
+                        }
+                }
+
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF; // PI_13 is 3 bytes max
                 // Record length must be >= chunk size to avoid "article length exceeded" errors
@@ -680,12 +695,27 @@ public class TransferService {
                 // OPEN (ORF) - open file for writing
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
                                 .withIdDst(serverConnectionId);
-                session.sendFpduWithAck(openFpdu);
+                Fpdu ackOpen = session.sendFpduWithAck(openFpdu);
+
+                // Check negotiated compression from ACK_OPEN (PI 21)
+                ParameterValue pi21 = ackOpen.getParameter(ParameterIdentifier.PI_21_COMPRESSION);
+                if (pi21 != null && pi21.getValue() != null && pi21.getValue().length >= 1) {
+                        int compressionAccepted = pi21.getValue()[0] & 0xFF;
+                        log.info("ACK_OPEN: Compression {} (0=refused, 1=accepted)",
+                                        compressionAccepted == 0 ? "refused" : "accepted");
+                }
 
                 // WRITE (signals start of data transfer, no data payload)
                 Fpdu writeFpdu = new Fpdu(FpduType.WRITE)
                                 .withIdDst(serverConnectionId);
-                session.sendFpduWithAck(writeFpdu);
+                Fpdu ackWrite = session.sendFpduWithAck(writeFpdu);
+
+                // Check restart point from ACK_WRITE (PI 18)
+                ParameterValue pi18 = ackWrite.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
+                if (pi18 != null && pi18.getValue() != null) {
+                        int restartPoint = parseNumericValue(pi18.getValue());
+                        log.info("ACK_WRITE: Restart point = {}", restartPoint);
+                }
 
                 // DTF - send data in chunks using configured chunk size
                 // Send sync points periodically for restart capability
@@ -808,6 +838,23 @@ public class TransferService {
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
                 int serverConnectionId = aconnect.getIdSrc();
 
+                // Parse negotiated sync points from ACONNECT (PI 7)
+                // Format: [interval_high][interval_low][ack_window]
+                int negotiatedSyncIntervalKb = 0;
+                ParameterValue pi7 = aconnect.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
+                if (pi7 != null && pi7.getValue() != null && pi7.getValue().length >= 3) {
+                        byte[] syncBytes = pi7.getValue();
+                        negotiatedSyncIntervalKb = ((syncBytes[0] & 0xFF) << 8) | (syncBytes[1] & 0xFF);
+                        int negotiatedSyncWindow = syncBytes[2] & 0xFF;
+                        log.info("ACONNECT: Negotiated sync points - interval={}KB, window={}",
+                                        negotiatedSyncIntervalKb, negotiatedSyncWindow);
+                        // If server returns 0 for interval, sync points are disabled
+                        if (negotiatedSyncIntervalKb == 0) {
+                                syncPointsEnabled = false;
+                                log.info("Server disabled sync points (interval=0)");
+                        }
+                }
+
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
                 // Record length must be >= chunk size to avoid "article length exceeded" errors
@@ -839,12 +886,27 @@ public class TransferService {
                 // OPEN (ORF) - open file for writing
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
                                 .withIdDst(serverConnectionId);
-                session.sendFpduWithAck(openFpdu);
+                Fpdu ackOpenStreaming = session.sendFpduWithAck(openFpdu);
+
+                // Check negotiated compression from ACK_OPEN (PI 21)
+                ParameterValue pi21Streaming = ackOpenStreaming.getParameter(ParameterIdentifier.PI_21_COMPRESSION);
+                if (pi21Streaming != null && pi21Streaming.getValue() != null && pi21Streaming.getValue().length >= 1) {
+                        int compressionAccepted = pi21Streaming.getValue()[0] & 0xFF;
+                        log.info("Streaming ACK_OPEN: Compression {}",
+                                        compressionAccepted == 0 ? "refused" : "accepted");
+                }
 
                 // WRITE (signals start of data transfer, no data payload)
                 Fpdu writeFpdu = new Fpdu(FpduType.WRITE)
                                 .withIdDst(serverConnectionId);
-                session.sendFpduWithAck(writeFpdu);
+                Fpdu ackWriteStreaming = session.sendFpduWithAck(writeFpdu);
+
+                // Check restart point from ACK_WRITE (PI 18)
+                ParameterValue pi18Streaming = ackWriteStreaming.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
+                if (pi18Streaming != null && pi18Streaming.getValue() != null) {
+                        int restartPoint = parseNumericValue(pi18Streaming.getValue());
+                        log.info("Streaming ACK_WRITE: Restart point = {}", restartPoint);
+                }
 
                 // DTF - stream data in chunks from InputStream
                 long totalSent = 0;
