@@ -671,6 +671,8 @@ public class TransferService {
                 int serverConnectionId = aconnect.getIdSrc();
 
                 // Parse negotiated sync points from ACONNECT (PI 7)
+                // IMPORTANT: Use server's negotiated interval, not client's auto-calculation
+                long negotiatedSyncIntervalBytes = 0;
                 ParameterValue pi7NonStreaming = aconnect.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
                 if (pi7NonStreaming != null && pi7NonStreaming.getValue() != null
                                 && pi7NonStreaming.getValue().length >= 3) {
@@ -682,6 +684,10 @@ public class TransferService {
                         if (negotiatedSyncIntervalKb == 0) {
                                 syncPointsEnabled = false;
                                 log.info("Server disabled sync points (interval=0)");
+                        } else {
+                                negotiatedSyncIntervalBytes = negotiatedSyncIntervalKb * 1024L;
+                                log.info("Using server-negotiated sync interval: {} bytes",
+                                                negotiatedSyncIntervalBytes);
                         }
                 }
 
@@ -752,8 +758,13 @@ public class TransferService {
                 int offset = 0;
                 long bytesSinceLastSync = 0;
                 int syncPointNumber = 0;
-                // Calculate sync point interval in bytes (auto or from request/config)
-                long syncIntervalBytes = calculateSyncPointInterval(request, config, data.length);
+                // Use server-negotiated sync interval (from ACONNECT PI 7)
+                // Fall back to auto-calculation only if server didn't negotiate
+                long syncIntervalBytes = negotiatedSyncIntervalBytes > 0
+                                ? negotiatedSyncIntervalBytes
+                                : calculateSyncPointInterval(request, config, data.length);
+                log.info("Sync interval: {} bytes (negotiated={}, syncEnabled={})",
+                                syncIntervalBytes, negotiatedSyncIntervalBytes, syncPointsEnabled);
 
                 while (offset < data.length) {
                         int currentChunkSize = Math.min(actualChunkSize, data.length - offset);
@@ -952,8 +963,14 @@ public class TransferService {
                 long totalSent = 0;
                 long bytesSinceLastSync = 0;
                 int syncPointNumber = 0;
-                long syncIntervalBytes = calculateSyncPointInterval(request, config,
-                                (int) Math.min(fileSize, Integer.MAX_VALUE));
+                // Use server-negotiated sync interval (from ACONNECT PI 7)
+                long negotiatedSyncIntervalBytes = negotiatedSyncIntervalKb * 1024L;
+                long syncIntervalBytes = negotiatedSyncIntervalBytes > 0
+                                ? negotiatedSyncIntervalBytes
+                                : calculateSyncPointInterval(request, config,
+                                                (int) Math.min(fileSize, Integer.MAX_VALUE));
+                log.info("Sync interval: {} bytes (negotiated={}KB, syncEnabled={})",
+                                syncIntervalBytes, negotiatedSyncIntervalKb, syncPointsEnabled);
 
                 byte[] buffer = new byte[actualChunkSizeStreaming];
                 int bytesRead;
