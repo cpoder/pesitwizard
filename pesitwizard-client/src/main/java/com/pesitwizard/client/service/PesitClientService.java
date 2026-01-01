@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.pesitwizard.client.config.ClientConfig;
 import com.pesitwizard.exception.PesitException;
+import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
@@ -67,20 +68,18 @@ public class PesitClientService {
         TransportChannel channel = createChannel(host, port);
 
         try (PesitSession session = new PesitSession(channel, config.isStrictMode())) {
-            // 1. CONNECT - PI order is critical: PI_03, PI_04, PI_05, PI_06, PI_22
+            // 1. CONNECT - use ConnectMessageBuilder for correct PI order
             connectionId = 1;
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(connectionId)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, config.getClientId()))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId));
+            ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
+                    .demandeur(config.getClientId())
+                    .serveur(serverId)
+                    .writeAccess();
 
             if (config.getPassword() != null && !config.getPassword().isEmpty()) {
-                connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, config.getPassword()));
+                connectBuilder.password(config.getPassword());
             }
 
-            connectFpdu.withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
-
+            Fpdu connectFpdu = connectBuilder.build(connectionId);
             Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
             serverConnectionId = aconnect.getIdSrc();
             log.info("Connected to server, connection ID: {}", serverConnectionId);
@@ -239,21 +238,18 @@ public class PesitClientService {
         TransportChannel channel = createChannel(host, port);
 
         try (PesitSession session = new PesitSession(channel, config.isStrictMode())) {
-            // 1. CONNECT
+            // 1. CONNECT - use ConnectMessageBuilder for correct PI order
             connectionId = 1;
-            // PI order is critical: PI_03, PI_04, PI_05, PI_06, PI_22
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(connectionId)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, config.getClientId()))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId));
+            ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
+                    .demandeur(config.getClientId())
+                    .serveur(serverId)
+                    .readAccess();
 
             if (config.getPassword() != null && !config.getPassword().isEmpty()) {
-                connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, config.getPassword()));
+                connectBuilder.password(config.getPassword());
             }
 
-            connectFpdu.withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 1)); // Read access
-
+            Fpdu connectFpdu = connectBuilder.build(connectionId);
             Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
             serverConnectionId = aconnect.getIdSrc();
             log.info("Connected to server, connection ID: {}", serverConnectionId);
@@ -394,14 +390,13 @@ public class PesitClientService {
             TransportChannel channel = createChannel(host, port);
 
             try (PesitSession session = new PesitSession(channel, config.isStrictMode())) {
+                // CONNECT - use ConnectMessageBuilder for correct PI order
                 connectionId = 1;
-                // PI order is critical: PI_03, PI_04, PI_06, PI_22
-                Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                        .withIdSrc(connectionId)
-                        .withParameter(new ParameterValue(PI_03_DEMANDEUR, config.getClientId()))
-                        .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
-                        .withParameter(new ParameterValue(PI_06_VERSION, 2))
-                        .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
+                Fpdu connectFpdu = new ConnectMessageBuilder()
+                        .demandeur(config.getClientId())
+                        .serveur(serverId)
+                        .writeAccess()
+                        .build(connectionId);
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
                 serverConnectionId = aconnect.getIdSrc();
@@ -442,21 +437,18 @@ public class PesitClientService {
         TransportChannel channel = createChannel(host, port);
 
         try (PesitSession session = new PesitSession(channel, config.isStrictMode())) {
-            // 1. CONNECT
+            // 1. CONNECT - use ConnectMessageBuilder for correct PI order
             connectionId = 1;
-            // PI order is critical: PI_03, PI_04, PI_05, PI_06, PI_22
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(connectionId)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, config.getClientId()))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId));
+            ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
+                    .demandeur(config.getClientId())
+                    .serveur(serverId)
+                    .writeAccess();
 
             if (config.getPassword() != null && !config.getPassword().isEmpty()) {
-                connectFpdu.withParameter(new ParameterValue(PI_05_CONTROLE_ACCES, config.getPassword()));
+                connectBuilder.password(config.getPassword());
             }
 
-            connectFpdu.withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
-
+            Fpdu connectFpdu = connectBuilder.build(connectionId);
             Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
             serverConnectionId = aconnect.getIdSrc();
             log.info("Connected to server, connection ID: {}", serverConnectionId);
