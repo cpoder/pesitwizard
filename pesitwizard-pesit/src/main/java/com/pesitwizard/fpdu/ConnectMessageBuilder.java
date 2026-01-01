@@ -97,25 +97,36 @@ public class ConnectMessageBuilder {
      * @throws IOException if serialization fails
      */
     public Fpdu build(int connectionId) throws IOException {
+        // PI order is critical in PeSIT: PI_03, PI_04, PI_05, PI_06, PI_07, PI_22,
+        // PI_23
         Fpdu fpdu = new Fpdu(FpduType.CONNECT)
                 .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, demandeur))
                 .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, serveur))
-                .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2))
-                .withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, accessType))
                 .withIdSrc(connectionId)
                 .withIdDst(0);
 
-        // Add password if provided (PI_05 CONTROLE_ACCES)
+        // PI_05 (password) - optional
         if (password != null && !password.isEmpty()) {
             fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, password));
         }
 
-        // PI_07 (sync points): Do NOT send in CONNECT request.
-        // CX rejects any CONNECT containing PI 7 with ABORT.
-        // The server will return its sync point configuration in ACONNECT.
-        // Client must respect server's PI 7 values from ACONNECT response.
+        // PI_06 (version)
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
-        // Add resync capability (PI_23)
+        // PI_07 (sync points) - MUST come after PI_06 and before PI_22
+        if (syncPointsEnabled) {
+            byte[] pi7Value = new byte[] {
+                    (byte) ((syncIntervalKb >> 8) & 0xFF),
+                    (byte) (syncIntervalKb & 0xFF),
+                    (byte) (syncAckWindow & 0xFF)
+            };
+            fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_07_SYNC_POINTS, pi7Value));
+        }
+
+        // PI_22 (access type) - MUST come after PI_07
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, accessType));
+
+        // PI_23 (resync) - last
         if (resyncEnabled) {
             fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_23_RESYNC, 1));
         }

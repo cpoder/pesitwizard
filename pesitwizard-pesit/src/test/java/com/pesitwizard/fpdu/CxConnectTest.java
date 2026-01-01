@@ -41,19 +41,21 @@ public class CxConnectTest {
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
-            // Build CONNECT FPDU
+            // Build CONNECT FPDU - PI order is critical: PI_03, PI_04, PI_06, PI_07, PI_22
             Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, DEMANDEUR))
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, SERVEUR))
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0)) // write
                     .withIdSrc(1)
                     .withIdDst(0);
 
-            // Add PI 7 if specified
+            // Add PI 7 BEFORE PI 22 (order is essential in PeSIT!)
             if (pi7Value != null) {
                 connectFpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_07_SYNC_POINTS, pi7Value));
             }
+
+            // PI 22 must come AFTER PI 7
+            connectFpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0)); // write
 
             // Serialize using FpduBuilder
             byte[] fpduData = FpduBuilder.buildFpdu(connectFpdu);
