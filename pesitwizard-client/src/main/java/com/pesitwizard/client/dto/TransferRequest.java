@@ -98,4 +98,13 @@ public class TransferRequest {
      * If set, this is the transfer ID to resume from.
      */
     private String resumeFromTransferId;
+
+    /**
+     * Record/article length (PI_32) - max size of a single article/record.
+     * This is configured per virtual file on the server and must be known in
+     * advance.
+     * If null, uses config default (typically 506 bytes).
+     * Note: PI_32 (article) and PI_25 (entity) are INDEPENDENT limits.
+     */
+    private Integer recordLength;
 }

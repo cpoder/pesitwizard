@@ -670,10 +670,13 @@ public class TransferService {
                 // Auto-calculate chunkSize based on file size, or use explicit override
                 int chunkSize = request.getChunkSize() != null ? request.getChunkSize()
                                 : calculateOptimalChunkSize(fileSize);
-                int recordLength = config.getRecordLength() != null ? config.getRecordLength() : 0;
+                // Record length (PI 32) - request overrides config (configured per virtual file
+                // on server)
+                int recordLength = request.getRecordLength() != null ? request.getRecordLength()
+                                : (config.getRecordLength() != null ? config.getRecordLength() : 506);
 
-                log.info("Streaming transfer: virtualFile={}, fileSize={}, chunkSize={} (auto-calculated)",
-                                virtualFile, fileSize, chunkSize);
+                log.info("Streaming transfer: virtualFile={}, fileSize={}, chunkSize={}, recordLength={} (PI32)",
+                                virtualFile, fileSize, chunkSize, recordLength);
 
                 // Determine sync point settings (request overrides config)
                 boolean syncPointsEnabled = request.getSyncPointsEnabled() != null

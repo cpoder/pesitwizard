@@ -95,7 +95,8 @@ const form = ref({
   // Advanced options
   syncPointsEnabled: false,
   syncPointIntervalBytes: null as number | null,  // null = auto
-  resyncEnabled: false
+  resyncEnabled: false,
+  recordLength: null as number | null  // PI 32 - configured per virtual file on server
 })
 
 const showAdvancedOptions = ref(false)
@@ -248,7 +249,8 @@ async function startTransfer() {
       // Advanced options
       syncPointsEnabled: form.value.syncPointsEnabled || undefined,
       syncPointIntervalBytes: form.value.syncPointIntervalBytes || undefined,
-      resyncEnabled: form.value.resyncEnabled || undefined
+      resyncEnabled: form.value.resyncEnabled || undefined,
+      recordLength: form.value.recordLength || undefined
     }
     
     // Add connection IDs if selected
@@ -291,6 +293,7 @@ function resetForm() {
   form.value.syncPointsEnabled = false
   form.value.syncPointIntervalBytes = null
   form.value.resyncEnabled = false
+  form.value.recordLength = null
   showAdvancedOptions.value = false
 }
 
@@ -570,6 +573,25 @@ async function resumeTransfer(transferId: string) {
                 </label>
                 <p class="text-xs text-gray-500 mt-1 ml-6">
                   Allow resuming from last checkpoint if transfer fails
+                </p>
+              </div>
+
+              <!-- Record Length (PI 32) -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Record Length (PI 32)
+                </label>
+                <select v-model="form.recordLength" class="select">
+                  <option :value="null">Default (506 bytes)</option>
+                  <option :value="128">128 bytes</option>
+                  <option :value="256">256 bytes</option>
+                  <option :value="506">506 bytes</option>
+                  <option :value="1018">1018 bytes</option>
+                  <option :value="2042">2042 bytes</option>
+                  <option :value="4044">4044 bytes (SIT max)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">
+                  Max article size - configured per virtual file on server. Must match server config.
                 </p>
               </div>
             </div>
