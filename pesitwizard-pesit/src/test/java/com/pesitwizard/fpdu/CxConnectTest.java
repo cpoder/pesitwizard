@@ -3,8 +3,6 @@ package com.pesitwizard.fpdu;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Test script to find valid PI 7 (sync points) configuration for CX server.
@@ -54,9 +52,9 @@ public class CxConnectTest {
 
             // 2. CREATE - TRUE NEGOTIATION: PI 25 and PI 32 are INDEPENDENT
             // PI 25 = max entity size (container), PI 32 = max article size (record)
-            // Test hypothesis: use fixed PI 32 = 506, negotiate PI 25 separately
-            int proposedPi32 = 506; // Fixed article size (known working)
-            int proposedPi25 = 65535; // Start with max entity size
+            // CX server: PI 25 = 65535, PI 32 = 1024 (configured on FILE virtual file)
+            int proposedPi32 = 1024; // Article size configured on server for FILE
+            int proposedPi25 = 65535; // Max entity size
             int negotiatedPi25 = proposedPi25;
             Fpdu ackCreate = null;
             int minPi25 = proposedPi32 + 6; // Entity must fit at least one article
@@ -69,7 +67,7 @@ public class CxConnectTest {
                         .variableFormat()
                         .recordLength(proposedPi32)
                         .maxEntitySize(proposedPi25)
-                        .fileSizeKB(1)
+                        .fileSizeKB(100) // 100KB test file
                         .build(serverConnId);
                 sendFpdu(out, createFpdu, "CREATE");
                 ackCreate = readFpdu(in, "ACK_CREATE");
@@ -145,33 +143,39 @@ public class CxConnectTest {
             if (!checkDiagnostic(ackWrite, "ACK_WRITE"))
                 return;
 
-            // 5. DTF - test multi-article transfer
-            // With PI 25 = 512, we can fit multiple small articles in one entity
-            // Article format for variable records: [2-byte length][article data]
-            List<byte[]> articles = new ArrayList<>();
-            articles.add("Article 1: First record".getBytes());
-            articles.add("Article 2: Second record".getBytes());
-            articles.add("Article 3: Third record".getBytes());
-
-            int articlesPerEntity = FpduBuilder.calculateArticlesPerEntity(25, negotiatedPi25);
-            System.out
-                    .println("Articles per entity (PI25=" + negotiatedPi25 + ", articleSize=25): " + articlesPerEntity);
-
-            // Build multi-article DTF
-            byte[] dtfBytes = FpduBuilder.buildMultiArticleDtf(serverConnId, articles, negotiatedPi25);
-            if (dtfBytes == null) {
-                // Fallback to single article if multi doesn't fit
-                byte[] testData = "Hello from CxConnectTest - this is test data for PeSIT transfer validation!"
-                        .getBytes();
-                dtfBytes = FpduBuilder.buildFpdu(FpduType.DTF, serverConnId, 0, testData);
-                System.out.println("Sending single-article DTF (" + dtfBytes.length + " bytes)");
-            } else {
-                System.out.println(
-                        "Sending multi-article DTF (" + dtfBytes.length + " bytes, " + articles.size() + " articles)");
+            // 5. DTF - test transfer with 100KB file using MONO-ARTICLE DTFs
+            // Multi-article requires prior agreement with server - use mono-article for now
+            // PI 25 = negotiated entity size, PI 32 = 1024 (article size)
+            int totalDataSize = 100 * 1024; // 100KB
+            byte[] fullData = new byte[totalDataSize];
+            for (int i = 0; i < totalDataSize; i++) {
+                fullData[i] = (byte) ('A' + (i % 26));
             }
-            out.writeShort(dtfBytes.length); // transport framing
-            out.write(dtfBytes);
-            out.flush();
+
+            int articleSize = proposedPi32; // 1024 bytes per article
+            System.out.println("=== Mono-article transfer test ===");
+            System.out.println("Total data: " + totalDataSize + " bytes (" + (totalDataSize / 1024) + " KB)");
+            System.out.println("Article size (PI32): " + articleSize + " bytes");
+            System.out.println("Entity size (PI25): " + negotiatedPi25 + " bytes");
+
+            int offset = 0;
+            int totalArticles = 0;
+
+            while (offset < totalDataSize) {
+                int chunkSize = Math.min(articleSize, totalDataSize - offset);
+                byte[] article = new byte[chunkSize];
+                System.arraycopy(fullData, offset, article, 0, chunkSize);
+
+                // Send mono-article DTF (one article per entity)
+                byte[] dtfBytes = FpduBuilder.buildFpdu(FpduType.DTF, serverConnId, 0, article);
+                out.writeShort(dtfBytes.length); // transport framing
+                out.write(dtfBytes);
+                out.flush();
+
+                offset += chunkSize;
+                totalArticles++;
+            }
+            System.out.println("Sent " + totalArticles + " mono-article DTFs");
 
             // 6. DTF_END
             Fpdu dtfEndFpdu = new Fpdu(FpduType.DTF_END)
