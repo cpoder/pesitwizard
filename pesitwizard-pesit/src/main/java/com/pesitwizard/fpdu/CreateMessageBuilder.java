@@ -23,7 +23,7 @@ public class CreateMessageBuilder {
     private int allocationUnit = 0; // 0=Koctets
     private int maxReservation = 0; // 0=no limit
     private String creationDate = null;
-    private int restartPoint = -1; // PI 18: restart from sync point (-1 = not set)
+    private boolean isRestart = false; // PI 15: indicates this is a resumed transfer
 
     public CreateMessageBuilder filename(String filename) {
         this.filename = filename;
@@ -76,12 +76,11 @@ public class CreateMessageBuilder {
     }
 
     /**
-     * Set restart point (PI 18) for resuming from a sync point.
-     * 
-     * @param syncPoint The sync point number to restart from
+     * Mark this transfer as a restart/resume (PI 15 = 1).
+     * The actual restart point will come from ACK_WRITE (PI 18).
      */
-    public CreateMessageBuilder restartPoint(int syncPoint) {
-        this.restartPoint = syncPoint;
+    public CreateMessageBuilder restart() {
+        this.isRestart = true;
         return this;
     }
 
@@ -124,14 +123,14 @@ public class CreateMessageBuilder {
         ParameterValue pi17 = new ParameterValue(PI_17_PRIORITE, priority);
         ParameterValue pi25 = new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize);
 
-        // Note: PI_15 and PI_16 not included - not in CREATE parameter requirements
         Fpdu fpdu = new Fpdu(FpduType.CREATE).withParameter(pgi9).withParameter(pi13)
                 .withParameter(pi17).withParameter(pi25).withParameter(pgi30).withParameter(pgi40).withParameter(pgi50)
                 .withIdDst(serverConnectionId);
 
-        // Add PI 18 (restart point) if set - for resuming from a sync point
-        if (restartPoint >= 0) {
-            fpdu.withParameter(new ParameterValue(PI_18_POINT_RELANCE, restartPoint));
+        // Add PI 15 (transfert relancé) if this is a restart
+        // Note: PI 18 (restart point) comes from ACK_WRITE, not from client
+        if (isRestart) {
+            fpdu.withParameter(new ParameterValue(PI_15_TRANSFERT_RELANCE, 1));
         }
 
         return fpdu;
