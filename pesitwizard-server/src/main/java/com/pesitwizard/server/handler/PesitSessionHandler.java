@@ -254,8 +254,18 @@ public class PesitSessionHandler {
             ctx.setAccessType(pi22.getValue()[0] & 0xFF);
         }
 
-        // PI 7 (Sync Points)
-        ctx.setSyncPointsEnabled(fpdu.hasParameter(ParameterIdentifier.PI_07_SYNC_POINTS));
+        // PI 7 (Sync Points) - format: [interval_high, interval_low, window]
+        ParameterValue pi7 = fpdu.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
+        if (pi7 != null && pi7.getValue() != null && pi7.getValue().length >= 2) {
+            byte[] syncBytes = pi7.getValue();
+            int intervalKb = ((syncBytes[0] & 0xFF) << 8) | (syncBytes[1] & 0xFF);
+            ctx.setSyncPointsEnabled(true);
+            ctx.setClientSyncIntervalKb(intervalKb);
+            log.info("[{}] Client declared sync interval: {} KB", ctx.getSessionId(), intervalKb);
+        } else {
+            ctx.setSyncPointsEnabled(fpdu.hasParameter(ParameterIdentifier.PI_07_SYNC_POINTS));
+            ctx.setClientSyncIntervalKb(0); // No sync interval declared
+        }
 
         // PI 23 (Resync)
         ctx.setResyncEnabled(fpdu.hasParameter(ParameterIdentifier.PI_23_RESYNC));

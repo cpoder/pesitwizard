@@ -46,6 +46,11 @@ public class SessionContext {
     /** Sync points option negotiated (PI 7) */
     private boolean syncPointsEnabled;
 
+    /**
+     * Sync point interval in KB declared by client (PI 7) - for D2-222 validation
+     */
+    private int clientSyncIntervalKb;
+
     /** Resynchronization option negotiated (PI 23) */
     private boolean resyncEnabled;
 

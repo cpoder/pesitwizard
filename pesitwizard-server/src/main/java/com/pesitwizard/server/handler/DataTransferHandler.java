@@ -254,14 +254,15 @@ public class DataTransferHandler {
             return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
         }
 
-        // D2-222: Validate data without sync point
-        long syncIntervalBytes = properties.getSyncIntervalKb() * 1024L;
-        if (syncIntervalBytes > 0) {
+        // D2-222: Validate that client respects its declared sync point interval
+        int clientSyncIntervalKb = ctx.getClientSyncIntervalKb();
+        if (clientSyncIntervalKb > 0) {
+            long syncIntervalBytes = clientSyncIntervalKb * 1024L;
             long newBytesSinceSync = transfer.getBytesSinceLastSync() + dataLength;
             validation = fpduValidator.validateDataWithoutSyncPoint(transfer, newBytesSinceSync, syncIntervalBytes);
             if (!validation.valid()) {
-                log.warn("[{}] DTF D2-222 validation failed: {} bytes without sync (limit {})",
-                        ctx.getSessionId(), newBytesSinceSync, syncIntervalBytes);
+                log.warn("[{}] DTF D2-222: client exceeded declared sync interval ({} KB): {} bytes without sync",
+                        ctx.getSessionId(), clientSyncIntervalKb, newBytesSinceSync);
                 return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
             }
             transfer.setBytesSinceLastSync(newBytesSinceSync);
