@@ -77,6 +77,10 @@ public class PesitServerConfig {
 
     @Column
     @Builder.Default
+    private int syncIntervalKb = 32; // Sync point interval in KB (default 32KB)
+
+    @Column
+    @Builder.Default
     private boolean resyncEnabled = true;
 
     @Column
