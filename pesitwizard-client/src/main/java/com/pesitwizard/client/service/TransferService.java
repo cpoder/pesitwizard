@@ -684,12 +684,20 @@ public class TransferService {
                 long bytesSinceLastProgressUpdate = 0;
                 log.info("Progress update interval: {} bytes (fileSize={})", progressUpdateInterval, data.length);
 
+                // Calculate sync interval BEFORE CONNECT so we can declare it in PI 7
+                long plannedSyncIntervalBytes = calculateSyncPointInterval(request, config, data.length);
+                int plannedSyncIntervalKb = plannedSyncIntervalBytes > 0
+                                ? (int) (plannedSyncIntervalBytes / 1024)
+                                : 0; // 0 = no sync points
+
                 // CONNECT - use ConnectMessageBuilder for correct structure
+                // IMPORTANT: declare the SAME interval we will actually use for sending SYN
                 ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
                                 .demandeur(request.getPartnerId())
                                 .serveur(server.getServerId())
                                 .writeAccess()
-                                .syncPointsEnabled(syncPointsEnabled)
+                                .syncPointsEnabled(syncPointsEnabled && plannedSyncIntervalKb > 0)
+                                .syncIntervalKb(plannedSyncIntervalKb)
                                 .resyncEnabled(resyncEnabled);
                 if (request.getPassword() != null && !request.getPassword().isEmpty()) {
                         // Decrypt password if it's encrypted (vault: or ENC: prefix)
@@ -697,6 +705,8 @@ public class TransferService {
                         connectBuilder.password(password);
                         log.debug("Password provided for CONNECT (length: {})", password.length());
                 }
+                log.info("CONNECT: declaring sync interval = {} KB (syncEnabled={})",
+                                plannedSyncIntervalKb, syncPointsEnabled && plannedSyncIntervalKb > 0);
                 Fpdu connectFpdu = connectBuilder.build(connectionId);
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
@@ -732,78 +742,51 @@ public class TransferService {
                 }
 
                 // CREATE - use CreateMessageBuilder for correct structure
+                // Strategy: propose MAX values, server will respond with its limits in
+                // ACK_CREATE
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF; // PI_13 is 3 bytes max
-                // PI 32 (recordLength) = max ARTICLE size
-                // PI 25 (maxEntitySize) = max ENTITY size >= PI 32 + 6 (FPDU header) per PeSIT
-                // spec
-                // Use server's PI 25 from ACONNECT if available, otherwise use config or
-                // default
-                int effectiveMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize
-                                : (recordLength > 0 ? recordLength + 6 : 1030);
-                int effectiveRecordLength = effectiveMaxEntity - 6; // Article = entity - 6-byte header
+                // PI 25 (maxEntitySize) = propose max (65535) or server limit from ACONNECT
+                // PI 32 (recordLength) = PI 25 - 6 (FPDU header)
+                int proposedMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize : 65535;
+                int proposedRecordLength = proposedMaxEntity - 6;
                 // PI 42 (maxReservation) = file size in KB (with PI 41 = 0 for KB unit)
                 long fileSizeKB = (data.length + 1023) / 1024; // Round up to KB
-                log.info("CREATE params (non-streaming): recordLength={}, chunkSize={}, PI32(article)={}, PI25(entity)={}, PI42(sizeKB)={}, syncPointsEnabled={}",
-                                recordLength, chunkSize, effectiveRecordLength, effectiveMaxEntity, fileSizeKB,
-                                syncPointsEnabled);
+                log.info("CREATE: proposing PI25(entity)={}, PI32(article)={}, syncPointsEnabled={}",
+                                proposedMaxEntity, proposedRecordLength, syncPointsEnabled);
                 Fpdu createFpdu = new CreateMessageBuilder()
                                 .filename(virtualFile)
                                 .transferId(transferId)
                                 .variableFormat()
-                                .recordLength(effectiveRecordLength)
-                                .maxEntitySize(effectiveMaxEntity)
+                                .recordLength(proposedRecordLength)
+                                .maxEntitySize(proposedMaxEntity)
                                 .fileSizeKB(fileSizeKB)
                                 .build(serverConnectionId);
 
                 Fpdu ackCreate = session.sendFpduWithAck(createFpdu);
 
-                // Check for error diagnostic in ACK_CREATE (D2_2xx = negotiation error)
-                ParameterValue diag = ackCreate.getParameter(ParameterIdentifier.PI_02_DIAG);
-                if (diag != null && diag.getValue() != null && diag.getValue().length >= 3) {
-                        byte[] diagBytes = diag.getValue();
-                        int diagCode = diagBytes[0] & 0xFF;
-                        int diagReason = ((diagBytes[1] & 0xFF) << 8) | (diagBytes[2] & 0xFF);
-                        if (diagCode == 2) { // D2_xxx = negotiation/parameter error
-                                log.warn("ACK_CREATE returned error D{}_{}", diagCode, diagReason);
-                                // Extract server's PI 25 and retry
-                                ParameterValue serverPi25 = ackCreate
-                                                .getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
-                                if (serverPi25 != null && serverPi25.getValue() != null) {
-                                        int serverMaxEntity = parseNumericValue(serverPi25.getValue());
-                                        log.info("Server max entity (PI 25) = {}, retrying CREATE", serverMaxEntity);
-                                        effectiveMaxEntity = serverMaxEntity;
-                                        effectiveRecordLength = serverMaxEntity - 6;
-                                        // Retry CREATE with server's values
-                                        createFpdu = new CreateMessageBuilder()
-                                                        .filename(virtualFile)
-                                                        .transferId(transferId)
-                                                        .variableFormat()
-                                                        .recordLength(effectiveRecordLength)
-                                                        .maxEntitySize(effectiveMaxEntity)
-                                                        .fileSizeKB(fileSizeKB)
-                                                        .build(serverConnectionId);
-                                        ackCreate = session.sendFpduWithAck(createFpdu);
-                                }
-                        }
-                }
+                // Check diagnostic - according to spec, non-zero = failure, return to CONNECTED
+                // state
+                checkAckDiagnostic(ackCreate, "ACK_CREATE");
 
-                // Use negotiated max entity size from ACK_CREATE (PI 25) to determine max
-                // article size
-                // Actual chunk (article) size = min(PI 32, negotiated PI 25 - 6)
-                int actualChunkSize = effectiveRecordLength;
+                // Use server's negotiated PI 25 from ACK_CREATE to determine actual chunk size
+                int actualChunkSize;
                 ParameterValue pi25 = ackCreate.getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
                 if (pi25 != null && pi25.getValue() != null) {
                         int negotiatedMaxEntity = parseNumericValue(pi25.getValue());
-                        int maxArticleFromEntity = negotiatedMaxEntity - 6; // Entity includes 6-byte header
-                        actualChunkSize = Math.min(effectiveRecordLength, maxArticleFromEntity);
-                        log.info("Non-streaming: PI25 negotiated={}, max article={}, using chunk size={}",
-                                        negotiatedMaxEntity, maxArticleFromEntity, actualChunkSize);
+                        actualChunkSize = negotiatedMaxEntity - 6; // Entity includes 6-byte header
+                        log.info("ACK_CREATE: PI25 negotiated={}, using chunk size (article)={}",
+                                        negotiatedMaxEntity, actualChunkSize);
+                } else {
+                        // Server didn't specify, use our proposed value
+                        actualChunkSize = proposedRecordLength;
+                        log.info("ACK_CREATE: no PI25 in response, using proposed chunk size={}", actualChunkSize);
                 }
 
                 // OPEN (ORF) - open file for writing
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
                                 .withIdDst(serverConnectionId);
                 Fpdu ackOpen = session.sendFpduWithAck(openFpdu);
+                checkAckDiagnostic(ackOpen, "ACK_OPEN");
 
                 // Check negotiated compression from ACK_OPEN (PI 21)
                 ParameterValue pi21 = ackOpen.getParameter(ParameterIdentifier.PI_21_COMPRESSION);
@@ -817,6 +800,7 @@ public class TransferService {
                 Fpdu writeFpdu = new Fpdu(FpduType.WRITE)
                                 .withIdDst(serverConnectionId);
                 Fpdu ackWrite = session.sendFpduWithAck(writeFpdu);
+                checkAckDiagnostic(ackWrite, "ACK_WRITE");
 
                 // Check restart point from ACK_WRITE (PI 18)
                 ParameterValue pi18 = ackWrite.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
@@ -942,17 +926,27 @@ public class TransferService {
                 long bytesSinceLastProgressUpdate = 0;
                 log.info("Progress update interval: {} bytes (fileSize={})", progressUpdateInterval, fileSize);
 
-                // CONNECT - use ConnectMessageBuilder for correct structure
+                // Calculate sync interval BEFORE CONNECT so we can declare it in PI 7
+                long plannedSyncIntervalBytes = calculateSyncPointInterval(request, config,
+                                (int) Math.min(fileSize, Integer.MAX_VALUE));
+                int plannedSyncIntervalKb = plannedSyncIntervalBytes > 0
+                                ? (int) (plannedSyncIntervalBytes / 1024)
+                                : 0; // 0 = no sync points
+
+                // CONNECT - declare the SAME interval we will actually use for sending SYN
                 ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
                                 .demandeur(request.getPartnerId())
                                 .serveur(server.getServerId())
                                 .writeAccess()
-                                .syncPointsEnabled(syncPointsEnabled)
+                                .syncPointsEnabled(syncPointsEnabled && plannedSyncIntervalKb > 0)
+                                .syncIntervalKb(plannedSyncIntervalKb)
                                 .resyncEnabled(resyncEnabled);
                 if (request.getPassword() != null && !request.getPassword().isEmpty()) {
                         String password = secretsService.decrypt(request.getPassword());
                         connectBuilder.password(password);
                 }
+                log.info("CONNECT (streaming): declaring sync interval = {} KB (syncEnabled={})",
+                                plannedSyncIntervalKb, syncPointsEnabled && plannedSyncIntervalKb > 0);
                 Fpdu connectFpdu = connectBuilder.build(connectionId);
 
                 Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
@@ -983,80 +977,51 @@ public class TransferService {
                         log.info("ACONNECT: Server max entity size (PI 25) = {}", serverMaxEntitySize);
                 }
 
-                // CREATE - use CreateMessageBuilder for correct structure
+                // CREATE - propose MAX values, server will respond with its limits in
+                // ACK_CREATE
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
-                // PI 32 (recordLength) = max ARTICLE size
-                // PI 25 (maxEntitySize) = max ENTITY size >= PI 32 + 6 (FPDU header) per PeSIT
-                // spec
-                // Use server's PI 25 from ACONNECT if available, otherwise use config or
-                // default
-                int effectiveMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize
-                                : (recordLength > 0 ? recordLength + 6 : 1030);
-                int effectiveRecordLength = effectiveMaxEntity - 6; // Article = entity - 6-byte header
+                // PI 25 (maxEntitySize) = propose max (65535) or server limit from ACONNECT
+                // PI 32 (recordLength) = PI 25 - 6 (FPDU header)
+                int proposedMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize : 65535;
+                int proposedRecordLength = proposedMaxEntity - 6;
                 // PI 42 (maxReservation) = file size in KB (with PI 41 = 0 for KB unit)
                 long fileSizeKB = (fileSize + 1023) / 1024; // Round up to KB
-                log.info("CREATE params: recordLength={}, chunkSize={}, PI32(article)={}, PI25(entity)={}, PI42(sizeKB)={}, syncPointsEnabled={}",
-                                recordLength, chunkSize, effectiveRecordLength, effectiveMaxEntity, fileSizeKB,
-                                syncPointsEnabled);
+                log.info("CREATE (streaming): proposing PI25(entity)={}, PI32(article)={}, syncPointsEnabled={}",
+                                proposedMaxEntity, proposedRecordLength, syncPointsEnabled);
                 Fpdu createFpdu = new CreateMessageBuilder()
                                 .filename(virtualFile)
                                 .transferId(transferId)
                                 .variableFormat()
-                                .recordLength(effectiveRecordLength)
-                                .maxEntitySize(effectiveMaxEntity)
+                                .recordLength(proposedRecordLength)
+                                .maxEntitySize(proposedMaxEntity)
                                 .fileSizeKB(fileSizeKB)
                                 .build(serverConnectionId);
 
                 Fpdu ackCreateStreaming = session.sendFpduWithAck(createFpdu);
 
-                // Check for error diagnostic in ACK_CREATE (D2_2xx = negotiation error)
-                ParameterValue diagStreaming = ackCreateStreaming.getParameter(ParameterIdentifier.PI_02_DIAG);
-                if (diagStreaming != null && diagStreaming.getValue() != null && diagStreaming.getValue().length >= 3) {
-                        byte[] diagBytes = diagStreaming.getValue();
-                        int diagCode = diagBytes[0] & 0xFF;
-                        int diagReason = ((diagBytes[1] & 0xFF) << 8) | (diagBytes[2] & 0xFF);
-                        if (diagCode == 2) { // D2_xxx = negotiation/parameter error
-                                log.warn("ACK_CREATE returned error D{}_{}", diagCode, diagReason);
-                                // Extract server's PI 25 and retry
-                                ParameterValue serverPi25 = ackCreateStreaming
-                                                .getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
-                                if (serverPi25 != null && serverPi25.getValue() != null) {
-                                        int serverMaxEntity = parseNumericValue(serverPi25.getValue());
-                                        log.info("Server max entity (PI 25) = {}, retrying CREATE", serverMaxEntity);
-                                        effectiveMaxEntity = serverMaxEntity;
-                                        effectiveRecordLength = serverMaxEntity - 6;
-                                        // Retry CREATE with server's values
-                                        createFpdu = new CreateMessageBuilder()
-                                                        .filename(virtualFile)
-                                                        .transferId(transferId)
-                                                        .variableFormat()
-                                                        .recordLength(effectiveRecordLength)
-                                                        .maxEntitySize(effectiveMaxEntity)
-                                                        .fileSizeKB(fileSizeKB)
-                                                        .build(serverConnectionId);
-                                        ackCreateStreaming = session.sendFpduWithAck(createFpdu);
-                                }
-                        }
-                }
+                // Check diagnostic - according to spec, non-zero = failure
+                checkAckDiagnostic(ackCreateStreaming, "ACK_CREATE");
 
-                // Use negotiated max entity size from ACK_CREATE (PI 25) to determine max
-                // article size
-                // Actual chunk (article) size = min(PI 32, negotiated PI 25 - 6)
-                int actualChunkSizeStreaming = effectiveRecordLength;
+                // Use server's negotiated PI 25 from ACK_CREATE to determine actual chunk size
+                int actualChunkSizeStreaming;
                 ParameterValue pi25Streaming = ackCreateStreaming
                                 .getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
                 if (pi25Streaming != null && pi25Streaming.getValue() != null) {
                         int negotiatedMaxEntity = parseNumericValue(pi25Streaming.getValue());
-                        int maxArticleFromEntity = negotiatedMaxEntity - 6; // Entity includes 6-byte header
-                        actualChunkSizeStreaming = Math.min(effectiveRecordLength, maxArticleFromEntity);
-                        log.info("Streaming: PI25 negotiated={}, max article={}, using chunk size={}",
-                                        negotiatedMaxEntity, maxArticleFromEntity, actualChunkSizeStreaming);
+                        actualChunkSizeStreaming = negotiatedMaxEntity - 6; // Entity includes 6-byte header
+                        log.info("ACK_CREATE (streaming): PI25 negotiated={}, using chunk size={}",
+                                        negotiatedMaxEntity, actualChunkSizeStreaming);
+                } else {
+                        actualChunkSizeStreaming = proposedRecordLength;
+                        log.info("ACK_CREATE (streaming): no PI25 in response, using proposed chunk size={}",
+                                        actualChunkSizeStreaming);
                 }
 
                 // OPEN (ORF) - open file for writing
                 Fpdu openFpdu = new Fpdu(FpduType.OPEN)
                                 .withIdDst(serverConnectionId);
                 Fpdu ackOpenStreaming = session.sendFpduWithAck(openFpdu);
+                checkAckDiagnostic(ackOpenStreaming, "ACK_OPEN");
 
                 // Check negotiated compression from ACK_OPEN (PI 21)
                 ParameterValue pi21Streaming = ackOpenStreaming.getParameter(ParameterIdentifier.PI_21_COMPRESSION);
@@ -1070,6 +1035,7 @@ public class TransferService {
                 Fpdu writeFpdu = new Fpdu(FpduType.WRITE)
                                 .withIdDst(serverConnectionId);
                 Fpdu ackWriteStreaming = session.sendFpduWithAck(writeFpdu);
+                checkAckDiagnostic(ackWriteStreaming, "ACK_WRITE");
 
                 // Check restart point from ACK_WRITE (PI 18)
                 ParameterValue pi18Streaming = ackWriteStreaming.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
@@ -1405,6 +1371,28 @@ public class TransferService {
          * - Files 10-100MB: every 1MB
          * - Files > 100MB: every 5MB
          */
+        /**
+         * Check ACK FPDU diagnostic (PI 2). Throws exception if non-zero.
+         * According to PeSIT spec, diagnostic code 0 = success, any other value =
+         * failure.
+         */
+        private void checkAckDiagnostic(Fpdu ack, String fpduName) {
+                ParameterValue diag = ack.getParameter(ParameterIdentifier.PI_02_DIAG);
+                if (diag != null && diag.getValue() != null && diag.getValue().length >= 1) {
+                        byte[] diagBytes = diag.getValue();
+                        int diagCode = diagBytes[0] & 0xFF;
+                        if (diagCode != 0) {
+                                int diagReason = diagBytes.length >= 3
+                                                ? ((diagBytes[1] & 0xFF) << 8) | (diagBytes[2] & 0xFF)
+                                                : 0;
+                                String msg = String.format("%s failed with diagnostic D%d_%d", fpduName, diagCode,
+                                                diagReason);
+                                log.error(msg);
+                                throw new RuntimeException(msg);
+                        }
+                }
+        }
+
         private long calculateSyncPointInterval(TransferRequest request, TransferConfig config, int fileSize) {
                 // Request takes priority
                 if (request.getSyncPointIntervalBytes() != null && request.getSyncPointIntervalBytes() > 0) {
