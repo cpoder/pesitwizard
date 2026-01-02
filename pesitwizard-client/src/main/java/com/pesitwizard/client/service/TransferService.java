@@ -719,14 +719,24 @@ public class TransferService {
                         }
                 }
 
+                // Parse PI 25 from ACONNECT - server's max entity size capability
+                int serverMaxEntitySize = 0;
+                ParameterValue aconnectPi25 = aconnect.getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
+                if (aconnectPi25 != null && aconnectPi25.getValue() != null) {
+                        serverMaxEntitySize = parseNumericValue(aconnectPi25.getValue());
+                        log.info("ACONNECT: Server max entity size (PI 25) = {}", serverMaxEntitySize);
+                }
+
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF; // PI_13 is 3 bytes max
-                // PI 32 (recordLength) = max ARTICLE size, must match server config
+                // PI 32 (recordLength) = max ARTICLE size
                 // PI 25 (maxEntitySize) = max ENTITY size >= PI 32 + 6 (FPDU header) per PeSIT
                 // spec
-                // DTF chunks = articles, must be <= PI 32
-                int effectiveRecordLength = recordLength > 0 ? recordLength : 1024;
-                int effectiveMaxEntity = effectiveRecordLength + 6; // Entity = article + 6-byte header
+                // Use server's PI 25 from ACONNECT if available, otherwise use config or
+                // default
+                int effectiveMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize
+                                : (recordLength > 0 ? recordLength + 6 : 1030);
+                int effectiveRecordLength = effectiveMaxEntity - 6; // Article = entity - 6-byte header
                 // PI 42 (maxReservation) = file size in KB (with PI 41 = 0 for KB unit)
                 long fileSizeKB = (data.length + 1023) / 1024; // Round up to KB
                 log.info("CREATE params (non-streaming): recordLength={}, chunkSize={}, PI32(article)={}, PI25(entity)={}, PI42(sizeKB)={}, syncPointsEnabled={}",
@@ -931,14 +941,24 @@ public class TransferService {
                         }
                 }
 
+                // Parse PI 25 from ACONNECT - server's max entity size capability
+                int serverMaxEntitySize = 0;
+                ParameterValue aconnectPi25 = aconnect.getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
+                if (aconnectPi25 != null && aconnectPi25.getValue() != null) {
+                        serverMaxEntitySize = parseNumericValue(aconnectPi25.getValue());
+                        log.info("ACONNECT: Server max entity size (PI 25) = {}", serverMaxEntitySize);
+                }
+
                 // CREATE - use CreateMessageBuilder for correct structure
                 int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
-                // PI 32 (recordLength) = max ARTICLE size, must match server config
+                // PI 32 (recordLength) = max ARTICLE size
                 // PI 25 (maxEntitySize) = max ENTITY size >= PI 32 + 6 (FPDU header) per PeSIT
                 // spec
-                // DTF chunks = articles, must be <= PI 32
-                int effectiveRecordLength = recordLength > 0 ? recordLength : 1024;
-                int effectiveMaxEntity = effectiveRecordLength + 6; // Entity = article + 6-byte header
+                // Use server's PI 25 from ACONNECT if available, otherwise use config or
+                // default
+                int effectiveMaxEntity = serverMaxEntitySize > 0 ? serverMaxEntitySize
+                                : (recordLength > 0 ? recordLength + 6 : 1030);
+                int effectiveRecordLength = effectiveMaxEntity - 6; // Article = entity - 6-byte header
                 // PI 42 (maxReservation) = file size in KB (with PI 41 = 0 for KB unit)
                 long fileSizeKB = (fileSize + 1023) / 1024; // Round up to KB
                 log.info("CREATE params: recordLength={}, chunkSize={}, PI32(article)={}, PI25(entity)={}, PI42(sizeKB)={}, syncPointsEnabled={}",
