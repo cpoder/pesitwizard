@@ -45,6 +45,11 @@ public class CreateMessageBuilder {
         return this;
     }
 
+    public CreateMessageBuilder creationDate(String creationDate) {
+        this.creationDate = creationDate;
+        return this;
+    }
+
     public CreateMessageBuilder variableFormat() {
         this.articleFormat = 0x80;
         return this;
@@ -123,15 +128,23 @@ public class CreateMessageBuilder {
         ParameterValue pi17 = new ParameterValue(PI_17_PRIORITE, priority);
         ParameterValue pi25 = new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize);
 
-        Fpdu fpdu = new Fpdu(FpduType.CREATE).withParameter(pgi9).withParameter(pi13)
-                .withParameter(pi17).withParameter(pi25).withParameter(pgi30).withParameter(pgi40).withParameter(pgi50)
-                .withIdDst(serverConnectionId);
+        // Build FPDU with PIs in correct order: PGI9, PI13, PI15 (if restart), PI17,
+        // PI25, PGI30, PGI40, PGI50
+        Fpdu fpdu = new Fpdu(FpduType.CREATE)
+                .withParameter(pgi9)
+                .withParameter(pi13);
 
-        // Add PI 15 (transfert relancé) if this is a restart
-        // Note: PI 18 (restart point) comes from ACK_WRITE, not from client
+        // PI 15 must come BEFORE PI 17 (order is critical in PeSIT!)
         if (isRestart) {
             fpdu.withParameter(new ParameterValue(PI_15_TRANSFERT_RELANCE, 1));
         }
+
+        fpdu.withParameter(pi17)
+                .withParameter(pi25)
+                .withParameter(pgi30)
+                .withParameter(pgi40)
+                .withParameter(pgi50)
+                .withIdDst(serverConnectionId);
 
         return fpdu;
     }

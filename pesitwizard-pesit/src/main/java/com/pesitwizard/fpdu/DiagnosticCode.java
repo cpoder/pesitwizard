@@ -59,8 +59,21 @@ public enum DiagnosticCode {
     D2_225(2, 225,
             "Congestion de l'application station : le fichier a bien été reçu mais SCRS n'a pu le donner à l'application station"),
     D2_226(2, 226, "Refus de transfert"),
+    D2_227(2, 227, "Reprise impossible - transfert non repreniable"),
+    D2_228(2, 228, "Reprise impossible - point de synchronisation inconnu"),
+    D2_229(2, 229, "Reprise impossible - fichier modifié"),
+    D2_230(2, 230, "Reprise impossible - délai dépassé"),
+    D2_043(2, 43, "Reprise impossible"),
     D2_299(2, 299, "Autres"),
     D1_100(1, 100, "Erreur de transmission");
+
+    /**
+     * Check if this diagnostic indicates a restart/resume is not supported.
+     */
+    public boolean isRestartNotSupported() {
+        return this == D2_214 || this == D2_218 || this == D2_227
+                || this == D2_228 || this == D2_229 || this == D2_230 || this == D2_043;
+    }
 
     private final byte code;
     private final short reason;

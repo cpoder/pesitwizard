@@ -20,8 +20,8 @@ public class CxConnectTest {
     private static final String SERVEUR = "CETOM1";
 
     public static void main(String[] args) throws Exception {
-        // Test transfer with interruption and resume
-        testTransferWithResume();
+        // Test PULL (read) transfer with interruption and resume
+        testPullWithResume();
     }
 
     /**
@@ -142,6 +142,210 @@ public class CxConnectTest {
     }
 
     /**
+     * Test PULL (read) transfer with interruption and resume.
+     * Phase 1: SELECT file BIG, READ, receive data, interrupt after some sync
+     * points
+     * Phase 2: Reconnect with SELECT(PI 15=1), get restart point from ACK_READ(PI
+     * 18)
+     */
+    private static void testPullWithResume() {
+        System.out.println("\n=== Test: PULL transfer with interruption and resume ===");
+
+        int interruptAfterSyncPoints = 5;
+        int transferId = (int) (System.currentTimeMillis() % 100000);
+        System.out.println("Using transfer ID: " + transferId);
+
+        int lastAckedSyncPoint = 0;
+        long bytesReceived = 0;
+        int serverTransferId = 0; // Server assigns transfer ID for READ
+
+        // ========== PHASE 1: Start PULL and interrupt ==========
+        System.out
+                .println("\n--- PHASE 1: Start PULL, interrupt after " + interruptAfterSyncPoints + " sync points ---");
+
+        TcpTransportChannel channel1 = new TcpTransportChannel(HOST, PORT);
+        try (PesitSession session = new PesitSession(channel1)) {
+
+            // 1. CONNECT in READ mode with sync points (like ReceiveFileTest but with sync)
+            int clientConnectionId = 0x05;
+            Fpdu connectFpdu = new ConnectMessageBuilder()
+                    .demandeur(DEMANDEUR)
+                    .serveur(SERVEUR)
+                    .readAccess()
+                    .syncIntervalKb(256)
+                    .syncAckWindow(1)
+                    .build(clientConnectionId);
+            Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
+            int serverConnId = aconnect.getIdSrc();
+            System.out.println("Connected in READ mode, server ID: " + serverConnId);
+
+            // 2. SELECT file BIG
+            Fpdu selectFpdu = new SelectMessageBuilder()
+                    .filename("BIG")
+                    .transferId(0) // 0 for new transfer, server assigns ID
+                    .build(serverConnId);
+            Fpdu ackSelect = session.sendFpduWithAck(selectFpdu);
+            System.out.println("SELECT accepted: " + ackSelect);
+
+            // Get server-assigned transfer ID from ACK_SELECT
+            ParameterValue pi13 = ackSelect.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
+            if (pi13 != null) {
+                serverTransferId = bytesToInt(pi13.getValue());
+                System.out.println("Server assigned transfer ID: " + serverTransferId);
+            }
+
+            // 3. OPEN
+            Fpdu openFpdu = new Fpdu(FpduType.OPEN).withIdDst(serverConnId);
+            session.sendFpduWithAck(openFpdu);
+            System.out.println("OPEN accepted");
+
+            // 4. READ - request data from restart point 0
+            Fpdu readFpdu = new Fpdu(FpduType.READ)
+                    .withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 0))
+                    .withIdDst(serverConnId);
+            session.sendFpduWithAck(readFpdu);
+            System.out.println("READ accepted, receiving data...");
+
+            // 5. Receive DTF packets and SYN until interrupt
+            int syncPointCount = 0;
+            while (syncPointCount < interruptAfterSyncPoints) {
+                Fpdu received = session.receiveFpdu();
+                FpduType type = received.getFpduType();
+
+                // DTF types: DTF, DTFDA, DTFMA, DTFFA
+                if (type == FpduType.DTF || type == FpduType.DTFDA
+                        || type == FpduType.DTFMA || type == FpduType.DTFFA) {
+                    byte[] data = received.getData();
+                    if (data != null) {
+                        bytesReceived += data.length;
+                    }
+                } else if (type == FpduType.SYN) {
+                    syncPointCount++;
+                    ParameterValue syncNum = received.getParameter(ParameterIdentifier.PI_20_NUM_SYNC);
+                    int syncPoint = syncNum != null ? bytesToInt(syncNum.getValue()) : syncPointCount;
+                    lastAckedSyncPoint = syncPoint;
+                    System.out.println("SYN #" + syncPoint + " received, bytes so far: " + bytesReceived);
+
+                    // Send ACK_SYN
+                    Fpdu ackSyn = new Fpdu(FpduType.ACK_SYN)
+                            .withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC, syncPoint))
+                            .withIdDst(serverConnId);
+                    session.sendFpdu(ackSyn);
+                } else if (received.getFpduType() == FpduType.CLOSE) {
+                    System.out.println("Server sent CLOSE - file transfer complete");
+                    break;
+                }
+            }
+
+            System.out.println("\n*** INTERRUPTING after " + syncPointCount + " sync points ***");
+            System.out.println("Bytes received: " + bytesReceived);
+
+        } catch (Exception e) {
+            System.out.println("Phase 1 error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        System.out.println("Last acked sync point: " + lastAckedSyncPoint);
+        System.out.println("Server transfer ID: " + serverTransferId);
+
+        // Wait for server to process
+        System.out.println("Waiting 5 seconds for CX to release resources...");
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+        }
+
+        // ========== PHASE 2: Resume PULL ==========
+        System.out.println("\n--- PHASE 2: Resume PULL from sync point " + lastAckedSyncPoint + " ---");
+
+        TcpTransportChannel channel2 = new TcpTransportChannel(HOST, PORT);
+        try (PesitSession session = new PesitSession(channel2)) {
+
+            // 1. CONNECT in READ mode with sync points
+            int clientConnectionId = 0x05;
+            Fpdu connectFpdu = new ConnectMessageBuilder()
+                    .demandeur(DEMANDEUR)
+                    .serveur(SERVEUR)
+                    .readAccess()
+                    .syncIntervalKb(256)
+                    .syncAckWindow(1)
+                    .build(clientConnectionId);
+            Fpdu aconnect = session.sendFpduWithAck(connectFpdu);
+            int serverConnId = aconnect.getIdSrc();
+            System.out.println("Reconnected, server ID: " + serverConnId);
+
+            // 2. SELECT with restart flag and same transfer ID
+            Fpdu selectFpdu = new SelectMessageBuilder()
+                    .filename("BIG")
+                    .transferId(serverTransferId) // Use server's transfer ID
+                    .restart() // PI 15 = 1
+                    .build(serverConnId);
+            System.out.println("Sending SELECT with restart, transferId=" + serverTransferId);
+            Fpdu ackSelect = session.sendFpduWithAck(selectFpdu);
+            System.out.println("SELECT restart accepted: " + ackSelect);
+
+            // 3. OPEN
+            Fpdu openFpdu = new Fpdu(FpduType.OPEN).withIdDst(serverConnId);
+            session.sendFpduWithAck(openFpdu);
+            System.out.println("OPEN accepted");
+
+            // 4. READ - server will tell us restart point via ACK_READ PI 18
+            Fpdu readFpdu = new Fpdu(FpduType.READ)
+                    .withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, lastAckedSyncPoint))
+                    .withIdDst(serverConnId);
+            Fpdu ackRead = session.sendFpduWithAck(readFpdu);
+
+            ParameterValue pi18 = ackRead.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
+            int restartPoint = pi18 != null ? bytesToInt(pi18.getValue()) : 0;
+            System.out.println("ACK_READ restart point (PI 18): " + restartPoint);
+
+            if (restartPoint > 0) {
+                System.out.println("*** SUCCESS! Server accepted restart from sync point " + restartPoint + " ***");
+            }
+
+            // 5. Receive remaining data
+            long bytesInPhase2 = 0;
+            int syncPointCount = 0;
+            int maxSyncPoints = 10; // Limit for testing
+
+            while (syncPointCount < maxSyncPoints) {
+                Fpdu received = session.receiveFpdu();
+                FpduType type = received.getFpduType();
+
+                // DTF types: DTF, DTFDA, DTFMA, DTFFA
+                if (type == FpduType.DTF || type == FpduType.DTFDA
+                        || type == FpduType.DTFMA || type == FpduType.DTFFA) {
+                    byte[] data = received.getData();
+                    if (data != null) {
+                        bytesInPhase2 += data.length;
+                    }
+                } else if (type == FpduType.SYN) {
+                    syncPointCount++;
+                    ParameterValue syncNum = received.getParameter(ParameterIdentifier.PI_20_NUM_SYNC);
+                    int syncPoint = syncNum != null ? bytesToInt(syncNum.getValue()) : syncPointCount;
+                    System.out.println("SYN #" + syncPoint + " received");
+
+                    // Send ACK_SYN
+                    Fpdu ackSyn = new Fpdu(FpduType.ACK_SYN)
+                            .withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC, syncPoint))
+                            .withIdDst(serverConnId);
+                    session.sendFpdu(ackSyn);
+                } else if (received.getFpduType() == FpduType.CLOSE) {
+                    System.out.println("Transfer complete!");
+                    break;
+                }
+            }
+
+            System.out.println("Phase 2 bytes received: " + bytesInPhase2);
+            System.out.println("Total bytes: " + (bytesReceived + bytesInPhase2));
+
+        } catch (Exception e) {
+            System.out.println("Phase 2 ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Test transfer with interruption (socket close) and resume using PI 15.
      * Phase 1: Start transfer, send some data with sync points, then close socket
      * Phase 2: Reconnect with CREATE(PI 15=1), get restart point from ACK_WRITE(PI
@@ -160,12 +364,13 @@ public class CxConnectTest {
         int articleSize = 30 * 1024; // 30KB articles
         int syncIntervalKB = 256;
         int interruptAfterSyncPoints = 5; // Interrupt after 5 sync points
-        int transferId = (int) (System.currentTimeMillis() % 10000); // Unique ID
+        int transferId = (int) (System.currentTimeMillis() % 100000); // Unique ID for each test run
+        System.out.println("Using transfer ID: " + transferId);
+        String creationDate = "250102120000"; // Fixed date - MUST be same in Phase 1 and Phase 2!
 
         System.out.println("Total data: " + (totalDataSize / 1024) + " KB");
         System.out.println("Article size: " + articleSize + " bytes");
         System.out.println("Will interrupt after " + interruptAfterSyncPoints + " sync points");
-        System.out.println("Transfer ID: " + transferId);
 
         int lastAckedSyncPoint = 0;
         int bytesAtLastSync = 0;
@@ -209,11 +414,15 @@ public class CxConnectTest {
             Fpdu createFpdu = new CreateMessageBuilder()
                     .filename("FILE")
                     .transferId(transferId)
+                    .creationDate(creationDate) // Fixed date for resume matching
                     .variableFormat()
                     .recordLength(articleSize)
                     .maxEntitySize(65535)
                     .fileSizeKB(totalDataSize / 1024)
                     .build(serverConnId);
+            // Debug: print PI 13 value
+            ParameterValue pi13 = createFpdu.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
+            System.out.println("Phase 1 - PI 13 (transferId): " + bytesToHex(pi13.getValue()));
             session.sendFpduWithAck(createFpdu);
             System.out.println("CREATE accepted");
 
@@ -249,7 +458,8 @@ public class CxConnectTest {
                     if (syncCount >= interruptAfterSyncPoints) {
                         System.out.println("\n*** INTERRUPTING after " + syncCount + " sync points ***");
                         System.out.println("Bytes sent: " + offset + " / " + totalDataSize);
-                        break; // Exit loop, socket will close
+                        // Just break and let socket close - simulating network failure
+                        break;
                     }
                 }
 
@@ -263,15 +473,17 @@ public class CxConnectTest {
             }
 
         } catch (Exception e) {
-            System.out.println("Phase 1 ended: " + e.getMessage());
+            System.out.println("Phase 1 error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         System.out.println("Last acked sync point: " + lastAckedSyncPoint);
         System.out.println("Bytes at last sync: " + bytesAtLastSync);
 
-        // Wait a bit for server to process
+        // Wait for server to process and release resources
+        System.out.println("Waiting 5 seconds for CX to release resources...");
         try {
-            Thread.sleep(1000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
         }
 
@@ -281,7 +493,7 @@ public class CxConnectTest {
         TcpTransportChannel channel2 = new TcpTransportChannel(HOST, PORT);
         try (PesitSession session = new PesitSession(channel2)) {
 
-            // 1. CONNECT
+            // 1. CONNECT (normal, without PI 23)
             byte[] pi7Value = new byte[] {
                     (byte) ((syncIntervalKB >> 8) & 0xFF),
                     (byte) (syncIntervalKB & 0xFF),
@@ -308,25 +520,35 @@ public class CxConnectTest {
                 syncIntervalBytes = syncIntervalKB * 1024;
             }
 
-            // 2. CREATE with PI 15 = 1 (restart) and SAME transfer ID
+            // 2. CREATE with PI 15 = 1 (restart) and SAME parameters as Phase 1
             Fpdu createFpdu = new CreateMessageBuilder()
                     .filename("FILE")
-                    .transferId(transferId) // Same transfer ID!
+                    .transferId(transferId)
+                    .creationDate(creationDate) // MUST match Phase 1!
                     .variableFormat()
                     .recordLength(articleSize)
                     .maxEntitySize(65535)
                     .fileSizeKB(totalDataSize / 1024)
                     .restart() // PI 15 = 1
                     .build(serverConnId);
+            // Debug: print PI 13 value
+            ParameterValue pi13 = createFpdu.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
+            System.out.println("Phase 2 - PI 13 (transferId): " + bytesToHex(pi13.getValue()));
             session.sendFpduWithAck(createFpdu);
-            System.out.println("CREATE (restart) accepted");
+            System.out.println("CREATE (restart with PI 15) accepted");
 
-            // 3. OPEN
-            session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
+            // 3. OPEN - try skipping for resume?
+            try {
+                session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
+                System.out.println("OPEN accepted");
+            } catch (Exception e) {
+                System.out.println("OPEN failed: " + e.getMessage() + " - trying direct WRITE...");
+            }
 
-            // 4. WRITE - server will return PI 18 with restart point!
+            // 4. WRITE - server should return PI 18 with restart point
             Fpdu ackWrite = session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
+            // Parse PI 18 from ackWrite
             int restartPoint = 0;
             ParameterValue pi18 = ackWrite.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
             if (pi18 != null) {
@@ -1234,5 +1456,13 @@ public class CxConnectTest {
             sb.append(String.format("%02X", b));
         }
         return sb.toString();
+    }
+
+    private static int bytesToInt(byte[] bytes) {
+        int result = 0;
+        for (byte b : bytes) {
+            result = (result << 8) | (b & 0xFF);
+        }
+        return result;
     }
 }

@@ -17,6 +17,7 @@ public class SelectMessageBuilder {
     private int priority = 0; // 0=normal
     private int maxEntitySize = 4096;
     private int requestedAttributes = 0; // PI_14: 0 = all attributes
+    private boolean isRestart = false;
 
     public SelectMessageBuilder filename(String filename) {
         this.filename = filename;
@@ -25,6 +26,11 @@ public class SelectMessageBuilder {
 
     public SelectMessageBuilder transferId(int transferId) {
         this.transferId = transferId;
+        return this;
+    }
+
+    public SelectMessageBuilder restart() {
+        this.isRestart = true;
         return this;
     }
 
@@ -56,12 +62,21 @@ public class SelectMessageBuilder {
         ParameterValue pi25 = new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize);
 
         // For file-level FPDUs, idSrc (octet 6) must be 0
-        return new Fpdu(FpduType.SELECT)
+        // Parameter order MUST be numerical: PGI9, PI13, PI14, PI15, PI17, PI25
+        Fpdu fpdu = new Fpdu(FpduType.SELECT)
                 .withParameter(pgi9)
                 .withParameter(pi13)
-                .withParameter(pi14)
-                .withParameter(pi17)
+                .withParameter(pi14);
+
+        // PI 15 must come after PI 14 and before PI 17
+        if (isRestart) {
+            fpdu.withParameter(new ParameterValue(PI_15_TRANSFERT_RELANCE, 1));
+        }
+
+        fpdu.withParameter(pi17)
                 .withParameter(pi25)
                 .withIdDst(serverConnectionId);
+
+        return fpdu;
     }
 }

@@ -70,11 +70,19 @@ public class PesitSession implements AutoCloseable {
             }
         }
 
+        // Check diagnostic in ACK - non-zero means failure
         if (fpdu.hasParameter(PI_02_DIAG)) {
             ParameterValue diagParam = fpdu.getParameter(PI_02_DIAG);
-            DiagnosticCode diagCode = DiagnosticCode.fromParameterValue(diagParam);
-            String diagMessage = diagCode != null ? diagCode.getMessage() : formatDiagBytes(diagParam.getValue());
-            log.info("Diagnostic message: {}", diagMessage);
+            byte[] diagBytes = diagParam.getValue();
+            // Check if diagnostic is non-zero (failure)
+            if (diagBytes != null && diagBytes.length >= 3
+                    && (diagBytes[0] != 0 || diagBytes[1] != 0 || diagBytes[2] != 0)) {
+                DiagnosticCode diagCode = DiagnosticCode.fromParameterValue(diagParam);
+                String diagMessage = diagCode != null ? diagCode.getMessage() : formatDiagBytes(diagBytes);
+                log.error("Server rejected request: {} ({})", diagMessage, formatDiagBytes(diagBytes));
+                throw new PesitException(diagParam);
+            }
+            log.info("Diagnostic: success");
         }
 
         if (fpdu.getFpduType() != context.getFpduType().getExpectedAck()) {

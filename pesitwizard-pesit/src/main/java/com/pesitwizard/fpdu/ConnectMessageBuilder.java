@@ -68,6 +68,7 @@ public class ConnectMessageBuilder {
      */
     public ConnectMessageBuilder syncIntervalKb(int intervalKb) {
         this.syncIntervalKb = intervalKb;
+        this.syncPointsEnabled = true;
         return this;
     }
 
@@ -79,6 +80,7 @@ public class ConnectMessageBuilder {
      */
     public ConnectMessageBuilder syncAckWindow(int window) {
         this.syncAckWindow = Math.min(window, 16);
+        this.syncPointsEnabled = true;
         return this;
     }
 

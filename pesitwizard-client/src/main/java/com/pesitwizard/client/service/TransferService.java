@@ -178,8 +178,25 @@ public class TransferService {
                         log.info("Sending WebSocket COMPLETED for transfer {}", historyId);
                         progressService.sendComplete(historyId, fileSize, fileSize);
 
+                } catch (PesitException e) {
+                        // Update history on PeSIT failure with diagnostic code
+                        log.error("Transfer {} FAILED with PeSIT error: {} ({})", historyId, e.getMessage(),
+                                        e.getDiagnosticCodeHex());
+                        historyRepository.findById(historyId).ifPresent(history -> {
+                                history.setStatus(TransferStatus.FAILED);
+                                history.setErrorMessage(e.getMessage());
+                                history.setDiagnosticCode(e.getDiagnosticCodeHex());
+                                history.setCompletedAt(Instant.now());
+                                historyRepository.save(history);
+                        });
+                        progressService.sendFailed(historyId, e.getMessage());
+                        if (e.isRestartNotSupported()) {
+                                log.warn("Send transfer failed - restart not supported: {}", e.getMessage());
+                        } else {
+                                log.error("Send transfer failed: {}", e.getMessage(), e);
+                        }
                 } catch (Exception e) {
-                        // Update history on failure
+                        // Update history on general failure
                         log.error("Transfer {} FAILED: {}", historyId, e.getMessage());
                         historyRepository.findById(historyId).ifPresent(history -> {
                                 history.setStatus(TransferStatus.FAILED);
@@ -187,9 +204,6 @@ public class TransferService {
                                 history.setCompletedAt(Instant.now());
                                 historyRepository.save(history);
                         });
-
-                        // Send failure via WebSocket
-                        log.info("Sending WebSocket FAILED for transfer {}", historyId);
                         progressService.sendFailed(historyId, e.getMessage());
                         log.error("Send transfer failed: {}", e.getMessage(), e);
                 } finally {
@@ -259,7 +273,7 @@ public class TransferService {
                         long bytesReceived;
                         try (PesitSession session = new PesitSession(channel, false)) {
                                 bytesReceived = executeReceiveTransfer(session, server, request,
-                                                connector, resolvedFilename, config);
+                                                connector, resolvedFilename, config, history.getId());
                         } finally {
                                 connector.close();
                         }
@@ -270,11 +284,24 @@ public class TransferService {
                         history.setBytesTransferred(bytesReceived);
                         history.setCompletedAt(Instant.now());
 
+                } catch (PesitException e) {
+                        history.setStatus(TransferStatus.FAILED);
+                        history.setErrorMessage(e.getMessage());
+                        history.setDiagnosticCode(e.getDiagnosticCodeHex());
+                        history.setCompletedAt(Instant.now());
+                        if (e.isRestartNotSupported()) {
+                                log.warn("Receive transfer failed - restart not supported: {}", e.getMessage());
+                        } else {
+                                log.error("Receive transfer failed with PeSIT error: {} ({})",
+                                                e.getMessage(), e.getDiagnosticCodeHex(), e);
+                        }
+                        progressService.sendFailed(history.getId(), e.getMessage());
                 } catch (Exception e) {
                         history.setStatus(TransferStatus.FAILED);
                         history.setErrorMessage(e.getMessage());
                         history.setCompletedAt(Instant.now());
                         log.error("Receive transfer failed: {}", e.getMessage(), e);
+                        progressService.sendFailed(history.getId(), e.getMessage());
                 }
 
                 history = historyRepository.save(history);
@@ -872,7 +899,8 @@ public class TransferService {
         }
 
         private long executeReceiveTransfer(PesitSession session, PesitServer server,
-                        TransferRequest request, StorageConnector connector, String destPath, TransferConfig config)
+                        TransferRequest request, StorageConnector connector, String destPath, TransferConfig config,
+                        String historyId)
                         throws IOException, InterruptedException, ConnectorException {
                 int connectionId = 1;
                 int chunkSize = config.getChunkSize();
@@ -919,7 +947,27 @@ public class TransferService {
                                 .withParameter(new ParameterValue(PI_14_ATTRIBUTS_DEMANDES, 0)) // Required by C:X
                                 .withParameter(new ParameterValue(PI_17_PRIORITE, 0))
                                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, chunkSize));
-                session.sendFpduWithAck(selectFpdu);
+                Fpdu ackSelect = session.sendFpduWithAck(selectFpdu);
+
+                // Try to get file size from ACK_SELECT (PGI 40 / PI 42 = max reservation in KB)
+                long expectedFileSize = 0;
+                ParameterValue pgi40 = ackSelect.getParameter(ParameterGroupIdentifier.PGI_40_ATTR_PHYSIQUES);
+                if (pgi40 != null) {
+                        for (ParameterValue pv : pgi40.getValues()) {
+                                if (pv.getParameter() == PI_42_MAX_RESERVATION) {
+                                        byte[] val = pv.getValue();
+                                        if (val != null && val.length > 0) {
+                                                int sizeKb = 0;
+                                                for (byte b : val) {
+                                                        sizeKb = (sizeKb << 8) | (b & 0xFF);
+                                                }
+                                                expectedFileSize = sizeKb * 1024L;
+                                                log.debug("Expected file size from PI 42: {} KB", sizeKb);
+                                        }
+                                        break;
+                                }
+                        }
+                }
 
                 // OPEN (file-level - no idSrc)
                 session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnectionId));
@@ -932,6 +980,10 @@ public class TransferService {
                 // Receive DTF chunks and write to connector
                 long totalBytes = 0;
                 int chunkCount = 0;
+                int lastSyncPoint = 0;
+                long lastProgressUpdate = System.currentTimeMillis();
+                final long PROGRESS_UPDATE_INTERVAL_MS = 100; // Update progress every 100ms max
+
                 try (OutputStream connectorOut = connector.write(destPath, false)) {
                         boolean receiving = true;
                         while (receiving) {
@@ -940,6 +992,7 @@ public class TransferService {
                                         int phase = rawFpdu[2] & 0xFF;
                                         int type = rawFpdu[3] & 0xFF;
 
+                                        // DTF types: phase=0x00, type=0x00/0x40/0x41/0x42
                                         if (phase == 0x00 && (type == 0x00 || type == 0x40 || type == 0x41
                                                         || type == 0x42)) {
                                                 if (rawFpdu.length > 6) {
@@ -947,8 +1000,33 @@ public class TransferService {
                                                         connectorOut.write(rawFpdu, 6, dataLen);
                                                         totalBytes += dataLen;
                                                         chunkCount++;
+
+                                                        // Send progress update (throttled)
+                                                        long now = System.currentTimeMillis();
+                                                        if (now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS) {
+                                                                progressService.sendProgress(historyId, totalBytes,
+                                                                                expectedFileSize, lastSyncPoint);
+                                                                lastProgressUpdate = now;
+                                                        }
+                                                }
+                                        } else if (phase == 0xC0 && type == 0x04) {
+                                                // SYN - parse and track sync point, send ACK_SYN
+                                                if (rawFpdu.length >= 9) {
+                                                        lastSyncPoint = rawFpdu[8] & 0xFF;
+                                                        // Send ACK_SYN
+                                                        Fpdu ackSyn = new Fpdu(FpduType.ACK_SYN)
+                                                                        .withParameter(new ParameterValue(
+                                                                                        PI_20_NUM_SYNC,
+                                                                                        lastSyncPoint))
+                                                                        .withIdDst(serverConnectionId);
+                                                        session.sendFpdu(ackSyn);
+                                                        // Update progress with sync point
+                                                        progressService.sendProgress(historyId, totalBytes,
+                                                                        expectedFileSize, lastSyncPoint);
+                                                        lastProgressUpdate = System.currentTimeMillis();
                                                 }
                                         } else if (phase == 0xC0 && type == 0x22) {
+                                                // TRANS_END
                                                 receiving = false;
                                         } else {
                                                 receiving = false;
@@ -956,6 +1034,8 @@ public class TransferService {
                                 }
                         }
                 }
+                // Final progress update
+                progressService.sendProgress(historyId, totalBytes, expectedFileSize, lastSyncPoint);
                 log.info("Wrote {} bytes to connector in {} chunks", totalBytes, chunkCount);
 
                 // Cleanup: TRANS_END, CLOSE, DESELECT (file-level - no idSrc), RELEASE
