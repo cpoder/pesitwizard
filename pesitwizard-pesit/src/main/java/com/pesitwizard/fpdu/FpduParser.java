@@ -10,7 +10,7 @@ public class FpduParser {
 
     public FpduParser(byte[] data) {
         this.buffer = ByteBuffer.wrap(data);
-        int len = buffer.getShort();
+        int len = buffer.getShort() & 0xFFFF; // Unsigned short
         if (len != data.length) {
             throw new IllegalArgumentException("Invalid Fpdu length: expected " + len + ", got " + data.length);
         }
