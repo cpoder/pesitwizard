@@ -1063,8 +1063,20 @@ public class TransferService {
                                         log.debug("Received CLOSE from server - transfer complete");
                                         receiving = false;
                                 } else if (fpduType == FpduType.IDT) {
-                                        // Interrupt Data Transfer - server cancelled/interrupted
-                                        log.info("Received IDT from server - transfer interrupted");
+                                        // Interrupt Data Transfer - parse PI 19 for reason
+                                        ParameterValue pi19 = received.getParameter(PI_19_CODE_FIN_TRANSFERT);
+                                        int endCode = 0;
+                                        if (pi19 != null && pi19.getValue() != null && pi19.getValue().length > 0) {
+                                                endCode = pi19.getValue()[0] & 0xFF;
+                                        }
+                                        String reason = switch (endCode) {
+                                                case 4 -> "error (restart should follow)";
+                                                case 8 -> "suspension";
+                                                case 12 -> "server cancellation";
+                                                case 16 -> "client cancellation";
+                                                default -> "unknown (" + endCode + ")";
+                                        };
+                                        log.info("Received IDT from server - {} (PI 19={})", reason, endCode);
                                         // Send ACK_IDT
                                         Fpdu ackIdt = new Fpdu(FpduType.ACK_IDT)
                                                         .withParameter(new ParameterValue(PI_02_DIAG,
