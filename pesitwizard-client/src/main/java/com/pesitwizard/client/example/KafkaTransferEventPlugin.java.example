@@ -1,0 +1,184 @@
+package com.pesitwizard.client.example;
+
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import com.pesitwizard.client.event.TransferEvent;
+import com.pesitwizard.client.event.TransferEvent.EventType;
+
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Example plugin that demonstrates how to subscribe to transfer events.
+ *
+ * <p>This plugin can be used as a template for integrating with external systems:
+ * <ul>
+ *   <li>Kafka event streaming</li>
+ *   <li>Metrics collection (Prometheus, Datadog, etc.)</li>
+ *   <li>Monitoring and alerting systems</li>
+ *   <li>Audit logging to external database</li>
+ *   <li>Custom business logic triggers</li>
+ * </ul>
+ *
+ * <h3>To enable this plugin:</h3>
+ * <ol>
+ *   <li>Rename this file to remove the .example extension</li>
+ *   <li>Uncomment the @Component annotation</li>
+ *   <li>Add necessary dependencies (e.g., spring-kafka)</li>
+ *   <li>Configure KafkaTemplate or other integrations</li>
+ * </ol>
+ *
+ * <h3>Example with Kafka:</h3>
+ * <pre>{@code
+ * // Add to pom.xml:
+ * <dependency>
+ *     <groupId>org.springframework.kafka</groupId>
+ *     <artifactId>spring-kafka</artifactId>
+ * </dependency>
+ *
+ * // Add to application.yml:
+ * spring:
+ *   kafka:
+ *     bootstrap-servers: localhost:9092
+ *     producer:
+ *       key-serializer: org.apache.kafka.common.serialization.StringSerializer
+ *       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+ * }</pre>
+ *
+ * @see TransferEvent
+ * @see org.springframework.context.event.EventListener
+ */
+@Slf4j
+// @Component  // Uncomment to enable this plugin
+public class KafkaTransferEventPlugin {
+
+    // Uncomment and autowire dependencies when enabling:
+    // @Autowired
+    // private KafkaTemplate<String, TransferEvent> kafkaTemplate;
+
+    /**
+     * Listens to all transfer events and publishes them to Kafka.
+     *
+     * <p>Uses @Async("pluginExecutor") to process events asynchronously,
+     * preventing slow Kafka publishing from blocking transfer threads.
+     *
+     * @param event the transfer event
+     */
+    @Async("pluginExecutor")
+    @EventListener
+    public void onTransferEvent(TransferEvent event) {
+        log.debug("Received transfer event: {} - {} for transfer {}",
+                event.getType(), event.getCurrentState(), event.getTransferId());
+
+        switch (event.getType()) {
+            case STATE_CHANGE -> handleStateChange(event);
+            case PROGRESS -> handleProgress(event);
+            case SYNC_POINT -> handleSyncPoint(event);
+            case ERROR -> handleError(event);
+            case COMPLETED -> handleCompleted(event);
+            case CANCELLED -> handleCancelled(event);
+        }
+    }
+
+    private void handleStateChange(TransferEvent event) {
+        log.info("Transfer {} state changed: {} -> {}",
+                event.getTransferId(),
+                event.getPreviousState() != null ? event.getPreviousState().getCode() : "null",
+                event.getCurrentState() != null ? event.getCurrentState().getCode() : "null");
+
+        // Example: Publish to Kafka topic
+        // kafkaTemplate.send("transfer-state-changes", event.getTransferId(), event);
+    }
+
+    private void handleProgress(TransferEvent event) {
+        // Filter progress events to avoid spam (event bus already throttles to 100ms)
+        if (event.getPercentComplete() % 10 == 0 || event.getPercentComplete() == 100) {
+            log.info("Transfer {} progress: {}% ({} / {} bytes)",
+                    event.getTransferId(),
+                    event.getPercentComplete(),
+                    event.getBytesTransferred(),
+                    event.getTotalBytes());
+
+            // Example: Update metrics
+            // meterRegistry.counter("transfer.bytes", "transfer_id", event.getTransferId())
+            //     .increment(event.getBytesTransferred());
+        }
+    }
+
+    private void handleSyncPoint(TransferEvent event) {
+        log.info("Transfer {} reached sync point #{} at {} bytes",
+                event.getTransferId(),
+                event.getSyncPointNumber(),
+                event.getSyncPointBytePosition());
+
+        // Example: Publish checkpoint event
+        // kafkaTemplate.send("transfer-checkpoints", event.getTransferId(), event);
+    }
+
+    private void handleError(TransferEvent event) {
+        log.error("Transfer {} failed: {} (diagnostic: {})",
+                event.getTransferId(),
+                event.getErrorMessage(),
+                event.getDiagnosticCode());
+
+        // Example: Send alert to monitoring system
+        // alertingService.sendAlert("Transfer " + event.getTransferId() + " failed",
+        //     event.getErrorMessage(), AlertLevel.ERROR);
+
+        // Example: Publish to error topic
+        // kafkaTemplate.send("transfer-errors", event.getTransferId(), event);
+    }
+
+    private void handleCompleted(TransferEvent event) {
+        log.info("Transfer {} completed successfully ({} bytes)",
+                event.getTransferId(),
+                event.getBytesTransferred());
+
+        // Example: Update completion metrics
+        // meterRegistry.counter("transfer.completed").increment();
+        // meterRegistry.timer("transfer.duration",
+        //     "transfer_id", event.getTransferId()).record(duration);
+
+        // Example: Publish completion event
+        // kafkaTemplate.send("transfer-completed", event.getTransferId(), event);
+    }
+
+    private void handleCancelled(TransferEvent event) {
+        log.info("Transfer {} was cancelled by user", event.getTransferId());
+
+        // Example: Publish cancellation event
+        // kafkaTemplate.send("transfer-cancelled", event.getTransferId(), event);
+    }
+}
+
+/**
+ * Example using @TransactionalEventListener to process events after DB commit.
+ *
+ * <p>This is useful when you want to ensure the database transaction completed
+ * successfully before sending notifications or publishing to external systems.
+ */
+// @Component
+class TransactionalTransferEventPlugin {
+
+    // @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    // public void onTransferCompleted(TransferEvent event) {
+    //     if (event.getType() == EventType.COMPLETED) {
+    //         // Database commit confirmed, safe to send external notifications
+    //         emailService.sendCompletionNotification(event.getTransferId());
+    //     }
+    // }
+}
+
+/**
+ * Example filtering only specific event types.
+ */
+// @Component
+class ErrorMonitoringPlugin {
+
+    // @EventListener(condition = "#event.type.name() == 'ERROR'")
+    // public void onTransferError(TransferEvent event) {
+    //     // Only receives ERROR events
+    //     alertingService.sendAlert("Transfer failed", event.getErrorMessage());
+    // }
+}
