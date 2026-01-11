@@ -58,12 +58,14 @@ public class FpduReader {
         ByteBuffer buffer = ByteBuffer.wrap(data);
 
         // Check if this looks like concatenated FPDUs:
-        // First 2 bytes would be sub-FPDU length, which should be < total length
+        // First 2 bytes = sub-FPDU length, next 2 bytes = FPDU type ID
         if (data.length >= 6) {
             int firstLen = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
+            int fpduTypeId = ((data[2] & 0xFF) << 8) | (data[3] & 0xFF);
 
-            if (firstLen >= 6 && firstLen < data.length) {
-                // Concatenated FPDUs - each has its own length prefix
+            // Valid concatenation: length makes sense AND type ID looks valid (known FPDU
+            // types are < 50)
+            if (firstLen >= 6 && firstLen <= data.length && fpduTypeId > 0 && fpduTypeId < 50) {
                 parseConcatenatedFpdus(buffer);
                 return;
             }
