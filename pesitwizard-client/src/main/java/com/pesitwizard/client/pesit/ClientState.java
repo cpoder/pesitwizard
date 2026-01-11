@@ -1,0 +1,64 @@
+package com.pesitwizard.client.pesit;
+
+import java.util.Set;
+
+public enum ClientState {
+    CN01_REPOS("CN01"),
+    CN02A_CONNECT_PENDING("CN02A"),
+    CN03_CONNECTED("CN03"),
+    CN04A_RELEASE_PENDING("CN04A"),
+    SF01A_CREATE_PENDING("SF01A"),
+    SF02A_SELECT_PENDING("SF02A"),
+    SF03_FILE_SELECTED("SF03"),
+    SF04A_DESELECT_PENDING("SF04A"),
+    OF01A_OPEN_PENDING("OF01A"),
+    OF02_TRANSFER_READY("OF02"),
+    OF03A_CLOSE_PENDING("OF03A"),
+    TDE01A_WRITE_PENDING("TDE01A"),
+    TDE02A_SENDING_DATA("TDE02A"),
+    TDE03_SYNC_PENDING("TDE03"),
+    TDE07_DATA_END("TDE07"),
+    TDE08A_TRANS_END_PENDING("TDE08A"),
+    TDL01A_READ_PENDING("TDL01A"),
+    TDL02A_RECEIVING_DATA("TDL02A"),
+    TDL03_SYNC_ACK("TDL03"),
+    TDL07_DATA_END("TDL07"),
+    TDL08A_TRANS_END_PENDING("TDL08A"),
+    ERROR("ERROR");
+
+    private final String code;
+    private Set<ClientState> next;
+
+    static {
+        CN01_REPOS.next = Set.of(CN02A_CONNECT_PENDING);
+        CN02A_CONNECT_PENDING.next = Set.of(CN03_CONNECTED, CN01_REPOS, ERROR);
+        CN03_CONNECTED.next = Set.of(SF01A_CREATE_PENDING, SF02A_SELECT_PENDING, CN04A_RELEASE_PENDING, ERROR);
+        CN04A_RELEASE_PENDING.next = Set.of(CN01_REPOS, ERROR);
+        SF01A_CREATE_PENDING.next = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
+        SF02A_SELECT_PENDING.next = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
+        SF03_FILE_SELECTED.next = Set.of(OF01A_OPEN_PENDING, SF04A_DESELECT_PENDING, ERROR);
+        SF04A_DESELECT_PENDING.next = Set.of(CN03_CONNECTED, ERROR);
+        OF01A_OPEN_PENDING.next = Set.of(OF02_TRANSFER_READY, SF03_FILE_SELECTED, ERROR);
+        OF02_TRANSFER_READY.next = Set.of(TDE01A_WRITE_PENDING, TDL01A_READ_PENDING, OF03A_CLOSE_PENDING, ERROR);
+        OF03A_CLOSE_PENDING.next = Set.of(SF03_FILE_SELECTED, ERROR);
+        TDE01A_WRITE_PENDING.next = Set.of(TDE02A_SENDING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDE02A_SENDING_DATA.next = Set.of(TDE02A_SENDING_DATA, TDE03_SYNC_PENDING, TDE07_DATA_END, ERROR);
+        TDE03_SYNC_PENDING.next = Set.of(TDE02A_SENDING_DATA, ERROR);
+        TDE07_DATA_END.next = Set.of(TDE08A_TRANS_END_PENDING, ERROR);
+        TDE08A_TRANS_END_PENDING.next = Set.of(OF02_TRANSFER_READY, ERROR);
+        TDL01A_READ_PENDING.next = Set.of(TDL02A_RECEIVING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDL02A_RECEIVING_DATA.next = Set.of(TDL02A_RECEIVING_DATA, TDL03_SYNC_ACK, TDL07_DATA_END, ERROR);
+        TDL03_SYNC_ACK.next = Set.of(TDL02A_RECEIVING_DATA, ERROR);
+        TDL07_DATA_END.next = Set.of(TDL08A_TRANS_END_PENDING, ERROR);
+        TDL08A_TRANS_END_PENDING.next = Set.of(OF02_TRANSFER_READY, ERROR);
+        ERROR.next = Set.of(CN01_REPOS);
+    }
+
+    ClientState(String code) { this.code = code; }
+    public String getCode() { return code; }
+    public Set<ClientState> getValidNext() { return next; }
+    public boolean canTransitionTo(ClientState n) { return next != null && next.contains(n); }
+    public boolean canSendData() { return this == TDE02A_SENDING_DATA; }
+    public boolean canReceiveData() { return this == TDL02A_RECEIVING_DATA; }
+    public boolean isConnected() { return this != CN01_REPOS && this != ERROR; }
+}
