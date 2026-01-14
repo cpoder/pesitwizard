@@ -1,13 +1,13 @@
 #!/bin/bash
 # Vectis Client Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/install-client.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-client.sh | bash
 # Or with options: curl -fsSL ... | bash -s -- --port-forward --port 9090
 
 set -e
 
 # Default values
 PESITWIZARD_NAMESPACE="${PESITWIZARD_NAMESPACE:-pesitwizard}"
-GITHUB_REPO="cpoder/pesitwizard"
+GITHUB_REPO="pesitwizard/pesitwizard"
 HELM_CHART_PATH="pesitwizard-helm-charts/pesitwizard-client"
 HELM_CHART_BRANCH="${PESITWIZARD_VERSION:-main}"
 INSTALL_K3S=false
@@ -85,7 +85,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  # Basic installation (uses Ingress on pesitwizard.local)"
-    echo "  curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/install-client.sh | bash"
+    echo "  curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-client.sh | bash"
     echo ""
     echo "  # Install with custom hostname"
     echo "  curl -fsSL ... | bash -s -- --host pesitwizard.mycompany.com"

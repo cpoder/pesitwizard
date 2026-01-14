@@ -11,7 +11,7 @@ hero:
       link: /guide/quickstart
     - theme: alt
       text: GitHub
-      link: https://github.com/cpoder/pesitwizard
+      link: https://github.com/pesitwizard/pesitwizard
 
 features:
   - icon: 📡
@@ -69,7 +69,7 @@ Gérez tous vos échanges avec plusieurs banques depuis une seule interface.
   <a href="/guide/quickstart" style="display: inline-block; padding: 12px 24px; background: #3451b2; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; margin-right: 1rem;">
     Documentation
   </a>
-  <a href="https://github.com/cpoder/pesitwizard" style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
+  <a href="https://github.com/pesitwizard/pesitwizard" style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
     GitHub
   </a>
 </div>

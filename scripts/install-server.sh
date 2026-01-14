@@ -1,11 +1,11 @@
 #!/bin/bash
 # Vectis Server Installation Script (Standalone)
-# Usage: curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/install-server.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-server.sh | bash
 
 set -e
 
 VECTIS_NAMESPACE="${VECTIS_NAMESPACE:-pesitwizard}"
-GITHUB_REPO="cpoder/pesitwizard"
+GITHUB_REPO="pesitwizard/pesitwizard"
 HELM_CHART_PATH="pesitwizard-helm-charts/pesitwizard-server"
 HELM_CHART_BRANCH="${VECTIS_VERSION:-main}"
 

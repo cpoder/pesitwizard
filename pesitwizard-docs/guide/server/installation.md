@@ -16,7 +16,7 @@ docker run -d \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
   -e VECTIS_CLUSTER_ENABLED=false \
   -v pesitwizard-data:/data \
-  ghcr.io/cpoder/pesitwizard-server:latest
+  ghcr.io/pesitwizard/pesitwizard-server:latest
 ```
 
 ## Déploiement Kubernetes
@@ -109,7 +109,7 @@ spec:
       serviceAccountName: pesitwizard-server
       containers:
       - name: pesitwizard-server
-        image: ghcr.io/cpoder/pesitwizard-server:latest
+        image: ghcr.io/pesitwizard/pesitwizard-server:latest
         ports:
         - containerPort: 5000
           name: pesitwizard

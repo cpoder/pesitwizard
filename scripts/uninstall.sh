@@ -1,6 +1,6 @@
 #!/bin/bash
 # Vectis Uninstall Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/uninstall.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/uninstall.sh | bash
 
 set -e
 

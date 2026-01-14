@@ -18,7 +18,7 @@ docker run -d \
   --name pesitwizard-client \
   -p 9081:9081 \
   -v pesitwizard-data:/data \
-  ghcr.io/cpoder/pesitwizard-client:latest
+  ghcr.io/pesitwizard/pesitwizard-client:latest
 ```
 
 ### Avec PostgreSQL
@@ -30,7 +30,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
   -e SPRING_DATASOURCE_USERNAME=pesitwizard \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
-  ghcr.io/cpoder/pesitwizard-client:latest
+  ghcr.io/pesitwizard/pesitwizard-client:latest
 ```
 
 ## Docker Compose
@@ -42,7 +42,7 @@ version: '3.8'
 
 services:
   pesitwizard-client:
-    image: ghcr.io/cpoder/pesitwizard-client:latest
+    image: ghcr.io/pesitwizard/pesitwizard-client:latest
     ports:
       - "9081:9081"
     environment:
@@ -55,7 +55,7 @@ services:
       - client-data:/data
 
   pesitwizard-client-ui:
-    image: ghcr.io/cpoder/pesitwizard-client-ui:latest
+    image: ghcr.io/pesitwizard/pesitwizard-client-ui:latest
     ports:
       - "3001:80"
     environment:
@@ -85,7 +85,7 @@ docker-compose up -d
 
 ```bash
 # Ajouter le repo Helm
-helm repo add pesitwizard https://cpoder.github.io/pesitwizard-helm-charts
+helm repo add pesitwizard https://pesitwizard.github.io/pesitwizard-helm-charts
 
 # Installer le client
 helm install pesitwizard-client pesitwizard/pesitwizard-client \
@@ -105,7 +105,7 @@ helm install pesitwizard-client pesitwizard/pesitwizard-client \
 ### Build
 
 ```bash
-git clone https://github.com/cpoder/pesitwizard-client.git
+git clone https://github.com/pesitwizard/pesitwizard-client.git
 cd pesitwizard-client
 mvn package -DskipTests
 ```

@@ -15,7 +15,7 @@ docker run -d \
   --name pesitwizard-client \
   -p 9081:9081 \
   -e SPRING_DATASOURCE_URL=jdbc:h2:mem:pesitwizard \
-  ghcr.io/cpoder/pesitwizard-client:latest
+  ghcr.io/pesitwizard/pesitwizard-client:latest
 ```
 
 L'interface web est accessible sur http://localhost:9081
@@ -58,7 +58,7 @@ docker run -d \
   --name pesitwizard-server \
   -p 5000:5000 \
   -p 8080:8080 \
-  ghcr.io/cpoder/pesitwizard-server:latest
+  ghcr.io/pesitwizard/pesitwizard-server:latest
 ```
 
 Puis configurez le client avec :

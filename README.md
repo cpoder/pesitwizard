@@ -43,7 +43,7 @@ PeSIT est le protocole standard utilisé par les banques françaises pour les é
 
 ```bash
 # Cloner le repo
-git clone https://github.com/cpoder/pesitwizard.git
+git clone https://github.com/pesitwizard/pesitwizard.git
 cd pesitwizard
 
 # Builder le serveur
@@ -204,17 +204,17 @@ docker run -p 5000:5000 -p 8080:8080 pesitwizard-server
 
 **Client PeSIT Wizard** (transfert de fichiers avec UI) :
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/install-client.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-client.sh | bash
 ```
 
 **Serveur PeSIT Wizard** (standalone) :
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/install-server.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-server.sh | bash
 ```
 
 **Désinstallation** :
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cpoder/pesitwizard/main/scripts/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/uninstall.sh | bash
 ```
 
 ### Helm Charts

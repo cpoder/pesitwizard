@@ -22,7 +22,7 @@ export default defineConfig({
       { text: 'Accueil', link: '/' },
       { text: 'Guide', link: '/guide/' },
       { text: 'API', link: '/api/' },
-      { text: 'GitHub', link: 'https://github.com/cpoder/pesitwizard' }
+      { text: 'GitHub', link: 'https://github.com/pesitwizard/pesitwizard' }
     ],
 
     sidebar: {
@@ -70,7 +70,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/cpoder/pesitwizard' }
+      { icon: 'github', link: 'https://github.com/pesitwizard/pesitwizard' }
     ],
 
     footer: {

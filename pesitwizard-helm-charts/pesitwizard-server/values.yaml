@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/cpoder/pesitwizard/pesitwizard-server
+  repository: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server
   tag: latest
   pullPolicy: Always
 

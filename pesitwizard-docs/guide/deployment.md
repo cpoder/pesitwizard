@@ -163,7 +163,7 @@ spec:
     spec:
       containers:
       - name: pesitwizard-server
-        image: ghcr.io/cpoder/pesitwizard/pesitwizard-server:latest
+        image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
         env:
         - name: VECTIS_SERVER_ID
           value: "MY_VECTIS_SERVER"
@@ -377,7 +377,7 @@ helm upgrade pesitwizard-server pesitwizard/pesitwizard-server -n pesitwizard
 
 # Ou mettre à jour l'image manuellement
 kubectl set image deployment/pesitwizard-server \
-  pesitwizard-server=ghcr.io/cpoder/pesitwizard/pesitwizard-server:v1.2.0 \
+  pesitwizard-server=ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:v1.2.0 \
   -n pesitwizard
 ```
 
@@ -393,7 +393,7 @@ kubectl logs -f deployment/pesitwizard-server -n pesitwizard
 
 ```bash
 # Tester la connexion PeSIT
-kubectl run test-client --rm -it --image=ghcr.io/cpoder/pesitwizard/pesitwizard-client:latest \
+kubectl run test-client --rm -it --image=ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest \
   -- java -jar pesitwizard-client.jar --host pesitwizard-server --port 5000 --test
 ```
 
