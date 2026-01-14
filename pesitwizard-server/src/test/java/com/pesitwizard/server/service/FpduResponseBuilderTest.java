@@ -32,15 +32,14 @@ class FpduResponseBuilderTest {
 
         @Test
         @DisplayName("should build ACONNECT response")
-        @org.junit.jupiter.api.Disabled("TODO: Fix after session context changes")
         void shouldBuildAconnect() {
             Fpdu response = FpduResponseBuilder.buildAconnect(sessionContext, 2, true, true, 4096, 32);
 
             assertEquals(FpduType.ACONNECT, response.getFpduType());
             assertEquals(1, response.getIdDst());
             assertEquals(2, response.getIdSrc());
-            // Verify PI 25 (max entity size)
-            assertNotNull(response.getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE));
+            // Verify PI 06 (protocol version) - ACONNECT doesn't have PI_25
+            assertNotNull(response.getParameter(ParameterIdentifier.PI_06_VERSION));
         }
 
         @Test
