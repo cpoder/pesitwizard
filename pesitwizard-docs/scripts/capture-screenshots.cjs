@@ -22,43 +22,47 @@ async function captureTlsScreenshots(page) {
     await page.goto(`${CLIENT_URL}/servers`);
     await page.waitForTimeout(1000);
 
-    // Look for a server with TLS button
-    const tlsButton = page.locator('button[title="TLS Configuration"], button:has-text("TLS")').first();
-    if (await tlsButton.count() > 0) {
-        // Capture server list with TLS button visible
-        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-config-nav.png'), fullPage: false });
-        console.log('  ✓ tls-config-nav.png');
+    // Capture server list showing TLS badge
+    await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-config-nav.png'), fullPage: false });
+    console.log('  \u2713 tls-config-nav.png');
 
-        // Click TLS button to open modal
-        await tlsButton.click();
+    // Find TLS buttons by title attribute
+    const tlsButtons = page.locator('button[title="Configure TLS certificates"]');
+    const buttonCount = await tlsButtons.count();
+    console.log(`  Found ${buttonCount} TLS buttons`);
+
+    if (buttonCount >= 2) {
+        // Click the second TLS button (Server with TLS - unconfigured)
+        await tlsButtons.nth(1).click();
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-truststore.png'), fullPage: false });
+        console.log('  \u2713 tls-import-truststore.png (unconfigured state)');
+        // Close modal by clicking Close button
+        await page.locator('button:has-text("Close")').click();
         await page.waitForTimeout(500);
 
-        // Capture TLS configuration modal
-        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-truststore.png'), fullPage: false });
-        console.log('  ✓ tls-import-truststore.png');
-
-        // Look for keystore section/tab if exists and is enabled
-        const keystoreTab = page.locator('button:has-text("Keystore"):not([disabled]), [role="tab"]:has-text("Keystore")').first();
-        if (await keystoreTab.count() > 0) {
-            await keystoreTab.click();
-            await page.waitForTimeout(300);
-            await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-keystore.png'), fullPage: false });
-            console.log('  ✓ tls-import-keystore.png');
-        } else {
-            // Just capture current state as keystore screenshot
-            await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-keystore.png'), fullPage: false });
-            console.log('  ✓ tls-import-keystore.png (keystore tab disabled)');
-        }
-
-        // Capture the full TLS config state
+        // Click the first TLS button (My server - configured)
+        await tlsButtons.nth(0).click();
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-keystore.png'), fullPage: false });
+        console.log('  \u2713 tls-import-keystore.png (configured state)');
         await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-enabled.png'), fullPage: false });
-        console.log('  ✓ tls-enabled.png');
-
-        // Close modal
-        await page.keyboard.press('Escape');
+        console.log('  \u2713 tls-enabled.png');
+        await page.locator('button:has-text("Close")').click();
+        await page.waitForTimeout(300);
+    } else if (buttonCount === 1) {
+        await tlsButtons.first().click();
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-truststore.png'), fullPage: false });
+        console.log('  \u2713 tls-import-truststore.png');
+        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-import-keystore.png'), fullPage: false });
+        console.log('  \u2713 tls-import-keystore.png');
+        await page.screenshot({ path: path.join(TLS_SCREENSHOT_DIR, 'tls-enabled.png'), fullPage: false });
+        console.log('  \u2713 tls-enabled.png');
+        await page.locator('button:has-text("Close")').click();
         await page.waitForTimeout(300);
     } else {
-        console.log('  ⚠ No TLS button found - skipping TLS screenshots');
+        console.log('  \u26a0 No TLS buttons found');
     }
 }
 
