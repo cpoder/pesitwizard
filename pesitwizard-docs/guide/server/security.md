@@ -72,14 +72,14 @@ La CA privée est un composant critique de sécurité. Son accès doit être **s
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │              CA Privée (Administration sécurité)                │
-│  - Accès restreint aux administrateurs sécurité                │
+│  - Accès restreint aux administrateurs sécurité                 │
 │  - Initialisation unique de la CA                               │
-│  - Signature des certificats serveur et client                 │
-│  - Stockage sécurisé des clés (HSM recommandé en prod)         │
+│  - Signature des certificats serveur et client                  │
+│  - Stockage sécurisé des clés (HSM recommandé en prod)          │
 └─────────────────────────────────────────────────────────────────┘
                               │ distribue certificats
            ┌──────────────────┼──────────────────┐
-           ▼                                      ▼
+           ▼                                     ▼
 ┌─────────────────────┐              ┌─────────────────────┐
 │  Serveur PeSIT      │              │  Client PeSIT       │
 │  - Reçoit keystore  │              │  - Reçoit keystore  │
@@ -126,37 +126,41 @@ L'administrateur distribue ensuite :
 
 ### Interface utilisateur Client
 
-Le client PeSIT Wizard dispose d'une interface **TLS Config** pour importer les certificats reçus de l'administrateur.
+La configuration TLS est accessible **par serveur** dans le client PeSIT Wizard. Chaque serveur configuré avec TLS activé dispose d'un bouton **TLS** permettant d'importer les certificats.
 
-Dans le menu latéral, cliquez sur **TLS Config** :
+Dans la liste des serveurs, cliquez sur le bouton **TLS** du serveur concerné :
 
 ![Navigation vers TLS Config](/screenshots/tls-config-nav.png)
 
-### 1. Importer le Truststore (Certificat CA)
+### 1. Importer le CA Certificate (Truststore)
 
 Pour faire confiance au serveur PeSIT, importez le certificat CA :
 
-![Import Truststore](/screenshots/tls-import-truststore.png)
+![Import CA Certificate](/screenshots/tls-import-truststore.png)
 
-1. Cliquez sur **Import Truststore**
-2. Sélectionnez le fichier CA reçu de l'administrateur (.p12, .jks, ou .pem)
+1. Cliquez sur **Import CA Certificate**
+2. Sélectionnez le fichier CA reçu de l'administrateur (.pem, .crt, .p12 ou .jks)
 3. Entrez le mot de passe si nécessaire
 
-### 2. Importer le Keystore (Certificat Client)
+### 2. Importer le Client Certificate (Keystore)
 
 Pour l'authentification mTLS, importez votre certificat client :
 
-![Import Keystore](/screenshots/tls-import-keystore.png)
+![Import Client Certificate](/screenshots/tls-import-keystore.png)
 
-1. Cliquez sur **Import Keystore**
+1. Cliquez sur **Import Client Certificate**
 2. Sélectionnez le fichier keystore reçu de l'administrateur (.p12 ou .jks)
 3. Entrez le mot de passe du keystore
 
-### 3. Activer TLS
+::: tip Note
+Le bouton d'import du certificat client n'est actif qu'après avoir importé le CA Certificate.
+:::
 
-Une fois les deux certificats importés, activez TLS :
+### 3. État TLS
 
-![TLS Enabled](/screenshots/tls-enabled.png)
+Une fois les certificats importés, l'état TLS est visible dans la configuration :
+
+![TLS Configuration](/screenshots/tls-enabled.png)
 
 ---
 
@@ -203,8 +207,6 @@ L'administrateur du serveur PeSIT Wizard génère un certificat pour le partenai
 2. **Administrateur** : Exporte et transmet le keystore au client de manière sécurisée
 3. **Client** : Importe le keystore reçu dans sa configuration
 
-![Workflow certificat généré](/screenshots/workflow-generated-cert.png)
-
 ### Option 2 : CSR fourni par le client (plus sécurisé)
 
 Si le client préfère générer sa propre clé privée (plus sécurisé) :
@@ -227,9 +229,7 @@ cat client.csr
 
 #### Côté serveur : Signer le CSR via l'UI
 
-L'administrateur signe le CSR via l'interface **Certificates > Sign CSR** :
-
-![Signer le CSR du client](/screenshots/sign-client-csr.png)
+L'administrateur signe le CSR via l'API :
 
 1. Collez le CSR reçu du client
 2. Sélectionnez **Client (mTLS)** comme purpose
@@ -285,11 +285,7 @@ Pour que le client fasse confiance au serveur PeSIT Wizard, il doit importer le 
 
 ### Télécharger le certificat CA via l'UI
 
-Le certificat CA peut être téléchargé via l'interface **Certificates > Download CA Cert** :
-
-![Téléchargement du certificat CA](/screenshots/client-download-ca.png)
-
-Le client peut également le télécharger via l'API publique :
+Le certificat CA peut être téléchargé via l'API :
 
 ```bash
 curl -o pesit-ca.pem \
