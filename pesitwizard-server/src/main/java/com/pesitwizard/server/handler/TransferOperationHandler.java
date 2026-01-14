@@ -61,14 +61,14 @@ public class TransferOperationHandler {
             log.warn("[{}] Logical file validation failed for CREATE: {}",
                     ctx.getSessionId(), fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAbort(ctx, fileValidation.getDiagCode(),
+            return FpduResponseBuilder.buildNackCreate(ctx, fileValidation.getDiagCode(),
                     fileValidation.getMessage());
         }
 
         // Prepare local file path
         Path localPath = prepareReceivePath(ctx, transfer);
         if (localPath == null) {
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_211,
+            return FpduResponseBuilder.buildNackCreate(ctx, DiagnosticCode.D2_211,
                     "Cannot prepare receive directory");
         }
         transfer.setLocalPath(localPath);
@@ -94,6 +94,7 @@ public class TransferOperationHandler {
      * Handle SELECT FPDU
      */
     public Fpdu handleSelect(SessionContext ctx, Fpdu fpdu) {
+        log.info("[{}] SELECT: entering handleSelect", ctx.getSessionId());
         TransferContext transfer = ctx.startTransfer();
         transfer.setWriteMode(false); // Read mode
 
@@ -111,8 +112,17 @@ public class TransferOperationHandler {
             log.warn("[{}] Logical file validation failed for SELECT: {}",
                     ctx.getSessionId(), fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAbort(ctx, fileValidation.getDiagCode(),
+            return FpduResponseBuilder.buildNackSelect(ctx, fileValidation.getDiagCode(),
                     fileValidation.getMessage());
+        }
+
+        // Set file attributes from config (for ACK_SELECT)
+        if (ctx.getLogicalFileConfig() != null) {
+            if (ctx.getLogicalFileConfig().getRecordLength() > 0) {
+                transfer.setRecordLength(ctx.getLogicalFileConfig().getRecordLength());
+            }
+            transfer.setRecordFormat(ctx.getLogicalFileConfig().getRecordFormat());
+            transfer.setFileType(ctx.getLogicalFileConfig().getFileType());
         }
 
         // Determine file path
@@ -123,14 +133,14 @@ public class TransferOperationHandler {
             log.warn("[{}] SELECT: file '{}' not found at {}",
                     ctx.getSessionId(), transfer.getFilename(), filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_205,
+            return FpduResponseBuilder.buildNackSelect(ctx, DiagnosticCode.D2_205,
                     "File '" + transfer.getFilename() + "' not found");
         }
         if (!Files.isReadable(filePath)) {
             log.error("[{}] SELECT: access denied to file '{}' at {}",
                     ctx.getSessionId(), transfer.getFilename(), filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_211,
+            return FpduResponseBuilder.buildNackSelect(ctx, DiagnosticCode.D2_211,
                     "Access denied to file: " + transfer.getFilename());
         }
 
@@ -152,7 +162,11 @@ public class TransferOperationHandler {
 
         ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
 
-        return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize());
+        // Use client's maxEntitySize if provided, otherwise server default
+        int maxEntitySize = transfer.getMaxEntitySize() > 0
+                ? transfer.getMaxEntitySize()
+                : properties.getMaxEntitySize();
+        return FpduResponseBuilder.buildAckSelect(ctx, maxEntitySize);
     }
 
     /**
@@ -200,10 +214,25 @@ public class TransferOperationHandler {
      * Handle DESELECT FPDU
      */
     public Fpdu handleDeselect(SessionContext ctx, Fpdu fpdu) {
+        // Log diagnostic code if present
+        ParameterValue pi2 = fpdu.getParameter(ParameterIdentifier.PI_02_DIAG);
+        if (pi2 != null && pi2.getValue() != null) {
+            byte[] diagBytes = pi2.getValue();
+            String diagHex = bytesToHex(diagBytes);
+            log.warn("[{}] DESELECT: diagnostic code={} (hex)", ctx.getSessionId(), diagHex);
+        }
         log.info("[{}] DESELECT: file deselected", ctx.getSessionId());
         ctx.endTransfer();
         ctx.transitionTo(ServerState.CN03_CONNECTED);
         return FpduResponseBuilder.buildAckDeselect(ctx);
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X", b & 0xFF));
+        }
+        return sb.toString();
     }
 
     /**

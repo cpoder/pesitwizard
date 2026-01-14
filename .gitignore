@@ -9,6 +9,9 @@ vectis-local/
 # Java / Maven
 **/target/
 *.log
+**/received/
+**/send/
+**/backups/
 
 # Node
 **/node_modules/

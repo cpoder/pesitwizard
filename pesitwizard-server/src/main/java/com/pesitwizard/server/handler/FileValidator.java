@@ -138,6 +138,8 @@ public class FileValidator {
                     .overwrite(vf.isOverwrite())
                     .maxFileSize(vf.getMaxFileSize())
                     .fileType(vf.getFileType())
+                    .recordLength(vf.getRecordLength())
+                    .recordFormat(vf.getRecordFormat())
                     .build();
         }
 

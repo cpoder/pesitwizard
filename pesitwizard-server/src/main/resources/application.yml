@@ -25,6 +25,14 @@ spring:
       ddl-auto: update
     show-sql: false
     open-in-view: false
+    defer-datasource-initialization: true
+
+  # SQL initialization - disabled, use API instead
+  # sql:
+  #   init:
+  #     mode: always
+  #     data-locations: classpath:data.sql
+  #     continue-on-error: true
   
   # H2 Console (for debugging, only in default profile)
   h2:
@@ -36,8 +44,8 @@ spring:
 server:
   port: 8080  # HTTP management port (REST API)
 
-# Vectis Protocol Configuration
-pesitwizard:
+# PeSIT Protocol Configuration
+pesit:
   # Version info (injected at build time)
   version: "@project.version@"
   build:
@@ -112,8 +120,8 @@ pesitwizard:
     # TLS port for Vectis protocol (when SSL enabled)
     tls-port: 5001
     
-    # Server identifier (PI 4)
-    server-id: PESIT_SERVER
+    # Server identifier (PI 4) - max 8 characters
+    server-id: PESITSRV
     
     # Protocol version (PI 6) - 2 for Hors-SIT
     protocol-version: 2
@@ -162,9 +170,9 @@ pesitwizard:
         max-connections: 10
         allowed-files: []
       
-      # Example partner: TEST_CLIENT
-      TEST_CLIENT:
-        id: TEST_CLIENT
+      # Example partner (8 chars max, uppercase alphanumeric only)
+      TESTCLI:
+        id: TESTCLI
         description: Test client for development
         enabled: true
         password: ""  # Empty = no password required
@@ -172,7 +180,7 @@ pesitwizard:
         max-connections: 10
         allowed-files: []  # Empty = all files allowed
 
-      # IBM CX Client
+      # IBM CX Client (8 chars max)
       CXCLIENT:
         id: CXCLIENT
         description: IBM Sterling Connect:Express client
@@ -182,21 +190,21 @@ pesitwizard:
         max-connections: 10
         allowed-files: []
 
-      # Example partner with password
-      SECURE_PARTNER:
-        id: SECURE_PARTNER
+      # Example partner with password (8 chars max)
+      SECUREP:
+        id: SECUREP
         description: Partner requiring authentication
         enabled: true
         password: secret123
         access-type: WRITE
         max-connections: 5
         allowed-files:
-          - INCOMING_*
-          - DATA_FILE
-      
-      # Example disabled partner
-      DISABLED_PARTNER:
-        id: DISABLED_PARTNER
+          - INCOMING
+          - DATAFILE
+
+      # Example disabled partner (8 chars max)
+      DISABLED:
+        id: DISABLED
         description: Temporarily disabled partner
         enabled: false
     
@@ -212,7 +220,7 @@ pesitwizard:
         direction: BOTH
         receive-directory: ./received/test
         send-directory: ./send/test
-        receive-filename-pattern: "${filename}_${timestamp}"
+        receive-filename-pattern: "${virtualfile}_${timestamp}"
         overwrite: true
       
       # Alternative test file
@@ -223,7 +231,7 @@ pesitwizard:
         direction: BOTH
         receive-directory: ./received/test
         send-directory: ./send/test
-        receive-filename-pattern: "${filename}_${timestamp}"
+        receive-filename-pattern: "${virtualfile}_${timestamp}"
         overwrite: true
       
       # Sync point test files
@@ -237,47 +245,47 @@ pesitwizard:
         enabled: true
         direction: BOTH
         receive-directory: ./received/test
-      RESTARTTEST:
-        id: RESTARTTEST
+      RESTART:
+        id: RESTART
         enabled: true
         direction: BOTH
         receive-directory: ./received/test
       
-      # Example: Incoming data files
-      INCOMING_DATA:
-        id: INCOMING_DATA
+      # Example: Incoming data files (8 chars max, no underscore)
+      INCOMING:
+        id: INCOMING
         description: Incoming data files from partners
         enabled: true
         direction: RECEIVE  # RECEIVE, SEND, or BOTH
         receive-directory: ./received/incoming
-        receive-filename-pattern: "${filename}_${timestamp}"
+        receive-filename-pattern: "${virtualfile}_${timestamp}"
         overwrite: false
         max-file-size: 104857600  # 100 MB
-      
-      # Example: Outgoing reports
-      REPORT_*:
-        id: REPORT_*
-        description: Outgoing report files (wildcard pattern)
+
+      # Example: Outgoing reports (8 chars max, no wildcard in ID)
+      REPORTS:
+        id: REPORTS
+        description: Outgoing report files
         enabled: true
         direction: SEND
         send-directory: ./send/reports
-      
-      # Example: Bidirectional file
-      EXCHANGE_FILE:
-        id: EXCHANGE_FILE
+
+      # Example: Bidirectional file (8 chars max, no underscore)
+      EXCHANGE:
+        id: EXCHANGE
         description: Bidirectional exchange file
         enabled: true
         direction: BOTH
         receive-directory: ./received/exchange
         send-directory: ./send/exchange
-        receive-filename-pattern: "${filename}_${date}"
+        receive-filename-pattern: "${virtualfile}_${date}"
         overwrite: true
     
     # Enable CRC checking (PI 1)
     crc-enabled: false
 
 # Security Configuration
-pesitwizard.security:
+pesit.security:
   # Enable security (set to false to disable all authentication)
   enabled: false
   
@@ -355,14 +363,14 @@ pesitwizard.security:
     #   idp-operator: OPERATOR
 
 # Secrets Management
-pesitwizard.secrets:
+pesit.secrets:
   # Encryption key for secrets (Base64 encoded, 32 bytes for AES-256)
   # Generate with: openssl rand -base64 32
   # For production, set via environment variable: VECTIS_SECRETS_ENCRYPTION_KEY
   # encryption-key: ${VECTIS_SECRETS_ENCRYPTION_KEY:}
 
 # Backup & Recovery
-pesitwizard.backup:
+pesit.backup:
   # Directory for storing backups
   directory: ./backups
   # Retention period in days
@@ -373,7 +381,7 @@ pesitwizard.backup:
   schedule: "0 0 1 * * ?"
 
 # File Integrity
-pesitwizard.integrity:
+pesit.integrity:
   # Hash algorithm: SHA-256, SHA-512, SHA-1, MD5
   algorithm: SHA-256
   # Re-verification interval in days
@@ -382,14 +390,14 @@ pesitwizard.integrity:
   buffer-size: 8192
 
 # Audit Logging
-pesitwizard.audit:
+pesit.audit:
   # Retention period for audit events (days)
   retention-days: 365
   # Log audit events to console in JSON format (for SIEM integration)
   log-to-console: true
 
 # Observability Configuration
-pesitwizard.observability:
+pesit.observability:
   service-name: pesitwizard-server
   tracing:
     # Disabled by default - enable via API or set OTEL_EXPORTER_OTLP_ENDPOINT env var
@@ -411,14 +419,14 @@ management:
       enabled: true
   metrics:
     tags:
-      application: ${pesitwizard.observability.service-name:pesitwizard-server}
+      application: ${pesit.observability.service-name:pesitwizard-server}
     distribution:
       percentiles-histogram:
         http.server.requests: true
         pesitwizard.transfers.duration: true
   tracing:
     # Only enable if endpoint is configured
-    enabled: ${pesitwizard.observability.tracing.enabled:false}
+    enabled: ${pesit.observability.tracing.enabled:false}
     sampling:
       probability: 1.0
 

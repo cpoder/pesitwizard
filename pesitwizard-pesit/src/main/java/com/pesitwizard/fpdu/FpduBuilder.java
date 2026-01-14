@@ -93,7 +93,7 @@ public class FpduBuilder {
         fpdu.put((byte) FpduType.DTF.getPhase());
         fpdu.put((byte) FpduType.DTF.getType());
         fpdu.put((byte) idDest);
-        fpdu.put((byte) 0); // idSrc = 0 for file-level FPDUs
+        fpdu.put((byte) articles.size()); // idSrc = number of articles for multi-article DTF
 
         // Add each article with 2-byte length prefix
         for (byte[] article : articles) {

@@ -291,7 +291,7 @@ class PesitSessionHandlerTest {
 
         // BufferUnderflowException when FPDU is too short to parse
         assertThrows(java.nio.BufferUnderflowException.class,
-                () -> handler.processIncomingFpdu(ctx, invalidData, null));
+                () -> handler.processIncomingFpdu(ctx, invalidData, null, null));
     }
 
     @Nested
@@ -320,7 +320,7 @@ class PesitSessionHandlerTest {
                     .build(1);
             byte[] rawData = FpduBuilder.buildFpdu(connectFpdu);
 
-            byte[] response = handler.processIncomingFpdu(ctx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(ctx, rawData, null, null);
 
             assertNotNull(response);
             assertEquals(ServerState.CN03_CONNECTED, ctx.getState());
@@ -342,7 +342,7 @@ class PesitSessionHandlerTest {
                     .build(1);
             byte[] rawData = FpduBuilder.buildFpdu(connectFpdu);
 
-            byte[] response = handler.processIncomingFpdu(ctx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(ctx, rawData, null, null);
 
             assertNotNull(response);
             assertEquals(ServerState.CN01_REPOS, ctx.getState()); // Should stay in CN01
@@ -364,7 +364,7 @@ class PesitSessionHandlerTest {
                     .build(1);
             byte[] rawData = FpduBuilder.buildFpdu(connectFpdu);
 
-            byte[] response = handler.processIncomingFpdu(ctx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(ctx, rawData, null, null);
 
             assertNotNull(response);
             assertEquals(ServerState.CN01_REPOS, ctx.getState());
@@ -396,7 +396,7 @@ class PesitSessionHandlerTest {
                     .build(1);
             byte[] rawData = FpduBuilder.buildFpdu(createFpdu);
 
-            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null, null);
 
             assertNotNull(response);
             verify(transferOperationHandler).handleCreate(eq(connectedCtx), any(Fpdu.class));
@@ -415,7 +415,7 @@ class PesitSessionHandlerTest {
                     .build(1);
             byte[] rawData = FpduBuilder.buildFpdu(selectFpdu);
 
-            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null, null);
 
             assertNotNull(response);
             verify(transferOperationHandler).handleSelect(eq(connectedCtx), any(Fpdu.class));
@@ -429,7 +429,7 @@ class PesitSessionHandlerTest {
                             com.pesitwizard.fpdu.ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0 }));
             byte[] rawData = FpduBuilder.buildFpdu(releaseFpdu);
 
-            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(connectedCtx, rawData, null, null);
 
             assertNotNull(response);
             assertEquals(ServerState.CN01_REPOS, connectedCtx.getState());
@@ -461,7 +461,7 @@ class PesitSessionHandlerTest {
                             com.pesitwizard.fpdu.ParameterIdentifier.PI_18_POINT_RELANCE, 0));
             byte[] rawData = FpduBuilder.buildFpdu(writeFpdu);
 
-            byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData, outputStream);
+            byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData, null, outputStream);
 
             assertNotNull(response);
             verify(dataTransferHandler).handleWrite(eq(transferReadyCtx), any(Fpdu.class));
@@ -478,7 +478,7 @@ class PesitSessionHandlerTest {
                             com.pesitwizard.fpdu.ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0 }));
             byte[] rawData = FpduBuilder.buildFpdu(closeFpdu);
 
-            byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData, outputStream);
+            byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData, null, outputStream);
 
             assertNotNull(response);
             verify(transferOperationHandler).handleClose(eq(transferReadyCtx), any(Fpdu.class));
@@ -500,7 +500,7 @@ class PesitSessionHandlerTest {
                             com.pesitwizard.fpdu.ParameterIdentifier.PI_02_DIAG, new byte[] { 0x03, 0x11 }));
             byte[] rawData = FpduBuilder.buildFpdu(abortFpdu);
 
-            byte[] response = handler.processIncomingFpdu(ctx, rawData, null);
+            byte[] response = handler.processIncomingFpdu(ctx, rawData, null, null);
 
             assertNull(response); // No response for ABORT
             assertTrue(ctx.isAborted());
@@ -519,7 +519,7 @@ class PesitSessionHandlerTest {
                             com.pesitwizard.fpdu.ParameterIdentifier.PI_02_DIAG, new byte[] { 0x02, 0x05 }));
             byte[] rawData = FpduBuilder.buildFpdu(abortFpdu);
 
-            handler.processIncomingFpdu(ctx, rawData, null);
+            handler.processIncomingFpdu(ctx, rawData, null, null);
 
             verify(transferTracker).trackTransferFailed(eq(ctx), anyString(), anyString());
             assertTrue(ctx.isAborted());

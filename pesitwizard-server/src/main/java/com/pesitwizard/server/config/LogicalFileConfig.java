@@ -55,6 +55,14 @@ public class LogicalFileConfig {
     @Builder.Default
     private int fileType = 0;
 
+    /** Record length (PI 32) - must match partner's LREC config */
+    @Builder.Default
+    private int recordLength = 1024;
+
+    /** Record format (PI 31) - 0x80 = variable, 0x00 = fixed */
+    @Builder.Default
+    private int recordFormat = 0x80;
+
     public enum Direction {
         RECEIVE, // Only for CREATE (receiving files)
         SEND, // Only for SELECT (sending files)

@@ -5,7 +5,6 @@ import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
@@ -29,18 +28,22 @@ public class FpduResponseBuilder {
      */
     public static Fpdu buildAconnect(SessionContext ctx, int protocolVersion,
             boolean syncPoints, boolean resync, int maxEntitySize, int syncIntervalKb) {
+        // Per FpduType.ACONNECT definition:
+        // Mandatory: PI_06 (version)
+        // Optional: PI_05 (access control), PI_07 (sync points), PI_23 (resync), PI_99
+        // (message)
         Fpdu response = new Fpdu(FpduType.ACONNECT)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(ctx.getServerConnectionId())
-                .withParameter(new ParameterValue(PI_06_VERSION, protocolVersion))
-                .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize));
+                .withParameter(new ParameterValue(PI_06_VERSION, protocolVersion)); // Mandatory - must be binary, not
+                                                                                    // string
 
         if (syncPoints) {
             // PI 7: sync points option - 3 bytes [interval_high, interval_low, window]
             byte intervalHigh = (byte) ((syncIntervalKb >> 8) & 0xFF);
             byte intervalLow = (byte) (syncIntervalKb & 0xFF);
             response.withParameter(new ParameterValue(PI_07_SYNC_POINTS,
-                    new byte[] { intervalHigh, intervalLow, 0x02 })); // window=2
+                    new byte[] { intervalHigh, intervalLow, 0x02 }));
         }
 
         if (resync) {
@@ -86,7 +89,8 @@ public class FpduResponseBuilder {
         Fpdu response = new Fpdu(FpduType.ACK_CREATE)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes));
+                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes))
+                .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, 4096)); // Mandatory for ACK_CREATE
 
         if (message != null && !message.isEmpty()) {
             response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
@@ -147,13 +151,18 @@ public class FpduResponseBuilder {
 
         // Get file size if available
         long fileSize = 0;
-        String creationDate = Instant.now().toString();
+        // PeSIT date format: AAMMJJHHMMSS (12 chars)
+        java.time.format.DateTimeFormatter pesitDateFormat = java.time.format.DateTimeFormatter
+                .ofPattern("yyMMddHHmmss");
+        String creationDate = java.time.LocalDateTime.now().format(pesitDateFormat);
         if (transfer != null && transfer.getLocalPath() != null) {
             Path filePath = transfer.getLocalPath();
             try {
                 if (Files.exists(filePath)) {
                     fileSize = Files.size(filePath);
-                    creationDate = Files.getLastModifiedTime(filePath).toInstant().toString();
+                    java.time.Instant modTime = Files.getLastModifiedTime(filePath).toInstant();
+                    creationDate = java.time.LocalDateTime.ofInstant(modTime, java.time.ZoneId.systemDefault())
+                            .format(pesitDateFormat);
                 }
             } catch (Exception e) {
                 log.warn("Could not get file attributes for {}: {}", filePath, e.getMessage());
@@ -161,13 +170,21 @@ public class FpduResponseBuilder {
         }
 
         // PGI 9: File Identification (PI_11 file type, PI_12 filename)
+        int fileType = transfer != null ? transfer.getFileType() : 0;
         ParameterValue pgi9 = new ParameterValue(PGI_09_ID_FICHIER,
-                new ParameterValue(PI_11_TYPE_FICHIER, 0), // 0 = binary
+                new ParameterValue(PI_11_TYPE_FICHIER, fileType),
                 new ParameterValue(PI_12_NOM_FICHIER, filename));
 
-        // PGI 30: Logical Attributes (PI_32 record length)
+        // PGI 30: Logical Attributes (PI_31 format, PI_32 record length)
+        // PI_31: record format from config (0x80 = variable, 0x00 = fixed)
+        // PI_32: record length from config
+        int recordFormat = transfer != null ? transfer.getRecordFormat() : 0x80;
+        int recordLength = transfer != null && transfer.getRecordLength() > 0
+                ? transfer.getRecordLength()
+                : 1024;
         ParameterValue pgi30 = new ParameterValue(PGI_30_ATTR_LOGIQUES,
-                new ParameterValue(PI_32_LONG_ARTICLE, 0)); // 0 = variable length
+                new ParameterValue(PI_31_FORMAT_ARTICLE, recordFormat),
+                new ParameterValue(PI_32_LONG_ARTICLE, recordLength));
 
         // PGI 40: Physical Attributes (PI_42 max reservation = file size)
         ParameterValue pgi40 = new ParameterValue(PGI_40_ATTR_PHYSIQUES,
@@ -221,6 +238,23 @@ public class FpduResponseBuilder {
     }
 
     /**
+     * Build negative ACK(READ) response
+     */
+    public static Fpdu buildNackRead(SessionContext ctx, DiagnosticCode diagCode, String message) {
+        byte[] diagBytes = diagCode.toBytes();
+        log.info("[{}] Building NACK_READ with diag={}, message='{}'",
+                ctx.getSessionId(), diagCode.name(), message);
+        Fpdu response = new Fpdu(FpduType.ACK_READ)
+                .withIdDst(ctx.getClientConnectionId())
+                .withIdSrc(0)
+                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes));
+        if (message != null && !message.isEmpty()) {
+            response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
+        }
+        return response;
+    }
+
+    /**
      * Build ACK(CRF) - ACK Close response
      */
     public static Fpdu buildAckClose(SessionContext ctx) {
@@ -266,6 +300,16 @@ public class FpduResponseBuilder {
         return new Fpdu(FpduType.RELCONF)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(ctx.getServerConnectionId());
+    }
+
+    /**
+     * Build SYN (sync point) request
+     */
+    public static Fpdu buildSyn(SessionContext ctx, int syncPointNumber) {
+        return new Fpdu(FpduType.SYN)
+                .withIdDst(ctx.getClientConnectionId())
+                .withIdSrc(0)
+                .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncPointNumber));
     }
 
     /**

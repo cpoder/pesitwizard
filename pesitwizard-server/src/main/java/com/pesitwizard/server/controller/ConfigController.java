@@ -18,6 +18,7 @@ import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
 import com.pesitwizard.server.service.AuditService;
 import com.pesitwizard.server.service.ConfigService;
+import com.pesitwizard.server.util.PesitIdValidator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -57,9 +58,16 @@ public class ConfigController {
      * Create a new partner
      */
     @PostMapping("/partners")
-    public ResponseEntity<Partner> createPartner(@RequestBody Partner partner) {
+    public ResponseEntity<?> createPartner(@RequestBody Partner partner) {
+        // Validate partner ID (max 8 chars, uppercase alphanumeric only)
+        String validationError = PesitIdValidator.validate(partner.getId(), "Partner");
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", validationError));
+        }
+
         if (configService.partnerExists(partner.getId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", "Partner already exists: " + partner.getId()));
         }
         Partner created = configService.savePartner(partner);
         auditService.logConfigChange(AuditEventType.PARTNER_CREATED, "Partner", partner.getId(),
@@ -71,7 +79,13 @@ public class ConfigController {
      * Update or create a partner
      */
     @PutMapping("/partners/{id}")
-    public ResponseEntity<Partner> savePartner(@PathVariable String id, @RequestBody Partner partner) {
+    public ResponseEntity<?> savePartner(@PathVariable String id, @RequestBody Partner partner) {
+        // Validate partner ID (max 8 chars, uppercase alphanumeric only)
+        String validationError = PesitIdValidator.validate(id, "Partner");
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", validationError));
+        }
+
         boolean isNew = !configService.partnerExists(id);
         partner.setId(id);
         Partner saved = configService.savePartner(partner);
@@ -118,9 +132,16 @@ public class ConfigController {
      * Create a new virtual file
      */
     @PostMapping("/files")
-    public ResponseEntity<VirtualFile> createVirtualFile(@RequestBody VirtualFile file) {
+    public ResponseEntity<?> createVirtualFile(@RequestBody VirtualFile file) {
+        // Validate file ID (max 8 chars, uppercase alphanumeric only)
+        String validationError = PesitIdValidator.validate(file.getId(), "Virtual file");
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", validationError));
+        }
+
         if (configService.virtualFileExists(file.getId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", "Virtual file already exists: " + file.getId()));
         }
         VirtualFile created = configService.saveVirtualFile(file);
         auditService.logConfigChange(AuditEventType.VIRTUAL_FILE_CREATED, "VirtualFile", file.getId(),
@@ -132,7 +153,13 @@ public class ConfigController {
      * Update or create a virtual file
      */
     @PutMapping("/files/{id}")
-    public ResponseEntity<VirtualFile> saveVirtualFile(@PathVariable String id, @RequestBody VirtualFile file) {
+    public ResponseEntity<?> saveVirtualFile(@PathVariable String id, @RequestBody VirtualFile file) {
+        // Validate file ID (max 8 chars, uppercase alphanumeric only)
+        String validationError = PesitIdValidator.validate(id, "Virtual file");
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", validationError));
+        }
+
         boolean isNew = !configService.virtualFileExists(id);
         file.setId(id);
         VirtualFile saved = configService.saveVirtualFile(file);

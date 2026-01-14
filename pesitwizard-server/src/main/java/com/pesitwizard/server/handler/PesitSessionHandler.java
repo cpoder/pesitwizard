@@ -1,5 +1,6 @@
 package com.pesitwizard.server.handler;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Component;
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
-import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
@@ -18,7 +18,6 @@ import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
-import com.pesitwizard.server.model.TransferContext;
 import com.pesitwizard.server.model.ValidationResult;
 import com.pesitwizard.server.service.AuditService;
 import com.pesitwizard.server.service.FpduResponseBuilder;
@@ -72,45 +71,28 @@ public class PesitSessionHandler {
     /**
      * Process an incoming FPDU and return the response
      */
-    public byte[] processIncomingFpdu(SessionContext ctx, byte[] rawData, DataOutputStream out)
+    public byte[] processIncomingFpdu(SessionContext ctx, byte[] rawData, DataInputStream in, DataOutputStream out)
             throws IOException {
         ctx.touch();
 
-        // Log raw data for debugging
-        int[] phaseType = FpduIO.getPhaseAndType(rawData);
-        if (phaseType != null) {
-            log.debug("[{}] Raw FPDU: length={}, phase=0x{}, type=0x{}",
-                    ctx.getSessionId(), rawData.length,
-                    String.format("%02X", phaseType[0]), String.format("%02X", phaseType[1]));
-        }
-
-        // Check for DTF - needs special handling before parsing
-        if (FpduIO.isDtf(rawData) && ctx.getState() == ServerState.TDE02B_RECEIVING_DATA) {
-            byte[] data = FpduIO.extractDtfData(rawData);
-            if (data.length > 0) {
-                TransferContext transfer = ctx.getCurrentTransfer();
-                if (transfer != null) {
-                    try {
-                        transfer.appendData(data);
-                        log.info("[{}] DTF: received {} bytes, total: {} bytes",
-                                ctx.getSessionId(), data.length, transfer.getBytesTransferred());
-                    } catch (java.io.IOException e) {
-                        log.error("[{}] DTF: error writing data: {}", ctx.getSessionId(), e.getMessage());
-                        throw new RuntimeException("Failed to write transfer data", e);
-                    }
-                }
-            }
-            return null; // No response for DTF
-        }
-
-        // Parse FPDU
+        // Parse FPDU - DTF data is handled via fpdu.getData() like the client does
         FpduParser parser = new FpduParser(rawData);
         Fpdu fpdu = parser.parse();
+
+        return processIncomingFpdu(ctx, fpdu, in, out);
+    }
+
+    /**
+     * Process an already-parsed FPDU and return the response
+     */
+    public byte[] processIncomingFpdu(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
+            throws IOException {
+        ctx.touch();
 
         log.info("[{}] Received {} in state {}", ctx.getSessionId(), fpdu.getFpduType(), ctx.getState());
 
         // Process based on current state and FPDU type
-        Fpdu response = processStateMachine(ctx, fpdu, out);
+        Fpdu response = processStateMachine(ctx, fpdu, in, out);
 
         if (response != null) {
             log.info("[{}] Sending {} -> state {}", ctx.getSessionId(), response.getFpduType(), ctx.getState());
@@ -123,8 +105,10 @@ public class PesitSessionHandler {
     /**
      * Main state machine processing
      */
-    private Fpdu processStateMachine(SessionContext ctx, Fpdu fpdu, DataOutputStream out) throws IOException {
+    private Fpdu processStateMachine(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
+            throws IOException {
         FpduType type = fpdu.getFpduType();
+        log.info("[{}] processStateMachine: type={}, state={}", ctx.getSessionId(), type, ctx.getState());
 
         // Handle ABORT from any state
         if (type == FpduType.ABORT) {
@@ -136,7 +120,7 @@ public class PesitSessionHandler {
             case CN03_CONNECTED -> handleCN03(ctx, fpdu);
             case MSG_RECEIVING -> messageHandler.handleMsgReceiving(ctx, fpdu);
             case SF03_FILE_SELECTED -> handleSF03(ctx, fpdu);
-            case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu, out);
+            case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu, in, out);
             case TDE02B_RECEIVING_DATA -> dataTransferHandler.handleTDE02B(ctx, fpdu);
             case TDE07_WRITE_END -> dataTransferHandler.handleTDE07(ctx, fpdu);
             case TDL02B_SENDING_DATA -> dataTransferHandler.handleTDL02B(ctx, fpdu);
@@ -211,12 +195,17 @@ public class PesitSessionHandler {
         // Transition to CONNECTED state
         ctx.transitionTo(ServerState.CN03_CONNECTED);
 
+        // Negotiate sync interval: use client's value if sync points are enabled
+        int negotiatedSyncInterval = (properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled())
+                ? ctx.getClientSyncIntervalKb()
+                : 0;
+
         return FpduResponseBuilder.buildAconnect(ctx,
                 properties.getProtocolVersion(),
                 properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled(),
                 properties.isResyncEnabled() && ctx.isResyncEnabled(),
                 properties.getMaxEntitySize(),
-                properties.getSyncIntervalKb());
+                negotiatedSyncInterval);
     }
 
     /**
@@ -278,6 +267,7 @@ public class PesitSessionHandler {
      * CN03 - CONNECTED: Waiting for CREATE, SELECT, MSG, or RELEASE
      */
     private Fpdu handleCN03(SessionContext ctx, Fpdu fpdu) throws IOException {
+        log.info("[{}] handleCN03: received {} fpdu", ctx.getSessionId(), fpdu.getFpduType());
         return switch (fpdu.getFpduType()) {
             case CREATE -> transferOperationHandler.handleCreate(ctx, fpdu);
             case SELECT -> transferOperationHandler.handleSelect(ctx, fpdu);
@@ -308,10 +298,11 @@ public class PesitSessionHandler {
     /**
      * OF02 - TRANSFER READY: Waiting for WRITE, READ, or CLOSE
      */
-    private Fpdu handleOF02(SessionContext ctx, Fpdu fpdu, DataOutputStream out) throws IOException {
+    private Fpdu handleOF02(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
+            throws IOException {
         return switch (fpdu.getFpduType()) {
             case WRITE -> dataTransferHandler.handleWrite(ctx, fpdu);
-            case READ -> dataTransferHandler.handleRead(ctx, fpdu, out);
+            case READ -> dataTransferHandler.handleRead(ctx, fpdu, in, out);
             case CLOSE -> transferOperationHandler.handleClose(ctx, fpdu);
             default -> {
                 log.warn("[{}] Unexpected FPDU {} in OF02", ctx.getSessionId(), fpdu.getFpduType());

@@ -19,6 +19,7 @@ import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
 import com.pesitwizard.server.handler.PesitSessionHandler;
 import com.pesitwizard.server.repository.PesitServerConfigRepository;
 import com.pesitwizard.server.ssl.SslContextFactory;
+import com.pesitwizard.server.util.PesitIdValidator;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -126,6 +127,9 @@ public class PesitServerManager implements ClusterEventListener {
      */
     @Transactional
     public PesitServerConfig createServer(PesitServerConfig config) {
+        // Validate server ID (max 8 chars, uppercase alphanumeric only)
+        PesitIdValidator.validateOrThrow(config.getServerId(), "Server");
+
         // Validate unique constraints
         if (configRepository.existsByServerId(config.getServerId())) {
             throw new IllegalArgumentException("Server ID already exists: " + config.getServerId());
@@ -384,6 +388,9 @@ public class PesitServerManager implements ClusterEventListener {
         props.setSendDirectory(config.getSendDirectory());
         props.setMaxEntitySize(config.getMaxEntitySize());
         props.setSyncPointsEnabled(config.isSyncPointsEnabled());
+        props.setSyncIntervalKb(config.getSyncIntervalKb());
+        log.debug("Created properties from config: serverId={}, syncPointsEnabled={}, syncIntervalKb={}",
+                config.getServerId(), config.isSyncPointsEnabled(), config.getSyncIntervalKb());
         props.setResyncEnabled(config.isResyncEnabled());
         props.setStrictPartnerCheck(config.isStrictPartnerCheck());
         props.setStrictFileCheck(config.isStrictFileCheck());

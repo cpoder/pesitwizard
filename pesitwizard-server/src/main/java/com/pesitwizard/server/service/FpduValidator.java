@@ -49,8 +49,13 @@ public class FpduValidator {
         }
 
         // D2-220: Validate article/record length
+        // Skip validation for binary files (format 0x80 = BU) which have no fixed
+        // record length
+        int recordFormat = transfer.getRecordFormat();
         int recordLength = transfer.getRecordLength();
-        if (recordLength > 0 && data != null && data.length > recordLength) {
+        boolean isBinaryFormat = (recordFormat & 0x80) != 0;
+
+        if (!isBinaryFormat && recordLength > 0 && data != null && data.length > recordLength) {
             log.warn("Article length {} exceeds announced record length {}", data.length, recordLength);
             return ValidationResult.error(DiagnosticCode.D2_220,
                     String.format("Article length %d exceeds announced record length %d", data.length, recordLength));
