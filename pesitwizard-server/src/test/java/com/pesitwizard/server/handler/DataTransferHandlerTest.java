@@ -297,16 +297,24 @@ class DataTransferHandlerTest {
     void handleDtfShouldIncrementRecordCount() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = ctx.startTransfer();
-        transfer.setRecordsTransferred(5);
+        int initialRecords = transfer.getRecordsTransferred();
+        // Open output stream to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
 
         Fpdu fpdu = new Fpdu(FpduType.DTF);
         byte[] data = new byte[100];
         fpdu.setData(data);
 
-        Fpdu response = handler.handleTDE02B(ctx, fpdu);
-
-        assertNull(response);
-        assertEquals(6, transfer.getRecordsTransferred());
+        try {
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
+            assertNull(response);
+            assertEquals(initialRecords + 1, transfer.getRecordsTransferred());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
@@ -318,7 +326,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null);
+        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
 
         assertNotNull(response);
         assertEquals(FpduType.ABORT, response.getFpduType());
@@ -334,7 +342,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null);
+        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
 
         assertNotNull(response);
         assertEquals(FpduType.ABORT, response.getFpduType());
@@ -350,7 +358,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null);
+        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
 
         assertNotNull(response);
         assertEquals(FpduType.ABORT, response.getFpduType());
@@ -377,7 +385,7 @@ class DataTransferHandlerTest {
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             java.io.DataOutputStream out = new java.io.DataOutputStream(baos);
 
-            Fpdu response = handler.handleRead(ctx, fpdu, out);
+            Fpdu response = handler.handleRead(ctx, fpdu, null, out);
 
             assertNull(response); // Success returns null
             assertEquals(ServerState.TDL02B_SENDING_DATA, ctx.getState());
@@ -409,7 +417,7 @@ class DataTransferHandlerTest {
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             java.io.DataOutputStream out = new java.io.DataOutputStream(baos);
 
-            Fpdu response = handler.handleRead(ctx, fpdu, out);
+            Fpdu response = handler.handleRead(ctx, fpdu, null, out);
 
             assertNull(response);
             assertEquals(5, transfer.getRestartPoint());

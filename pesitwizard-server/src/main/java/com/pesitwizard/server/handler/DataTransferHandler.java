@@ -1,5 +1,7 @@
 package com.pesitwizard.server.handler;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduIO;
+import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
@@ -50,18 +53,18 @@ public class DataTransferHandler {
     /**
      * Handle READ FPDU - streams file data to client
      */
-    public Fpdu handleRead(SessionContext ctx, Fpdu fpdu, DataOutputStream out) throws IOException {
+    public Fpdu handleRead(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out) throws IOException {
         TransferContext transfer = ctx.getCurrentTransfer();
 
         if (transfer == null || transfer.getLocalPath() == null) {
             log.error("[{}] READ: no file selected for transfer", ctx.getSessionId());
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_205, "No file selected");
+            return FpduResponseBuilder.buildNackRead(ctx, DiagnosticCode.D2_205, "No file selected");
         }
 
         Path filePath = transfer.getLocalPath();
         if (!Files.exists(filePath)) {
             log.error("[{}] READ: file not found: {}", ctx.getSessionId(), filePath);
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_205, "File not found");
+            return FpduResponseBuilder.buildNackRead(ctx, DiagnosticCode.D2_205, "File not found");
         }
 
         // Extract PI 18 (Restart Point)
@@ -78,7 +81,7 @@ public class DataTransferHandler {
         log.info("[{}] Sent ACK(READ)", ctx.getSessionId());
 
         // 2. Stream file data as DTF chunks
-        long totalBytes = streamFileData(ctx, filePath, restartPoint, out);
+        long totalBytes = streamFileData(ctx, filePath, restartPoint, in, out);
 
         // 3. Send DTF.END
         FpduIO.writeFpdu(out, FpduResponseBuilder.buildDtfEnd(ctx));
@@ -92,45 +95,188 @@ public class DataTransferHandler {
     }
 
     /**
-     * Stream file data to client
+     * Stream file data to client using proper PeSIT article format.
+     * 
+     * Structure:
+     * - An ENTITY (FPDU) contains multiple ARTICLES
+     * - Each article = recordLength bytes, prefixed with 2-byte length
+     * - Within an entity: DTFDA (first) + DTFMA* (middle) + DTFFA (last)
+     * - SYN points are sent between entities (after DTFFA, before next DTFDA)
      */
-    private long streamFileData(SessionContext ctx, Path filePath, long startPosition, DataOutputStream out)
-            throws IOException {
-        int maxChunkSize = properties.getMaxEntitySize();
-        long totalBytes = 0;
-        int recordCount = 0;
-        byte[] buffer = new byte[maxChunkSize];
+    private long streamFileData(SessionContext ctx, Path filePath, long startPosition, DataInputStream in,
+            DataOutputStream out) throws IOException {
+        TransferContext transfer = ctx.getCurrentTransfer();
+        int maxEntitySize = properties.getMaxEntitySize();
+        int recordLength = transfer != null && transfer.getRecordLength() > 0
+                ? transfer.getRecordLength()
+                : 1024;
 
-        try (InputStream fileIn = Files.newInputStream(filePath)) {
-            // Skip to restart point if resuming transfer
+        // Sync point configuration
+        boolean syncEnabled = ctx.isSyncPointsEnabled();
+        int syncIntervalKb = ctx.getClientSyncIntervalKb();
+        long syncIntervalBytes = syncIntervalKb * 1024L;
+        long bytesSinceLastSync = 0;
+        int syncPointNumber = transfer != null ? transfer.getCurrentSyncPoint() : 0;
+
+        // Calculate articles per entity: each article needs 6 (header) + 2 (length
+        // prefix) + recordLength
+        // But header is per FPDU, so: maxEntitySize = 6 + N * (2 + recordLength)
+        int articlesPerEntity = Math.max(1, (maxEntitySize - 6) / (2 + recordLength));
+
+        long totalBytes = 0;
+        int entityCount = 0;
+        byte[] articleBuffer = new byte[recordLength];
+
+        try (InputStream rawIn = Files.newInputStream(filePath);
+                java.io.BufferedInputStream fileIn = new java.io.BufferedInputStream(rawIn)) {
             if (startPosition > 0) {
                 long skipped = fileIn.skip(startPosition);
                 log.info("[{}] READ: skipped {} bytes to resume position", ctx.getSessionId(), skipped);
             }
 
-            int bytesRead;
-            while ((bytesRead = fileIn.read(buffer)) != -1) {
-                byte[] chunk = (bytesRead == buffer.length) ? buffer : Arrays.copyOf(buffer, bytesRead);
-                FpduIO.writeFpduWithData(out, FpduType.DTF, ctx.getClientConnectionId(), 0, chunk);
+            long fileSize = Files.size(filePath) - startPosition;
+            boolean hasMoreData = true;
 
-                totalBytes += bytesRead;
-                recordCount++;
+            // Estimate bytes per entity for sync point calculation
+            int bytesPerEntity = articlesPerEntity * recordLength;
 
-                log.debug("[{}] DTF: sent {} bytes, total: {} bytes",
-                        ctx.getSessionId(), bytesRead, totalBytes);
+            while (hasMoreData) {
+                // Check if NEXT entity would exceed sync interval - send SYN BEFORE
+                if (syncEnabled && syncIntervalBytes > 0
+                        && (bytesSinceLastSync + bytesPerEntity) > syncIntervalBytes) {
+                    syncPointNumber++;
+                    log.info("[{}] Sending SYN point {} at {} bytes (before next entity would exceed {} limit)",
+                            ctx.getSessionId(), syncPointNumber, totalBytes, syncIntervalBytes);
+
+                    FpduIO.writeFpdu(out, FpduResponseBuilder.buildSyn(ctx, syncPointNumber));
+
+                    Fpdu ackSyn = readAndParseAckSyn(ctx, in, syncPointNumber);
+                    if (ackSyn == null) {
+                        throw new IOException("Timeout waiting for ACK_SYN");
+                    }
+
+                    if (transfer != null) {
+                        transfer.setCurrentSyncPoint(syncPointNumber);
+                        transfer.setBytesSinceLastSync(0);
+                    }
+                    bytesSinceLastSync = 0;
+                    log.info("[{}] SYN point {} acknowledged", ctx.getSessionId(), syncPointNumber);
+                }
+
+                // Build one entity with multiple articles
+                ByteArrayOutputStream entityData = new ByteArrayOutputStream();
+                int articlesInEntity = 0;
+
+                for (int i = 0; i < articlesPerEntity && hasMoreData; i++) {
+                    int bytesRead = fileIn.read(articleBuffer);
+                    if (bytesRead == -1) {
+                        hasMoreData = false;
+                        break;
+                    }
+
+                    byte[] article = (bytesRead == articleBuffer.length)
+                            ? articleBuffer
+                            : Arrays.copyOf(articleBuffer, bytesRead);
+
+                    // Determine article type within entity
+                    FpduType articleType;
+                    boolean isFirstInEntity = (articlesInEntity == 0);
+                    boolean isLastInEntity = (i == articlesPerEntity - 1) || (totalBytes + bytesRead >= fileSize);
+
+                    // Peek to see if more data
+                    if (!isLastInEntity) {
+                        fileIn.mark(1);
+                        int peek = fileIn.read();
+                        if (peek == -1) {
+                            isLastInEntity = true;
+                            hasMoreData = false;
+                        } else {
+                            fileIn.reset();
+                        }
+                    }
+
+                    if (isFirstInEntity && isLastInEntity) {
+                        articleType = FpduType.DTF;
+                    } else if (isFirstInEntity) {
+                        articleType = FpduType.DTFDA;
+                    } else if (isLastInEntity) {
+                        articleType = FpduType.DTFFA;
+                    } else {
+                        articleType = FpduType.DTFMA;
+                    }
+
+                    // Write article with 2-byte length prefix
+                    entityData.write((bytesRead >> 8) & 0xFF);
+                    entityData.write(bytesRead & 0xFF);
+                    entityData.write(article);
+
+                    totalBytes += bytesRead;
+                    bytesSinceLastSync += bytesRead;
+                    articlesInEntity++;
+
+                    log.debug("[{}] Article {}: {} {} bytes", ctx.getSessionId(), articlesInEntity, articleType,
+                            bytesRead);
+
+                    if (isLastInEntity)
+                        break;
+                }
+
+                // Send the entity if we have articles - always DTF for multi-articles
+                if (articlesInEntity > 0) {
+                    byte[] data = entityData.toByteArray();
+                    // Multi-article DTF: idSrc = number of articles
+                    FpduIO.writeFpduWithData(out, FpduType.DTF, ctx.getClientConnectionId(), articlesInEntity, data);
+                    entityCount++;
+                    log.debug("[{}] Entity {}: {} articles, {} bytes",
+                            ctx.getSessionId(), entityCount, articlesInEntity, data.length);
+                }
             }
         }
 
-        log.info("[{}] READ: sent {} bytes in {} DTF chunk(s)", ctx.getSessionId(), totalBytes, recordCount);
+        log.info("[{}] READ: sent {} bytes in {} entities, {} sync points",
+                ctx.getSessionId(), totalBytes, entityCount, syncPointNumber);
 
-        // Store transfer stats
-        TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null) {
             transfer.setBytesTransferred(totalBytes);
-            transfer.setRecordsTransferred(recordCount);
+            transfer.setRecordsTransferred(entityCount);
         }
 
         return totalBytes;
+    }
+
+    /**
+     * Read and parse ACK_SYN response from client
+     */
+    private Fpdu readAndParseAckSyn(SessionContext ctx, DataInputStream in, int expectedSyncPoint) throws IOException {
+        // Read FPDU length
+        int length = in.readUnsignedShort();
+        if (length <= 0 || length > 65535) {
+            log.warn("[{}] Invalid FPDU length while waiting for ACK_SYN: {}", ctx.getSessionId(), length);
+            return null;
+        }
+
+        byte[] data = new byte[length];
+        in.readFully(data);
+
+        FpduParser parser = new FpduParser(data, ctx.isEbcdicEncoding());
+        Fpdu fpdu = parser.parse();
+
+        if (fpdu.getFpduType() != FpduType.ACK_SYN) {
+            log.warn("[{}] Expected ACK_SYN but got {}", ctx.getSessionId(), fpdu.getFpduType());
+            return null;
+        }
+
+        // Verify sync point number
+        ParameterValue pi20 = fpdu.getParameter(ParameterIdentifier.PI_20_NUM_SYNC);
+        if (pi20 != null) {
+            int receivedSyncPoint = parseNumeric(pi20.getValue());
+            if (receivedSyncPoint != expectedSyncPoint) {
+                log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
+                        ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
+            }
+        }
+
+        return fpdu;
     }
 
     /**
@@ -200,31 +346,6 @@ public class DataTransferHandler {
     }
 
     /**
-     * Write received data to file
-     */
-    private void writeReceivedData(SessionContext ctx, TransferContext transfer) throws IOException {
-        try {
-            // Ensure parent directory exists
-            Path parentDir = transfer.getLocalPath().getParent();
-            if (parentDir != null && !Files.exists(parentDir)) {
-                Files.createDirectories(parentDir);
-            }
-
-            Files.write(transfer.getLocalPath(), transfer.getData());
-            log.info("[{}] TRANS.END: wrote {} bytes to {}",
-                    ctx.getSessionId(), transfer.getData().length, transfer.getLocalPath());
-        } catch (java.nio.file.FileSystemException e) {
-            // Disk full or permission error
-            log.error("[{}] TRANS.END: failed to write file: {}", ctx.getSessionId(), e.getMessage());
-            ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
-            if (e.getMessage() != null && e.getMessage().contains("No space")) {
-                throw new DataTransferException(DiagnosticCode.D2_219, "Disk full: " + e.getMessage());
-            }
-            throw new DataTransferException(DiagnosticCode.D2_213, "File write error: " + e.getMessage());
-        }
-    }
-
-    /**
      * Handle DTF (Data Transfer) FPDU - no response needed
      * Validates article length against announced record length (D2-220)
      * Validates data without sync point (D2-222)
@@ -254,21 +375,54 @@ public class DataTransferHandler {
             return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
         }
 
-        // D2-222: Validate that client respects its declared sync point interval
+        // Track bytes since last sync (for logging only - client sends SYN after data,
+        // not before)
         int clientSyncIntervalKb = ctx.getClientSyncIntervalKb();
         if (clientSyncIntervalKb > 0) {
-            long syncIntervalBytes = clientSyncIntervalKb * 1024L;
             long newBytesSinceSync = transfer.getBytesSinceLastSync() + dataLength;
-            validation = fpduValidator.validateDataWithoutSyncPoint(transfer, newBytesSinceSync, syncIntervalBytes);
-            if (!validation.valid()) {
-                log.warn("[{}] DTF D2-222: client exceeded declared sync interval ({} KB): {} bytes without sync",
-                        ctx.getSessionId(), clientSyncIntervalKb, newBytesSinceSync);
-                return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
-            }
             transfer.setBytesSinceLastSync(newBytesSinceSync);
         }
 
-        log.debug("[{}] DTF: received {} bytes", ctx.getSessionId(), dataLength);
+        // Write data to output stream
+        // Only DTF (type 0x00) can have multi-article format with 2-byte length
+        // prefixes
+        // DTFDA/DTFMA/DTFFA are article segments - no prefixes, write data as-is
+        if (data != null && data.length > 0) {
+            try {
+                // Only check for multi-article if this is a DTF (not DTFDA/DTFMA/DTFFA)
+                boolean isDtfType = fpdu.getFpduType() == com.pesitwizard.fpdu.FpduType.DTF;
+                boolean isMultiArticle = isDtfType && looksLikeMultiArticle(data);
+                log.debug("[{}] {}: {} bytes, multiArticle={}",
+                        ctx.getSessionId(), fpdu.getFpduType(), data.length, isMultiArticle);
+                if (isMultiArticle) {
+                    // Extract articles from multi-article format
+                    java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+                    int bytesWritten = 0;
+                    while (buffer.remaining() >= 2) {
+                        int articleLen = buffer.getShort() & 0xFFFF;
+                        if (articleLen == 0 || articleLen > buffer.remaining()) {
+                            break;
+                        }
+                        byte[] articleData = new byte[articleLen];
+                        buffer.get(articleData);
+                        transfer.appendData(articleData);
+                        bytesWritten += articleLen;
+                    }
+                    log.debug("[{}] DTF: received {} bytes, wrote {} bytes (multi-article), total: {} bytes",
+                            ctx.getSessionId(), dataLength, bytesWritten, transfer.getBytesTransferred());
+                } else {
+                    // Raw data - write as-is
+                    transfer.appendData(data);
+                    log.debug("[{}] DTF: received and wrote {} bytes, total: {} bytes",
+                            ctx.getSessionId(), dataLength, transfer.getBytesTransferred());
+                }
+            } catch (java.io.IOException e) {
+                log.error("[{}] DTF: error writing data: {}", ctx.getSessionId(), e.getMessage());
+                return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_213, "Write error: " + e.getMessage());
+            }
+        } else {
+            log.debug("[{}] DTF: received {} bytes (no data)", ctx.getSessionId(), dataLength);
+        }
         transfer.setRecordsTransferred(transfer.getRecordsTransferred() + 1);
         return null; // No response for DTF
     }
@@ -374,6 +528,20 @@ public class DataTransferHandler {
             value = (value << 8) | (b & 0xFF);
         }
         return value;
+    }
+
+    /**
+     * Detect if data looks like multi-article format with 2-byte length prefixes.
+     * Check if first 2 bytes are a valid article length that fits in the data.
+     */
+    private boolean looksLikeMultiArticle(byte[] data) {
+        if (data == null || data.length < 4) {
+            return false;
+        }
+        int firstLen = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
+        // Valid if: length > 0, length <= remaining data, and length is reasonable (<
+        // 64KB)
+        return firstLen > 0 && firstLen <= data.length - 2 && firstLen < 65535;
     }
 
     /**

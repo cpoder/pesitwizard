@@ -1,6 +1,5 @@
 package com.pesitwizard.fpdu;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,7 +9,8 @@ import java.util.Deque;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Reads FPDUs from a TCP stream, handling concatenated FPDUs (PeSIT section 4.5).
+ * Reads FPDUs from a TCP stream, handling concatenated FPDUs (PeSIT section
+ * 4.5).
  *
  * A data entity received from the transport may contain multiple FPDUs.
  * This reader buffers them and returns one FPDU at a time.
@@ -38,7 +38,7 @@ public class FpduReader {
 
         // Read next data entity from stream
         byte[] data = FpduIO.readRawFpdu(input);
-        parseDataEntity(data);
+        parseBuffer(data);
 
         // Return first parsed FPDU
         return pendingFpdus.poll();
@@ -62,93 +62,46 @@ public class FpduReader {
     }
 
     /**
-     * Parse a data entity which may contain one or more FPDUs.
+     * Inject raw FPDU data that was already read from the stream.
+     * Useful when the first message needs special handling (e.g., pre-connection
+     * handshake).
      */
-    private void parseDataEntity(byte[] data) {
-        // Check if this looks like concatenated FPDUs:
-        // First 2 bytes = sub-FPDU length, next 2 bytes = FPDU type ID
-        if (data.length >= 6) {
-            int firstLen = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
-            int fpduTypeId = ((data[2] & 0xFF) << 8) | (data[3] & 0xFF);
-
-            // Valid concatenation: length makes sense AND type ID looks valid (known FPDU types are < 50)
-            if (firstLen >= 6 && firstLen <= data.length && fpduTypeId > 0 && fpduTypeId < 50) {
-                log.debug("Detected concatenated FPDUs: first sub-len={}, total={}", firstLen, data.length);
-                parseConcatenatedFpdus(ByteBuffer.wrap(data));
-                return;
-            }
-        }
-
-        // Single FPDU - no internal length prefix
-        FpduParser parser = new FpduParser(data);
-        pendingFpdus.add(parser.parse());
+    public void injectRawData(byte[] data) {
+        parseBuffer(data);
     }
 
     /**
-     * Parse concatenated FPDUs from a buffer.
-     * Structure: [len1][fpdu1_content][len2][fpdu2_content]...
+     * Parse buffer containing one or more FPDUs.
+     * Format: [len1][fpdu1_content][len2][fpdu2_content]...
+     * Each FPDU: [len 2B][phase 1B][type 1B][idDst 1B][idSrc 1B][data/params]
      */
-    private void parseConcatenatedFpdus(ByteBuffer buffer) {
-        ByteArrayOutputStream dtfData = null;
-        Fpdu dtfFpdu = null;
+    private void parseBuffer(byte[] data) {
+        if (data.length < 6) {
+            log.warn("Data too short for FPDU: {} bytes", data.length);
+            return;
+        }
+
+        ByteBuffer buffer = ByteBuffer.wrap(data);
         int fpduCount = 0;
 
         while (buffer.remaining() >= 6) {
-            int subLen = buffer.getShort() & 0xFFFF;
-            if (subLen < 6 || subLen > buffer.remaining() + 2) {
-                log.warn("Invalid sub-FPDU length: {} (remaining: {})", subLen, buffer.remaining());
+            // Peek at length to validate
+            int fpduLen = buffer.getShort(buffer.position()) & 0xFFFF;
+            if (fpduLen < 6 || fpduLen > buffer.remaining()) {
+                log.warn("Invalid FPDU length: {} (remaining: {})", fpduLen, buffer.remaining());
                 break;
             }
 
-            // Read sub-FPDU content (without the length prefix we just read)
-            byte[] subContent = new byte[subLen - 2];
-            buffer.get(subContent);
+            // Parse FPDU (FpduParser reads length and advances buffer position)
+            FpduParser parser = new FpduParser(buffer);
+            Fpdu fpdu = parser.parse();
+            pendingFpdus.add(fpdu);
             fpduCount++;
 
-            FpduParser parser = new FpduParser(subContent);
-            Fpdu fpdu = parser.parse();
-
-            // For DTF* FPDUs, aggregate data into a single FPDU
-            if (isDtfType(fpdu.getFpduType())) {
-                if (dtfFpdu == null) {
-                    dtfFpdu = fpdu;
-                    dtfData = new ByteArrayOutputStream();
-                }
-                if (fpdu.getData() != null) {
-                    try {
-                        dtfData.write(fpdu.getData());
-                    } catch (IOException e) {
-                        // ByteArrayOutputStream doesn't throw
-                    }
-                }
-            } else {
-                // Non-DTF FPDU: flush any accumulated DTF data first
-                if (dtfFpdu != null) {
-                    dtfFpdu.setData(dtfData.toByteArray());
-                    pendingFpdus.add(dtfFpdu);
-                    log.debug("Aggregated {} bytes from {} concatenated DTF FPDUs",
-                        dtfData.size(), fpduCount - 1);
-                    dtfFpdu = null;
-                    dtfData = null;
-                }
-                pendingFpdus.add(fpdu);
-            }
+            log.debug("Parsed FPDU #{}: type={}, dataLen={}", fpduCount, fpdu.getFpduType(),
+                    fpdu.getData() != null ? fpdu.getData().length : 0);
         }
 
-        // Flush remaining DTF data
-        if (dtfFpdu != null) {
-            dtfFpdu.setData(dtfData.toByteArray());
-            pendingFpdus.add(dtfFpdu);
-            log.debug("Aggregated {} bytes from {} concatenated DTF FPDUs",
-                dtfData.size(), fpduCount);
-        }
-
-        log.debug("Parsed {} FPDUs from concatenated message, buffered {} FPDUs",
-            fpduCount, pendingFpdus.size());
-    }
-
-    private boolean isDtfType(FpduType type) {
-        return type == FpduType.DTF || type == FpduType.DTFDA
-                || type == FpduType.DTFMA || type == FpduType.DTFFA;
+        log.debug("Parsed {} FPDU(s) from {} bytes", fpduCount, data.length);
     }
 }
