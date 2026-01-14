@@ -22,3 +22,8 @@ vectis-local/
 
 # Connector plugins (hot-loaded JARs)
 **/connectors/
+
+# CX test scripts (internal use only)
+scripts/cx-*.sh
+scripts/cx-*.md
+scripts/setup-cx-test.sh

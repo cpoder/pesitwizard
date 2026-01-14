@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - JGroups config for K8s deployments now uses `kubernetes.xml` with DNS_PING instead of TCPPING
 
-## [1.0.0] - Initial Release
+## [1.0.0] - 2026-01-14
 
 ### Features
 - PeSIT Hors-SIT protocol implementation (TCP/IP)

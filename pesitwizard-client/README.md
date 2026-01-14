@@ -53,22 +53,22 @@ spring:
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/api/servers` | Liste des serveurs configurés |
-| POST | `/api/servers` | Ajouter un serveur |
-| DELETE | `/api/servers/{id}` | Supprimer un serveur |
+| GET | `/api/v1/servers` | Liste des serveurs configurés |
+| POST | `/api/v1/servers` | Ajouter un serveur |
+| DELETE | `/api/v1/servers/{id}` | Supprimer un serveur |
 
 ### Transferts
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/api/transfers/send` | Envoyer un fichier |
-| POST | `/api/transfers/receive` | Recevoir un fichier |
-| GET | `/api/transfers` | Historique des transferts |
+| POST | `/api/v1/transfers/send` | Envoyer un fichier |
+| POST | `/api/v1/transfers/receive` | Recevoir un fichier |
+| GET | `/api/v1/transfers` | Historique des transferts |
 
 ### Exemple d'envoi
 
 ```bash
-curl -X POST http://localhost:9081/api/transfers/send \
+curl -X POST http://localhost:9081/api/v1/transfers/send \
   -H "Content-Type: multipart/form-data" \
   -F "file=@document.pdf" \
   -F "serverId=1" \
