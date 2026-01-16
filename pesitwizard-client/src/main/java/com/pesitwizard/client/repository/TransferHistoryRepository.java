@@ -48,4 +48,9 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
             "AND h.lastSyncPoint > 0 " +
             "ORDER BY h.startedAt DESC")
     Page<TransferHistory> findResumableTransfers(Pageable pageable);
+
+    /**
+     * Find most recent transfers.
+     */
+    List<TransferHistory> findTop10ByOrderByStartedAtDesc();
 }
