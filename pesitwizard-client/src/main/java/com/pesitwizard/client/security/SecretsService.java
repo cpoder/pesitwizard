@@ -44,19 +44,22 @@ public class SecretsService {
 
     public SecretsService(
             @Value("${pesitwizard.security.master-key:}") String masterKey,
-            @Value("${pesitwizard.security.mode:AES}") String mode,
+            @Value("${pesitwizard.security.mode:VAULT}") String mode,
             @Value("${pesitwizard.security.vault.address:}") String vaultAddress,
             @Value("${pesitwizard.security.vault.token:}") String vaultToken,
-            @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard-client}") String vaultPath) {
+            @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard-client}") String vaultPath,
+            @Value("${pesitwizard.security.vault.auth-method:token}") String vaultAuthMethod,
+            @Value("${pesitwizard.security.vault.role-id:}") String vaultRoleId,
+            @Value("${pesitwizard.security.vault.secret-id:}") String vaultSecretId) {
 
-        // Initialize AES
+        // Initialize AES (required for bootstrap)
         SecretKey key = null;
         boolean aesAvail = false;
         if (masterKey != null && !masterKey.isBlank()) {
             try {
                 key = deriveKey(masterKey);
                 aesAvail = true;
-                log.info("AES-256-GCM encryption initialized");
+                log.info("AES-256-GCM encryption initialized (for bootstrap)");
             } catch (Exception e) {
                 log.error("Failed to initialize AES encryption: {}", e.getMessage());
             }
@@ -64,19 +67,31 @@ public class SecretsService {
         this.secretKey = key;
         this.aesAvailable = aesAvail;
 
-        // Initialize Vault if configured
+        // Initialize Vault (required for production)
         if ("VAULT".equalsIgnoreCase(mode) && vaultAddress != null && !vaultAddress.isBlank()) {
-            this.vaultClient = new VaultClient(vaultAddress, vaultToken, vaultPath);
+            if ("approle".equalsIgnoreCase(vaultAuthMethod)) {
+                // AppRole authentication (recommended)
+                this.vaultClient = new VaultClient(vaultAddress, vaultPath, vaultRoleId, vaultSecretId);
+            } else {
+                // Token authentication
+                this.vaultClient = new VaultClient(vaultAddress, vaultToken, vaultPath);
+            }
             if (this.vaultClient.isAvailable()) {
-                log.info("Vault encryption initialized: {}", vaultAddress);
+                log.info("✅ Vault encryption initialized: {} (auth: {})", vaultAddress, vaultAuthMethod);
+            } else {
+                log.error("🔴 Vault configured but not available: {}", vaultAddress);
             }
         } else {
             this.vaultClient = null;
         }
 
-        // Log final status
+        // SECURITY: Encryption is MANDATORY for PeSIT
         if (!aesAvail && (vaultClient == null || !vaultClient.isAvailable())) {
-            log.warn("No encryption configured. Sensitive data will be stored in plaintext.");
+            log.error("🔴 SECURITY ERROR: No encryption configured!");
+            log.error("🔴 PeSIT transfers contain sensitive data - encryption is MANDATORY.");
+            log.error("🔴 Configure Vault with: PESITWIZARD_SECURITY_VAULT_ADDRESS and AppRole credentials.");
+            throw new IllegalStateException(
+                    "Encryption is mandatory for PeSIT. Configure Vault (recommended) or AES master key.");
         }
     }
 
