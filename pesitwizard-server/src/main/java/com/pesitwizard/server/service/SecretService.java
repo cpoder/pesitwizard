@@ -1,33 +1,25 @@
 package com.pesitwizard.server.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.SecretEntry;
 import com.pesitwizard.server.entity.SecretEntry.SecretScope;
 import com.pesitwizard.server.entity.SecretEntry.SecretType;
 import com.pesitwizard.server.repository.SecretRepository;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service for managing encrypted secrets.
- * Uses AES-256-GCM for encryption.
+ * Uses pesitwizard-security module (supports AES and HashiCorp Vault with
+ * AppRole).
  */
 @SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
@@ -36,33 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SecretService {
 
     private final SecretRepository secretRepository;
-    private final SecureRandom secureRandom = new SecureRandom();
-
-    private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final int GCM_IV_LENGTH = 12;
-    private static final int GCM_TAG_LENGTH = 128;
-
-    @Value("${pesit.secrets.encryption-key:#{null}}")
-    private String configuredEncryptionKey;
-
-    private SecretKey encryptionKey;
-
-    @PostConstruct
-    public void init() {
-        if (configuredEncryptionKey != null && !configuredEncryptionKey.isBlank()) {
-            // Use configured key (from environment or Kubernetes secret)
-            byte[] keyBytes = Base64.getDecoder().decode(configuredEncryptionKey);
-            encryptionKey = new SecretKeySpec(keyBytes, "AES");
-            log.info("Using configured encryption key for secrets");
-        } else {
-            // Generate a random key (for development - secrets won't survive restart)
-            byte[] keyBytes = new byte[32]; // 256 bits
-            secureRandom.nextBytes(keyBytes);
-            encryptionKey = new SecretKeySpec(keyBytes, "AES");
-            log.warn("Using random encryption key - secrets will be lost on restart. " +
-                    "Set PESIT_SECRETS_ENCRYPTION_KEY for production.");
-        }
-    }
+    private final SecretsService secretsService;
 
     // ========== CRUD Operations ==========
 
@@ -249,59 +215,52 @@ public class SecretService {
         return secretRepository.save(secret);
     }
 
-    // ========== Encryption ==========
+    // ========== Encryption (delegated to pesitwizard-security) ==========
 
     /**
-     * Encrypt a plain text value
+     * Encrypt a plain text value using the security module.
+     * Supports both AES and Vault with AppRole.
      */
     private EncryptedData encrypt(String plainText) {
-        try {
-            // Generate random IV
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            secureRandom.nextBytes(iv);
-
-            // Initialize cipher
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, encryptionKey, parameterSpec);
-
-            // Encrypt
-            byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-
-            return new EncryptedData(
-                    Base64.getEncoder().encodeToString(cipherText),
-                    Base64.getEncoder().encodeToString(iv));
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to encrypt secret", e);
-        }
+        // Use the security module which handles AES/Vault transparently
+        String encrypted = secretsService.encryptForStorage(plainText);
+        // For compatibility with existing DB schema, store in encryptedValue field
+        // IV is managed internally by the security module (embedded in the encrypted
+        // string)
+        return new EncryptedData(encrypted, "");
     }
 
     /**
-     * Decrypt an encrypted value
+     * Decrypt an encrypted value using the security module.
      */
     private String decrypt(String cipherText, String ivString) {
-        try {
-            byte[] iv = Base64.getDecoder().decode(ivString);
-            byte[] encrypted = Base64.getDecoder().decode(cipherText);
-
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, encryptionKey, parameterSpec);
-
-            byte[] plainText = cipher.doFinal(encrypted);
-            return new String(plainText, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt secret", e);
-        }
+        // The security module handles the decryption transparently
+        // ivString is ignored as IV is embedded in the encrypted string for new format
+        return secretsService.decryptFromStorage(cipherText);
     }
 
     /**
-     * Generate a new encryption key (for key rotation)
+     * Get current encryption mode (AES or VAULT).
+     */
+    public String getEncryptionMode() {
+        return secretsService.getEncryptionMode();
+    }
+
+    /**
+     * Check if encryption is enabled.
+     */
+    public boolean isEncryptionEnabled() {
+        return secretsService.isEncryptionEnabled();
+    }
+
+    /**
+     * Generate a new AES encryption key (for manual key rotation).
+     * Note: With Vault + AppRole, key rotation is handled automatically.
      */
     public String generateEncryptionKey() {
-        byte[] keyBytes = new byte[32];
-        secureRandom.nextBytes(keyBytes);
-        return Base64.getEncoder().encodeToString(keyBytes);
+        byte[] keyBytes = new byte[32]; // 256 bits
+        new java.security.SecureRandom().nextBytes(keyBytes);
+        return java.util.Base64.getEncoder().encodeToString(keyBytes);
     }
 
     // ========== Statistics ==========
@@ -323,6 +282,13 @@ public class SecretService {
     // ========== Helper Classes ==========
 
     private record EncryptedData(String ciphertext, String iv) {
+    }
+
+    /**
+     * Get encryption status for monitoring.
+     */
+    public SecretsService.SecretsProviderStatus getEncryptionStatus() {
+        return secretsService.getStatus();
     }
 
     @lombok.Data
