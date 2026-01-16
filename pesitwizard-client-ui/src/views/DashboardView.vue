@@ -367,5 +367,6 @@ function formatDate(dateStr: string) {
         </RouterLink>
       </div>
     </div>
+    </template>
   </div>
 </template>
