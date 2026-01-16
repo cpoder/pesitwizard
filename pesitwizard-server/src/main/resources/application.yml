@@ -287,7 +287,8 @@ pesit:
 # Security Configuration
 pesit.security:
   # Enable security (set to false to disable all authentication)
-  enabled: false
+  # WARNING: Must be true in production!
+  enabled: ${PESIT_SECURITY_ENABLED:true}
   
   # Authentication mode: oauth2, apikey, basic, or mixed
   mode: mixed
@@ -314,18 +315,18 @@ pesit.security:
   
   # Basic auth (for development only - disable in production)
   basic-auth:
-    enabled: true
+    enabled: ${PESIT_BASIC_AUTH_ENABLED:false}
     users:
       admin:
-        password: admin
+        password: ${PESIT_ADMIN_PASSWORD:changeme}
         roles:
           - ADMIN
       operator:
-        password: operator
+        password: ${PESIT_OPERATOR_PASSWORD:changeme}
         roles:
           - OPERATOR
       user:
-        password: user
+        password: ${PESIT_USER_PASSWORD:changeme}
         roles:
           - USER
   
@@ -334,8 +335,9 @@ pesit.security:
     - /actuator/health
     - /actuator/health/**
     - /actuator/info
-    - /h2-console/**
-    - /api/v1/deployment/**
+    # WARNING: h2-console must be disabled in production
+    # - /h2-console/**
+    # REMOVED: /api/v1/deployment/** - requires authentication
   
   # CORS configuration
   cors:
