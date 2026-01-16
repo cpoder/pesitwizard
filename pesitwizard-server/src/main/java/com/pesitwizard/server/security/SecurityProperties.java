@@ -167,6 +167,11 @@ public class SecurityProperties {
          * Static API keys (for simple setups - use database for production)
          */
         private Map<String, ApiKeyEntry> keys = new HashMap<>();
+
+        /**
+         * Admin API key (for automated deployments via env var)
+         */
+        private String adminKey;
     }
 
     /**

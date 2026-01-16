@@ -312,6 +312,8 @@ pesit.security:
     enabled: true
     header-name: X-API-Key
     query-param: api_key
+    # Admin API key (set via env var for automated deployments)
+    admin-key: ${PESIT_API_KEY_ADMIN:}
   
   # Basic auth (for development only - disable in production)
   basic-auth:

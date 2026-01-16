@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ApiKeyService {
 
     private final ApiKeyRepository apiKeyRepository;
+    private final SecurityProperties securityProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     private static final int KEY_LENGTH = 32; // 256 bits
@@ -85,6 +86,14 @@ public class ApiKeyService {
             return Optional.empty();
         }
 
+        // First, check static keys from configuration
+        Optional<ApiKey> staticKey = validateStaticKey(plainKey);
+        if (staticKey.isPresent()) {
+            log.debug("Authenticated with static API key");
+            return staticKey;
+        }
+
+        // Then check database keys
         String keyHash = hashKey(plainKey);
         Optional<ApiKey> optKey = apiKeyRepository.findActiveByKeyHash(keyHash);
 
@@ -224,6 +233,39 @@ public class ApiKeyService {
         log.info("Regenerated API key: {}", existing.getName());
 
         return new ApiKeyResult(existing, plainKey);
+    }
+
+    /**
+     * Validate a static API key from configuration
+     */
+    private Optional<ApiKey> validateStaticKey(String plainKey) {
+        // Check admin key from env var
+        String adminKey = securityProperties.getApiKey().getAdminKey();
+        if (adminKey != null && !adminKey.isBlank() && adminKey.equals(plainKey)) {
+            ApiKey virtualKey = ApiKey.builder()
+                    .name("admin")
+                    .description("Admin API key (from env)")
+                    .roles(List.of("ADMIN"))
+                    .active(true)
+                    .build();
+            return Optional.of(virtualKey);
+        }
+
+        // Check static keys from config
+        var staticKeys = securityProperties.getApiKey().getKeys();
+        for (var entry : staticKeys.entrySet()) {
+            var keyConfig = entry.getValue();
+            if (keyConfig.isEnabled() && plainKey.equals(entry.getKey())) {
+                ApiKey virtualKey = ApiKey.builder()
+                        .name(keyConfig.getName() != null ? keyConfig.getName() : entry.getKey())
+                        .description(keyConfig.getDescription())
+                        .roles(keyConfig.getRoles())
+                        .active(true)
+                        .build();
+                return Optional.of(virtualKey);
+            }
+        }
+        return Optional.empty();
     }
 
     /**
