@@ -20,7 +20,10 @@ const testResult = ref<{ success: boolean; message: string } | null>(null)
 // Vault settings
 const showVaultConfig = ref(false)
 const vaultAddress = ref('http://localhost:30200')
+const vaultAuthMethod = ref<'token' | 'approle'>('token')
 const vaultToken = ref('')
+const vaultRoleId = ref('')
+const vaultSecretId = ref('')
 const testingVault = ref(false)
 const vaultTestResult = ref<{ success: boolean; message: string } | null>(null)
 
@@ -200,20 +203,57 @@ async function saveOtlpSettings() {
           </button>
           
           <div v-if="showVaultConfig" class="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
-            <p class="text-sm text-gray-600">Connect to an external HashiCorp Vault for secrets management.</p>
+            <div class="p-3 bg-blue-100 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <strong>Note:</strong> Vault configuration is done via environment variables. 
+              Use this form to test connectivity and generate the required variables.
+            </div>
+            
+            <!-- Auth Method Selection -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Authentication Method</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button
+                  @click="vaultAuthMethod = 'token'"
+                  :class="['p-3 border rounded-lg text-left transition', vaultAuthMethod === 'token' ? 'border-blue-500 bg-white' : 'hover:border-gray-400']"
+                >
+                  <span class="text-sm font-medium">Token</span>
+                  <span class="text-xs block text-gray-500">Simple, for dev/test</span>
+                </button>
+                <button
+                  @click="vaultAuthMethod = 'approle'"
+                  :class="['p-3 border rounded-lg text-left transition', vaultAuthMethod === 'approle' ? 'border-blue-500 bg-white' : 'hover:border-gray-400']"
+                >
+                  <span class="text-sm font-medium">AppRole</span>
+                  <span class="text-xs block text-green-600">✓ Recommended</span>
+                </button>
+              </div>
+            </div>
             
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Vault Address</label>
               <input v-model="vaultAddress" type="text" class="input" placeholder="http://localhost:30200" />
             </div>
             
-            <div>
+            <!-- Token auth -->
+            <div v-if="vaultAuthMethod === 'token'">
               <label class="block text-sm font-medium text-gray-700 mb-1">Vault Token</label>
               <input v-model="vaultToken" type="password" class="input" placeholder="hvs.xxxxx or root" />
             </div>
 
+            <!-- AppRole auth -->
+            <template v-if="vaultAuthMethod === 'approle'">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Role ID</label>
+                <input v-model="vaultRoleId" type="text" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Secret ID</label>
+                <input v-model="vaultSecretId" type="password" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              </div>
+            </template>
+
             <div class="flex items-center gap-3">
-              <button @click="testVaultConnection" :disabled="testingVault || !vaultAddress || !vaultToken" class="btn btn-primary flex items-center gap-2">
+              <button @click="testVaultConnection" :disabled="testingVault || !vaultAddress || (vaultAuthMethod === 'token' ? !vaultToken : (!vaultRoleId || !vaultSecretId))" class="btn btn-primary flex items-center gap-2">
                 <RefreshCw :class="['h-4 w-4', testingVault && 'animate-spin']" />
                 Test Connection
               </button>
@@ -228,13 +268,28 @@ async function saveOtlpSettings() {
               {{ vaultTestResult.message }}
             </div>
 
-            <div v-if="vaultTestResult?.success" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p class="text-sm font-medium text-blue-800 mb-2">To enable Vault, set these environment variables:</p>
-              <pre class="bg-white p-2 rounded border text-xs font-mono overflow-x-auto">PESITWIZARD_SECURITY_MODE=VAULT
+            <!-- Environment Variables Display -->
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm font-medium text-blue-800 mb-2">Set these environment variables and restart:</p>
+              <pre v-if="vaultAuthMethod === 'token'" class="bg-white p-2 rounded border text-xs font-mono overflow-x-auto">PESITWIZARD_SECURITY_MODE=VAULT
 PESITWIZARD_SECURITY_VAULT_ADDRESS={{ vaultAddress }}
-PESITWIZARD_SECURITY_VAULT_TOKEN={{ vaultToken }}
+PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
+PESITWIZARD_SECURITY_VAULT_TOKEN={{ vaultToken || '&lt;your-token&gt;' }}
 PESITWIZARD_SECURITY_VAULT_PATH=secret/data/pesitwizard-client</pre>
-              <p class="text-xs text-blue-600 mt-2">Then restart the client application.</p>
+              <pre v-else class="bg-white p-2 rounded border text-xs font-mono overflow-x-auto">PESITWIZARD_SECURITY_MODE=VAULT
+PESITWIZARD_SECURITY_VAULT_ADDRESS={{ vaultAddress }}
+PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
+PESITWIZARD_SECURITY_VAULT_ROLE_ID={{ vaultRoleId || '&lt;your-role-id&gt;' }}
+PESITWIZARD_SECURITY_VAULT_SECRET_ID={{ vaultSecretId || '&lt;your-secret-id&gt;' }}
+PESITWIZARD_SECURITY_VAULT_PATH=secret/data/pesitwizard-client</pre>
+              <div class="flex gap-2 mt-2">
+                <button @click="copyToClipboard(vaultAuthMethod === 'token' 
+                  ? `PESITWIZARD_SECURITY_MODE=VAULT\nPESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultAddress}\nPESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token\nPESITWIZARD_SECURITY_VAULT_TOKEN=${vaultToken}\nPESITWIZARD_SECURITY_VAULT_PATH=secret/data/pesitwizard-client`
+                  : `PESITWIZARD_SECURITY_MODE=VAULT\nPESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultAddress}\nPESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle\nPESITWIZARD_SECURITY_VAULT_ROLE_ID=${vaultRoleId}\nPESITWIZARD_SECURITY_VAULT_SECRET_ID=${vaultSecretId}\nPESITWIZARD_SECURITY_VAULT_PATH=secret/data/pesitwizard-client`
+                )" class="btn btn-sm btn-secondary flex items-center gap-1">
+                  <Copy class="h-3 w-3" /> Copy
+                </button>
+              </div>
             </div>
           </div>
         </div>
