@@ -20,41 +20,143 @@ public class VaultClient {
 
     private static final String PREFIX = "vault:";
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration TOKEN_REFRESH_THRESHOLD = Duration.ofMinutes(5);
+
+    public enum AuthMethod {
+        TOKEN, APPROLE
+    }
 
     private final String vaultAddr;
-    private final String vaultToken;
     private final String secretsPath;
+    private final AuthMethod authMethod;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private boolean available;
 
+    // Token auth
+    private final String staticToken;
+
+    // AppRole auth
+    private final String roleId;
+    private final String secretId;
+    private volatile String currentToken;
+    private volatile java.time.Instant tokenExpiry;
+
+    /**
+     * Constructor for token authentication.
+     */
     public VaultClient(String vaultAddr, String vaultToken, String secretsPath) {
+        this(vaultAddr, secretsPath, AuthMethod.TOKEN, vaultToken, null, null);
+    }
+
+    /**
+     * Constructor for AppRole authentication (recommended for production).
+     */
+    public VaultClient(String vaultAddr, String secretsPath, String roleId, String secretId) {
+        this(vaultAddr, secretsPath, AuthMethod.APPROLE, null, roleId, secretId);
+    }
+
+    /**
+     * Full constructor.
+     */
+    public VaultClient(String vaultAddr, String secretsPath, AuthMethod authMethod,
+            String staticToken, String roleId, String secretId) {
         this.vaultAddr = vaultAddr;
-        this.vaultToken = vaultToken;
         this.secretsPath = secretsPath != null ? secretsPath : "secret/data/pesitwizard-client";
+        this.authMethod = authMethod;
+        this.staticToken = staticToken;
+        this.roleId = roleId;
+        this.secretId = secretId;
         this.objectMapper = new ObjectMapper();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .build();
 
-        if (vaultAddr == null || vaultAddr.isBlank() || vaultToken == null || vaultToken.isBlank()) {
-            log.debug("Vault not configured for client");
+        if (vaultAddr == null || vaultAddr.isBlank()) {
+            log.debug("Vault address not configured");
+            this.available = false;
+        } else if (authMethod == AuthMethod.TOKEN && (staticToken == null || staticToken.isBlank())) {
+            log.debug("Vault token not configured");
+            this.available = false;
+        } else if (authMethod == AuthMethod.APPROLE &&
+                (roleId == null || roleId.isBlank() || secretId == null || secretId.isBlank())) {
+            log.debug("Vault AppRole credentials not configured");
             this.available = false;
         } else {
+            // Initialize token
+            if (authMethod == AuthMethod.TOKEN) {
+                this.currentToken = staticToken;
+            } else {
+                refreshAppRoleToken();
+            }
             this.available = testConnection();
             if (this.available) {
-                log.info("Vault client initialized: {}", vaultAddr);
+                log.info("Vault client initialized: {} (auth: {})", vaultAddr, authMethod);
             } else {
                 log.warn("Vault configured but not reachable: {}", vaultAddr);
             }
         }
     }
 
+    /**
+     * Refresh token using AppRole authentication.
+     */
+    private boolean refreshAppRoleToken() {
+        if (authMethod != AuthMethod.APPROLE)
+            return false;
+        try {
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("role_id", roleId);
+            body.put("secret_id", secretId);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(vaultAddr + "/v1/auth/approle/login"))
+                    .header("Content-Type", "application/json")
+                    .timeout(TIMEOUT)
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                String token = root.path("auth").path("client_token").asText();
+                int leaseDuration = root.path("auth").path("lease_duration").asInt(3600);
+                this.currentToken = token;
+                this.tokenExpiry = java.time.Instant.now().plusSeconds(leaseDuration);
+                log.debug("AppRole token refreshed, expires in {} seconds", leaseDuration);
+                return true;
+            } else {
+                log.error("AppRole login failed: {} - {}", response.statusCode(), response.body());
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("AppRole login failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get current valid token, refreshing if needed.
+     */
+    private String getToken() {
+        if (authMethod == AuthMethod.TOKEN) {
+            return staticToken;
+        }
+        // Check if token needs refresh
+        if (tokenExpiry == null || java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(tokenExpiry)) {
+            refreshAppRoleToken();
+        }
+        return currentToken;
+    }
+
     private boolean testConnection() {
         try {
+            String token = getToken();
+            if (token == null)
+                return false;
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vaultAddr + "/v1/sys/health"))
-                    .header("X-Vault-Token", vaultToken)
+                    .header("X-Vault-Token", token)
                     .timeout(TIMEOUT)
                     .GET()
                     .build();
@@ -87,7 +189,7 @@ public class VaultClient {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("X-Vault-Token", vaultToken)
+                    .header("X-Vault-Token", getToken())
                     .header("Content-Type", "application/json")
                     .timeout(TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(dataNode)))
@@ -122,7 +224,7 @@ public class VaultClient {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("X-Vault-Token", vaultToken)
+                    .header("X-Vault-Token", getToken())
                     .timeout(TIMEOUT)
                     .GET()
                     .build();
