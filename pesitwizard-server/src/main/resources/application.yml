@@ -342,10 +342,10 @@ pesit.security:
     # REMOVED: /api/v1/deployment/** - requires authentication
   
   # CORS configuration
+  # WARNING: Restrict origins in production!
   cors:
     enabled: true
-    allowed-origins:
-      - "*"
+    allowed-origins: ${PESIT_CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
     allowed-methods:
       - GET
       - POST
@@ -353,8 +353,13 @@ pesit.security:
       - DELETE
       - OPTIONS
     allowed-headers:
-      - "*"
-    allow-credentials: false
+      - Authorization
+      - Content-Type
+      - X-API-Key
+      - X-Requested-With
+    exposed-headers:
+      - X-Total-Count
+    allow-credentials: true
     max-age: 3600
   
   # Role mapping
