@@ -148,22 +148,29 @@ function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text)
 }
 
-function copyEnvVars() {
-  const mode = vaultStatus.value?.mode || 'AES'
-  let vars = ''
-  
-  if (mode === 'VAULT') {
-    vars = `PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultStatus.value?.vaultAddress || 'http://vault:8200'}
-PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=${vaultStatus.value?.authMethod || 'approle'}
-PESITWIZARD_SECURITY_VAULT_ROLE_ID=<role-id>
-PESITWIZARD_SECURITY_VAULT_SECRET_ID=<secret-id>`
+// Selected mode for env vars display
+const envVarsMode = ref<'aes' | 'vault-token' | 'vault-approle'>('aes')
+
+function getEnvVarsText() {
+  if (envVarsMode.value === 'vault-approle') {
+    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
+export PESITWIZARD_SECURITY_VAULT_ROLE_ID=${initVaultResult.value?.roleId || '<role-id>'}
+export PESITWIZARD_SECURITY_VAULT_SECRET_ID=${initVaultResult.value?.secretId || '<secret-id>'}`
+  } else if (envVarsMode.value === 'vault-token') {
+    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
+export PESITWIZARD_SECURITY_VAULT_TOKEN=${vaultTestToken.value || '<vault-token>'}`
   } else {
-    vars = `PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
-PESITWIZARD_SECURITY_MASTER_KEY=${generatedKey.value || '<base64-key>'}`
+    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
+export PESITWIZARD_SECURITY_MASTER_KEY=${generatedKey.value || '<base64-key>'}`
   }
-  
-  navigator.clipboard.writeText(vars)
+}
+
+function copyEnvVars() {
+  navigator.clipboard.writeText(getEnvVarsText())
   successMessage.value = 'Environment variables copied to clipboard'
   setTimeout(() => successMessage.value = null, 3000)
 }
@@ -387,18 +394,44 @@ onMounted(() => {
           </button>
         </div>
         
-        <p class="text-sm text-gray-600 mb-3">Set these environment variables and restart the application:</p>
+        <!-- Mode selector -->
+        <div class="flex gap-2 mb-4">
+          <button 
+            @click="envVarsMode = 'aes'" 
+            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'aes' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
+          >AES</button>
+          <button 
+            @click="envVarsMode = 'vault-token'" 
+            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'vault-token' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
+          >Vault (Token)</button>
+          <button 
+            @click="envVarsMode = 'vault-approle'" 
+            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'vault-approle' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
+          >Vault (AppRole)</button>
+        </div>
         
-        <pre class="bg-gray-100 p-4 rounded-lg text-xs font-mono overflow-x-auto whitespace-pre-wrap"># For AES encryption (default)
-PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
-PESITWIZARD_SECURITY_MASTER_KEY={{ generatedKey || '&lt;base64-key&gt;' }}
-
-# For Vault with AppRole (recommended for production)
-PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-PESITWIZARD_SECURITY_VAULT_ADDRESS={{ vaultStatus?.vaultAddress || 'http://vault:8200' }}
-PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
-PESITWIZARD_SECURITY_VAULT_ROLE_ID=&lt;role-id&gt;
-PESITWIZARD_SECURITY_VAULT_SECRET_ID=&lt;secret-id&gt;</pre>
+        <p class="text-sm text-gray-600 mb-3">Add to your shell profile or systemd unit file:</p>
+        
+        <pre class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono overflow-x-auto whitespace-pre-wrap">{{ getEnvVarsText() }}</pre>
+        
+        <!-- Security Warning -->
+        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div class="flex items-start gap-2">
+            <AlertTriangle class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div class="text-sm">
+              <p class="font-medium text-yellow-800">Security Note</p>
+              <p class="text-yellow-700 mt-1">
+                Environment variables can be visible via <code class="bg-yellow-100 px-1 rounded">/proc</code> or process listings.
+                For production, consider:
+              </p>
+              <ul class="list-disc list-inside text-yellow-700 mt-1 space-y-1">
+                <li><strong>systemd credentials</strong>: <code class="bg-yellow-100 px-1 rounded">LoadCredential=</code> directive</li>
+                <li><strong>Vault Agent</strong>: auto-injects secrets, no env vars needed</li>
+                <li><strong>File-based</strong>: <code class="bg-yellow-100 px-1 rounded">chmod 600</code> file read at startup</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </template>
   </div>
