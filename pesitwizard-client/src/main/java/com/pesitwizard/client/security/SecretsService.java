@@ -122,7 +122,7 @@ public class SecretsService {
 
         // Try Vault first if available
         if (vaultClient != null && vaultClient.isAvailable()) {
-            String key = "secret/" + java.util.UUID.randomUUID().toString();
+            String key = java.util.UUID.randomUUID().toString();
             return vaultClient.storeSecret(key, plaintext);
         }
 
