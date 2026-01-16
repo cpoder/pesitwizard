@@ -4,6 +4,12 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Vault configuration (dev mode)
+# Set PESITWIZARD_SECURITY_VAULT_TOKEN in your environment or .env file
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${PESITWIZARD_SECURITY_VAULT_ADDRESS:-http://localhost:30200}
+export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=${PESITWIZARD_SECURITY_VAULT_AUTH_METHOD:-token}
+# export PESITWIZARD_SECURITY_VAULT_TOKEN=your-token-here
+
 echo "Starting PeSIT Wizard Client..."
 
 # Kill existing processes
