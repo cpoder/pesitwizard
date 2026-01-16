@@ -85,13 +85,13 @@ public class SecretsService {
             this.vaultClient = null;
         }
 
-        // SECURITY: Encryption is MANDATORY for PeSIT
+        // SECURITY WARNING: Encryption should be configured for PeSIT
         if (!aesAvail && (vaultClient == null || !vaultClient.isAvailable())) {
-            log.error("🔴 SECURITY ERROR: No encryption configured!");
-            log.error("🔴 PeSIT transfers contain sensitive data - encryption is MANDATORY.");
-            log.error("🔴 Configure Vault with: PESITWIZARD_SECURITY_VAULT_ADDRESS and AppRole credentials.");
-            throw new IllegalStateException(
-                    "Encryption is mandatory for PeSIT. Configure Vault (recommended) or AES master key.");
+            log.warn("⚠️ SECURITY WARNING: No encryption configured!");
+            log.warn("⚠️ Running in DEGRADED MODE - sensitive data will NOT be encrypted.");
+            log.warn("⚠️ Configure encryption via Settings > Security before storing credentials.");
+            log.warn("⚠️ Set PESITWIZARD_SECURITY_MASTER_KEY or configure Vault.");
+            // Allow startup in degraded mode so user can access UI to configure encryption
         }
     }
 
