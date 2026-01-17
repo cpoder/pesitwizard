@@ -164,5 +164,32 @@ PESITWIZARD_SECURITY_VAULT_TOKEN=<token>
 
 1. ✅ **Client Module**: Migration service created for PesitServer and StorageConnection
 2. ✅ **Server Module**: Migration service created for Partner and CertificateStore
-3. **Verify Vault policies**: Ensure all policies are applied correctly
-4. **Test migration**: Run migration on test environment before production
+3. ✅ **Vault path fixed**: Changed from `pesitwizard-client` to `pesitwizard/client` to match policy
+4. ✅ **PBKDF2 iterations**: Increased from 65536 to 100000
+5. ✅ **Security exceptions**: Added EncryptionException and DecryptionException
+6. **Test migration**: Run migration on test environment
+
+---
+
+## Future Security Improvements (Separate PR)
+
+### 1. Dynamic Salt (Critical)
+Replace static salt with per-installation random salt stored in file:
+- Generate 32-byte random salt on first startup
+- Store in `./config/encryption.salt` with restricted permissions
+- Support backward compatibility with legacy static salt
+
+### 2. Key Versioning for Rotation
+Add version prefix to encrypted values (`AES:v2:`) to support:
+- Key rotation without re-encrypting all data
+- Backward compatibility with legacy format
+
+### 3. Vault Cache with TTL
+Add in-memory cache for Vault secrets:
+- 5-minute TTL to reduce HTTP calls
+- Invalidate on write operations
+
+### 4. Circuit Breaker for Vault
+Prevent cascading failures when Vault is unavailable:
+- Open circuit after 5 consecutive failures
+- Auto-reset after 1 minute
