@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.SecretEntry;
 import com.pesitwizard.server.entity.SecretEntry.SecretScope;
 import com.pesitwizard.server.entity.SecretEntry.SecretType;
@@ -30,6 +31,9 @@ class SecretServiceTest {
     @Mock
     private SecretRepository secretRepository;
 
+    @Mock
+    private SecretsService secretsService;
+
     @InjectMocks
     private SecretService secretService;
 
@@ -37,9 +41,6 @@ class SecretServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize encryption key
-        secretService.init();
-
         testSecret = SecretEntry.builder()
                 .id(1L)
                 .name("test-secret")
