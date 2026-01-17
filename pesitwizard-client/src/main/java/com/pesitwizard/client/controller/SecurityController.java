@@ -32,7 +32,7 @@ public class SecurityController {
 
     private final SecretsService secretsService;
 
-    @Value("${pesitwizard.security.mode:AES}")
+    @Value("${pesitwizard.security.encryption-mode:AES}")
     private String encryptionMode;
 
     @Value("${pesitwizard.security.vault.address:}")
