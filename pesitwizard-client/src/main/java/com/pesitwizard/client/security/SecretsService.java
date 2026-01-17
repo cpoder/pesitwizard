@@ -53,11 +53,11 @@ public class SecretsService {
             @Value("${pesitwizard.security.vault.token:}") String vaultToken,
             @Value("${pesitwizard.security.vault.token-file:}") String vaultTokenFile,
             @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard-client}") String vaultPath,
-            @Value("${pesitwizard.security.vault.auth-method:token}") String vaultAuthMethod,
-            @Value("${pesitwizard.security.vault.role-id:}") String vaultRoleId,
-            @Value("${pesitwizard.security.vault.role-id-file:}") String vaultRoleIdFile,
-            @Value("${pesitwizard.security.vault.secret-id:}") String vaultSecretId,
-            @Value("${pesitwizard.security.vault.secret-id-file:}") String vaultSecretIdFile) {
+            @Value("${pesitwizard.security.vault.auth-method:${pesitwizard.security.vault.auth.method:token}}") String vaultAuthMethod,
+            @Value("${pesitwizard.security.vault.role-id:${pesitwizard.security.vault.role.id:}}") String vaultRoleId,
+            @Value("${pesitwizard.security.vault.role-id-file:${pesitwizard.security.vault.role.id.file:}}") String vaultRoleIdFile,
+            @Value("${pesitwizard.security.vault.secret-id:${pesitwizard.security.vault.secret.id:}}") String vaultSecretId,
+            @Value("${pesitwizard.security.vault.secret-id-file:${pesitwizard.security.vault.secret.id.file:}}") String vaultSecretIdFile) {
 
         // Load secrets from files if *_FILE variants are set (more secure than env
         // vars)
