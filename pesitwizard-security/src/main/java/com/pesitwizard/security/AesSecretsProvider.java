@@ -29,9 +29,9 @@ public class AesSecretsProvider implements SecretsProvider {
     private static final int GCM_IV_LENGTH = 12;
     private static final int GCM_TAG_LENGTH = 128;
     private static final int KEY_LENGTH = 256;
-    private static final int ITERATIONS = 65536;
+    private static final int ITERATIONS = 100000;
     private static final String PREFIX = "AES:";
-    private static final String SALT = "PeSITWizardEnterprise"; // Static salt, key derivation from master password
+    private static final String SALT = "PeSITWizardEnterprise";
 
     private final SecretKey secretKey;
     private final boolean available;
