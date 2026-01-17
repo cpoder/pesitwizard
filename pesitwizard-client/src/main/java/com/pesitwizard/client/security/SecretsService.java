@@ -287,6 +287,17 @@ public class SecretsService {
         return vaultClient != null && vaultClient.isAvailable();
     }
 
+    /**
+     * Store a secret in Vault with a specific key path.
+     * Returns the vault reference (vault:key) to store in DB.
+     */
+    public String storeInVault(String key, String plaintext) {
+        if (vaultClient == null || !vaultClient.isAvailable()) {
+            throw new IllegalStateException("Vault is not available");
+        }
+        return vaultClient.storeSecret(key, plaintext);
+    }
+
     public record EncryptionStatus(boolean enabled, String mode, String message) {
     }
 }

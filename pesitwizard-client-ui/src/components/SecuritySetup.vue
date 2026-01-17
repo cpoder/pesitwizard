@@ -39,6 +39,10 @@ const vaultTestResult = ref<{ success: boolean; message: string } | null>(null)
 const initializingVault = ref(false)
 const initVaultResult = ref<{ success: boolean; message: string; roleId?: string; secretId?: string } | null>(null)
 
+// Migration
+const migratingSecrets = ref(false)
+const migrationResult = ref<{ success: boolean; message: string; totalMigrated?: number } | null>(null)
+
 const isConfigured = computed(() => {
   return status.value?.encryption?.enabled === true
 })
@@ -46,6 +50,23 @@ const isConfigured = computed(() => {
 const isDegradedMode = computed(() => {
   return !isConfigured.value
 })
+
+async function migrateSecretsToVault() {
+  migratingSecrets.value = true
+  migrationResult.value = null
+  try {
+    const response = await api.post('/security/encryption/migrate')
+    migrationResult.value = response.data
+    if (response.data.success) {
+      successMessage.value = `Migration complete: ${response.data.totalMigrated} secrets migrated`
+      setTimeout(() => successMessage.value = null, 5000)
+    }
+  } catch (e: any) {
+    migrationResult.value = { success: false, message: e.response?.data?.message || e.message }
+  } finally {
+    migratingSecrets.value = false
+  }
+}
 
 async function fetchStatus() {
   loading.value = true
@@ -270,6 +291,27 @@ onMounted(() => {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Migration button when Vault is connected -->
+        <div v-if="status?.vault?.connected" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-blue-800">Migrate Secrets to Vault</p>
+              <p class="text-sm text-blue-600">Move server passwords and connector credentials to Vault</p>
+            </div>
+            <button 
+              @click="migrateSecretsToVault" 
+              :disabled="migratingSecrets"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              <RefreshCw :class="['w-4 h-4', migratingSecrets && 'animate-spin']" />
+              {{ migratingSecrets ? 'Migrating...' : 'Migrate Now' }}
+            </button>
+          </div>
+          <div v-if="migrationResult" class="mt-3 p-2 rounded" :class="migrationResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+            {{ migrationResult.message }}
           </div>
         </div>
       </div>
