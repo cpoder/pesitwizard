@@ -13,25 +13,14 @@ const emit = defineEmits<{
 
 interface SecurityStatus {
   encryption: { mode: string; enabled: boolean; message: string }
-}
-
-interface VaultStatus {
-  mode: string
-  configured: boolean
-  connected: boolean
-  connectionMessage: string
-  kvEngineReady?: boolean
-  kvEngineMessage?: string
-  vaultAddress?: string
-  authMethod?: string
-  secretPath?: string
+  aes: { configured: boolean; usingFixedKey: boolean; message: string }
+  vault: { enabled: boolean; connected: boolean; address: string; authMethod: string; message: string }
 }
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const status = ref<SecurityStatus | null>(null)
-const vaultStatus = ref<VaultStatus | null>(null)
 
 // AES key generation
 const generatedKey = ref('')
@@ -64,26 +53,17 @@ async function fetchStatus() {
   try {
     const response = await api.get('/security/status')
     status.value = response.data
+    // Pre-fill Vault fields from current config
+    if (status.value?.vault?.address) {
+      vaultTestAddress.value = status.value.vault.address
+    }
+    if (status.value?.vault?.authMethod) {
+      vaultTestAuthMethod.value = status.value.vault.authMethod.toLowerCase() as 'token' | 'approle'
+    }
   } catch (e: any) {
     error.value = e.message
   } finally {
     loading.value = false
-  }
-}
-
-async function fetchVaultStatus() {
-  try {
-    const response = await api.get('/security/vault/status')
-    vaultStatus.value = response.data
-    // Pre-fill test fields from current config
-    if (vaultStatus.value?.vaultAddress) {
-      vaultTestAddress.value = vaultStatus.value.vaultAddress
-    }
-    if (vaultStatus.value?.authMethod) {
-      vaultTestAuthMethod.value = vaultStatus.value.authMethod.toLowerCase() as 'token' | 'approle'
-    }
-  } catch (e) {
-    console.debug('Vault status not available:', e)
   }
 }
 
@@ -148,61 +128,61 @@ function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text)
 }
 
-// Selected mode for env vars display
-const envVarsMode = ref<'aes' | 'vault-token' | 'vault-approle'>('aes')
-
 // Use file-based secrets (more secure)
-const useFileSecrets = ref(false)
+const useFileSecrets = ref(true)
 
+// Generate env vars based on actual config (AES always + Vault if enabled)
 function getEnvVarsText() {
-  if (envVarsMode.value === 'vault-approle') {
-    if (useFileSecrets.value) {
-      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+  const vaultEnabled = status.value?.vault?.enabled
+  const authMethod = status.value?.vault?.authMethod?.toLowerCase() || vaultTestAuthMethod.value
+  
+  let vars = `# AES Master Key (always required for bootstrap)
+export PESITWIZARD_SECURITY_MASTER_KEY${useFileSecrets.value ? '_FILE=/etc/pesitwizard/master-key' : `=${generatedKey.value || '<generate-key-above>'}`}`
+  
+  if (vaultEnabled || initVaultResult.value?.success) {
+    vars += `\n
+# Vault Configuration (secrets storage)
+export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${status.value?.vault?.address || vaultTestAddress.value || 'http://vault:8200'}`
+    
+    if (authMethod === 'approle') {
+      if (useFileSecrets.value) {
+        vars += `
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
 export PESITWIZARD_SECURITY_VAULT_ROLE_ID_FILE=/etc/pesitwizard/vault-role-id
-export PESITWIZARD_SECURITY_VAULT_SECRET_ID_FILE=/etc/pesitwizard/vault-secret-id
-
-# Create secret files (run as root):
-# echo '${initVaultResult.value?.roleId || '<role-id>'}' > /etc/pesitwizard/vault-role-id
-# echo '${initVaultResult.value?.secretId || '<secret-id>'}' > /etc/pesitwizard/vault-secret-id
-# chmod 600 /etc/pesitwizard/vault-*
-# chown pesitwizard:pesitwizard /etc/pesitwizard/vault-*`
-    }
-    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_SECRET_ID_FILE=/etc/pesitwizard/vault-secret-id`
+      } else {
+        vars += `
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
 export PESITWIZARD_SECURITY_VAULT_ROLE_ID=${initVaultResult.value?.roleId || '<role-id>'}
 export PESITWIZARD_SECURITY_VAULT_SECRET_ID=${initVaultResult.value?.secretId || '<secret-id>'}`
-  } else if (envVarsMode.value === 'vault-token') {
-    if (useFileSecrets.value) {
-      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+      }
+    } else {
+      if (useFileSecrets.value) {
+        vars += `
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
-export PESITWIZARD_SECURITY_VAULT_TOKEN_FILE=/etc/pesitwizard/vault-token
-
-# Create secret file (run as root):
-# echo '${vaultTestToken.value || '<vault-token>'}' > /etc/pesitwizard/vault-token
-# chmod 600 /etc/pesitwizard/vault-token
-# chown pesitwizard:pesitwizard /etc/pesitwizard/vault-token`
-    }
-    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
-export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_TOKEN_FILE=/etc/pesitwizard/vault-token`
+      } else {
+        vars += `
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
 export PESITWIZARD_SECURITY_VAULT_TOKEN=${vaultTestToken.value || '<vault-token>'}`
-  } else {
-    if (useFileSecrets.value) {
-      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
-export PESITWIZARD_SECURITY_MASTER_KEY_FILE=/etc/pesitwizard/master-key
-
-# Create secret file (run as root):
-# echo '${generatedKey.value || '<base64-key>'}' > /etc/pesitwizard/master-key
-# chmod 600 /etc/pesitwizard/master-key
-# chown pesitwizard:pesitwizard /etc/pesitwizard/master-key`
+      }
     }
-    return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
-export PESITWIZARD_SECURITY_MASTER_KEY=${generatedKey.value || '<base64-key>'}`
+  } else {
+    vars += `\n
+# AES-only mode (no Vault)
+export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES`
   }
+  
+  if (useFileSecrets.value) {
+    vars += `\n
+# Create secret files (run as root):
+# mkdir -p /etc/pesitwizard && chmod 700 /etc/pesitwizard
+# echo '<value>' > /etc/pesitwizard/<secret-name>
+# chmod 600 /etc/pesitwizard/*`
+  }
+  
+  return vars
 }
 
 function copyEnvVars() {
@@ -213,7 +193,6 @@ function copyEnvVars() {
 
 onMounted(() => {
   fetchStatus()
-  fetchVaultStatus()
 })
 </script>
 
@@ -253,38 +232,44 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Current Status -->
+      <!-- Current Status (unified) -->
       <div class="card">
-        <h2 class="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Shield class="w-5 h-5" />
-          Current Status
-        </h2>
-        
-        <div v-if="status?.encryption" class="flex items-center gap-3 p-4 rounded-lg" :class="status.encryption.enabled ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'">
-          <component :is="status.encryption.enabled ? CheckCircle : AlertTriangle" :class="['w-8 h-8', status.encryption.enabled ? 'text-green-500' : 'text-yellow-500']" />
-          <div>
-            <p class="font-semibold">{{ status.encryption.mode }}</p>
-            <p class="text-sm text-gray-600">{{ status.encryption.message }}</p>
-          </div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <Shield class="w-5 h-5" />
+            Security Status
+          </h2>
+          <button @click="fetchStatus" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1">
+            <RefreshCw class="w-3 h-3" />
+            Refresh
+          </button>
         </div>
-
-        <!-- Vault Status (if configured) -->
-        <div v-if="vaultStatus?.mode === 'VAULT'" class="mt-4 p-4 rounded-lg border" :class="vaultStatus.connected ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'">
-          <div class="flex items-center justify-between">
+        
+        <div class="grid md:grid-cols-2 gap-4">
+          <!-- AES Status -->
+          <div class="p-4 rounded-lg border" :class="status?.aes?.usingFixedKey ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'">
             <div class="flex items-center gap-3">
-              <Server :class="['w-6 h-6', vaultStatus.connected ? 'text-green-500' : 'text-yellow-500']" />
+              <Key :class="['w-6 h-6', status?.aes?.usingFixedKey ? 'text-green-500' : 'text-yellow-500']" />
               <div>
-                <p class="font-medium">Vault: {{ vaultStatus.connected ? 'Connected' : 'Not Connected' }}</p>
-                <p class="text-sm text-gray-600">{{ vaultStatus.connectionMessage }}</p>
-                <p v-if="vaultStatus.kvEngineReady !== undefined" class="text-xs mt-1" :class="vaultStatus.kvEngineReady ? 'text-green-600' : 'text-yellow-600'">
-                  KV Engine: {{ vaultStatus.kvEngineMessage }}
+                <p class="font-medium">AES Encryption</p>
+                <p class="text-sm" :class="status?.aes?.usingFixedKey ? 'text-green-600' : 'text-yellow-600'">
+                  {{ status?.aes?.message || 'Loading...' }}
                 </p>
               </div>
             </div>
-            <button @click="fetchVaultStatus" class="px-3 py-1 text-sm border rounded hover:bg-white flex items-center gap-1">
-              <RefreshCw class="w-3 h-3" />
-              Refresh
-            </button>
+          </div>
+
+          <!-- Vault Status -->
+          <div class="p-4 rounded-lg border" :class="status?.vault?.connected ? 'bg-green-50 border-green-200' : status?.vault?.enabled ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'">
+            <div class="flex items-center gap-3">
+              <Server :class="['w-6 h-6', status?.vault?.connected ? 'text-green-500' : status?.vault?.enabled ? 'text-yellow-500' : 'text-gray-400']" />
+              <div>
+                <p class="font-medium">HashiCorp Vault</p>
+                <p class="text-sm" :class="status?.vault?.connected ? 'text-green-600' : status?.vault?.enabled ? 'text-yellow-600' : 'text-gray-500'">
+                  {{ status?.vault?.enabled ? (status?.vault?.connected ? '✓ Connected' : status?.vault?.message) : 'Not configured (AES-only mode)' }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -424,56 +409,34 @@ onMounted(() => {
       <div class="card">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold">Environment Variables</h2>
-          <button @click="copyEnvVars" class="px-3 py-1 text-sm bg-gray-100 border rounded hover:bg-gray-200 flex items-center gap-1">
-            <Copy class="w-4 h-4" />
-            Copy All
-          </button>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" v-model="useFileSecrets" class="rounded" />
+              <span :class="useFileSecrets ? 'text-green-700 font-medium' : 'text-gray-600'">
+                Use *_FILE (recommended)
+              </span>
+            </label>
+            <button @click="copyEnvVars" class="px-3 py-1 text-sm bg-gray-100 border rounded hover:bg-gray-200 flex items-center gap-1">
+              <Copy class="w-4 h-4" />
+              Copy
+            </button>
+          </div>
         </div>
         
-        <!-- Mode selector -->
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <button 
-            @click="envVarsMode = 'aes'" 
-            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'aes' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
-          >AES</button>
-          <button 
-            @click="envVarsMode = 'vault-token'" 
-            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'vault-token' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
-          >Vault (Token)</button>
-          <button 
-            @click="envVarsMode = 'vault-approle'" 
-            :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'vault-approle' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
-          >Vault (AppRole)</button>
-          <span class="mx-2 text-gray-300">|</span>
-          <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" v-model="useFileSecrets" class="rounded" />
-            <span :class="useFileSecrets ? 'text-green-700 font-medium' : 'text-gray-600'">
-              Use *_FILE (recommended)
-            </span>
-          </label>
-        </div>
-        
-        <p class="text-sm text-gray-600 mb-3">Add to your shell profile or systemd unit file:</p>
+        <p class="text-sm text-gray-600 mb-3">
+          Variables based on your current configuration. AES master key is always required.
+          {{ status?.vault?.enabled ? 'Vault is enabled for secrets storage.' : 'Vault not configured (AES-only mode).' }}
+        </p>
         
         <pre class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs font-mono overflow-x-auto whitespace-pre-wrap">{{ getEnvVarsText() }}</pre>
         
-        <!-- Security Warning -->
-        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div class="flex items-start gap-2">
-            <AlertTriangle class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div class="text-sm">
-              <p class="font-medium text-yellow-800">Security Note</p>
-              <p class="text-yellow-700 mt-1">
-                Environment variables can be visible via <code class="bg-yellow-100 px-1 rounded">/proc</code> or process listings.
-                For production, consider:
-              </p>
-              <ul class="list-disc list-inside text-yellow-700 mt-1 space-y-1">
-                <li><strong>systemd credentials</strong>: <code class="bg-yellow-100 px-1 rounded">LoadCredential=</code> directive</li>
-                <li><strong>Vault Agent</strong>: auto-injects secrets, no env vars needed</li>
-                <li><strong>File-based</strong>: <code class="bg-yellow-100 px-1 rounded">chmod 600</code> file read at startup</li>
-              </ul>
-            </div>
-          </div>
+        <!-- Architecture explanation -->
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+          <p class="font-medium text-blue-800 mb-2">Architecture</p>
+          <p class="text-blue-700">
+            <strong>AES</strong> is always required to encrypt Vault credentials stored in the database (bootstrap).
+            <strong>Vault</strong> (optional) provides external secrets storage for application data (passwords, tokens).
+          </p>
         </div>
       </div>
     </template>

@@ -45,16 +45,38 @@ public class SecurityController {
     private String vaultPath;
 
     /**
-     * Get current encryption status
+     * Get current encryption status (unified format matching admin)
      */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         var status = secretsService.getStatus();
+
+        // Check if using auto-generated key
+        String masterKeyEnv = System.getenv("PESITWIZARD_SECURITY_MASTER_KEY");
+        String masterKeyFile = System.getenv("PESITWIZARD_SECURITY_MASTER_KEY_FILE");
+        boolean usingFixedKey = (masterKeyEnv != null && !masterKeyEnv.isBlank())
+                || (masterKeyFile != null && !masterKeyFile.isBlank());
+
+        boolean vaultEnabled = "VAULT".equalsIgnoreCase(encryptionMode);
+        boolean vaultConnected = vaultEnabled && status.enabled() && "VAULT".equals(status.mode());
+
         return ResponseEntity.ok(Map.of(
                 "encryption", Map.of(
                         "enabled", status.enabled(),
                         "mode", status.mode(),
-                        "message", status.message())));
+                        "message", status.message()),
+                "aes", Map.of(
+                        "configured", true,
+                        "usingFixedKey", usingFixedKey,
+                        "message", usingFixedKey
+                                ? "✅ Using fixed master key"
+                                : "⚠️ Using auto-generated key (not portable)"),
+                "vault", Map.of(
+                        "enabled", vaultEnabled,
+                        "connected", vaultConnected,
+                        "address", vaultAddress != null ? vaultAddress : "",
+                        "authMethod", vaultAuthMethod != null ? vaultAuthMethod.toUpperCase() : "TOKEN",
+                        "message", vaultConnected ? "Connected" : (vaultEnabled ? "Not connected" : ""))));
     }
 
     /**
