@@ -43,7 +43,7 @@ public class SecurityController {
     @Value("${pesitwizard.security.vault.auth-method:token}")
     private String vaultAuthMethod;
 
-    @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard-client}")
+    @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard/client}")
     private String vaultPath;
 
     /**
@@ -208,7 +208,7 @@ public class SecurityController {
                         "PESITWIZARD_SECURITY_MODE", "VAULT",
                         "PESITWIZARD_SECURITY_VAULT_ADDRESS", "http://localhost:30200",
                         "PESITWIZARD_SECURITY_VAULT_TOKEN", "<your-token>",
-                        "PESITWIZARD_SECURITY_VAULT_PATH", "secret/data/pesitwizard-client"),
+                        "PESITWIZARD_SECURITY_VAULT_PATH", "secret/data/pesitwizard/client"),
                 "vaultAvailable", secretsService.isVaultAvailable(),
                 "currentMode", secretsService.getMode()));
     }

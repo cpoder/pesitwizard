@@ -62,7 +62,7 @@ public class VaultClient {
     public VaultClient(String vaultAddr, String secretsPath, AuthMethod authMethod,
             String staticToken, String roleId, String secretId) {
         this.vaultAddr = vaultAddr;
-        this.secretsPath = secretsPath != null ? secretsPath : "secret/data/pesitwizard-client";
+        this.secretsPath = secretsPath != null ? secretsPath : "secret/data/pesitwizard/client";
         this.authMethod = authMethod;
         this.staticToken = staticToken;
         this.roleId = roleId;
