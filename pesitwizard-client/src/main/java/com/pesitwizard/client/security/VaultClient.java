@@ -179,6 +179,10 @@ public class VaultClient {
             return value;
         }
 
+        return storeSecretWithRetry(key, value, true);
+    }
+
+    private String storeSecretWithRetry(String key, String value, boolean retry) {
         try {
             ObjectNode dataNode = objectMapper.createObjectNode();
             ObjectNode innerData = objectMapper.createObjectNode();
@@ -186,10 +190,13 @@ public class VaultClient {
             dataNode.set("data", innerData);
 
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
+            String token = getToken();
+            log.debug("Storing secret at {} with auth method {} (token present: {})",
+                    url, authMethod, token != null && !token.isBlank());
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("X-Vault-Token", getToken())
+                    .header("X-Vault-Token", token)
                     .header("Content-Type", "application/json")
                     .timeout(TIMEOUT)
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(dataNode)))
@@ -200,14 +207,24 @@ public class VaultClient {
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 log.debug("Secret stored in Vault: {}", key);
                 return PREFIX + key;
+            } else if (response.statusCode() == 403 && retry && authMethod == AuthMethod.APPROLE) {
+                // Token may have expired, force refresh and retry once
+                log.debug("Got 403, refreshing token and retrying...");
+                if (refreshAppRoleToken()) {
+                    return storeSecretWithRetry(key, value, false);
+                }
+                log.error("Failed to store secret in Vault after token refresh: {} - {}", key, response.body());
+                throw new RuntimeException("Vault permission denied: " + response.body());
             } else {
                 log.error("Failed to store secret in Vault: {} - {}", key, response.body());
-                return value;
+                throw new RuntimeException("Vault error: " + response.body());
             }
 
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to store secret in Vault: {} - {}", key, e.getMessage());
-            return value;
+            throw new RuntimeException("Vault error: " + e.getMessage(), e);
         }
     }
 
