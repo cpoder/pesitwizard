@@ -1,10 +1,15 @@
 package com.pesitwizard.security;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -45,6 +50,53 @@ public class SecretsConfig {
 
     @Value("${pesitwizard.security.vault.secret-id:}")
     private String vaultSecretId;
+
+    // *_FILE support for reading secrets from files (more secure than env vars)
+    @Value("${pesitwizard.security.master-key-file:}")
+    private String masterKeyFile;
+
+    @Value("${pesitwizard.security.vault.token-file:}")
+    private String vaultTokenFile;
+
+    @Value("${pesitwizard.security.vault.role-id-file:}")
+    private String vaultRoleIdFile;
+
+    @Value("${pesitwizard.security.vault.secret-id-file:}")
+    private String vaultSecretIdFile;
+
+    /**
+     * Load secrets from files if *_FILE properties are set.
+     * File-based secrets take precedence over environment variables.
+     */
+    @PostConstruct
+    public void loadSecretsFromFiles() {
+        masterKey = readFromFileOrValue(masterKeyFile, masterKey, "master-key");
+        vaultToken = readFromFileOrValue(vaultTokenFile, vaultToken, "vault-token");
+        vaultRoleId = readFromFileOrValue(vaultRoleIdFile, vaultRoleId, "vault-role-id");
+        vaultSecretId = readFromFileOrValue(vaultSecretIdFile, vaultSecretId, "vault-secret-id");
+    }
+
+    /**
+     * Read secret from file if path is set, otherwise return the original value.
+     */
+    private String readFromFileOrValue(String filePath, String originalValue, String secretName) {
+        if (filePath == null || filePath.isBlank()) {
+            return originalValue;
+        }
+        try {
+            Path path = Path.of(filePath);
+            if (Files.exists(path)) {
+                String value = Files.readString(path).trim();
+                log.info("✅ Loaded {} from file: {}", secretName, filePath);
+                return value;
+            } else {
+                log.warn("Secret file not found: {} (using env var if set)", filePath);
+            }
+        } catch (IOException e) {
+            log.error("Failed to read secret file {}: {}", filePath, e.getMessage());
+        }
+        return originalValue;
+    }
 
     @Bean
     public SecretsService secretsService(SecretsProvider secretsProvider) {

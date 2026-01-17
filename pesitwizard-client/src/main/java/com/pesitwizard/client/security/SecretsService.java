@@ -1,6 +1,9 @@
 package com.pesitwizard.client.security;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -44,13 +47,24 @@ public class SecretsService {
 
     public SecretsService(
             @Value("${pesitwizard.security.master-key:}") String masterKey,
+            @Value("${pesitwizard.security.master-key-file:}") String masterKeyFile,
             @Value("${pesitwizard.security.mode:VAULT}") String mode,
             @Value("${pesitwizard.security.vault.address:}") String vaultAddress,
             @Value("${pesitwizard.security.vault.token:}") String vaultToken,
+            @Value("${pesitwizard.security.vault.token-file:}") String vaultTokenFile,
             @Value("${pesitwizard.security.vault.path:secret/data/pesitwizard-client}") String vaultPath,
             @Value("${pesitwizard.security.vault.auth-method:token}") String vaultAuthMethod,
             @Value("${pesitwizard.security.vault.role-id:}") String vaultRoleId,
-            @Value("${pesitwizard.security.vault.secret-id:}") String vaultSecretId) {
+            @Value("${pesitwizard.security.vault.role-id-file:}") String vaultRoleIdFile,
+            @Value("${pesitwizard.security.vault.secret-id:}") String vaultSecretId,
+            @Value("${pesitwizard.security.vault.secret-id-file:}") String vaultSecretIdFile) {
+
+        // Load secrets from files if *_FILE variants are set (more secure than env
+        // vars)
+        masterKey = readFromFileOrValue(masterKeyFile, masterKey, "master-key");
+        vaultToken = readFromFileOrValue(vaultTokenFile, vaultToken, "vault-token");
+        vaultRoleId = readFromFileOrValue(vaultRoleIdFile, vaultRoleId, "vault-role-id");
+        vaultSecretId = readFromFileOrValue(vaultSecretIdFile, vaultSecretId, "vault-secret-id");
 
         // Initialize AES (required for bootstrap)
         SecretKey key = null;
@@ -104,6 +118,29 @@ public class SecretsService {
                 KEY_LENGTH);
         byte[] keyBytes = factory.generateSecret(spec).getEncoded();
         return new SecretKeySpec(keyBytes, "AES");
+    }
+
+    /**
+     * Read secret from file if path is set, otherwise return the original value.
+     * File-based secrets are more secure than environment variables.
+     */
+    private static String readFromFileOrValue(String filePath, String originalValue, String secretName) {
+        if (filePath == null || filePath.isBlank()) {
+            return originalValue;
+        }
+        try {
+            Path path = Path.of(filePath);
+            if (Files.exists(path)) {
+                String value = Files.readString(path).trim();
+                log.info("✅ Loaded {} from file: {}", secretName, filePath);
+                return value;
+            } else {
+                log.warn("Secret file not found: {} (using env var if set)", filePath);
+            }
+        } catch (IOException e) {
+            log.error("Failed to read secret file {}: {}", filePath, e.getMessage());
+        }
+        return originalValue;
     }
 
     /**

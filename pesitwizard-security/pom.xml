@@ -53,6 +53,13 @@
             <version>2.0.9</version>
         </dependency>
 
+        <!-- Jakarta Annotations (PostConstruct) -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

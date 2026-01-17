@@ -151,19 +151,55 @@ function copyToClipboard(text: string) {
 // Selected mode for env vars display
 const envVarsMode = ref<'aes' | 'vault-token' | 'vault-approle'>('aes')
 
+// Use file-based secrets (more secure)
+const useFileSecrets = ref(false)
+
 function getEnvVarsText() {
   if (envVarsMode.value === 'vault-approle') {
+    if (useFileSecrets.value) {
+      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
+export PESITWIZARD_SECURITY_VAULT_ROLE_ID_FILE=/etc/pesitwizard/vault-role-id
+export PESITWIZARD_SECURITY_VAULT_SECRET_ID_FILE=/etc/pesitwizard/vault-secret-id
+
+# Create secret files (run as root):
+# echo '${initVaultResult.value?.roleId || '<role-id>'}' > /etc/pesitwizard/vault-role-id
+# echo '${initVaultResult.value?.secretId || '<secret-id>'}' > /etc/pesitwizard/vault-secret-id
+# chmod 600 /etc/pesitwizard/vault-*
+# chown pesitwizard:pesitwizard /etc/pesitwizard/vault-*`
+    }
     return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
 export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=approle
 export PESITWIZARD_SECURITY_VAULT_ROLE_ID=${initVaultResult.value?.roleId || '<role-id>'}
 export PESITWIZARD_SECURITY_VAULT_SECRET_ID=${initVaultResult.value?.secretId || '<secret-id>'}`
   } else if (envVarsMode.value === 'vault-token') {
+    if (useFileSecrets.value) {
+      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
+export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
+export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
+export PESITWIZARD_SECURITY_VAULT_TOKEN_FILE=/etc/pesitwizard/vault-token
+
+# Create secret file (run as root):
+# echo '${vaultTestToken.value || '<vault-token>'}' > /etc/pesitwizard/vault-token
+# chmod 600 /etc/pesitwizard/vault-token
+# chown pesitwizard:pesitwizard /etc/pesitwizard/vault-token`
+    }
     return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=VAULT
 export PESITWIZARD_SECURITY_VAULT_ADDRESS=${vaultTestAddress.value || 'http://vault:8200'}
 export PESITWIZARD_SECURITY_VAULT_AUTH_METHOD=token
 export PESITWIZARD_SECURITY_VAULT_TOKEN=${vaultTestToken.value || '<vault-token>'}`
   } else {
+    if (useFileSecrets.value) {
+      return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
+export PESITWIZARD_SECURITY_MASTER_KEY_FILE=/etc/pesitwizard/master-key
+
+# Create secret file (run as root):
+# echo '${generatedKey.value || '<base64-key>'}' > /etc/pesitwizard/master-key
+# chmod 600 /etc/pesitwizard/master-key
+# chown pesitwizard:pesitwizard /etc/pesitwizard/master-key`
+    }
     return `export PESITWIZARD_SECURITY_ENCRYPTION_MODE=AES
 export PESITWIZARD_SECURITY_MASTER_KEY=${generatedKey.value || '<base64-key>'}`
   }
@@ -395,7 +431,7 @@ onMounted(() => {
         </div>
         
         <!-- Mode selector -->
-        <div class="flex gap-2 mb-4">
+        <div class="flex flex-wrap items-center gap-2 mb-4">
           <button 
             @click="envVarsMode = 'aes'" 
             :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'aes' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
@@ -408,6 +444,13 @@ onMounted(() => {
             @click="envVarsMode = 'vault-approle'" 
             :class="['px-3 py-1 text-sm rounded border', envVarsMode === 'vault-approle' ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100']"
           >Vault (AppRole)</button>
+          <span class="mx-2 text-gray-300">|</span>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" v-model="useFileSecrets" class="rounded" />
+            <span :class="useFileSecrets ? 'text-green-700 font-medium' : 'text-gray-600'">
+              Use *_FILE (recommended)
+            </span>
+          </label>
         </div>
         
         <p class="text-sm text-gray-600 mb-3">Add to your shell profile or systemd unit file:</p>
