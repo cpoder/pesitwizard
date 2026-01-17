@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pesitwizard.client.security.SecretsService;
+import com.pesitwizard.client.service.EncryptionMigrationService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SecurityController {
 
     private final SecretsService secretsService;
+    private final EncryptionMigrationService migrationService;
 
     @Value("${pesitwizard.security.encryption-mode:AES}")
     private String encryptionMode;
@@ -92,6 +94,30 @@ public class SecurityController {
                 "key", base64Key,
                 "instructions",
                 "Set this key as environment variable PESITWIZARD_SECURITY_MASTER_KEY and restart the application."));
+    }
+
+    /**
+     * Migrate existing secrets to Vault.
+     * Handles PeSIT server passwords and storage connection credentials.
+     */
+    @PostMapping("/encryption/migrate")
+    public ResponseEntity<Map<String, Object>> migrateToVault() {
+        try {
+            var result = migrationService.migrateAllToVault();
+            log.info("Vault migration: {} migrated, {} skipped", result.totalMigrated(), result.totalSkipped());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", result.success(),
+                    "message", result.message(),
+                    "totalMigrated", result.totalMigrated(),
+                    "totalSkipped", result.totalSkipped(),
+                    "details", result.details()));
+        } catch (Exception e) {
+            log.error("Migration failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Migration failed: " + e.getMessage()));
+        }
     }
 
     /**
