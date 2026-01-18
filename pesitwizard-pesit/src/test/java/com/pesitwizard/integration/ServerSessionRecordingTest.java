@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @DisplayName("Server Session Recording (requires C:X)")
 public class ServerSessionRecordingTest {
 
-    private static final int SERVER_PORT = 17617; // PesitWizard default port
+    private static final int SERVER_PORT = 6502; // Port configuré dans C:X pour PesitWizard
     private static final Path GOLDEN_DIR = Paths.get("src/test/resources/golden-sessions");
 
     @BeforeAll
