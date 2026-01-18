@@ -51,6 +51,9 @@ public class SecretsConfig {
     @Value("${pesitwizard.security.salt-file:./config/encryption.salt}")
     private String saltFile;
 
+    @Value("${pesitwizard.security.machine-id:}")
+    private String machineId;
+
     @Value("${pesitwizard.security.vault.secret-id:}")
     private String vaultSecretId;
 
@@ -203,17 +206,22 @@ public class SecretsConfig {
      */
     private String generateDefaultMasterKey() {
         try {
-            // Use a combination of stable system properties as seed
-            String seed = System.getProperty("user.home", "/tmp") +
-                    System.getProperty("os.name", "unknown") +
-                    "pesitwizard-default-key-v1";
+            String seed;
+            if (machineId != null && !machineId.isBlank()) {
+                // User-provided stable machine ID (recommended for Kubernetes)
+                seed = machineId + "pesitwizard-default-key-v1";
+                log.info("Using configured machine-id for key generation");
+            } else {
+                // Auto-detect based on system properties (less reliable in containers)
+                seed = System.getProperty("user.home", "/tmp") +
+                        System.getProperty("os.name", "unknown") +
+                        "pesitwizard-default-key-v1";
+            }
 
-            // Generate a deterministic key from the seed
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(seed.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             return java.util.Base64.getEncoder().encodeToString(hash);
         } catch (Exception e) {
-            // Fallback to a fixed default (not recommended but better than plaintext)
             log.error("Failed to generate default key, using fallback", e);
             return "cGVzaXR3aXphcmQtZGVmYXVsdC1rZXktdjE=";
         }

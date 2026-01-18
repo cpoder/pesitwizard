@@ -55,10 +55,14 @@ public class VaultSecretsProvider implements SecretsProvider {
     private final AtomicReference<Instant> circuitOpenUntil = new AtomicReference<>();
 
     private record CachedSecret(String value, Instant expiry) {
-        boolean isExpired() { return Instant.now().isAfter(expiry); }
+        boolean isExpired() {
+            return Instant.now().isAfter(expiry);
+        }
     }
 
-    public enum AuthMethod { TOKEN, APPROLE }
+    public enum AuthMethod {
+        TOKEN, APPROLE
+    }
 
     public VaultSecretsProvider(String vaultAddr, String vaultToken, String secretsPath) {
         this(vaultAddr, secretsPath, AuthMethod.TOKEN, vaultToken, null, null);
@@ -125,7 +129,8 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     private boolean refreshAppRoleToken() {
-        if (authMethod != AuthMethod.APPROLE) return false;
+        if (authMethod != AuthMethod.APPROLE)
+            return false;
         try {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("role_id", roleId);
@@ -157,7 +162,8 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     private String getToken() {
-        if (authMethod == AuthMethod.TOKEN) return staticToken;
+        if (authMethod == AuthMethod.TOKEN)
+            return staticToken;
         Instant expiry = tokenExpiry.get();
         if (expiry == null || Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(expiry)) {
             refreshAppRoleToken();
@@ -168,7 +174,8 @@ public class VaultSecretsProvider implements SecretsProvider {
     private boolean testConnection() {
         try {
             String token = getToken();
-            if (token == null) return false;
+            if (token == null)
+                return false;
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vaultAddr + "/v1/sys/health"))
                     .header("X-Vault-Token", token)
@@ -183,7 +190,8 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String encrypt(String plaintext) {
-        if (!available || plaintext == null || plaintext.isBlank()) return plaintext;
+        if (!available || plaintext == null || plaintext.isBlank())
+            return plaintext;
         String key = java.util.UUID.randomUUID().toString();
         storeSecret(key, plaintext);
         return PREFIX + key;
@@ -191,9 +199,11 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String encrypt(String plaintext, String context) {
-        if (!available || plaintext == null || plaintext.isBlank()) return plaintext;
-        if (context == null || context.isBlank()) return encrypt(plaintext);
-        String sanitizedContext = context.toLowerCase().replaceAll("[^a-z0-9/_-]", "-");
+        if (!available || plaintext == null || plaintext.isBlank())
+            return plaintext;
+        if (context == null || context.isBlank())
+            return encrypt(plaintext);
+        String sanitizedContext = sanitizeVaultPath(context);
         storeSecret(sanitizedContext, plaintext);
         return PREFIX + sanitizedContext;
     }
@@ -214,7 +224,8 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public void storeSecret(String key, String value) {
-        if (!available || isCircuitOpen()) return;
+        if (!available || isCircuitOpen())
+            return;
         secretCache.remove(key);
         try {
             ObjectNode dataNode = objectMapper.createObjectNode();
@@ -248,17 +259,19 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String getSecret(String key) {
-        if (!available) return null;
-        
+        if (!available)
+            return null;
+
         // Check cache first
         CachedSecret cached = secretCache.get(key);
         if (cached != null && !cached.isExpired()) {
             log.debug("Cache hit for secret: {}", key);
             return cached.value();
         }
-        
-        if (isCircuitOpen()) return null;
-        
+
+        if (isCircuitOpen())
+            return null;
+
         try {
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
             HttpRequest request = HttpRequest.newBuilder()
@@ -292,7 +305,8 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public void deleteSecret(String key) {
-        if (!available || isCircuitOpen()) return;
+        if (!available || isCircuitOpen())
+            return;
         secretCache.remove(key);
         try {
             String url = vaultAddr + "/v1/" + secretsPath.replace("/data/", "/metadata/") + "/" + key;
@@ -309,11 +323,29 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     @Override
-    public boolean isAvailable() { return available; }
+    public boolean isAvailable() {
+        return available;
+    }
 
     @Override
-    public String getProviderType() { return "VAULT"; }
+    public String getProviderType() {
+        return "VAULT";
+    }
 
-    public String createReference(String key) { return PREFIX + key; }
-    public boolean isVaultReference(String value) { return value != null && value.startsWith(PREFIX); }
+    public String createReference(String key) {
+        return PREFIX + key;
+    }
+
+    public boolean isVaultReference(String value) {
+        return value != null && value.startsWith(PREFIX);
+    }
+
+    private String sanitizeVaultPath(String context) {
+        if (context == null)
+            return null;
+        return context.toLowerCase()
+                .replaceAll("[^a-z0-9/_-]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+    }
 }

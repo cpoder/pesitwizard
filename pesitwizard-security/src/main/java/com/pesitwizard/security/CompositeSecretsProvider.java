@@ -32,6 +32,12 @@ public class CompositeSecretsProvider implements SecretsProvider {
     }
 
     @Override
+    public String encrypt(String plaintext, String context) {
+        // Always use primary provider for new encryption with context
+        return primaryProvider.encrypt(plaintext, context);
+    }
+
+    @Override
     public String decrypt(String ciphertext) {
         if (ciphertext == null || ciphertext.isBlank()) {
             return ciphertext;
