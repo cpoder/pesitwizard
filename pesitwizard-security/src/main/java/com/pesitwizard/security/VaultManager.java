@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -259,7 +260,7 @@ public class VaultManager {
     /**
      * Get Role ID for an AppRole.
      */
-    public String getRoleId(String token, String roleName, String namespace) {
+    public Optional<String> getRoleId(String token, String roleName, String namespace) {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName + "/role-id"))
@@ -276,19 +277,19 @@ public class VaultManager {
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
-                return root.path("data").path("role_id").asText();
+                return Optional.of(root.path("data").path("role_id").asText());
             }
-            return null;
+            return Optional.empty();
         } catch (Exception e) {
             log.error("Failed to get role_id: {}", e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
     /**
      * Generate a new Secret ID for an AppRole.
      */
-    public String generateSecretId(String token, String roleName, String namespace) {
+    public Optional<String> generateSecretId(String token, String roleName, String namespace) {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName + "/secret-id"))
@@ -306,12 +307,12 @@ public class VaultManager {
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
-                return root.path("data").path("secret_id").asText();
+                return Optional.of(root.path("data").path("secret_id").asText());
             }
-            return null;
+            return Optional.empty();
         } catch (Exception e) {
             log.error("Failed to generate secret_id: {}", e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
