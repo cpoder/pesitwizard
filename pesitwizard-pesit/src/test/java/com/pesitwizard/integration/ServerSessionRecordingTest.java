@@ -15,8 +15,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.pesitwizard.fpdu.EbcdicConverter;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
+import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
@@ -104,34 +106,58 @@ public class ServerSessionRecordingTest {
         DataOutputStream out = new DataOutputStream(client.getOutputStream());
         client.setSoTimeout(30000);
 
+        // Handle pre-connection handshake (IBM C:X compatibility)
+        byte[] firstData = FpduIO.readRawFpdu(in);
+        byte[] pendingFpdu = null;
+
+        if (firstData.length == 24 && EbcdicConverter.isEbcdic(firstData)) {
+            byte[] asciiData = EbcdicConverter.toAscii(firstData);
+            String preConnMsg = new String(asciiData).trim();
+            if (preConnMsg.startsWith("PESIT")) {
+                log.info("Pre-connection handshake received: {}", preConnMsg);
+                // Send ACK0 in EBCDIC
+                byte[] ack = EbcdicConverter.asciiToEbcdic("ACK0".getBytes());
+                out.writeShort(4);
+                out.write(ack);
+                out.flush();
+                log.info("Sent pre-connection ACK0");
+            }
+        } else {
+            // Not a pre-connection message, save for processing
+            pendingFpdu = firstData;
+        }
+
         int serverConnId = 1;
         boolean sessionActive = true;
 
         while (sessionActive) {
             try {
-                // Read incoming FPDU
-                int len = in.readUnsignedShort();
-                byte[] data = new byte[len];
-                in.readFully(data);
+                // Read raw FPDU data (use pending if available)
+                byte[] rawData;
+                if (pendingFpdu != null) {
+                    rawData = pendingFpdu;
+                    pendingFpdu = null;
+                } else {
+                    rawData = FpduIO.readRawFpdu(in);
+                }
 
-                Fpdu received = new FpduParser(data).parse();
-                recorder.recordRaw(Direction.RECEIVED, received.getFpduType(), data);
-                log.info("Received: {} (id_src={}, id_dst={})",
-                        received.getFpduType(), received.getIdSrc(), received.getIdDst());
+                // Parse to get type info
+                Fpdu received = new FpduParser(rawData).parse();
+                recorder.recordRaw(Direction.RECEIVED, received.getFpduType(), rawData);
+                log.info("Received: {} (id_src={}, id_dst={}, {} bytes)",
+                        received.getFpduType(), received.getIdSrc(), received.getIdDst(), rawData.length);
 
                 if (respond) {
                     Fpdu response = createResponse(received, serverConnId);
                     if (response != null) {
                         byte[] respData = FpduBuilder.buildFpdu(response);
-                        out.writeShort(respData.length);
-                        out.write(respData);
-                        out.flush();
+                        FpduIO.writeRawFpdu(out, respData);
                         recorder.recordRaw(Direction.SENT, response.getFpduType(), respData);
                         log.info("Sent: {}", response.getFpduType());
                     }
                 }
 
-                // End session on RELCONF or ABORT
+                // End session on RELEASE
                 if (received.getFpduType() == FpduType.RELEASE) {
                     sessionActive = false;
                 }
