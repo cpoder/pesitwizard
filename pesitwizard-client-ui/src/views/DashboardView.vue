@@ -9,11 +9,9 @@ import {
   Server,
   ArrowRight,
   Lock,
-  AlertTriangle,
   Activity,
   RefreshCw,
-  Cpu,
-  HardDrive
+  Cpu
 } from 'lucide-vue-next'
 import api from '@/api'
 

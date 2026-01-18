@@ -136,7 +136,7 @@ async function initializeVault() {
     })
     initVaultResult.value = response.data
     if (response.data.success) {
-      await fetchVaultStatus()
+      await fetchStatus()
     }
   } catch (e: any) {
     initVaultResult.value = { success: false, message: e.response?.data?.message || e.message }
