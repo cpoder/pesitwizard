@@ -49,7 +49,7 @@ public class AesSecretsProvider implements SecretsProvider {
     public AesSecretsProvider(
             @Value("${pesitwizard.security.master-key:}") String masterKey,
             @Value("${pesitwizard.security.salt-file:./config/encryption.salt}") String saltFilePath) {
-        
+
         if (masterKey == null || masterKey.isBlank()) {
             log.warn("No master key configured. AES encryption not available.");
             this.secretKey = null;
@@ -74,21 +74,21 @@ public class AesSecretsProvider implements SecretsProvider {
             log.debug("Loading existing salt from {}", saltFile);
             return Files.readAllBytes(saltFile);
         }
-        
+
         log.info("Generating new salt and saving to {}", saltFile);
         byte[] newSalt = new byte[SALT_LENGTH];
         new SecureRandom().nextBytes(newSalt);
-        
+
         Files.createDirectories(saltFile.getParent());
         Files.write(saltFile, newSalt, StandardOpenOption.CREATE_NEW);
-        
+
         try {
-            Files.setPosixFilePermissions(saltFile, 
-                Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+            Files.setPosixFilePermissions(saltFile,
+                    Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
         } catch (UnsupportedOperationException e) {
             log.warn("Cannot set POSIX permissions on {}", saltFile);
         }
-        
+
         return newSalt;
     }
 
@@ -126,7 +126,9 @@ public class AesSecretsProvider implements SecretsProvider {
             System.arraycopy(iv, 0, combined, 0, iv.length);
             System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
 
-            return V2_PREFIX + Base64.getEncoder().encodeToString(combined);
+            String result = V2_PREFIX + Base64.getEncoder().encodeToString(combined);
+            log.debug("Encryption successful (v2 format, {} bytes plaintext)", plaintext.length());
+            return result;
 
         } catch (Exception e) {
             log.error("Encryption failed");
@@ -145,7 +147,7 @@ public class AesSecretsProvider implements SecretsProvider {
         } else if (ciphertext.startsWith(LEGACY_PREFIX)) {
             return decryptLegacy(ciphertext);
         }
-        
+
         return ciphertext;
     }
 
@@ -164,6 +166,7 @@ public class AesSecretsProvider implements SecretsProvider {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
 
             byte[] plaintext = cipher.doFinal(encrypted);
+            log.debug("Decryption successful (v2 format)");
             return new String(plaintext, StandardCharsets.UTF_8);
 
         } catch (Exception e) {
@@ -187,6 +190,7 @@ public class AesSecretsProvider implements SecretsProvider {
             cipher.init(Cipher.DECRYPT_MODE, legacySecretKey, parameterSpec);
 
             byte[] plaintext = cipher.doFinal(encrypted);
+            log.debug("Decryption successful (legacy format - consider re-encrypting)");
             return new String(plaintext, StandardCharsets.UTF_8);
 
         } catch (Exception e) {

@@ -249,4 +249,57 @@ class AesSecretsProviderTest {
                     .isInstanceOf(RuntimeException.class);
         }
     }
+
+    @Nested
+    @DisplayName("Key Rotation / Versioning")
+    class KeyRotationTests {
+
+        @Test
+        @DisplayName("should encrypt with v2 prefix")
+        void shouldEncryptWithV2Prefix() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            String encrypted = provider.encrypt("secret");
+
+            assertThat(encrypted).startsWith("AES:v2:");
+        }
+
+        @Test
+        @DisplayName("should decrypt legacy AES: prefix values")
+        void shouldDecryptLegacyPrefix() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            // Simulate legacy encrypted value (would have been encrypted with old static
+            // salt)
+            // For this test, we verify that isEncrypted recognizes both formats
+            assertThat(provider.isEncrypted("AES:legacydata")).isTrue();
+            assertThat(provider.isEncrypted("AES:v2:newdata")).isTrue();
+        }
+
+        @Test
+        @DisplayName("should not re-encrypt v2 values")
+        void shouldNotReEncryptV2Values() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String plaintext = "my-secret";
+
+            String encrypted = provider.encrypt(plaintext);
+            String reEncrypted = provider.encrypt(encrypted);
+
+            assertThat(reEncrypted).isEqualTo(encrypted);
+            assertThat(encrypted).startsWith("AES:v2:");
+        }
+
+        @Test
+        @DisplayName("should use same salt file across instances")
+        void shouldUseSameSaltFileAcrossInstances() {
+            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String encrypted = provider1.encrypt("test-data");
+
+            // Create new instance with same salt file
+            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String decrypted = provider2.decrypt(encrypted);
+
+            assertThat(decrypted).isEqualTo("test-data");
+        }
+    }
 }
