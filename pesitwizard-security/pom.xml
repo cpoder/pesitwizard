@@ -60,6 +60,14 @@
             <version>2.1.1</version>
         </dependency>
 
+        <!-- Micrometer for metrics (optional) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>1.12.0</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
