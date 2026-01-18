@@ -12,8 +12,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
-import com.pesitwizard.integration.PesitSessionRecorder.Direction;
-import com.pesitwizard.integration.PesitSessionRecorder.RecordedFrame;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
 
 /**
  * Tests for session recording and replay functionality.

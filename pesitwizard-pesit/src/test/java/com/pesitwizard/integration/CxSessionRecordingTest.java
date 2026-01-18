@@ -17,6 +17,7 @@ import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.SelectMessageBuilder;
 import com.pesitwizard.transport.TcpTransportChannel;
 

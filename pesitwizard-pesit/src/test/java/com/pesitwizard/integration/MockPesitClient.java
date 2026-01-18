@@ -11,8 +11,9 @@ import java.util.List;
 
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduParser;
-import com.pesitwizard.integration.PesitSessionRecorder.Direction;
-import com.pesitwizard.integration.PesitSessionRecorder.RecordedFrame;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

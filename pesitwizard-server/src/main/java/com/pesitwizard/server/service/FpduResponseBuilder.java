@@ -109,10 +109,22 @@ public class FpduResponseBuilder {
                 String.format("%02X", diagBytes[0]), String.format("%02X", diagBytes[1]),
                 String.format("%02X", diagBytes[2]), message);
 
+        TransferContext transfer = ctx.getCurrentTransfer();
+        String filename = transfer != null ? transfer.getFilename() : "unknown";
+        int fileType = transfer != null ? transfer.getFileType() : 0;
+        int transferId = transfer != null ? transfer.getTransferId() : 1;
+
+        // PGI 9: File Identification (required for ACK_SELECT)
+        ParameterValue pgi9 = new ParameterValue(PGI_09_ID_FICHIER,
+                new ParameterValue(PI_11_TYPE_FICHIER, fileType),
+                new ParameterValue(PI_12_NOM_FICHIER, filename));
+
         Fpdu response = new Fpdu(FpduType.ACK_SELECT)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes));
+                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes))
+                .withParameter(pgi9)
+                .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, transferId));
 
         if (message != null && !message.isEmpty()) {
             response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
