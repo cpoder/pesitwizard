@@ -55,7 +55,7 @@ public class ServerSessionRecordingTest {
 
     @Test
     @DisplayName("Record incoming PUSH from C:X")
-    @Disabled("Manual test - run with cx-test-push.sh")
+    @Disabled("Manual test - use real PesitWizard server for complete sessions")
     void recordIncomingPush() throws Exception {
         PesitSessionRecorder recorder = new PesitSessionRecorder("cx-push-to-server");
 
@@ -67,7 +67,7 @@ public class ServerSessionRecordingTest {
 
             try (Socket client = serverSocket.accept()) {
                 log.info("Client connected from {}", client.getRemoteSocketAddress());
-                recordSession(client, recorder, true); // true = we respond as server
+                recordSession(client, recorder, false); // false = just record, don't respond
             }
         }
 
@@ -174,10 +174,24 @@ public class ServerSessionRecordingTest {
      */
     private Fpdu createResponse(Fpdu received, int serverConnId) {
         return switch (received.getFpduType()) {
-            case CONNECT -> new Fpdu(FpduType.ACONNECT)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, "D"));
+            case CONNECT -> {
+                // Echo back the version from the CONNECT, add sync points if client supports it
+                ParameterValue clientVersion = received.getParameter(ParameterIdentifier.PI_06_VERSION);
+                int version = (clientVersion != null && clientVersion.getValue().length > 0)
+                        ? clientVersion.getValue()[0] & 0xFF
+                        : 2;
+                Fpdu aconnect = new Fpdu(FpduType.ACONNECT)
+                        .withIdSrc(serverConnId)
+                        .withIdDst(received.getIdSrc())
+                        .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, version));
+                // Add sync points option if client sent it
+                ParameterValue clientSync = received.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
+                if (clientSync != null) {
+                    aconnect.withParameter(new ParameterValue(ParameterIdentifier.PI_07_SYNC_POINTS,
+                            new byte[] { 0, 32, 2 })); // 32KB interval, window 2
+                }
+                yield aconnect;
+            }
 
             case CREATE -> new Fpdu(FpduType.ACK_CREATE)
                     .withIdSrc(serverConnId)
