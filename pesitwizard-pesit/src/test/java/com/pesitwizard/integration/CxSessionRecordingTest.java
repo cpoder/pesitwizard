@@ -8,7 +8,6 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +93,6 @@ public class CxSessionRecordingTest {
     }
 
     @Test
-    @Disabled("BIG file requires sync points - use CxConnectTest.testPullWithResume for full PULL")
     void recordSimplePull() throws Exception {
         assumeTrue(isCxAvailable(), "CX not available");
         TcpTransportChannel ch = new TcpTransportChannel(HOST, PORT);
@@ -102,7 +100,7 @@ public class CxSessionRecordingTest {
             Fpdu ac = s.sendFpduWithAck(
                     new ConnectMessageBuilder().demandeur("LOOP").serveur("CETOM1").readAccess().build(1));
             int srv = ac.getIdSrc();
-            s.sendFpduWithAck(new SelectMessageBuilder().filename("BIG").transferId(0).build(srv));
+            s.sendFpduWithAck(new SelectMessageBuilder().filename("SMALL").transferId(0).build(srv));
             s.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(srv));
             s.sendFpduWithAck(new Fpdu(FpduType.READ).withIdDst(srv)
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 0)));
