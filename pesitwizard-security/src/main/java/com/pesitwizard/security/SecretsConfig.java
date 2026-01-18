@@ -48,6 +48,9 @@ public class SecretsConfig {
     @Value("${pesitwizard.security.vault.role-id:}")
     private String vaultRoleId;
 
+    @Value("${pesitwizard.security.salt-file:./config/encryption.salt}")
+    private String saltFile;
+
     @Value("${pesitwizard.security.vault.secret-id:}")
     private String vaultSecretId;
 
@@ -120,7 +123,7 @@ public class SecretsConfig {
             log.warn("⚠️  This key will be DIFFERENT on another machine/container!");
             log.warn("⚠️  For production, set PESITWIZARD_SECURITY_MASTER_KEY environment variable.");
         }
-        AesSecretsProvider aesProvider = new AesSecretsProvider(keyToUse);
+        AesSecretsProvider aesProvider = new AesSecretsProvider(keyToUse, saltFile);
 
         // Try Vault if configured
         if (mode == EncryptionMode.VAULT) {

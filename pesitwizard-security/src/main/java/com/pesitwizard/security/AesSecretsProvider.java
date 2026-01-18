@@ -1,8 +1,15 @@
 package com.pesitwizard.security;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -19,8 +26,8 @@ import lombok.extern.slf4j.Slf4j;
  * AES-GCM based secrets provider for local encryption.
  * Uses a master key from environment variable or configuration.
  * 
- * Format: BASE64(IV + CIPHERTEXT + AUTH_TAG)
- * Prefix: "AES:" to identify encrypted values
+ * Format v2: "AES:v2:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with dynamic salt
+ * Legacy format: "AES:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with static salt
  */
 @Slf4j
 public class AesSecretsProvider implements SecretsProvider {
@@ -30,39 +37,70 @@ public class AesSecretsProvider implements SecretsProvider {
     private static final int GCM_TAG_LENGTH = 128;
     private static final int KEY_LENGTH = 256;
     private static final int ITERATIONS = 100000;
-    private static final String PREFIX = "AES:";
-    private static final String SALT = "PeSITWizardEnterprise";
+    private static final int SALT_LENGTH = 32;
+    private static final String LEGACY_PREFIX = "AES:";
+    private static final String V2_PREFIX = "AES:v2:";
+    private static final String LEGACY_SALT = "PeSITWizardEnterprise";
 
     private final SecretKey secretKey;
+    private final SecretKey legacySecretKey;
     private final boolean available;
 
-    public AesSecretsProvider(@Value("${pesitwizard.security.master-key:}") String masterKey) {
+    public AesSecretsProvider(
+            @Value("${pesitwizard.security.master-key:}") String masterKey,
+            @Value("${pesitwizard.security.salt-file:./config/encryption.salt}") String saltFilePath) {
+        
         if (masterKey == null || masterKey.isBlank()) {
-            log.warn("No master key configured (PESITWIZARD_SECURITY_MASTER_KEY). " +
-                    "AES encryption will not be available. Secrets will be stored in plaintext.");
+            log.warn("No master key configured. AES encryption not available.");
             this.secretKey = null;
+            this.legacySecretKey = null;
             this.available = false;
         } else {
             try {
-                this.secretKey = deriveKey(masterKey);
+                byte[] salt = loadOrGenerateSalt(Paths.get(saltFilePath));
+                this.secretKey = deriveKey(masterKey, salt);
+                this.legacySecretKey = deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
                 this.available = true;
-                log.info("AES secrets provider initialized successfully");
+                log.info("AES secrets provider initialized (v2 with dynamic salt)");
             } catch (Exception e) {
-                log.error("Failed to initialize AES secrets provider: {}", e.getMessage());
-                throw new RuntimeException("Failed to initialize AES encryption", e);
+                log.error("Failed to initialize AES secrets provider");
+                throw new EncryptionException("Failed to initialize AES encryption", e);
             }
         }
     }
 
-    private SecretKey deriveKey(String masterKey) throws Exception {
+    private byte[] loadOrGenerateSalt(Path saltFile) throws IOException {
+        if (Files.exists(saltFile)) {
+            log.debug("Loading existing salt from {}", saltFile);
+            return Files.readAllBytes(saltFile);
+        }
+        
+        log.info("Generating new salt and saving to {}", saltFile);
+        byte[] newSalt = new byte[SALT_LENGTH];
+        new SecureRandom().nextBytes(newSalt);
+        
+        Files.createDirectories(saltFile.getParent());
+        Files.write(saltFile, newSalt, StandardOpenOption.CREATE_NEW);
+        
+        try {
+            Files.setPosixFilePermissions(saltFile, 
+                Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+        } catch (UnsupportedOperationException e) {
+            log.warn("Cannot set POSIX permissions on {}", saltFile);
+        }
+        
+        return newSalt;
+    }
+
+    private SecretKey deriveKey(String masterKey, byte[] salt) throws Exception {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        PBEKeySpec spec = new PBEKeySpec(
-                masterKey.toCharArray(),
-                SALT.getBytes(StandardCharsets.UTF_8),
-                ITERATIONS,
-                KEY_LENGTH);
-        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
-        return new SecretKeySpec(keyBytes, "AES");
+        PBEKeySpec spec = new PBEKeySpec(masterKey.toCharArray(), salt, ITERATIONS, KEY_LENGTH);
+        try {
+            byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+            return new SecretKeySpec(keyBytes, "AES");
+        } finally {
+            spec.clearPassword();
+        }
     }
 
     @Override
@@ -70,9 +108,7 @@ public class AesSecretsProvider implements SecretsProvider {
         if (!available || plaintext == null) {
             return plaintext;
         }
-
-        // Don't re-encrypt already encrypted values
-        if (plaintext.startsWith(PREFIX)) {
+        if (plaintext.startsWith(V2_PREFIX) || plaintext.startsWith(LEGACY_PREFIX)) {
             return plaintext;
         }
 
@@ -86,16 +122,15 @@ public class AesSecretsProvider implements SecretsProvider {
 
             byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
-            // Combine IV + ciphertext
             byte[] combined = new byte[iv.length + ciphertext.length];
             System.arraycopy(iv, 0, combined, 0, iv.length);
             System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
 
-            return PREFIX + Base64.getEncoder().encodeToString(combined);
+            return V2_PREFIX + Base64.getEncoder().encodeToString(combined);
 
         } catch (Exception e) {
-            log.error("Encryption failed: {}", e.getMessage());
-            throw new RuntimeException("Encryption failed", e);
+            log.error("Encryption failed");
+            throw new EncryptionException("Encryption failed", e);
         }
     }
 
@@ -105,16 +140,20 @@ public class AesSecretsProvider implements SecretsProvider {
             return ciphertext;
         }
 
-        // Not encrypted, return as-is
-        if (!ciphertext.startsWith(PREFIX)) {
-            return ciphertext;
+        if (ciphertext.startsWith(V2_PREFIX)) {
+            return decryptV2(ciphertext);
+        } else if (ciphertext.startsWith(LEGACY_PREFIX)) {
+            return decryptLegacy(ciphertext);
         }
+        
+        return ciphertext;
+    }
 
+    private String decryptV2(String ciphertext) {
         try {
-            String encoded = ciphertext.substring(PREFIX.length());
+            String encoded = ciphertext.substring(V2_PREFIX.length());
             byte[] combined = Base64.getDecoder().decode(encoded);
 
-            // Extract IV and ciphertext
             byte[] iv = new byte[GCM_IV_LENGTH];
             byte[] encrypted = new byte[combined.length - GCM_IV_LENGTH];
             System.arraycopy(combined, 0, iv, 0, iv.length);
@@ -128,30 +167,48 @@ public class AesSecretsProvider implements SecretsProvider {
             return new String(plaintext, StandardCharsets.UTF_8);
 
         } catch (Exception e) {
-            log.error("Decryption failed: {}", e.getMessage());
-            throw new RuntimeException("Decryption failed", e);
+            log.error("Decryption failed (v2)");
+            throw new DecryptionException("Decryption failed", e);
+        }
+    }
+
+    private String decryptLegacy(String ciphertext) {
+        try {
+            String encoded = ciphertext.substring(LEGACY_PREFIX.length());
+            byte[] combined = Base64.getDecoder().decode(encoded);
+
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            byte[] encrypted = new byte[combined.length - GCM_IV_LENGTH];
+            System.arraycopy(combined, 0, iv, 0, iv.length);
+            System.arraycopy(combined, iv.length, encrypted, 0, encrypted.length);
+
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.DECRYPT_MODE, legacySecretKey, parameterSpec);
+
+            byte[] plaintext = cipher.doFinal(encrypted);
+            return new String(plaintext, StandardCharsets.UTF_8);
+
+        } catch (Exception e) {
+            log.error("Decryption failed (legacy)");
+            throw new DecryptionException("Decryption failed", e);
         }
     }
 
     @Override
     public void storeSecret(String key, String value) {
-        // For AES provider, secrets are stored encrypted in the database
-        // This method is a no-op as encryption happens via encrypt()
-        log.debug("AES provider: storeSecret is handled by encrypt() for database storage");
+        log.debug("AES provider: storeSecret handled by encrypt()");
     }
 
     @Override
     public String getSecret(String key) {
-        // For AES provider, secrets are retrieved from the database
-        // This method is a no-op as decryption happens via decrypt()
-        log.debug("AES provider: getSecret is handled by decrypt() for database retrieval");
+        log.debug("AES provider: getSecret handled by decrypt()");
         return null;
     }
 
     @Override
     public void deleteSecret(String key) {
-        // For AES provider, deletion is handled by database operations
-        log.debug("AES provider: deleteSecret is handled by database deletion");
+        log.debug("AES provider: deleteSecret handled by database");
     }
 
     @Override
@@ -164,10 +221,7 @@ public class AesSecretsProvider implements SecretsProvider {
         return "AES";
     }
 
-    /**
-     * Check if a value is encrypted with this provider.
-     */
     public boolean isEncrypted(String value) {
-        return value != null && value.startsWith(PREFIX);
+        return value != null && (value.startsWith(V2_PREFIX) || value.startsWith(LEGACY_PREFIX));
     }
 }
