@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 class AesSecretsProviderTest {
 
     private static final String VALID_MASTER_KEY = "test-master-key-for-unit-tests-32";
+    private static final String TEST_SALT_FILE = "./target/test-encryption.salt";
 
     @Nested
     @DisplayName("Initialization")
@@ -21,7 +22,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should initialize with valid master key")
         void shouldInitializeWithValidMasterKey() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isTrue();
             assertThat(provider.getProviderType()).isEqualTo("AES");
@@ -30,7 +31,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should not be available with null master key")
         void shouldNotBeAvailableWithNullMasterKey() {
-            AesSecretsProvider provider = new AesSecretsProvider(null);
+            AesSecretsProvider provider = new AesSecretsProvider(null, TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -38,7 +39,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should not be available with empty master key")
         void shouldNotBeAvailableWithEmptyMasterKey() {
-            AesSecretsProvider provider = new AesSecretsProvider("");
+            AesSecretsProvider provider = new AesSecretsProvider("", TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -46,7 +47,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should not be available with blank master key")
         void shouldNotBeAvailableWithBlankMasterKey() {
-            AesSecretsProvider provider = new AesSecretsProvider("   ");
+            AesSecretsProvider provider = new AesSecretsProvider("   ", TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -59,7 +60,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should encrypt and decrypt successfully")
         void shouldEncryptAndDecryptSuccessfully() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "my-secret-password";
 
             String encrypted = provider.encrypt(plaintext);
@@ -73,7 +74,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return null when encrypting null")
         void shouldReturnNullWhenEncryptingNull() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             String result = provider.encrypt(null);
 
@@ -83,7 +84,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return null when decrypting null")
         void shouldReturnNullWhenDecryptingNull() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             String result = provider.decrypt(null);
 
@@ -93,7 +94,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should not re-encrypt already encrypted value")
         void shouldNotReEncryptAlreadyEncryptedValue() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "my-secret-password";
 
             String encrypted1 = provider.encrypt(plaintext);
@@ -105,7 +106,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return plaintext when decrypting non-encrypted value")
         void shouldReturnPlaintextWhenDecryptingNonEncrypted() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "not-encrypted";
 
             String result = provider.decrypt(plaintext);
@@ -116,7 +117,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should produce different ciphertexts for same plaintext (random IV)")
         void shouldProduceDifferentCiphertexts() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "my-secret-password";
 
             String encrypted1 = provider.encrypt(plaintext);
@@ -130,7 +131,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should handle empty string")
         void shouldHandleEmptyString() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             String encrypted = provider.encrypt("");
             String decrypted = provider.decrypt(encrypted);
@@ -141,7 +142,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should handle special characters")
         void shouldHandleSpecialCharacters() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "pässwörd!@#$%^&*()_+-=[]{}|;':\",./<>?";
 
             String encrypted = provider.encrypt(plaintext);
@@ -153,7 +154,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should handle long strings")
         void shouldHandleLongStrings() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             String plaintext = "a".repeat(10000);
 
             String encrypted = provider.encrypt(plaintext);
@@ -170,7 +171,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("encrypt should return plaintext when not available")
         void encryptShouldReturnPlaintextWhenNotAvailable() {
-            AesSecretsProvider provider = new AesSecretsProvider(null);
+            AesSecretsProvider provider = new AesSecretsProvider(null, TEST_SALT_FILE);
             String plaintext = "secret";
 
             String result = provider.encrypt(plaintext);
@@ -181,7 +182,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("decrypt should return ciphertext when not available")
         void decryptShouldReturnCiphertextWhenNotAvailable() {
-            AesSecretsProvider provider = new AesSecretsProvider(null);
+            AesSecretsProvider provider = new AesSecretsProvider(null, TEST_SALT_FILE);
             String ciphertext = "AES:someencrypteddata";
 
             String result = provider.decrypt(ciphertext);
@@ -197,7 +198,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return true for encrypted value")
         void shouldReturnTrueForEncryptedValue() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             assertThat(provider.isEncrypted("AES:somedata")).isTrue();
         }
@@ -205,7 +206,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return false for non-encrypted value")
         void shouldReturnFalseForNonEncryptedValue() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             assertThat(provider.isEncrypted("plaintext")).isFalse();
         }
@@ -213,7 +214,7 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should return false for null")
         void shouldReturnFalseForNull() {
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             assertThat(provider.isEncrypted(null)).isFalse();
         }
@@ -226,8 +227,8 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should decrypt with different instance using same key")
         void shouldDecryptWithDifferentInstanceUsingSameKey() {
-            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY);
-            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY);
+            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
 
             String plaintext = "shared-secret";
             String encrypted = provider1.encrypt(plaintext);
@@ -239,8 +240,8 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should fail to decrypt with different key")
         void shouldFailToDecryptWithDifferentKey() {
-            AesSecretsProvider provider1 = new AesSecretsProvider("key-one-for-encryption");
-            AesSecretsProvider provider2 = new AesSecretsProvider("key-two-for-decryption");
+            AesSecretsProvider provider1 = new AesSecretsProvider("key-one-for-encryption", TEST_SALT_FILE);
+            AesSecretsProvider provider2 = new AesSecretsProvider("key-two-for-decryption", TEST_SALT_FILE);
 
             String encrypted = provider1.encrypt("secret");
 
