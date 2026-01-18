@@ -116,7 +116,7 @@ pesit:
   
   server:
     # TCP port for Vectis protocol
-    port: 5000
+    port: 6502
     # TLS port for Vectis protocol (when SSL enabled)
     tls-port: 5001
     
@@ -283,6 +283,10 @@ pesit:
     
     # Enable CRC checking (PI 1)
     crc-enabled: false
+    
+    # Session recording (for debugging and testing)
+    session-recording-enabled: true
+    session-recording-directory: ./recordings
 
 # Security Configuration
 pesit.security:
@@ -337,6 +341,7 @@ pesit.security:
     - /actuator/health
     - /actuator/health/**
     - /actuator/info
+    - /api/servers/**
     # WARNING: h2-console must be disabled in production
     # - /h2-console/**
     # REMOVED: /api/v1/deployment/** - requires authentication

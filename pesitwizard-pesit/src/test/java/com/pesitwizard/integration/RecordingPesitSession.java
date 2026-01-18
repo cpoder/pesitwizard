@@ -3,7 +3,8 @@ package com.pesitwizard.integration;
 import java.io.IOException;
 
 import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.integration.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TransportChannel;
 

@@ -23,7 +23,8 @@ import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
-import com.pesitwizard.integration.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -46,6 +46,7 @@ public class PesitServerManager implements ClusterEventListener {
     private final FileSystemService fileSystemService;
     private final SslProperties sslProperties;
     private final SslContextFactory sslContextFactory;
+    private final PesitServerProperties globalProperties;
 
     // Map of running server instances: serverId -> PesitServerInstance
     private final Map<String, PesitServerInstance> runningServers = new ConcurrentHashMap<>();
@@ -394,6 +395,9 @@ public class PesitServerManager implements ClusterEventListener {
         props.setResyncEnabled(config.isResyncEnabled());
         props.setStrictPartnerCheck(config.isStrictPartnerCheck());
         props.setStrictFileCheck(config.isStrictFileCheck());
+        // Copy session recording settings from global properties
+        props.setSessionRecordingEnabled(globalProperties.isSessionRecordingEnabled());
+        props.setSessionRecordingDirectory(globalProperties.getSessionRecordingDirectory());
         return props;
     }
 }

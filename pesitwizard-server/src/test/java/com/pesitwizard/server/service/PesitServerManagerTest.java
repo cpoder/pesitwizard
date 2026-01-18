@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.pesitwizard.server.cluster.ClusterEvent;
 import com.pesitwizard.server.cluster.ClusterProvider;
+import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.config.SslProperties;
 import com.pesitwizard.server.entity.PesitServerConfig;
 import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
@@ -46,6 +47,9 @@ class PesitServerManagerTest {
     @Mock
     private SslContextFactory sslContextFactory;
 
+    @Mock
+    private PesitServerProperties globalProperties;
+
     private PesitServerManager serverManager;
 
     private PesitServerConfig testConfig;
@@ -53,7 +57,7 @@ class PesitServerManagerTest {
     @BeforeEach
     void setUp() {
         serverManager = new PesitServerManager(configRepository, clusterProvider,
-                sessionHandler, fileSystemService, sslProperties, sslContextFactory);
+                sessionHandler, fileSystemService, sslProperties, sslContextFactory, globalProperties);
 
         testConfig = new PesitServerConfig();
         testConfig.setId(1L);

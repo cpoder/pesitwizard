@@ -64,6 +64,12 @@ public class PesitServerProperties {
     /** Require logical file to be configured (if false, any filename is allowed) */
     private boolean strictFileCheck = false;
 
+    /** Enable session recording for debugging/testing */
+    private boolean sessionRecordingEnabled = false;
+
+    /** Directory to save recorded sessions */
+    private String sessionRecordingDirectory = "recorded-sessions";
+
     /** Configured partners (key = partner ID) */
     private Map<String, PartnerConfig> partners = new HashMap<>();
 

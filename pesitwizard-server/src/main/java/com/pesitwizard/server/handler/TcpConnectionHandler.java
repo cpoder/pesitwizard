@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.net.ssl.SSLSocket;
 
@@ -14,6 +17,8 @@ import com.pesitwizard.fpdu.EbcdicConverter;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduReader;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.state.ServerState;
@@ -31,6 +36,7 @@ public class TcpConnectionHandler implements Runnable {
     private final PesitServerProperties properties;
     private final String serverId;
     private SessionContext sessionContext;
+    private PesitSessionRecorder recorder;
 
     public TcpConnectionHandler(Socket socket, PesitSessionHandler sessionHandler,
             PesitServerProperties properties, String serverId) {
@@ -64,6 +70,12 @@ public class TcpConnectionHandler implements Runnable {
             }
 
             sessionContext = sessionHandler.createSession(remoteAddress, serverId);
+
+            // Initialize session recording if enabled
+            if (properties.isSessionRecordingEnabled()) {
+                recorder = new PesitSessionRecorder("session-" + sessionContext.getSessionId());
+                log.info("[{}] Session recording enabled", sessionContext.getSessionId());
+            }
 
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -111,6 +123,11 @@ public class TcpConnectionHandler implements Runnable {
                             sessionContext.getSessionId(), fpdu.getFpduType(),
                             sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
 
+                    // Record received FPDU if recording is enabled
+                    if (recorder != null) {
+                        recorder.record(Direction.RECEIVED, fpdu);
+                    }
+
                     // Process the FPDU directly (pass parsed Fpdu object to avoid data loss)
                     byte[] response = sessionHandler.processIncomingFpdu(sessionContext, fpdu, in, out);
 
@@ -133,6 +150,11 @@ public class TcpConnectionHandler implements Runnable {
                         log.debug("[{}] Sent {} bytes (client encoding: {})",
                                 sessionContext.getSessionId(), response.length,
                                 sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
+
+                        // Record sent FPDU if recording is enabled
+                        if (recorder != null) {
+                            recorder.recordRaw(Direction.SENT, response);
+                        }
                     }
 
                     // Check if session ended normally (RELCONF sent or ABORT)
@@ -163,7 +185,33 @@ public class TcpConnectionHandler implements Runnable {
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
                     e.getMessage(), e);
         } finally {
+            saveRecordingIfEnabled();
             closeConnection();
+        }
+    }
+
+    private void saveRecordingIfEnabled() {
+        if (recorder != null && recorder.getFrames().size() > 0) {
+            try {
+                String dir = properties.getSessionRecordingDirectory();
+                if (dir == null || dir.isEmpty()) {
+                    dir = "recordings";
+                }
+                Path recordingDir = Paths.get(dir);
+                Files.createDirectories(recordingDir);
+                String filename = String.format("session-%s-%d.raw",
+                        sessionContext != null ? sessionContext.getSessionId() : "unknown",
+                        System.currentTimeMillis());
+                Path recordingPath = recordingDir.resolve(filename);
+                recorder.saveRawToFile(recordingPath);
+                log.info("[{}] Session recording saved to {}",
+                        sessionContext != null ? sessionContext.getSessionId() : "unknown",
+                        recordingPath);
+            } catch (IOException e) {
+                log.error("[{}] Failed to save session recording: {}",
+                        sessionContext != null ? sessionContext.getSessionId() : "unknown",
+                        e.getMessage());
+            }
         }
     }
 
