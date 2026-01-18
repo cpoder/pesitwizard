@@ -63,6 +63,7 @@ class SecretServiceTest {
         @Test
         @DisplayName("Should create secret successfully")
         void shouldCreateSecret() {
+            when(secretsService.encryptForStorage(anyString())).thenReturn("AES:v2:encrypted");
             when(secretRepository.existsByName("new-secret")).thenReturn(false);
             when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> {
                 SecretEntry saved = inv.getArgument(0);
