@@ -51,8 +51,15 @@ public enum ParameterValueType {
         @Override
         public String renderValue(ParameterValue value) {
             String dateTime = new String(value.getValue());
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss", Locale.ENGLISH);
-            return LocalDateTime.parse(dateTime, formatter).toString();
+            if (dateTime.equals("000000000000") || dateTime.isBlank()) {
+                return "N/A";
+            }
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss", Locale.ENGLISH);
+                return LocalDateTime.parse(dateTime, formatter).toString();
+            } catch (Exception e) {
+                return dateTime + " (invalid)";
+            }
         }
     },
     // Aggregation of submentioned types

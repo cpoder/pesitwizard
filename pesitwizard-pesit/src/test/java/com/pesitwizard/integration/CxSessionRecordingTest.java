@@ -94,7 +94,7 @@ public class CxSessionRecordingTest {
     }
 
     @Test
-    @Disabled("Date parsing issue with ACK_SELECT - needs fix in SelectMessageBuilder")
+    @Disabled("BIG file requires sync points - use CxConnectTest.testPullWithResume for full PULL")
     void recordSimplePull() throws Exception {
         assumeTrue(isCxAvailable(), "CX not available");
         TcpTransportChannel ch = new TcpTransportChannel(HOST, PORT);
@@ -102,17 +102,25 @@ public class CxSessionRecordingTest {
             Fpdu ac = s.sendFpduWithAck(
                     new ConnectMessageBuilder().demandeur("LOOP").serveur("CETOM1").readAccess().build(1));
             int srv = ac.getIdSrc();
-            s.sendFpduWithAck(new SelectMessageBuilder().filename("SMALL").transferId(0).build(srv));
+            s.sendFpduWithAck(new SelectMessageBuilder().filename("BIG").transferId(0).build(srv));
             s.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(srv));
             s.sendFpduWithAck(new Fpdu(FpduType.READ).withIdDst(srv)
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 0)));
-            // Receive data until DTF_END or CLOSE
+            // Receive data until DTF_END
             boolean done = false;
-            while (!done) {
+            int frameCount = 0;
+            while (!done && frameCount < 100) {
                 Fpdu rx = s.receiveFpdu();
-                if (rx.getFpduType() == FpduType.DTF_END || rx.getFpduType() == FpduType.CLOSE)
+                frameCount++;
+                if (rx.getFpduType() == FpduType.DTF_END)
                     done = true;
             }
+            // Complete transfer sequence
+            s.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(srv));
+            s.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(srv)
+                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 })));
+            s.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(srv)
+                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 })));
             s.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(srv).withIdSrc(1)
                     .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 })));
         }
