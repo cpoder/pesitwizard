@@ -44,8 +44,7 @@ public class FpduBuilder {
                 out.write(pi.getBytes());
                 parameters.add(pi.getParameter());
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                throw new FpduBuildException("Failed to encode parameter " + pi.getParameter(), e);
             }
         }
 

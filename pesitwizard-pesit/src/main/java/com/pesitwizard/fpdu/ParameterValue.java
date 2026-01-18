@@ -22,7 +22,7 @@ public class ParameterValue {
             bytes = ParameterBuilder.forParameter(parameter)
                     .value(value).build();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build parameter " + parameter.getName(), e);
         }
         this.bytes = bytes;
     }
@@ -40,7 +40,7 @@ public class ParameterValue {
             bytes = builder.build();
             valueBytes = builder.getValue();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build parameter " + parameter.getName(), e);
         }
         this.bytes = bytes;
         this.value = valueBytes;
@@ -55,7 +55,7 @@ public class ParameterValue {
             bytes = builder.build();
             valueBytes = builder.getValue();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build parameter " + parameter.getName(), e);
         }
         this.bytes = bytes;
         this.value = valueBytes;
@@ -69,7 +69,7 @@ public class ParameterValue {
             bytes = ParameterBuilder.forParameter(parameter)
                     .value(value ? 1 : 0).build();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build parameter " + parameter.getName(), e);
         }
         this.bytes = bytes;
     }
@@ -91,7 +91,7 @@ public class ParameterValue {
                 baos.write(val.getBytes());
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build PGI " + parameter.getName(), e);
         }
         ParameterBuilder builder = ParameterBuilder.forParameter(parameter).value(baos.toByteArray());
         this.value = builder.getValue();
@@ -99,7 +99,7 @@ public class ParameterValue {
         try {
             combined = builder.build();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new FpduBuildException("Failed to build PGI " + parameter.getName(), e);
         }
         this.bytes = combined;
     }

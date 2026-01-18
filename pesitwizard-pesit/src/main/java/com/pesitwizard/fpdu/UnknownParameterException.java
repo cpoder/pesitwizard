@@ -6,7 +6,7 @@ package com.pesitwizard.fpdu;
  * This indicates a protocol mismatch or an extension not supported by this
  * implementation.
  */
-public class UnknownParameterException extends RuntimeException {
+public class UnknownParameterException extends FpduException {
 
     private final int parameterId;
     private final int parameterLength;
