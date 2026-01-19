@@ -58,13 +58,13 @@ public class DataTransferHandler {
 
         if (transfer == null || transfer.getLocalPath() == null) {
             log.error("[{}] READ: no file selected for transfer", ctx.getSessionId());
-            return FpduResponseBuilder.buildNackRead(ctx, DiagnosticCode.D2_205, "No file selected");
+            return FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D2_205);
         }
 
         Path filePath = transfer.getLocalPath();
         if (!Files.exists(filePath)) {
             log.error("[{}] READ: file not found: {}", ctx.getSessionId(), filePath);
-            return FpduResponseBuilder.buildNackRead(ctx, DiagnosticCode.D2_205, "File not found");
+            return FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D2_205);
         }
 
         // Extract PI 18 (Restart Point)
@@ -77,7 +77,7 @@ public class DataTransferHandler {
         }
 
         // 1. Send ACK(READ)
-        FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckRead(ctx));
+        FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D0_000));
         log.info("[{}] Sent ACK(READ)", ctx.getSessionId());
 
         // 2. Stream file data as DTF chunks

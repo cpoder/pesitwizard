@@ -77,36 +77,14 @@ public class FpduResponseBuilder {
     }
 
     /**
-     * Build negative ACK for CREATE (file error)
+     * Build ACK(CREATE) response - used for both ACK (diag=D0_000) and NACK
+     * (diag!=D0_000)
      */
-    public static Fpdu buildNackCreate(SessionContext ctx, DiagnosticCode diagCode, String message) {
-        byte[] diagBytes = diagCode.toBytes();
-        log.info("[{}] Building NACK_CREATE with diag={} (code={}, reason={}, bytes=[0x{}, 0x{}, 0x{}]), message='{}'",
-                ctx.getSessionId(), diagCode.name(), diagCode.getCode(), diagCode.getReason(),
-                String.format("%02X", diagBytes[0]), String.format("%02X", diagBytes[1]),
-                String.format("%02X", diagBytes[2]), message);
-
-        Fpdu response = new Fpdu(FpduType.ACK_CREATE)
-                .withIdDst(ctx.getClientConnectionId())
-                .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes))
-                .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, 4096)); // Mandatory for ACK_CREATE
-
-        if (message != null && !message.isEmpty()) {
-            response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
-        }
-
-        return response;
-    }
-
-    /**
-     * Build ACK(CREATE) response
-     */
-    public static Fpdu buildAckCreate(SessionContext ctx, int maxEntitySize) {
+    public static Fpdu buildAckCreate(SessionContext ctx, int maxEntitySize, DiagnosticCode diagCode) {
         return new Fpdu(FpduType.ACK_CREATE)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, DIAG_OK))
+                .withParameter(new ParameterValue(PI_02_DIAG, diagCode.toBytes()))
                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize));
     }
 
@@ -206,30 +184,14 @@ public class FpduResponseBuilder {
     }
 
     /**
-     * Build ACK(READ) response
+     * Build ACK(READ) response - used for both ACK (diag=D0_000) and NACK
+     * (diag!=D0_000)
      */
-    public static Fpdu buildAckRead(SessionContext ctx) {
+    public static Fpdu buildAckRead(SessionContext ctx, DiagnosticCode diagCode) {
         return new Fpdu(FpduType.ACK_READ)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, DIAG_OK));
-    }
-
-    /**
-     * Build negative ACK(READ) response
-     */
-    public static Fpdu buildNackRead(SessionContext ctx, DiagnosticCode diagCode, String message) {
-        byte[] diagBytes = diagCode.toBytes();
-        log.info("[{}] Building NACK_READ with diag={}, message='{}'",
-                ctx.getSessionId(), diagCode.name(), message);
-        Fpdu response = new Fpdu(FpduType.ACK_READ)
-                .withIdDst(ctx.getClientConnectionId())
-                .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes));
-        if (message != null && !message.isEmpty()) {
-            response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
-        }
-        return response;
+                .withParameter(new ParameterValue(PI_02_DIAG, diagCode.toBytes()));
     }
 
     /**
@@ -310,25 +272,10 @@ public class FpduResponseBuilder {
     }
 
     /**
-     * Build ACK(MSG) response for message transfer
+     * Build ACK(MSG) response - used for both ACK (diag=D0_000) and NACK
+     * (diag!=D0_000)
      */
-    public static Fpdu buildAckMsg(SessionContext ctx, String responseMessage) {
-        Fpdu response = new Fpdu(FpduType.ACK_MSG)
-                .withIdDst(ctx.getClientConnectionId())
-                .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, DIAG_OK));
-
-        if (responseMessage != null && !responseMessage.isEmpty()) {
-            response.withParameter(new ParameterValue(PI_91_MESSAGE, responseMessage));
-        }
-
-        return response;
-    }
-
-    /**
-     * Build negative ACK(MSG) response
-     */
-    public static Fpdu buildNackMsg(SessionContext ctx, DiagnosticCode diagCode, String message) {
+    public static Fpdu buildAckMsg(SessionContext ctx, DiagnosticCode diagCode, String message) {
         Fpdu response = new Fpdu(FpduType.ACK_MSG)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)

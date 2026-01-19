@@ -387,7 +387,7 @@ class PesitSessionHandlerTest {
         @Test
         @DisplayName("should delegate CREATE to TransferOperationHandler")
         void shouldDelegateCreate() throws Exception {
-            Fpdu ackCreate = FpduResponseBuilder.buildAckCreate(connectedCtx, 4096);
+            Fpdu ackCreate = FpduResponseBuilder.buildAckCreate(connectedCtx, 4096, DiagnosticCode.D0_000);
             when(transferOperationHandler.handleCreate(any(), any())).thenReturn(ackCreate);
 
             Fpdu createFpdu = new CreateMessageBuilder()
