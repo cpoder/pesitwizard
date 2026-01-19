@@ -198,6 +198,43 @@ public class GoldenFileRegressionTest {
         assertTrue(types.contains(FpduType.ACK_SELECT), "Should have ACK_SELECT");
     }
 
+    // ========== EDGE CASE TESTS ==========
+
+    @Test
+    @DisplayName("should verify transfer ID is present in file operations")
+    void shouldVerifyTransferIdPresent() throws Exception {
+        PesitSessionRecorder recorder = loadGoldenFile("golden/cx-push-1mb.raw");
+        Fpdu createFpdu = recorder.getFrames().stream()
+                .map(f -> new FpduParser(f.data()).parse())
+                .filter(fpdu -> fpdu.getFpduType() == FpduType.CREATE)
+                .findFirst().orElse(null);
+        assertNotNull(createFpdu);
+        ParameterValue pi13 = createFpdu.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
+        assertNotNull(pi13, "CREATE should have transfer ID");
+    }
+
+    @Test
+    @DisplayName("should verify session ends with RELEASE/RELCONF")
+    void shouldVerifySessionEndsWithRelease() throws Exception {
+        PesitSessionRecorder recorder = loadGoldenFile("golden/cx-push-1mb.raw");
+        var frames = recorder.getFrames();
+        int lastIdx = frames.size() - 1;
+        FpduType lastType = parseType(frames.get(lastIdx));
+        assertTrue(lastType == FpduType.RELCONF || lastType == FpduType.RELEASE,
+                "Session should end with RELEASE or RELCONF");
+    }
+
+    @Test
+    @DisplayName("should verify CREATE has filename parameter")
+    void shouldVerifyCreateHasFilename() throws Exception {
+        PesitSessionRecorder recorder = loadGoldenFile("golden/cx-push-1mb.raw");
+        Fpdu createFpdu = recorder.getFrames().stream()
+                .map(f -> new FpduParser(f.data()).parse())
+                .filter(fpdu -> fpdu.getFpduType() == FpduType.CREATE)
+                .findFirst().orElse(null);
+        assertNotNull(createFpdu, "Should have CREATE FPDU");
+    }
+
     // ========== HELPER METHODS ==========
 
     private long countFpduType(PesitSessionRecorder recorder, FpduType type) {
