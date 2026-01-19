@@ -87,7 +87,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_CREATE response")
         void shouldBuildAckCreate() {
-            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096);
+            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
             assertEquals(1, response.getIdDst());
@@ -96,8 +96,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_CREATE response")
         void shouldBuildNackCreate() {
-            Fpdu response = FpduResponseBuilder.buildNackCreate(sessionContext,
-                    DiagnosticCode.D2_205, "File not found");
+            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
         }
@@ -163,7 +162,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_READ response")
         void shouldBuildAckRead() {
-            Fpdu response = FpduResponseBuilder.buildAckRead(sessionContext);
+            Fpdu response = FpduResponseBuilder.buildAckRead(sessionContext, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_READ, response.getFpduType());
         }
@@ -231,7 +230,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG response")
         void shouldBuildAckMsg() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, "Response message");
+            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, "Response message");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -239,7 +238,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG without message")
         void shouldBuildAckMsgWithoutMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, null);
+            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, null);
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -247,8 +246,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_MSG response")
         void shouldBuildNackMsg() {
-            Fpdu response = FpduResponseBuilder.buildNackMsg(sessionContext,
-                    DiagnosticCode.D2_299, "Error message");
+            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D2_299, "Error message");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -320,8 +318,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_CREATE with empty message")
         void shouldBuildNackCreateWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildNackCreate(sessionContext,
-                    DiagnosticCode.D2_205, "");
+            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
         }
@@ -345,7 +342,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG with empty message")
         void shouldBuildAckMsgWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, "");
+            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, "");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -393,7 +390,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_READ")
         void shouldBuildAckRead() {
-            Fpdu response = FpduResponseBuilder.buildAckRead(sessionContext);
+            Fpdu response = FpduResponseBuilder.buildAckRead(sessionContext, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_READ, response.getFpduType());
         }

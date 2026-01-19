@@ -48,7 +48,7 @@ public class MessageHandler {
         // For now, just acknowledge receipt
 
         // Stay in CN03 state after message
-        return FpduResponseBuilder.buildAckMsg(ctx, null);
+        return FpduResponseBuilder.buildAckMsg(ctx, DiagnosticCode.D0_000, null);
     }
 
     /**
@@ -137,7 +137,7 @@ public class MessageHandler {
         // Return to connected state
         ctx.transitionTo(ServerState.CN03_CONNECTED);
 
-        return FpduResponseBuilder.buildAckMsg(ctx, null);
+        return FpduResponseBuilder.buildAckMsg(ctx, DiagnosticCode.D0_000, null);
     }
 
     /**

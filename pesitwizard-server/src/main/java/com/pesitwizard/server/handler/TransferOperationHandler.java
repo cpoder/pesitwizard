@@ -61,15 +61,13 @@ public class TransferOperationHandler {
             log.warn("[{}] Logical file validation failed for CREATE: {}",
                     ctx.getSessionId(), fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildNackCreate(ctx, fileValidation.getDiagCode(),
-                    fileValidation.getMessage());
+            return FpduResponseBuilder.buildAckCreate(ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
         }
 
         // Prepare local file path
         Path localPath = prepareReceivePath(ctx, transfer);
         if (localPath == null) {
-            return FpduResponseBuilder.buildNackCreate(ctx, DiagnosticCode.D2_211,
-                    "Cannot prepare receive directory");
+            return FpduResponseBuilder.buildAckCreate(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
         }
         transfer.setLocalPath(localPath);
 
@@ -87,7 +85,7 @@ public class TransferOperationHandler {
         int maxSize = Math.min(properties.getMaxEntitySize(),
                 transfer.getMaxEntitySize() > 0 ? transfer.getMaxEntitySize() : properties.getMaxEntitySize());
         log.debug("[{}] handleCreate: building ACK(CREATE) with maxEntitySize={}", ctx.getSessionId(), maxSize);
-        return FpduResponseBuilder.buildAckCreate(ctx, maxSize);
+        return FpduResponseBuilder.buildAckCreate(ctx, maxSize, DiagnosticCode.D0_000);
     }
 
     /**
