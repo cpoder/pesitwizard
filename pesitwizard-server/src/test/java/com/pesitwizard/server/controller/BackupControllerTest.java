@@ -15,10 +15,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.pesitwizard.server.backup.BackupService;
-import com.pesitwizard.server.backup.BackupService.BackupInfo;
-import com.pesitwizard.server.backup.BackupService.BackupResult;
-import com.pesitwizard.server.backup.BackupService.RestoreResult;
+import com.pesitwizard.backup.BackupInfo;
+import com.pesitwizard.backup.BackupResult;
+import com.pesitwizard.backup.RestoreResult;
+import com.pesitwizard.server.backup.BackupServiceAdapter;
 
 @WebMvcTest(BackupController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -29,7 +29,7 @@ class BackupControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private BackupService backupService;
+    private BackupServiceAdapter backupService;
 
     @Test
     @DisplayName("should create backup")
@@ -62,15 +62,15 @@ class BackupControllerTest {
     @DisplayName("should list backups")
     void shouldListBackups() throws Exception {
         BackupInfo backup1 = new BackupInfo();
-        backup1.setName("backup-1.zip");
+        backup1.setFilename("backup-1.zip");
         BackupInfo backup2 = new BackupInfo();
-        backup2.setName("backup-2.zip");
+        backup2.setFilename("backup-2.zip");
         when(backupService.listBackups()).thenReturn(List.of(backup1, backup2));
 
         mockMvc.perform(get("/api/v1/backup"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("backup-1.zip"));
+                .andExpect(jsonPath("$[0].filename").value("backup-1.zip"));
     }
 
     @Test
