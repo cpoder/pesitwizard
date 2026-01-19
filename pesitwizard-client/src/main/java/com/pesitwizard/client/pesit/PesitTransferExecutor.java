@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import com.pesitwizard.client.dto.TransferRequest;
 import com.pesitwizard.client.entity.PesitServer;
 import com.pesitwizard.client.entity.TransferConfig;
-import com.pesitwizard.client.security.SecretsService;
 import com.pesitwizard.client.service.RestartRequiredException;
 import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.StorageConnector;
@@ -23,6 +22,7 @@ import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
 
 import lombok.RequiredArgsConstructor;

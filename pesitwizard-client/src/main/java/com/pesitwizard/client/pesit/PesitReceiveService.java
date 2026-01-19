@@ -20,7 +20,6 @@ import com.pesitwizard.client.entity.TransferConfig;
 import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
 import com.pesitwizard.client.event.TransferEventBus;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
-import com.pesitwizard.client.security.SecretsService;
 import com.pesitwizard.client.service.RestartRequiredException;
 import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.StorageConnector;
@@ -30,6 +29,7 @@ import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TransportChannel;
 

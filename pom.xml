@@ -15,6 +15,7 @@
     <url>https://pesitwizard.com</url>
 
     <modules>
+        <module>pesitwizard-common</module>
         <module>pesitwizard-pesit</module>
         <module>pesitwizard-security</module>
         <module>pesitwizard-connector-api</module>

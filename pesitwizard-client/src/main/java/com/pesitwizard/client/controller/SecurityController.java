@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.client.security.SecretsService;
 import com.pesitwizard.client.service.EncryptionMigrationService;
+import com.pesitwizard.security.SecretsService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,12 +60,12 @@ public class SecurityController {
                 || (masterKeyFile != null && !masterKeyFile.isBlank());
 
         boolean vaultEnabled = "VAULT".equalsIgnoreCase(encryptionMode);
-        boolean vaultConnected = vaultEnabled && status.enabled() && "VAULT".equals(status.mode());
+        boolean vaultConnected = vaultEnabled && status.available() && "VAULT".equals(status.providerType());
 
         return ResponseEntity.ok(Map.of(
                 "encryption", Map.of(
-                        "enabled", status.enabled(),
-                        "mode", status.mode(),
+                        "enabled", status.available(),
+                        "mode", status.providerType(),
                         "message", status.message()),
                 "aes", Map.of(
                         "configured", true,
@@ -210,7 +210,7 @@ public class SecurityController {
                         "PESITWIZARD_SECURITY_VAULT_TOKEN", "<your-token>",
                         "PESITWIZARD_SECURITY_VAULT_PATH", "secret/data/pesitwizard/client"),
                 "vaultAvailable", secretsService.isVaultAvailable(),
-                "currentMode", secretsService.getMode()));
+                "currentMode", secretsService.getEncryptionMode()));
     }
 
     /**

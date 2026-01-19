@@ -13,9 +13,9 @@ import com.pesitwizard.client.entity.PesitServer;
 import com.pesitwizard.client.entity.StorageConnection;
 import com.pesitwizard.client.repository.PesitServerRepository;
 import com.pesitwizard.client.repository.StorageConnectionRepository;
-import com.pesitwizard.client.security.SecretsService;
+import com.pesitwizard.security.AbstractEncryptionMigrationService;
+import com.pesitwizard.security.SecretsService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -24,23 +24,25 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class EncryptionMigrationService {
+public class EncryptionMigrationService extends AbstractEncryptionMigrationService {
 
-    private final SecretsService secretsService;
     private final PesitServerRepository serverRepository;
     private final StorageConnectionRepository connectionRepository;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Migrate all secrets to Vault.
-     */
-    @Transactional
-    public MigrationResult migrateAllToVault() {
-        if (!secretsService.isVaultAvailable()) {
-            return new MigrationResult(false, "Vault is not available", 0, 0, List.of());
-        }
+    public EncryptionMigrationService(SecretsService secretsService,
+            PesitServerRepository serverRepository,
+            StorageConnectionRepository connectionRepository,
+            ObjectMapper objectMapper) {
+        super(secretsService);
+        this.serverRepository = serverRepository;
+        this.connectionRepository = connectionRepository;
+        this.objectMapper = objectMapper;
+    }
 
+    @Override
+    @Transactional
+    protected MigrationResult doMigration() {
         List<String> details = new ArrayList<>();
         int totalMigrated = 0;
         int totalSkipped = 0;
@@ -60,9 +62,7 @@ public class EncryptionMigrationService {
 
         log.info("Vault migration completed: {} migrated, {} skipped", totalMigrated, totalSkipped);
 
-        return new MigrationResult(true,
-                "Migration completed successfully",
-                totalMigrated, totalSkipped, details);
+        return new MigrationResult(true, "Migration completed successfully", totalMigrated, totalSkipped, details);
     }
 
     private MigrationCount migratePesitServers() {
@@ -194,27 +194,4 @@ public class EncryptionMigrationService {
                 lower.equals("token") || lower.equals("credential");
     }
 
-    private boolean isVaultRef(String value) {
-        return value != null && (value.startsWith("vault:") || value.startsWith("VAULT:"));
-    }
-
-    private String decryptIfNeeded(String value) {
-        if (value == null)
-            return null;
-        if (secretsService.isEncrypted(value)) {
-            return secretsService.decrypt(value);
-        }
-        return value;
-    }
-
-    public record MigrationResult(
-            boolean success,
-            String message,
-            int totalMigrated,
-            int totalSkipped,
-            List<String> details) {
-    }
-
-    private record MigrationCount(int migrated, int skipped) {
-    }
 }

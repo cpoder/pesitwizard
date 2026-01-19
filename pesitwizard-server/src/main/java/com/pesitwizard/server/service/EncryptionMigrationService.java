@@ -6,29 +6,33 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pesitwizard.security.AbstractEncryptionMigrationService;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.repository.CertificateStoreRepository;
 import com.pesitwizard.server.repository.PartnerRepository;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class EncryptionMigrationService {
+public class EncryptionMigrationService extends AbstractEncryptionMigrationService {
 
-    private final SecretsService secretsService;
     private final PartnerRepository partnerRepository;
     private final CertificateStoreRepository certificateStoreRepository;
 
+    public EncryptionMigrationService(SecretsService secretsService,
+            PartnerRepository partnerRepository,
+            CertificateStoreRepository certificateStoreRepository) {
+        super(secretsService);
+        this.partnerRepository = partnerRepository;
+        this.certificateStoreRepository = certificateStoreRepository;
+    }
+
+    @Override
     @Transactional
-    public MigrationResult migrateAllToVault() {
-        if (!"VAULT".equals(secretsService.getEncryptionMode())) {
-            return new MigrationResult(false, "Vault mode not enabled", 0, 0, List.of());
-        }
+    protected MigrationResult doMigration() {
         List<String> details = new ArrayList<>();
         int totalMigrated = 0, totalSkipped = 0;
 
@@ -84,20 +88,4 @@ public class EncryptionMigrationService {
         return new MigrationCount(migrated, skipped);
     }
 
-    private boolean isVaultRef(String v) {
-        return v != null && v.startsWith("vault:");
-    }
-
-    private String decryptIfNeeded(String v) {
-        if (v != null && (v.startsWith("AES:") || v.startsWith("ENC:")))
-            return secretsService.decryptFromStorage(v);
-        return v;
-    }
-
-    public record MigrationResult(boolean success, String message, int totalMigrated, int totalSkipped,
-            List<String> details) {
-    }
-
-    private record MigrationCount(int migrated, int skipped) {
-    }
 }

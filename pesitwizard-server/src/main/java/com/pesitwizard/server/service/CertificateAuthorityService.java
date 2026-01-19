@@ -1,22 +1,16 @@
 package com.pesitwizard.server.service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
 
@@ -30,8 +24,6 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -39,6 +31,11 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pesitwizard.common.crypto.CertificateUtils;
+import com.pesitwizard.common.crypto.CryptoException;
+import com.pesitwizard.common.crypto.CsrUtils;
+import com.pesitwizard.common.crypto.KeystoreUtils;
+import com.pesitwizard.common.crypto.PemUtils;
 import com.pesitwizard.server.config.CaProperties;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
@@ -443,56 +440,23 @@ public class CertificateAuthorityService {
         }
     }
 
-    // ========== Helper Methods ==========
+    // ========== Helper Methods (delegating to pesitwizard-common) ==========
 
-    private KeyPair generateKeyPair(int keySize) throws Exception {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(keySize, new SecureRandom());
-        return keyGen.generateKeyPair();
+    private KeyPair generateKeyPair(int keySize) throws CryptoException {
+        return KeystoreUtils.generateKeyPair(keySize);
     }
 
     private X509Certificate generateSelfSignedCertificate(
             KeyPair keyPair,
             X500Name subject,
             Duration validity,
-            boolean isCA) throws Exception {
-
-        BigInteger serialNumber = new BigInteger(128, new SecureRandom());
-        Instant now = Instant.now();
-        Date notBefore = Date.from(now);
-        Date notAfter = Date.from(now.plus(validity));
-
-        X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                subject,
-                serialNumber,
-                notBefore,
-                notAfter,
-                subject,
-                keyPair.getPublic());
-
-        // Add CA extensions
-        certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(isCA));
-
-        if (isCA) {
-            KeyUsage keyUsage = new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
-            certBuilder.addExtension(Extension.keyUsage, true, keyUsage);
-        }
-
-        ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).build(keyPair.getPrivate());
-        X509CertificateHolder certHolder = certBuilder.build(signer);
-
-        return new JcaX509CertificateConverter().getCertificate(certHolder);
+            boolean isCA) throws CryptoException {
+        return CertificateUtils.generateSelfSignedCertificate(keyPair, subject, validity, isCA);
     }
 
     private byte[] createKeystore(X509Certificate cert, PrivateKey privateKey, String alias, String password)
-            throws Exception {
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(null, null);
-        keyStore.setKeyEntry(alias, privateKey, password.toCharArray(), new Certificate[] { cert });
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        keyStore.store(bos, password.toCharArray());
-        return bos.toByteArray();
+            throws CryptoException {
+        return KeystoreUtils.createKeystore(cert, privateKey, alias, password);
     }
 
     private byte[] createKeystoreWithChain(
@@ -500,64 +464,28 @@ public class CertificateAuthorityService {
             PrivateKey privateKey,
             Certificate[] chain,
             String alias,
-            String password) throws Exception {
-
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(null, null);
-        keyStore.setKeyEntry(alias, privateKey, password.toCharArray(), chain);
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        keyStore.store(bos, password.toCharArray());
-        return bos.toByteArray();
+            String password) throws CryptoException {
+        return KeystoreUtils.createKeystoreWithChain(cert, privateKey, chain, alias, password);
     }
 
-    private String toPem(Object obj) throws Exception {
-        StringWriter sw = new StringWriter();
-        try (JcaPEMWriter writer = new JcaPEMWriter(sw)) {
-            writer.writeObject(obj);
-        }
-        return sw.toString();
+    private String toPem(Object obj) throws CryptoException {
+        return PemUtils.toPem(obj);
     }
 
-    private PKCS10CertificationRequest parseCsr(String csrPem) throws Exception {
-        try (PEMParser parser = new PEMParser(new StringReader(csrPem))) {
-            Object obj = parser.readObject();
-            if (obj instanceof PKCS10CertificationRequest) {
-                return (PKCS10CertificationRequest) obj;
-            }
-            throw new SslConfigurationException("Invalid CSR format");
-        }
+    private PKCS10CertificationRequest parseCsr(String csrPem) throws CryptoException {
+        return CsrUtils.parseCsr(csrPem);
     }
 
-    private X509Certificate parseCertificate(String certPem) throws Exception {
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        return (X509Certificate) cf.generateCertificate(
-                new ByteArrayInputStream(certPem.getBytes()));
+    private X509Certificate parseCertificate(String certPem) throws CryptoException {
+        return PemUtils.parseCertificate(certPem);
     }
 
-    private PrivateKey parsePrivateKey(String keyPem) throws Exception {
-        try (PEMParser parser = new PEMParser(new StringReader(keyPem))) {
-            Object obj = parser.readObject();
-
-            if (obj instanceof org.bouncycastle.openssl.PEMKeyPair) {
-                // PKCS#1 format (BEGIN RSA PRIVATE KEY)
-                org.bouncycastle.openssl.PEMKeyPair keyPair = (org.bouncycastle.openssl.PEMKeyPair) obj;
-                return new org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter()
-                        .getPrivateKey(keyPair.getPrivateKeyInfo());
-            } else if (obj instanceof org.bouncycastle.asn1.pkcs.PrivateKeyInfo) {
-                // PKCS#8 format (BEGIN PRIVATE KEY)
-                return new org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter()
-                        .getPrivateKey((org.bouncycastle.asn1.pkcs.PrivateKeyInfo) obj);
-            } else {
-                throw new SslConfigurationException("Unknown private key format: " + obj.getClass().getName());
-            }
-        }
+    private PrivateKey parsePrivateKey(String keyPem) throws CryptoException {
+        return PemUtils.parsePrivateKey(keyPem);
     }
 
     private String generatePassword() {
-        byte[] bytes = new byte[16];
-        new SecureRandom().nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return KeystoreUtils.generateSecurePassword();
     }
 
     // ========== DTOs ==========
