@@ -22,6 +22,7 @@
         <module>pesitwizard-connector-local</module>
         <module>pesitwizard-connector-sftp</module>
         <module>pesitwizard-connector-s3</module>
+        <module>pesitwizard-backup</module>
         <module>pesitwizard-server</module>
         <module>pesitwizard-client</module>
     </modules>

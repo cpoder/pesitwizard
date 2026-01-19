@@ -42,6 +42,13 @@
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
+        <!-- PeSIT Wizard Backup -->
+        <dependency>
+            <groupId>com.pesitwizard</groupId>
+            <artifactId>pesitwizard-backup</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- PeSIT Wizard Protocol Library -->
         <dependency>
             <groupId>com.pesitwizard</groupId>
