@@ -110,6 +110,46 @@ public class SecretsService {
                 getStatusMessage());
     }
 
+    /**
+     * Direct encrypt method (alias for encryptForStorage).
+     */
+    public String encrypt(String plaintext) {
+        return encryptForStorage(plaintext);
+    }
+
+    /**
+     * Direct decrypt method (alias for decryptFromStorage).
+     */
+    public String decrypt(String ciphertext) {
+        return decryptFromStorage(ciphertext);
+    }
+
+    /**
+     * Check if any encryption is available.
+     */
+    public boolean isAvailable() {
+        return secretsProvider.isAvailable();
+    }
+
+    /**
+     * Check if Vault is the active provider.
+     */
+    public boolean isVaultAvailable() {
+        return "VAULT".equals(secretsProvider.getProviderType()) && secretsProvider.isAvailable();
+    }
+
+    /**
+     * Store a secret directly in Vault with a specific key.
+     * Returns a vault reference to store in the database.
+     */
+    public String storeInVault(String key, String plaintext) {
+        if (!isVaultAvailable()) {
+            throw new IllegalStateException("Vault is not available");
+        }
+        secretsProvider.storeSecret(key, plaintext);
+        return "vault:" + key;
+    }
+
     private String getStatusMessage() {
         String type = secretsProvider.getProviderType();
         boolean available = secretsProvider.isAvailable();

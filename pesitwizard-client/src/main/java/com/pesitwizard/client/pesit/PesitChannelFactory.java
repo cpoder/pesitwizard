@@ -3,7 +3,7 @@ package com.pesitwizard.client.pesit;
 import org.springframework.stereotype.Component;
 
 import com.pesitwizard.client.entity.PesitServer;
-import com.pesitwizard.client.security.SecretsService;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.transport.TcpTransportChannel;
 import com.pesitwizard.transport.TlsTransportChannel;
 import com.pesitwizard.transport.TransportChannel;

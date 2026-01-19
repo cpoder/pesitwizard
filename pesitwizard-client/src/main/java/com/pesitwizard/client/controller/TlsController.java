@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pesitwizard.client.repository.PesitServerRepository;
-import com.pesitwizard.client.security.SecretsService;
+import com.pesitwizard.security.SecretsService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

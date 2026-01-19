@@ -20,7 +20,6 @@ import com.pesitwizard.client.entity.TransferConfig;
 import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
 import com.pesitwizard.client.event.TransferEventBus;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
-import com.pesitwizard.client.security.SecretsService;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.exception.PesitException;
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
@@ -28,6 +27,7 @@ import com.pesitwizard.fpdu.CreateMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TransportChannel;
 
@@ -120,7 +120,8 @@ public class PesitSendService {
 
         int negotiatedSyncKb = parsePI7(aconnect);
         long syncIntervalBytes = negotiatedSyncKb * 1024L;
-        if (negotiatedSyncKb == 0) syncEnabled = false;
+        if (negotiatedSyncKb == 0)
+            syncEnabled = false;
 
         int serverMaxEntity = parsePI25(aconnect);
         int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
@@ -128,7 +129,8 @@ public class PesitSendService {
         int initialPi25 = serverMaxEntity > 0 ? serverMaxEntity : 65535;
 
         ctx.createSent();
-        int negotiatedPi25 = negotiateCreate(session, serverConnId, virtualFile, transferId, fileSizeKB, initialPi25, recordLength);
+        int negotiatedPi25 = negotiateCreate(session, serverConnId, virtualFile, transferId, fileSizeKB, initialPi25,
+                recordLength);
         ctx.createAck();
 
         ctx.openSent();
@@ -139,7 +141,8 @@ public class PesitSendService {
         session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
         ctx.writeAck();
 
-        sendData(session, serverConnId, inputStream, negotiatedPi25, recordLength, syncIntervalBytes, syncEnabled, ctx, cancelledTransfers);
+        sendData(session, serverConnId, inputStream, negotiatedPi25, recordLength, syncIntervalBytes, syncEnabled, ctx,
+                cancelledTransfers);
         sendCleanup(session, serverConnId, connectionId, ctx);
     }
 
@@ -179,29 +182,31 @@ public class PesitSendService {
             throws IOException, InterruptedException {
         ctx.dtfEndSent();
         session.sendFpdu(new Fpdu(FpduType.DTF_END).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0,0,0})));
+                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
         ctx.transEndSent();
         session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnId));
         ctx.transEndAck();
         ctx.closeSent();
         session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0,0,0})));
+                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
         ctx.closeAck();
         ctx.deselectSent();
         session.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0,0,0})));
+                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
         ctx.deselectAck();
         ctx.releaseSent();
         session.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(serverConnId).withIdSrc(connectionId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0,0,0})));
+                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
         ctx.releaseAck();
     }
 
     private int negotiateCreate(PesitSession session, int serverConnId, String virtualFile,
-            int transferId, long fileSizeKB, int initialPi25, int recordLength) throws IOException, InterruptedException {
+            int transferId, long fileSizeKB, int initialPi25, int recordLength)
+            throws IOException, InterruptedException {
         int pi25 = initialPi25;
         Fpdu create = new CreateMessageBuilder().filename(virtualFile).transferId(transferId)
-                .variableFormat().recordLength(recordLength).maxEntitySize(pi25).fileSizeKB(fileSizeKB).build(serverConnId);
+                .variableFormat().recordLength(recordLength).maxEntitySize(pi25).fileSizeKB(fileSizeKB)
+                .build(serverConnId);
         session.sendFpduWithAck(create);
         return pi25;
     }
@@ -218,7 +223,8 @@ public class PesitSendService {
         ParameterValue pv = fpdu.getParameter(PI_25_TAILLE_MAX_ENTITE);
         if (pv != null && pv.getValue() != null) {
             int val = 0;
-            for (byte b : pv.getValue()) val = (val << 8) | (b & 0xFF);
+            for (byte b : pv.getValue())
+                val = (val << 8) | (b & 0xFF);
             return val;
         }
         return 0;
@@ -244,6 +250,10 @@ public class PesitSendService {
     }
 
     private void closeQuietly(AutoCloseable c) {
-        if (c != null) try { c.close(); } catch (Exception ignored) {}
+        if (c != null)
+            try {
+                c.close();
+            } catch (Exception ignored) {
+            }
     }
 }

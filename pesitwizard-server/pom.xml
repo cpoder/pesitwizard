@@ -26,6 +26,13 @@
     </properties>
 
     <dependencies>
+        <!-- PeSIT Wizard Common Crypto Utilities -->
+        <dependency>
+            <groupId>com.pesitwizard</groupId>
+            <artifactId>pesitwizard-common</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- PeSIT Wizard Protocol Library -->
         <dependency>
             <groupId>com.pesitwizard</groupId>

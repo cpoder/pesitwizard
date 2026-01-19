@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pesitwizard.client.connector.ConnectorRegistry;
 import com.pesitwizard.client.entity.StorageConnection;
 import com.pesitwizard.client.repository.StorageConnectionRepository;
-import com.pesitwizard.client.security.SecretsService;
 import com.pesitwizard.connector.StorageConnector;
+import com.pesitwizard.security.SecretsService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
