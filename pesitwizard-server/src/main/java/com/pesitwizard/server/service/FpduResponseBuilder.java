@@ -100,40 +100,6 @@ public class FpduResponseBuilder {
     }
 
     /**
-     * Build negative ACK for SELECT (file error)
-     */
-    public static Fpdu buildNackSelect(SessionContext ctx, DiagnosticCode diagCode, String message) {
-        byte[] diagBytes = diagCode.toBytes();
-        log.info("[{}] Building NACK_SELECT with diag={} (code={}, reason={}, bytes=[0x{}, 0x{}, 0x{}]), message='{}'",
-                ctx.getSessionId(), diagCode.name(), diagCode.getCode(), diagCode.getReason(),
-                String.format("%02X", diagBytes[0]), String.format("%02X", diagBytes[1]),
-                String.format("%02X", diagBytes[2]), message);
-
-        TransferContext transfer = ctx.getCurrentTransfer();
-        String filename = transfer != null ? transfer.getFilename() : "unknown";
-        int fileType = transfer != null ? transfer.getFileType() : 0;
-        int transferId = transfer != null ? transfer.getTransferId() : 1;
-
-        // PGI 9: File Identification (required for ACK_SELECT)
-        ParameterValue pgi9 = new ParameterValue(PGI_09_ID_FICHIER,
-                new ParameterValue(PI_11_TYPE_FICHIER, fileType),
-                new ParameterValue(PI_12_NOM_FICHIER, filename));
-
-        Fpdu response = new Fpdu(FpduType.ACK_SELECT)
-                .withIdDst(ctx.getClientConnectionId())
-                .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, diagBytes))
-                .withParameter(pgi9)
-                .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, transferId));
-
-        if (message != null && !message.isEmpty()) {
-            response.withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, message));
-        }
-
-        return response;
-    }
-
-    /**
      * Build ACK(CREATE) response
      */
     public static Fpdu buildAckCreate(SessionContext ctx, int maxEntitySize) {
@@ -156,7 +122,7 @@ public class FpduResponseBuilder {
      * - PGI_40_ATTR_PHYSIQUES: Physical attributes (PI_42 max reservation)
      * - PGI_50_ATTR_HISTORIQUES: Historical attributes (PI_51 creation date)
      */
-    public static Fpdu buildAckSelect(SessionContext ctx, int maxEntitySize) {
+    public static Fpdu buildAckSelect(SessionContext ctx, int maxEntitySize, DiagnosticCode diagCode) {
         TransferContext transfer = ctx.getCurrentTransfer();
         String filename = transfer != null ? transfer.getFilename() : "unknown";
         int transferId = transfer != null ? transfer.getTransferId() : 1;
@@ -209,7 +175,7 @@ public class FpduResponseBuilder {
         return new Fpdu(FpduType.ACK_SELECT)
                 .withIdDst(ctx.getClientConnectionId())
                 .withIdSrc(0)
-                .withParameter(new ParameterValue(PI_02_DIAG, DIAG_OK))
+                .withParameter(new ParameterValue(PI_02_DIAG, diagCode.toBytes()))
                 .withParameter(pgi9)
                 .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, transferId))
                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, maxEntitySize))

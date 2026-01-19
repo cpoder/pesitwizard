@@ -110,7 +110,7 @@ class FpduResponseBuilderTest {
             transfer.setTransferId(1);
             sessionContext.setCurrentTransfer(transfer);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096);
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -118,8 +118,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT response")
         void shouldBuildNackSelect() {
-            Fpdu response = FpduResponseBuilder.buildNackSelect(sessionContext,
-                    DiagnosticCode.D2_205, "File not found");
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -330,8 +329,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT with empty message")
         void shouldBuildNackSelectWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildNackSelect(sessionContext,
-                    DiagnosticCode.D2_205, "");
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -339,8 +337,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT with null message")
         void shouldBuildNackSelectWithNullMessage() {
-            Fpdu response = FpduResponseBuilder.buildNackSelect(sessionContext,
-                    DiagnosticCode.D2_205, null);
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -358,7 +355,7 @@ class FpduResponseBuilderTest {
         void shouldBuildAckSelectWithNullTransfer() {
             sessionContext.setCurrentTransfer(null);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096);
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -372,7 +369,7 @@ class FpduResponseBuilderTest {
             transfer.setLocalPath(null);
             sessionContext.setCurrentTransfer(transfer);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096);
+            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }

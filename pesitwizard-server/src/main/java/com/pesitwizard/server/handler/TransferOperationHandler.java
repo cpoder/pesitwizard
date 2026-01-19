@@ -112,8 +112,7 @@ public class TransferOperationHandler {
             log.warn("[{}] Logical file validation failed for SELECT: {}",
                     ctx.getSessionId(), fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildNackSelect(ctx, fileValidation.getDiagCode(),
-                    fileValidation.getMessage());
+            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
         }
 
         // Set file attributes from config (for ACK_SELECT)
@@ -133,15 +132,13 @@ public class TransferOperationHandler {
             log.warn("[{}] SELECT: file '{}' not found at {}",
                     ctx.getSessionId(), transfer.getFilename(), filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildNackSelect(ctx, DiagnosticCode.D2_205,
-                    "File '" + transfer.getFilename() + "' not found");
+            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_205);
         }
         if (!Files.isReadable(filePath)) {
             log.error("[{}] SELECT: access denied to file '{}' at {}",
                     ctx.getSessionId(), transfer.getFilename(), filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildNackSelect(ctx, DiagnosticCode.D2_211,
-                    "Access denied to file: " + transfer.getFilename());
+            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
         }
 
         transfer.setLocalPath(filePath);
@@ -166,7 +163,7 @@ public class TransferOperationHandler {
         int maxEntitySize = transfer.getMaxEntitySize() > 0
                 ? transfer.getMaxEntitySize()
                 : properties.getMaxEntitySize();
-        return FpduResponseBuilder.buildAckSelect(ctx, maxEntitySize);
+        return FpduResponseBuilder.buildAckSelect(ctx, maxEntitySize, DiagnosticCode.D0_000);
     }
 
     /**

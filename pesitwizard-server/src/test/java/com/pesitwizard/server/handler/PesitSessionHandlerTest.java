@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.CreateMessageBuilder;
+import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
 import com.pesitwizard.fpdu.FpduType;
@@ -406,7 +407,7 @@ class PesitSessionHandlerTest {
         @DisplayName("should delegate SELECT to TransferOperationHandler")
         void shouldDelegateSelect() throws Exception {
             connectedCtx.startTransfer().setFilename("TESTFILE");
-            Fpdu ackSelect = FpduResponseBuilder.buildAckSelect(connectedCtx, 4096);
+            Fpdu ackSelect = FpduResponseBuilder.buildAckSelect(connectedCtx, 4096, DiagnosticCode.D0_000);
             when(transferOperationHandler.handleSelect(any(), any())).thenReturn(ackSelect);
 
             Fpdu selectFpdu = new SelectMessageBuilder()
