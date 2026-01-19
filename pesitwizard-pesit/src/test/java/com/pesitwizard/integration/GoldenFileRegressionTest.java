@@ -48,6 +48,32 @@ public class GoldenFileRegressionTest {
         assertEquals(FpduType.ACK_CREATE, parseType(frames.get(3)));
     }
 
+    @Test
+    @DisplayName("should parse all FPDUs from C:X PULL session")
+    void shouldParseAllFpdusFromCxPullSession() throws Exception {
+        PesitSessionRecorder recorder = loadGoldenFile("golden/cx-pull-1mb.raw");
+        assertNotNull(recorder);
+        assertTrue(recorder.getFrames().size() > 0);
+
+        for (RecordedFrame frame : recorder.getFrames()) {
+            Fpdu fpdu = new FpduParser(frame.data()).parse();
+            assertNotNull(fpdu.getFpduType());
+        }
+    }
+
+    @Test
+    @DisplayName("should have correct FPDU sequence for PULL")
+    void shouldHaveCorrectSequenceForPull() throws Exception {
+        PesitSessionRecorder recorder = loadGoldenFile("golden/cx-pull-1mb.raw");
+        var frames = recorder.getFrames();
+
+        assertTrue(frames.size() >= 4);
+        assertEquals(FpduType.CONNECT, parseType(frames.get(0)));
+        assertEquals(FpduType.ACONNECT, parseType(frames.get(1)));
+        assertEquals(FpduType.SELECT, parseType(frames.get(2)));
+        assertEquals(FpduType.ACK_SELECT, parseType(frames.get(3)));
+    }
+
     private FpduType parseType(RecordedFrame frame) {
         return new FpduParser(frame.data()).parse().getFpduType();
     }

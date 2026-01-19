@@ -43,6 +43,17 @@ public class GoldenFileServerTest {
         assertTrue(hasType(frames, Direction.SENT, FpduType.ACK_CLOSE));
     }
 
+    @Test
+    @DisplayName("verify request-response pairs from PULL session")
+    void verifyPullSession() throws Exception {
+        var recorder = loadGoldenFile("golden/cx-pull-1mb.raw");
+        var frames = recorder.getFrames();
+
+        assertTrue(frames.size() > 0);
+        assertTrue(hasType(frames, Direction.SENT, FpduType.ACONNECT));
+        assertTrue(hasType(frames, Direction.SENT, FpduType.ACK_SELECT));
+    }
+
     private boolean hasType(List<RecordedFrame> frames, Direction dir, FpduType type) {
         return frames.stream()
                 .anyMatch(f -> f.direction() == dir && new FpduParser(f.data()).parse().getFpduType() == type);

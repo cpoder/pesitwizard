@@ -63,6 +63,21 @@ public class GoldenFileClientTest {
         assertTrue(dtfCount > 0, "Should have DTF frames for data transfer");
     }
 
+    @Test
+    @DisplayName("verify client requests from PULL session")
+    void verifyClientRequestsForPull() throws Exception {
+        var recorder = loadGoldenFile("golden/cx-pull-1mb.raw");
+        var frames = recorder.getFrames();
+
+        var clientFrames = frames.stream()
+                .filter(f -> f.direction() == Direction.RECEIVED)
+                .toList();
+
+        assertTrue(clientFrames.size() > 0);
+        assertTrue(hasType(clientFrames, FpduType.CONNECT));
+        assertTrue(hasType(clientFrames, FpduType.SELECT));
+    }
+
     private boolean hasType(List<RecordedFrame> frames, FpduType type) {
         return frames.stream().anyMatch(f -> new FpduParser(f.data()).parse().getFpduType() == type);
     }
