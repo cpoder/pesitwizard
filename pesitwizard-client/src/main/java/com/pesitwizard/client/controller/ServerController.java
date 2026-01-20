@@ -98,8 +98,8 @@ public class ServerController {
     public ResponseEntity<TestResult> testConnection(@PathVariable String id) {
         return serverService.getServerById(id)
                 .map(server -> {
-                    // TODO: Implement actual connection test
-                    return ResponseEntity.ok(new TestResult(true, "Connection successful"));
+                    var result = serverService.testConnection(server);
+                    return ResponseEntity.ok(new TestResult(result.success(), result.message()));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

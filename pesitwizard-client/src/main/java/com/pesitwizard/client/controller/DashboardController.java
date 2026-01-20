@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pesitwizard.client.entity.PesitServer;
 import com.pesitwizard.client.entity.TransferHistory;
 import com.pesitwizard.client.repository.PesitServerRepository;
+import com.pesitwizard.client.repository.ScheduledTransferRepository;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
 import com.pesitwizard.client.service.TransferService;
 import com.pesitwizard.security.SecretsService;
@@ -30,6 +31,7 @@ public class DashboardController {
         private final TransferService transferService;
         private final TransferHistoryRepository transferHistoryRepository;
         private final PesitServerRepository serverRepository;
+        private final ScheduledTransferRepository scheduledTransferRepository;
         private final SecretsService secretsService;
 
         @GetMapping
@@ -90,8 +92,7 @@ public class DashboardController {
                                 "vaultAvailable", secretsService.isVaultAvailable()));
 
                 // Scheduled transfers count
-                // TODO: Add when schedule repository is available
-                dashboard.put("scheduledTransfers", 0);
+                dashboard.put("scheduledTransfers", scheduledTransferRepository.countByEnabled(true));
 
                 // System info
                 Runtime runtime = Runtime.getRuntime();

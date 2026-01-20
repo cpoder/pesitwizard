@@ -1,5 +1,6 @@
 package com.pesitwizard.server.controller;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 
@@ -130,7 +131,7 @@ public class SecretController {
      * Create a new secret
      */
     @PostMapping
-    public ResponseEntity<?> createSecret(@RequestBody CreateSecretRequest request) {
+    public ResponseEntity<?> createSecret(@RequestBody CreateSecretRequest request, Principal principal) {
         try {
             SecretEntry secret = secretService.createSecret(
                     request.getName(),
@@ -141,8 +142,7 @@ public class SecretController {
                     request.getPartnerId(),
                     request.getServerId(),
                     request.getExpiresAt(),
-                    "api" // TODO: Get from security context
-            );
+                    principal.getName());
 
             log.info("Created secret: {}", request.getName());
             return ResponseEntity.status(HttpStatus.CREATED).body(SecretResponse.from(secret));

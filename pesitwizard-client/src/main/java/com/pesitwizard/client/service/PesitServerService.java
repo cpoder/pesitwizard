@@ -1,5 +1,7 @@
 package com.pesitwizard.client.service;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.List;
 import java.util.Optional;
 
@@ -177,5 +179,28 @@ public class PesitServerService {
                 .enabled(server.isEnabled())
                 .defaultServer(server.isDefaultServer())
                 .build();
+    }
+
+    /**
+     * Test TCP connection to a PeSIT server.
+     * 
+     * @param server the server to test
+     * @return result with success status and message
+     */
+    public ConnectionTestResult testConnection(PesitServer server) {
+        int timeout = server.getConnectionTimeout() != null ? server.getConnectionTimeout() : 5000;
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(server.getHost(), server.getPort()), timeout);
+            log.info("Connection test successful for server {} ({}:{})",
+                    server.getName(), server.getHost(), server.getPort());
+            return new ConnectionTestResult(true, "Connection successful");
+        } catch (Exception e) {
+            log.warn("Connection test failed for server {} ({}:{}): {}",
+                    server.getName(), server.getHost(), server.getPort(), e.getMessage());
+            return new ConnectionTestResult(false, "Connection failed: " + e.getMessage());
+        }
+    }
+
+    public record ConnectionTestResult(boolean success, String message) {
     }
 }
