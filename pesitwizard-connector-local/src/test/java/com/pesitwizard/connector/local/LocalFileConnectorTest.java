@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -53,13 +52,13 @@ class LocalFileConnectorTest {
     @Test
     void testWriteAndRead() throws Exception {
         String content = "Hello, Vectis!";
-        
+
         try (OutputStream os = connector.write("test.txt")) {
             os.write(content.getBytes());
         }
-        
+
         assertThat(connector.exists("test.txt")).isTrue();
-        
+
         try (InputStream is = connector.read("test.txt")) {
             String read = new String(is.readAllBytes());
             assertThat(read).isEqualTo(content);
@@ -69,11 +68,11 @@ class LocalFileConnectorTest {
     @Test
     void testReadWithOffset() throws Exception {
         String content = "0123456789";
-        
+
         try (OutputStream os = connector.write("offset.txt")) {
             os.write(content.getBytes());
         }
-        
+
         try (InputStream is = connector.read("offset.txt", 5)) {
             String read = new String(is.readAllBytes());
             assertThat(read).isEqualTo("56789");
@@ -85,11 +84,11 @@ class LocalFileConnectorTest {
         try (OutputStream os = connector.write("append.txt")) {
             os.write("Hello".getBytes());
         }
-        
+
         try (OutputStream os = connector.write("append.txt", true)) {
             os.write(" World".getBytes());
         }
-        
+
         try (InputStream is = connector.read("append.txt")) {
             assertThat(new String(is.readAllBytes())).isEqualTo("Hello World");
         }
@@ -101,7 +100,7 @@ class LocalFileConnectorTest {
         try (OutputStream os = connector.write("meta.txt")) {
             os.write(content.getBytes());
         }
-        
+
         FileMetadata meta = connector.getMetadata("meta.txt");
         assertThat(meta.getName()).isEqualTo("meta.txt");
         assertThat(meta.getSize()).isEqualTo(content.length());
@@ -118,7 +117,7 @@ class LocalFileConnectorTest {
         try (OutputStream os = connector.write("file2.txt")) {
             os.write("content".getBytes());
         }
-        
+
         List<FileMetadata> files = connector.list(".");
         assertThat(files).hasSize(3);
         assertThat(files).extracting(FileMetadata::getName)
@@ -130,7 +129,7 @@ class LocalFileConnectorTest {
         connector.mkdir("newdir/nested");
         assertThat(connector.exists("newdir")).isTrue();
         assertThat(connector.exists("newdir/nested")).isTrue();
-        
+
         FileMetadata meta = connector.getMetadata("newdir");
         assertThat(meta.isDirectory()).isTrue();
     }
@@ -140,7 +139,7 @@ class LocalFileConnectorTest {
         try (OutputStream os = connector.write("todelete.txt")) {
             os.write("delete me".getBytes());
         }
-        
+
         assertThat(connector.exists("todelete.txt")).isTrue();
         connector.delete("todelete.txt");
         assertThat(connector.exists("todelete.txt")).isFalse();
@@ -151,9 +150,9 @@ class LocalFileConnectorTest {
         try (OutputStream os = connector.write("original.txt")) {
             os.write("content".getBytes());
         }
-        
+
         connector.rename("original.txt", "renamed.txt");
-        
+
         assertThat(connector.exists("original.txt")).isFalse();
         assertThat(connector.exists("renamed.txt")).isTrue();
     }
@@ -176,9 +175,10 @@ class LocalFileConnectorTest {
     }
 
     @Test
-    void testNotInitialized() {
-        LocalFileConnector uninit = new LocalFileConnector();
-        assertThatThrownBy(() -> uninit.exists("test"))
-                .isInstanceOf(ConnectorException.class);
+    void testNotInitialized() throws Exception {
+        try (LocalFileConnector uninit = new LocalFileConnector()) {
+            assertThatThrownBy(() -> uninit.exists("test"))
+                    .isInstanceOf(ConnectorException.class);
+        }
     }
 }

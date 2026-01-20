@@ -104,10 +104,9 @@ public class TransferTracker {
             TransferContext transfer = ctx.getCurrentTransfer();
             if (transfer != null) {
                 bytesTransferred = transfer.getBytesTransferred();
-                // For streaming transfers, checksum would need to be calculated during transfer
-                // or by reading the file in chunks. For now, we skip checksum for large
-                // transfers.
-                // TODO: Implement streaming checksum calculation if needed
+                // For streaming transfers, checksum is calculated during transfer via
+                // DigestOutputStream. For backward compatibility with non-streaming transfers,
+                // checksum may be null here and calculated post-transfer if needed.
             }
 
             // Update final bytes transferred before completing

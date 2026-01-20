@@ -1,5 +1,6 @@
 package com.pesitwizard.server.controller;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class ApiKeyController {
      * Create a new API key
      */
     @PostMapping
-    public ResponseEntity<?> createApiKey(@RequestBody CreateApiKeyRequest request) {
+    public ResponseEntity<?> createApiKey(@RequestBody CreateApiKeyRequest request, Principal principal) {
         try {
             ApiKeyResult result = apiKeyService.createApiKey(
                     request.getName(),
@@ -81,8 +82,7 @@ public class ApiKeyController {
                     request.getAllowedIps(),
                     request.getRateLimit(),
                     request.getPartnerId(),
-                    "api" // TODO: Get from security context
-            );
+                    principal.getName());
 
             log.info("Created API key: {}", request.getName());
 

@@ -1,5 +1,6 @@
 package com.pesitwizard.server.controller;
 
+import java.security.Principal;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -133,7 +134,8 @@ public class CertificateController {
             @RequestParam(required = false) String keyAlias,
             @RequestParam(defaultValue = "SERVER") CertificatePurpose purpose,
             @RequestParam(required = false) String partnerId,
-            @RequestParam(defaultValue = "false") boolean isDefault) {
+            @RequestParam(defaultValue = "false") boolean isDefault,
+            Principal principal) {
 
         try {
             CertificateStore store = certificateService.createCertificateStore(
@@ -148,8 +150,7 @@ public class CertificateController {
                     purpose,
                     partnerId,
                     isDefault,
-                    "api" // TODO: Get from security context
-            );
+                    principal.getName());
 
             log.info("Keystore uploaded: {}", name);
             return ResponseEntity.status(HttpStatus.CREATED).body(store);

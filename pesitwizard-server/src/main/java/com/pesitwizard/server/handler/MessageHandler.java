@@ -44,8 +44,8 @@ public class MessageHandler {
                     message.length() > 100 ? message.substring(0, 100) + "..." : message);
         }
 
-        // TODO: Process message (e.g., store, forward, trigger action)
-        // For now, just acknowledge receipt
+        // Message received and logged - extend MessageHandler to add custom processing
+        // (e.g., store to database, forward to external system, trigger workflow)
 
         // Stay in CN03 state after message
         return FpduResponseBuilder.buildAckMsg(ctx, DiagnosticCode.D0_000, null);
@@ -126,7 +126,7 @@ public class MessageHandler {
         log.info("[{}] MSGFM received: file={}, total message length={}",
                 ctx.getSessionId(), filename, fullMessage.length());
 
-        // TODO: Process complete message
+        // Complete message received - extend MessageHandler to add custom processing
         log.debug("[{}] Complete message: {}", ctx.getSessionId(),
                 fullMessage.length() > 100 ? fullMessage.substring(0, 100) + "..." : fullMessage);
 
