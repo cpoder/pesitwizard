@@ -153,6 +153,7 @@ class SecretControllerTest {
                 """;
 
         mockMvc.perform(post("/api/v1/secrets")
+                .principal(() -> "testuser")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isCreated())
@@ -173,6 +174,7 @@ class SecretControllerTest {
                 """;
 
         mockMvc.perform(post("/api/v1/secrets")
+                .principal(() -> "testuser")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isBadRequest());
