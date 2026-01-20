@@ -15,15 +15,28 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractSocketTransportChannel implements TransportChannel {
 
-    protected static final int DEFAULT_TIMEOUT = 60000; // 60 seconds
+    /** Default socket timeout in milliseconds. */
+    protected static final int DEFAULT_TIMEOUT = 60000;
 
+    /** Remote host address. */
     protected final String host;
+    /** Remote port number. */
     protected final int port;
+    /** Underlying socket connection. */
     protected Socket socket;
+    /** Input stream for reading data. */
     protected DataInputStream inputStream;
+    /** Output stream for writing data. */
     protected DataOutputStream outputStream;
+    /** Receive timeout in milliseconds. */
     protected int receiveTimeout = DEFAULT_TIMEOUT;
 
+    /**
+     * Construct a new transport channel.
+     * 
+     * @param host the remote host
+     * @param port the remote port
+     */
     protected AbstractSocketTransportChannel(String host, int port) {
         this.host = host;
         this.port = port;
@@ -31,6 +44,9 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
 
     /**
      * Create and configure the socket. Subclasses override for TLS.
+     * 
+     * @return the configured socket
+     * @throws IOException if socket creation fails
      */
     protected abstract Socket createSocket() throws IOException;
 
@@ -142,16 +158,28 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
         }
     }
 
+    /**
+     * Get the remote host.
+     * 
+     * @return the host
+     */
     public String getHost() {
         return host;
     }
 
+    /**
+     * Get the remote port.
+     * 
+     * @return the port
+     */
     public int getPort() {
         return port;
     }
 
     /**
-     * Get the input stream for reading data
+     * Get the input stream for reading data.
+     * 
+     * @return the input stream
      */
     public DataInputStream getInputStream() {
         return inputStream;
