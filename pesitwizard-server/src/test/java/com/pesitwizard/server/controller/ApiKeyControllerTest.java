@@ -101,6 +101,7 @@ class ApiKeyControllerTest {
                                 """;
 
                 mockMvc.perform(post("/api/v1/apikeys")
+                                .principal(() -> "testuser")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(requestBody))
                                 .andExpect(status().isCreated())
@@ -122,6 +123,7 @@ class ApiKeyControllerTest {
                                 """;
 
                 mockMvc.perform(post("/api/v1/apikeys")
+                                .principal(() -> "testuser")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(requestBody))
                                 .andExpect(status().isBadRequest())
