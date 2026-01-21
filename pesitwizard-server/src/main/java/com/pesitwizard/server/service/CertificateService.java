@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
  * Service for managing SSL certificates centrally.
  * Provides CRUD operations and certificate lifecycle management.
  */
-@SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
 @Service
 @RequiredArgsConstructor

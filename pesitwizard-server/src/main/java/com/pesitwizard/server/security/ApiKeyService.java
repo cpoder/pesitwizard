@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
  * Service for API key management.
  * Handles creation, validation, and lifecycle of API keys.
  */
-@SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
 @Service
 @RequiredArgsConstructor

@@ -46,7 +46,6 @@ import lombok.extern.slf4j.Slf4j;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DisplayName("Security Integration Tests")
-@SuppressWarnings("null") // Spring Security test utilities are safe
 public class KeycloakSecurityTest {
 
         @Autowired

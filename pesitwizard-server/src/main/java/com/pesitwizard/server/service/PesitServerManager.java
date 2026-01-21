@@ -34,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
  * - When this node becomes leader, auto-start servers
  * - When this node loses leadership, stop servers (another node will take over)
  */
-@SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
 @Service
 @RequiredArgsConstructor

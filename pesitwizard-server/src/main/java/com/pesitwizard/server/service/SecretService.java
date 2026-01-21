@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
  * Uses pesitwizard-security module (supports AES and HashiCorp Vault with
  * AppRole).
  */
-@SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
 @Service
 @RequiredArgsConstructor

@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
  * Service for audit logging.
  * Provides structured audit trail for security and compliance.
  */
-@SuppressWarnings("null") // Spring Data JPA methods never return null for save/findById
 @Slf4j
 @Service
 @RequiredArgsConstructor

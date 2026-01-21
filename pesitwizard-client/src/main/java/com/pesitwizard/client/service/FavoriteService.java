@@ -71,7 +71,7 @@ public class FavoriteService {
                             .serverName(history.getServerName())
                             .partnerId(history.getPartnerId())
                             .direction(history.getDirection())
-                            .localPath(history.getLocalFilename())
+                            .filename(history.getLocalFilename())
                             .remoteFilename(history.getRemoteFilename())
                             .transferConfigId(history.getTransferConfigId())
                             .build();
@@ -117,7 +117,7 @@ public class FavoriteService {
         List<ScheduledTransfer> linkedSchedules = scheduleRepository.findByFavoriteId(favorite.getId());
         if (!linkedSchedules.isEmpty()) {
             log.info("Updating {} linked schedules for favorite {}", linkedSchedules.size(), favorite.getName());
-            String filename = favorite.getFilename() != null ? favorite.getFilename() : favorite.getLocalPath();
+            String filename = favorite.getFilename();
             for (ScheduledTransfer schedule : linkedSchedules) {
                 schedule.setServerId(favorite.getServerId());
                 schedule.setServerName(favorite.getServerName());
@@ -157,7 +157,7 @@ public class FavoriteService {
                     favoriteRepository.save(favorite);
 
                     // Build transfer request with connector support
-                    String filename = favorite.getFilename() != null ? favorite.getFilename() : favorite.getLocalPath();
+                    String filename = favorite.getFilename();
                     TransferRequest request = TransferRequest.builder()
                             .server(favorite.getServerId())
                             .partnerId(favorite.getPartnerId())

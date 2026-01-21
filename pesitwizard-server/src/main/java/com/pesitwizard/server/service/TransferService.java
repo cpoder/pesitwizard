@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
  * Service for managing file transfers.
  * Provides transfer tracking, retry management, and statistics.
  */
-@SuppressWarnings("null") // Spring Data JPA save() never returns null
 @Slf4j
 @Service
 @RequiredArgsConstructor
