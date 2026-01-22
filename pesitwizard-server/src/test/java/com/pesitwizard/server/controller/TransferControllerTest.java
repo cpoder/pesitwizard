@@ -290,4 +290,69 @@ class TransferControllerTest {
             verify(transferService).cleanupOldTransfers();
         }
     }
+
+    @Nested
+    @DisplayName("Error Handling")
+    class ErrorHandlingTests {
+
+        @Test
+        @DisplayName("should return 404 when pausing non-existent transfer")
+        void shouldReturn404WhenPausingNonExistent() throws Exception {
+            when(transferService.pauseTransfer("not-found"))
+                    .thenThrow(new IllegalArgumentException("Not found"));
+
+            mockMvc.perform(post("/api/v1/transfers/not-found/pause"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("should return 400 when pausing invalid state transfer")
+        void shouldReturn400WhenPausingInvalidState() throws Exception {
+            when(transferService.pauseTransfer("invalid-state"))
+                    .thenThrow(new IllegalStateException("Cannot pause"));
+
+            mockMvc.perform(post("/api/v1/transfers/invalid-state/pause"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should return 404 when resuming non-existent transfer")
+        void shouldReturn404WhenResumingNonExistent() throws Exception {
+            when(transferService.resumeTransfer("not-found"))
+                    .thenThrow(new IllegalArgumentException("Not found"));
+
+            mockMvc.perform(post("/api/v1/transfers/not-found/resume"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("should return 400 when resuming invalid state transfer")
+        void shouldReturn400WhenResumingInvalidState() throws Exception {
+            when(transferService.resumeTransfer("invalid-state"))
+                    .thenThrow(new IllegalStateException("Cannot resume"));
+
+            mockMvc.perform(post("/api/v1/transfers/invalid-state/resume"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should return 404 when retrying non-existent transfer")
+        void shouldReturn404WhenRetryingNonExistent() throws Exception {
+            when(transferService.retryTransfer("not-found"))
+                    .thenThrow(new IllegalArgumentException("Not found"));
+
+            mockMvc.perform(post("/api/v1/transfers/not-found/retry"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("should return 400 when retrying invalid state transfer")
+        void shouldReturn400WhenRetryingInvalidState() throws Exception {
+            when(transferService.retryTransfer("invalid-state"))
+                    .thenThrow(new IllegalStateException("Cannot retry"));
+
+            mockMvc.perform(post("/api/v1/transfers/invalid-state/retry"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
 }
