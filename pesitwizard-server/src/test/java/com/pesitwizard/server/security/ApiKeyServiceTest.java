@@ -256,4 +256,110 @@ class ApiKeyServiceTest {
             assertThat(result.getPlainKey()).isEqualTo("psk_plainkey");
         }
     }
+
+    @Nested
+    @DisplayName("Update API Key Tests")
+    class UpdateApiKeyTests {
+
+        @Test
+        @DisplayName("Should update API key description")
+        void shouldUpdateApiKeyDescription() {
+            ApiKey apiKey = ApiKey.builder().id(1L).name("test").description("old").build();
+            when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
+            when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(i -> i.getArgument(0));
+
+            ApiKey result = apiKeyService.updateApiKey(1L, "new description", null, null, null, null, null);
+
+            assertThat(result.getDescription()).isEqualTo("new description");
+        }
+
+        @Test
+        @DisplayName("Should throw when updating non-existent key")
+        void shouldThrowWhenUpdatingNonExistentKey() {
+            when(apiKeyRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> apiKeyService.updateApiKey(999L, "desc", null, null, null, null, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("not found");
+        }
+    }
+
+    @Nested
+    @DisplayName("Revoke API Key Tests")
+    class RevokeApiKeyTests {
+
+        @Test
+        @DisplayName("Should revoke API key")
+        void shouldRevokeApiKey() {
+            ApiKey apiKey = ApiKey.builder().id(1L).name("test").active(true).build();
+            when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
+            when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(i -> i.getArgument(0));
+
+            apiKeyService.revokeApiKey(1L);
+
+            verify(apiKeyRepository).save(argThat(key -> !key.getActive()));
+        }
+
+        @Test
+        @DisplayName("Should throw when revoking non-existent key")
+        void shouldThrowWhenRevokingNonExistentKey() {
+            when(apiKeyRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> apiKeyService.revokeApiKey(999L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Delete API Key Tests")
+    class DeleteApiKeyTests {
+
+        @Test
+        @DisplayName("Should delete API key")
+        void shouldDeleteApiKey() {
+            ApiKey apiKey = ApiKey.builder().id(1L).name("test").build();
+            when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
+
+            apiKeyService.deleteApiKey(1L);
+
+            verify(apiKeyRepository).delete(apiKey);
+        }
+
+        @Test
+        @DisplayName("Should throw when deleting non-existent key")
+        void shouldThrowWhenDeletingNonExistentKey() {
+            when(apiKeyRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> apiKeyService.deleteApiKey(999L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Regenerate API Key Tests")
+    class RegenerateApiKeyTests {
+
+        @Test
+        @DisplayName("Should regenerate API key")
+        void shouldRegenerateApiKey() {
+            ApiKey apiKey = ApiKey.builder().id(1L).name("test").keyHash("oldhash").keyPrefix("psk_old").build();
+            when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
+            when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(i -> i.getArgument(0));
+
+            ApiKeyService.ApiKeyResult result = apiKeyService.regenerateApiKey(1L);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getPlainKey()).startsWith("psk_");
+            assertThat(result.getApiKey().getKeyHash()).isNotEqualTo("oldhash");
+        }
+
+        @Test
+        @DisplayName("Should throw when regenerating non-existent key")
+        void shouldThrowWhenRegeneratingNonExistentKey() {
+            when(apiKeyRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> apiKeyService.regenerateApiKey(999L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
 }
