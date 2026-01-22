@@ -117,31 +117,19 @@ jobs:
           cache-to: type=gha,mode=max,scope=server
 
       # Make packages public (GHCR packages are private by default)
-      # Note: This requires a PAT with write:packages scope stored as PACKAGES_TOKEN secret
-      # Alternatively, manually set visibility in GitHub: Settings > Packages > Package Settings > Change visibility
       - name: Make packages public
         if: ${{ secrets.PACKAGES_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           
           for PACKAGE in pesitwizard-client pesitwizard-client-ui pesitwizard-server; do
-            PACKAGE_NAME="${REPO}/${PACKAGE}"
-            echo "Setting ${PACKAGE_NAME} visibility to public..."
-            
-            # Change package visibility using GitHub CLI
+            echo "Setting ${PACKAGE} visibility to public..."
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              "/user/packages/container/$(echo ${PACKAGE_NAME} | sed 's/\//%2F/g')" \
-              -f visibility=public 2>/dev/null || \
-            gh api \
-              --method PATCH \
-              -H "Accept: application/vnd.github+json" \
-              "/orgs/${OWNER}/packages/container/$(echo ${PACKAGE_NAME} | sed 's/\//%2F/g')" \
-              -f visibility=public 2>/dev/null || \
-            echo "Could not change visibility for ${PACKAGE_NAME} - may need manual configuration"
+              "/orgs/${OWNER}/packages/container/${PACKAGE}" \
+              -f visibility=public || echo "Could not change visibility for ${PACKAGE}"
           done
         continue-on-error: true
