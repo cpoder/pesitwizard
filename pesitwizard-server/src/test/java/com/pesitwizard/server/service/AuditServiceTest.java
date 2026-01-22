@@ -375,4 +375,53 @@ class AuditServiceTest {
             assertEquals(475L, stats.getEventsByOutcome().get("SUCCESS"));
         }
     }
+
+    @Nested
+    @DisplayName("Async Logging Tests")
+    class AsyncLoggingTests {
+
+        @Test
+        @DisplayName("Should log async event")
+        void shouldLogAsyncEvent() {
+            AuditEvent event = AuditEvent.builder()
+                    .category(AuditCategory.TRANSFER)
+                    .eventType(AuditEventType.TRANSFER_STARTED)
+                    .outcome(AuditOutcome.SUCCESS)
+                    .build();
+            when(auditRepository.save(any(AuditEvent.class))).thenReturn(event);
+
+            assertDoesNotThrow(() -> auditService.logAsync(AuditEvent.builder()
+                    .category(AuditCategory.TRANSFER)
+                    .eventType(AuditEventType.TRANSFER_STARTED)
+                    .outcome(AuditOutcome.SUCCESS)));
+
+            verify(auditRepository).save(any(AuditEvent.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Search Tests")
+    class SearchTests {
+
+        @Test
+        @DisplayName("Should search events with criteria")
+        void shouldSearchEventsWithCriteria() {
+            Page<AuditEvent> mockPage = new PageImpl<>(List.of());
+            when(auditRepository.search(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(mockPage);
+
+            Page<AuditEvent> result = auditService.search(
+                    AuditCategory.TRANSFER,
+                    AuditEventType.TRANSFER_COMPLETED,
+                    AuditOutcome.SUCCESS,
+                    "user1",
+                    "partner1",
+                    "192.168.1.1",
+                    Instant.now().minusSeconds(3600),
+                    Instant.now(),
+                    0, 10);
+
+            assertNotNull(result);
+        }
+    }
 }
