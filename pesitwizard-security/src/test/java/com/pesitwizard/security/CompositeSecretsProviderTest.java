@@ -70,4 +70,50 @@ class CompositeSecretsProviderTest {
     void shouldHandleNull() {
         assertThat(compositeProvider.decrypt(null)).isNull();
     }
+
+    @Test
+    @DisplayName("should handle empty string")
+    void shouldHandleEmptyString() {
+        assertThat(compositeProvider.decrypt("")).isEqualTo("");
+    }
+
+    @Test
+    @DisplayName("should handle blank string")
+    void shouldHandleBlankString() {
+        assertThat(compositeProvider.decrypt("   ")).isEqualTo("   ");
+    }
+
+    @Test
+    @DisplayName("should delegate storeSecret to primary")
+    void shouldDelegateStoreSecretToPrimary() {
+        compositeProvider.storeSecret("key", "value");
+        verify(mockPrimaryProvider).storeSecret("key", "value");
+    }
+
+    @Test
+    @DisplayName("should delegate getSecret to primary")
+    void shouldDelegateGetSecretToPrimary() {
+        when(mockPrimaryProvider.getSecret("key")).thenReturn("value");
+        assertThat(compositeProvider.getSecret("key")).isEqualTo("value");
+    }
+
+    @Test
+    @DisplayName("should delegate deleteSecret to primary")
+    void shouldDelegateDeleteSecretToPrimary() {
+        compositeProvider.deleteSecret("key");
+        verify(mockPrimaryProvider).deleteSecret("key");
+    }
+
+    @Test
+    @DisplayName("should delegate isAvailable to primary")
+    void shouldDelegateIsAvailableToPrimary() {
+        when(mockPrimaryProvider.isAvailable()).thenReturn(true);
+        assertThat(compositeProvider.isAvailable()).isTrue();
+    }
+
+    @Test
+    @DisplayName("should delegate getProviderType to primary")
+    void shouldDelegateGetProviderTypeToPrimary() {
+        assertThat(compositeProvider.getProviderType()).isEqualTo("VAULT");
+    }
 }
