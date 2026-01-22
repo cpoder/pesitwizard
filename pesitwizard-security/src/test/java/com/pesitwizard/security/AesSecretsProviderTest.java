@@ -302,4 +302,95 @@ class AesSecretsProviderTest {
             assertThat(decrypted).isEqualTo("test-data");
         }
     }
+
+    @Nested
+    @DisplayName("Encrypt with Context")
+    class EncryptWithContextTests {
+
+        @Test
+        @DisplayName("should encrypt with context and decrypt successfully")
+        void shouldEncryptWithContextAndDecrypt() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String plaintext = "my-password";
+            String context = "registry/github/password";
+
+            String encrypted = provider.encrypt(plaintext, context);
+            String decrypted = provider.decrypt(encrypted);
+
+            assertThat(encrypted).startsWith("AES:");
+            assertThat(decrypted).isEqualTo(plaintext);
+        }
+
+        @Test
+        @DisplayName("should return null when encrypting null with context")
+        void shouldReturnNullWhenEncryptingNullWithContext() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            String result = provider.encrypt(null, "some/context");
+
+            assertThat(result).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Secret Store Operations")
+    class SecretStoreOperationsTests {
+
+        @Test
+        @DisplayName("storeSecret should be no-op for AES")
+        void storeSecretShouldBeNoOp() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            // Should not throw
+            assertThatCode(() -> provider.storeSecret("key", "value")).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("getSecret should return null for AES")
+        void getSecretShouldReturnNull() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            String result = provider.getSecret("any-key");
+
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("deleteSecret should be no-op for AES")
+        void deleteSecretShouldBeNoOp() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            // Should not throw
+            assertThatCode(() -> provider.deleteSecret("key")).doesNotThrowAnyException();
+        }
+    }
+
+    @Nested
+    @DisplayName("Unicode and Binary Data")
+    class UnicodeAndBinaryTests {
+
+        @Test
+        @DisplayName("should handle unicode characters")
+        void shouldHandleUnicodeCharacters() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String plaintext = "密码🔐пароль";
+
+            String encrypted = provider.encrypt(plaintext);
+            String decrypted = provider.decrypt(encrypted);
+
+            assertThat(decrypted).isEqualTo(plaintext);
+        }
+
+        @Test
+        @DisplayName("should handle newlines and tabs")
+        void shouldHandleNewlinesAndTabs() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            String plaintext = "line1\nline2\ttabbed";
+
+            String encrypted = provider.encrypt(plaintext);
+            String decrypted = provider.decrypt(encrypted);
+
+            assertThat(decrypted).isEqualTo(plaintext);
+        }
+    }
 }
