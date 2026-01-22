@@ -135,5 +135,110 @@ class SecretsConfigTest {
             SecretsConfig config = new SecretsConfig();
             assertThatCode(() -> config.loadSecretsFromFiles()).doesNotThrowAnyException();
         }
+
+        @Test
+        @DisplayName("should create secrets provider bean with reflection setup")
+        void shouldCreateSecretsProviderBean() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+
+            // Set required fields via reflection (Spring normally does this)
+            setField(config, "saltFile", "./target/test-salt.salt");
+            setField(config, "encryptionMode", "AES");
+
+            config.loadSecretsFromFiles();
+
+            SecretsProvider provider = config.secretsProvider();
+            assertThat(provider).isNotNull();
+            assertThat(provider.isAvailable()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should create secrets service bean")
+        void shouldCreateSecretsServiceBean() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+            setField(config, "saltFile", "./target/test-salt2.salt");
+            setField(config, "encryptionMode", "AES");
+            config.loadSecretsFromFiles();
+
+            SecretsProvider provider = config.secretsProvider();
+            SecretsService service = config.secretsService(provider);
+
+            assertThat(service).isNotNull();
+        }
+
+        private void setField(Object obj, String fieldName, Object value) throws Exception {
+            java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(obj, value);
+        }
+    }
+
+    @Nested
+    @DisplayName("Secrets Provider Creation")
+    class SecretsProviderCreationTests {
+
+        @Test
+        @DisplayName("should create AES provider by default")
+        void shouldCreateAesProviderByDefault() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+            setField(config, "saltFile", "./target/test-salt3.salt");
+            setField(config, "encryptionMode", "AES");
+            config.loadSecretsFromFiles();
+
+            SecretsProvider provider = config.secretsProvider();
+
+            assertThat(provider).isNotNull();
+            assertThat(provider.getProviderType()).isEqualTo("AES");
+        }
+
+        @Test
+        @DisplayName("should encrypt and decrypt with created provider")
+        void shouldEncryptAndDecryptWithCreatedProvider() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+            setField(config, "saltFile", "./target/test-salt4.salt");
+            setField(config, "encryptionMode", "AES");
+            config.loadSecretsFromFiles();
+
+            SecretsProvider provider = config.secretsProvider();
+            String plaintext = "test-secret";
+
+            String encrypted = provider.encrypt(plaintext);
+            String decrypted = provider.decrypt(encrypted);
+
+            assertThat(decrypted).isEqualTo(plaintext);
+        }
+
+        @Test
+        @DisplayName("should handle invalid encryption mode gracefully")
+        void shouldHandleInvalidEncryptionModeGracefully() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+            setField(config, "saltFile", "./target/test-salt5.salt");
+            setField(config, "encryptionMode", "INVALID_MODE");
+            config.loadSecretsFromFiles();
+
+            // Should fall back to AES
+            SecretsProvider provider = config.secretsProvider();
+            assertThat(provider).isNotNull();
+            assertThat(provider.getProviderType()).isEqualTo("AES");
+        }
+
+        @Test
+        @DisplayName("should handle null encryption mode")
+        void shouldHandleNullEncryptionMode() throws Exception {
+            SecretsConfig config = new SecretsConfig();
+            setField(config, "saltFile", "./target/test-salt6.salt");
+            setField(config, "encryptionMode", null);
+            config.loadSecretsFromFiles();
+
+            // Should default to AES
+            SecretsProvider provider = config.secretsProvider();
+            assertThat(provider).isNotNull();
+        }
+
+        private void setField(Object obj, String fieldName, Object value) throws Exception {
+            java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(obj, value);
+        }
     }
 }
