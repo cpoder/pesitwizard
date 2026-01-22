@@ -34,17 +34,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Integration tests for mTLS (mutual TLS) socket-level communication.
  * These tests verify actual TLS handshakes between client and server,
  * ensuring proper certificate validation in both directions.
  */
-@Slf4j
 @DisplayName("mTLS Socket Integration Tests")
 public class MtlsSocketIntegrationTest {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MtlsSocketIntegrationTest.class);
     private static final String CERTS_DIR = "src/test/resources/certs";
     private static final String PASSWORD = "changeit";
     private static final int TEST_PORT_BASE = 19000;
@@ -308,13 +306,13 @@ public class MtlsSocketIntegrationTest {
                 int response = clientSocket.getInputStream().read();
                 fail("Client without cert should fail, but got response: " + response);
             } catch (IOException e) {
-                log.info("Client correctly failed: {}", e.getMessage());
+                // Client correctly failed - expected behavior
             }
 
             Thread.sleep(500);
             assertTrue(handshakeFailed.get(),
                     "Server should reject client without certificate. Server exception: " + serverException.get());
-            log.info("Client without certificate correctly rejected");
+            // Client without certificate correctly rejected
         }
     }
 
@@ -339,7 +337,7 @@ public class MtlsSocketIntegrationTest {
                         clientConnection.startHandshake();
                     }
                 } catch (Exception e) {
-                    log.info("Server saw handshake failure (expected): {}", e.getMessage());
+                    // Server saw handshake failure (expected)
                 }
             });
 
@@ -351,7 +349,7 @@ public class MtlsSocketIntegrationTest {
                 }
             }, "Client should reject untrusted server");
 
-            log.info("Client correctly rejected untrusted server certificate");
+            // Client correctly rejected untrusted server certificate
         }
     }
 

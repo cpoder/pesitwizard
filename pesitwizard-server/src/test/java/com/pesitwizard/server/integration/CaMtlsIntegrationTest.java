@@ -34,8 +34,6 @@ import com.pesitwizard.server.service.CertificateAuthorityService.SignedCertific
 import com.pesitwizard.server.service.CertificateService;
 import com.pesitwizard.server.ssl.SslContextFactory;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Integration tests for CA-based mTLS communication.
  * 
@@ -46,12 +44,12 @@ import lombok.extern.slf4j.Slf4j;
  * 4. Establish mTLS connection between client and server
  * 5. Verify untrusted certificates are rejected
  */
-@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("CA-based mTLS Integration Tests")
 public class CaMtlsIntegrationTest {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CaMtlsIntegrationTest.class);
     private static final String PASSWORD = "changeit";
     private static final int TEST_PORT = 15443;
 
