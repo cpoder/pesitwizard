@@ -27,8 +27,6 @@ import com.pesitwizard.server.security.ApiKeyService;
 import com.pesitwizard.server.security.JwtRoleConverter;
 import com.pesitwizard.server.security.SecurityProperties;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Security integration tests using mock JWT tokens and API keys.
  * <p>
@@ -41,12 +39,13 @@ import lombok.extern.slf4j.Slf4j;
  * - operator/operator (OPERATOR role)
  * - user/user (USER role)
  */
-@Slf4j
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DisplayName("Security Integration Tests")
 public class KeycloakSecurityTest {
+
+        private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(KeycloakSecurityTest.class);
 
         @Autowired
         private MockMvc mockMvc;

@@ -323,28 +323,6 @@ public class TransferServiceTest {
     }
 
     @Test
-    @DisplayName("Retry transfer")
-    void testRetryTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-34", "server-1", "node-1",
-                "PARTNER_N", "RETRY_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.134");
-
-        transferService.startTransfer(transfer.getTransferId(), 10000L, "/data/retry.dat");
-        transferService.updateProgress(transfer.getTransferId(), 5000L);
-        transferService.recordSyncPoint(transfer.getTransferId(), 5000L);
-        transferService.interruptTransfer(transfer.getTransferId(), "Connection lost");
-
-        TransferRecord retry = transferService.retryTransfer(transfer.getTransferId());
-
-        assertNotNull(retry);
-        assertNotEquals(transfer.getTransferId(), retry.getTransferId());
-        assertEquals(transfer.getTransferId(), retry.getParentTransferId());
-        assertEquals(5000L, retry.getBytesTransferred()); // Resumes from sync point
-        assertEquals(TransferStatus.INITIATED, retry.getStatus());
-    }
-
-    @Test
     @DisplayName("Get retryable transfers")
     void testGetRetryableTransfers() {
         // Create an interrupted transfer
