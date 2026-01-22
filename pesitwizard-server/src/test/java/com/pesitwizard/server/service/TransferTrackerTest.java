@@ -334,4 +334,38 @@ class TransferTrackerTest {
             verify(transferService).completeTransfer(eq("transfer-123"), isNull());
         }
     }
+
+    @Nested
+    @DisplayName("Track Authentication Failure")
+    class TrackAuthenticationFailureTests {
+
+        @Test
+        @DisplayName("should track authentication failure")
+        void shouldTrackAuthenticationFailure() {
+            TransferRecord record = new TransferRecord();
+            record.setTransferId("transfer-auth-fail");
+
+            when(transferService.createTransfer(anyString(), anyString(), anyString(),
+                    anyString(), eq("AUTH_FAILURE"), any(TransferDirection.class), anyString()))
+                    .thenReturn(record);
+
+            transferTracker.trackAuthenticationFailure(sessionContext, "server-1", "node-1",
+                    "AUTH001", "Invalid credentials");
+
+            verify(transferService).createTransfer(eq("session-123"), eq("server-1"), eq("node-1"),
+                    eq("partner-1"), eq("AUTH_FAILURE"), eq(TransferDirection.RECEIVE), eq("192.168.1.100"));
+            verify(transferService).failTransfer("transfer-auth-fail", "AUTH001", "Invalid credentials");
+        }
+
+        @Test
+        @DisplayName("should handle exception when tracking auth failure fails")
+        void shouldHandleExceptionWhenAuthFailureTrackingFails() {
+            when(transferService.createTransfer(anyString(), anyString(), anyString(),
+                    anyString(), anyString(), any(TransferDirection.class), anyString()))
+                    .thenThrow(new RuntimeException("Database error"));
+
+            assertDoesNotThrow(() -> transferTracker.trackAuthenticationFailure(
+                    sessionContext, "server-1", "node-1", "AUTH001", "Invalid credentials"));
+        }
+    }
 }
