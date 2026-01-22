@@ -231,4 +231,36 @@ class PesitServerControllerTest {
                     .andExpect(status().isNotFound());
         }
     }
+
+    @Nested
+    @DisplayName("Runtime Error Handling")
+    class RuntimeErrorTests {
+
+        @Test
+        @DisplayName("should return 500 when start fails with runtime error")
+        void shouldReturn500WhenStartFailsWithRuntimeError() throws Exception {
+            doThrow(new RuntimeException("Port already in use")).when(serverManager).startServer("server-1");
+
+            mockMvc.perform(post("/api/servers/server-1/start"))
+                    .andExpect(status().isInternalServerError());
+        }
+
+        @Test
+        @DisplayName("should return 500 when stop fails with runtime error")
+        void shouldReturn500WhenStopFailsWithRuntimeError() throws Exception {
+            doThrow(new RuntimeException("Failed to stop")).when(serverManager).stopServer("server-1");
+
+            mockMvc.perform(post("/api/servers/server-1/stop"))
+                    .andExpect(status().isInternalServerError());
+        }
+
+        @Test
+        @DisplayName("should return 404 when stopping non-existent server")
+        void shouldReturn404WhenStoppingNonExistent() throws Exception {
+            doThrow(new IllegalArgumentException("Not found")).when(serverManager).stopServer("non-existent");
+
+            mockMvc.perform(post("/api/servers/non-existent/stop"))
+                    .andExpect(status().isNotFound());
+        }
+    }
 }
