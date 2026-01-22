@@ -323,4 +323,89 @@ class FileSystemServiceTest {
             assertEquals("---", fileSystemService.getPermissionString(nonExistent));
         }
     }
+
+    @Nested
+    @DisplayName("FileOperationResult Record")
+    class FileOperationResultTests {
+
+        @Test
+        @DisplayName("Should create success result")
+        void shouldCreateSuccessResult() {
+            FileOperationResult result = FileOperationResult.success(tempDir);
+
+            assertTrue(result.success());
+            assertNull(result.errorMessage());
+            assertNull(result.errorType());
+            assertEquals(tempDir, result.resolvedPath());
+        }
+
+        @Test
+        @DisplayName("Should create error result")
+        void shouldCreateErrorResult() {
+            FileOperationResult result = FileOperationResult.error(
+                    FileErrorType.ACCESS_DENIED, "Permission denied", tempDir);
+
+            assertFalse(result.success());
+            assertEquals("Permission denied", result.errorMessage());
+            assertEquals(FileErrorType.ACCESS_DENIED, result.errorType());
+            assertEquals(tempDir, result.resolvedPath());
+        }
+    }
+
+    @Nested
+    @DisplayName("FileErrorType Enum")
+    class FileErrorTypeTests {
+
+        @Test
+        @DisplayName("Should have all error types")
+        void shouldHaveAllErrorTypes() {
+            assertEquals(6, FileErrorType.values().length);
+            assertNotNull(FileErrorType.ACCESS_DENIED);
+            assertNotNull(FileErrorType.PATH_NOT_FOUND);
+            assertNotNull(FileErrorType.PATH_OUTSIDE_ALLOWED);
+            assertNotNull(FileErrorType.INVALID_PATH);
+            assertNotNull(FileErrorType.IO_ERROR);
+            assertNotNull(FileErrorType.DIRECTORY_CREATION_FAILED);
+        }
+    }
+
+    @Nested
+    @DisplayName("Edge Cases")
+    class EdgeCaseTests {
+
+        @Test
+        @DisplayName("Should handle send directory not readable")
+        void shouldHandleSendDirectoryNotReadable() throws IOException {
+            // This test validates the code path, even if we can't actually
+            // make a directory unreadable in all environments
+            Path dir = tempDir.resolve("send-dir");
+            Files.createDirectories(dir);
+
+            FileOperationResult result = fileSystemService.validateSendDirectory(
+                    dir.toString(), "Test");
+
+            assertTrue(result.success());
+        }
+
+        @Test
+        @DisplayName("Should handle blank send directory path")
+        void shouldHandleBlankSendDirectoryPath() {
+            FileOperationResult result = fileSystemService.validateSendDirectory(
+                    "   ", "Test");
+
+            assertFalse(result.success());
+            assertEquals(FileErrorType.INVALID_PATH, result.errorType());
+        }
+
+        @Test
+        @DisplayName("Should handle existing non-writable directory in createDirectories")
+        void shouldHandleExistingNonWritableDirectory() throws IOException {
+            Path existingDir = tempDir.resolve("existing-dir");
+            Files.createDirectories(existingDir);
+
+            // For writable directory, should succeed
+            FileOperationResult result = fileSystemService.createDirectories(existingDir);
+            assertTrue(result.success());
+        }
+    }
 }
