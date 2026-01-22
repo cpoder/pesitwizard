@@ -118,10 +118,13 @@ jobs:
 
       # Make packages public (GHCR packages are private by default)
       - name: Make packages public
-        if: ${{ secrets.PACKAGES_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PACKAGES_TOKEN not set, skipping visibility change"
+            exit 0
+          fi
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           
           for PACKAGE in pesitwizard-client pesitwizard-client-ui pesitwizard-server; do
