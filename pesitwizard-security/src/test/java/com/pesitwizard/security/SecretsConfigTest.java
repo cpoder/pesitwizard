@@ -54,6 +54,13 @@ class SecretsConfigTest {
             SecretsConfig.EncryptionMode mode = SecretsConfig.EncryptionMode.valueOf("VAULT");
             assertThat(mode).isEqualTo(SecretsConfig.EncryptionMode.VAULT);
         }
+
+        @Test
+        @DisplayName("should throw exception for invalid mode")
+        void shouldThrowExceptionForInvalidMode() {
+            assertThatThrownBy(() -> SecretsConfig.EncryptionMode.valueOf("INVALID"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
     }
 
     @Nested
@@ -89,6 +96,26 @@ class SecretsConfigTest {
             Path nonExistent = tempDir.resolve("does-not-exist.txt");
             assertThat(Files.exists(nonExistent)).isFalse();
         }
+
+        @Test
+        @DisplayName("should handle empty file")
+        void shouldHandleEmptyFile() throws IOException {
+            Path emptyFile = tempDir.resolve("empty.txt");
+            Files.writeString(emptyFile, "");
+
+            String content = Files.readString(emptyFile).trim();
+            assertThat(content).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should read vault token from file")
+        void shouldReadVaultTokenFromFile() throws IOException {
+            Path tokenFile = tempDir.resolve("vault-token.txt");
+            Files.writeString(tokenFile, "hvs.my-vault-token\n");
+
+            String content = Files.readString(tokenFile).trim();
+            assertThat(content).isEqualTo("hvs.my-vault-token");
+        }
     }
 
     @Nested
@@ -100,6 +127,13 @@ class SecretsConfigTest {
         void shouldCreateSecretsConfigInstance() {
             SecretsConfig config = new SecretsConfig();
             assertThat(config).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should call loadSecretsFromFiles without error")
+        void shouldCallLoadSecretsFromFilesWithoutError() {
+            SecretsConfig config = new SecretsConfig();
+            assertThatCode(() -> config.loadSecretsFromFiles()).doesNotThrowAnyException();
         }
     }
 }
