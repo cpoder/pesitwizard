@@ -2,8 +2,8 @@
 FROM eclipse-temurin:21-jre-alpine
 
 # Add non-root user
-RUN addgroup -g 1000 vectis && \
-    adduser -u 1000 -G vectis -s /bin/sh -D vectis
+RUN addgroup -g 1000 pesitwizard && \
+    adduser -u 1000 -G pesitwizard -s /bin/sh -D pesitwizard
 
 WORKDIR /app
 
@@ -15,20 +15,23 @@ COPY connector[s]/ connectors/
 
 # Create directories for data
 RUN mkdir -p /data /app/data /app/connectors && \
-    chown -R vectis:vectis /data /app
+    chown -R pesitwizard:pesitwizard /data /app
 
 # Switch to non-root user
-USER vectis
+USER pesitwizard
 
 # Expose ports
-# 8080 - REST API
+# 8080 - REST API (configurable via SERVER_PORT)
 EXPOSE 8080
 
-# Health check
+# Default server port (can be overridden)
+ENV SERVER_PORT=8080
+
+# Health check (uses SERVER_PORT)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
+    CMD wget -q --spider http://localhost:${SERVER_PORT}/actuator/health || exit 1
 
 # JVM options for containers
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=8080 -jar app.jar serve"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${SERVER_PORT} -jar app.jar serve"]

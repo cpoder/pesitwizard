@@ -38,14 +38,13 @@ docker run -d \
 Créez un fichier `docker-compose.yml` :
 
 ```yaml
-version: '3.8'
-
 services:
-  pesitwizard-client:
-    image: ghcr.io/pesitwizard/pesitwizard-client:latest
+  pesitwizard-client-api:
+    image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
     ports:
       - "9081:9081"
     environment:
+      SERVER_PORT: 9081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
       SPRING_DATASOURCE_USERNAME: pesitwizard
       SPRING_DATASOURCE_PASSWORD: pesitwizard
@@ -53,22 +52,36 @@ services:
       - postgres
     volumes:
       - client-data:/data
+    networks:
+      - client-network
 
   pesitwizard-client-ui:
-    image: ghcr.io/pesitwizard/pesitwizard-client-ui:latest
+    image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client-ui:latest
     ports:
-      - "3001:80"
+      - "3001:8080"
     environment:
-      VITE_API_URL: http://localhost:9081
+      NGINX_PORT: 8080
+      API_HOST: pesitwizard-client-api
+      API_PORT: 9081
+    depends_on:
+      - pesitwizard-client-api
+    networks:
+      - client-network
 
   postgres:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_DB: pesitwizard
       POSTGRES_USER: pesitwizard
       POSTGRES_PASSWORD: pesitwizard
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - client-network
+
+networks:
+  client-network:
+    driver: bridge
 
 volumes:
   client-data:
@@ -78,8 +91,107 @@ volumes:
 Lancez avec :
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
+
+### Avec HashiCorp Vault
+
+Pour une gestion sécurisée des secrets avec HashiCorp Vault :
+
+```yaml
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: pesitwizard-dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    command: server -dev
+    networks:
+      - client-network
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  vault-init:
+    image: hashicorp/vault:1.15
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: pesitwizard-dev-token
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        vault secrets enable -path=secret kv-v2 2>/dev/null || true
+        vault kv put secret/pesitwizard/client initialized=true
+    networks:
+      - client-network
+
+  pesitwizard-client-api:
+    image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
+    ports:
+      - "9081:9081"
+    environment:
+      SERVER_PORT: 9081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
+      SPRING_DATASOURCE_USERNAME: pesitwizard
+      SPRING_DATASOURCE_PASSWORD: pesitwizard
+      PESITWIZARD_SECURITY_MODE: VAULT
+      PESITWIZARD_SECURITY_VAULT_ADDRESS: http://vault:8200
+      PESITWIZARD_SECURITY_VAULT_TOKEN: pesitwizard-dev-token
+      PESITWIZARD_SECURITY_VAULT_PATH: secret/data/pesitwizard/client
+    depends_on:
+      postgres:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+    volumes:
+      - client-data:/data
+    networks:
+      - client-network
+
+  pesitwizard-client-ui:
+    image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client-ui:latest
+    ports:
+      - "3001:8080"
+    environment:
+      NGINX_PORT: 8080
+      API_HOST: pesitwizard-client-api
+      API_PORT: 9081
+    depends_on:
+      - pesitwizard-client-api
+    networks:
+      - client-network
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pesitwizard
+      POSTGRES_USER: pesitwizard
+      POSTGRES_PASSWORD: pesitwizard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - client-network
+
+networks:
+  client-network:
+    driver: bridge
+
+volumes:
+  client-data:
+  postgres-data:
+```
+
+> ⚠️ **Production** : Remplacez le token dev par une authentification **AppRole** avec `PESITWIZARD_SECURITY_VAULT_ROLE_ID` et `PESITWIZARD_SECURITY_VAULT_SECRET_ID`.
 
 ## Kubernetes (Helm)
 

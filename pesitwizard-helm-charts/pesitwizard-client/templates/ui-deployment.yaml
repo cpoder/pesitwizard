@@ -25,6 +25,13 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          env:
+            - name: NGINX_PORT
+              value: "8080"
+            - name: API_HOST
+              value: "{{ include "pesitwizard-client.fullname" . }}-api"
+            - name: API_PORT
+              value: "{{ .Values.api.service.port }}"
           livenessProbe:
             httpGet:
               path: /

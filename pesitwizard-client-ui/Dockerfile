@@ -9,6 +9,11 @@ RUN npm run build
 # Runtime stage - use unprivileged nginx for Kubernetes
 FROM docker.io/nginxinc/nginx-unprivileged:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Default values for environment variables
+ENV NGINX_PORT=8080
+ENV API_HOST=pesitwizard-client-api
+ENV API_PORT=8080
+
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]

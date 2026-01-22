@@ -1,5 +1,5 @@
 server {
-    listen 8080;
+    listen ${NGINX_PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
@@ -10,7 +10,7 @@ server {
 
     # API proxy to backend
     location /api/ {
-        proxy_pass http://pesitwizard-client-api:8080/api/;
+        proxy_pass http://${API_HOST}:${API_PORT}/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -20,9 +20,30 @@ server {
 
     # Actuator proxy for health checks
     location /actuator/ {
-        proxy_pass http://pesitwizard-client-api:8080/actuator/;
+        proxy_pass http://${API_HOST}:${API_PORT}/actuator/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+    }
+
+    # WebSocket proxy
+    location /ws {
+        proxy_pass http://${API_HOST}:${API_PORT}/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
+
+    location /ws-raw {
+        proxy_pass http://${API_HOST}:${API_PORT}/ws-raw;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
     }
 
     # SPA fallback
