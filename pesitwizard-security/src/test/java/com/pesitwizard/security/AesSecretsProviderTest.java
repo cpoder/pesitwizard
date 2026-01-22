@@ -393,4 +393,49 @@ class AesSecretsProviderTest {
             assertThat(decrypted).isEqualTo(plaintext);
         }
     }
+
+    @Nested
+    @DisplayName("Decrypt Exceptions")
+    class DecryptExceptionTests {
+
+        @Test
+        @DisplayName("should throw DecryptionException for invalid v2 data")
+        void shouldThrowDecryptionExceptionForInvalidV2Data() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            assertThatThrownBy(() -> provider.decrypt("AES:v2:invalidbase64data!!!"))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("should throw DecryptionException for corrupted v2 ciphertext")
+        void shouldThrowDecryptionExceptionForCorruptedV2() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            // Valid base64 but invalid ciphertext
+            String corruptedCiphertext = "AES:v2:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
+
+            assertThatThrownBy(() -> provider.decrypt(corruptedCiphertext))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("should throw DecryptionException for invalid legacy data")
+        void shouldThrowDecryptionExceptionForInvalidLegacyData() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+
+            assertThatThrownBy(() -> provider.decrypt("AES:invalidbase64!!!"))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("should throw DecryptionException for corrupted legacy ciphertext")
+        void shouldThrowDecryptionExceptionForCorruptedLegacy() {
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
+            // Valid base64 but invalid ciphertext for legacy format
+            String corruptedCiphertext = "AES:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
+
+            assertThatThrownBy(() -> provider.decrypt(corruptedCiphertext))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
 }
