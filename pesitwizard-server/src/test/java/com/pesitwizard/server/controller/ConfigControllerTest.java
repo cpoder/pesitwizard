@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -202,6 +202,85 @@ class ConfigControllerTest {
 
             mockMvc.perform(delete("/api/v1/config/files/FILE1"))
                     .andExpect(status().isNoContent());
+        }
+    }
+
+    @Nested
+    @DisplayName("Validation Tests")
+    class ValidationTests {
+
+        @Test
+        @DisplayName("should reject partner with invalid ID - too long")
+        void shouldRejectPartnerWithTooLongId() throws Exception {
+            Partner invalidPartner = Partner.builder().id("TOOLONGID").description("Test").build();
+
+            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(invalidPartner)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should reject partner with invalid characters")
+        void shouldRejectPartnerWithInvalidChars() throws Exception {
+            Partner invalidPartner = Partner.builder().id("test-id").description("Test").build();
+
+            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(invalidPartner)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should reject virtual file with invalid ID")
+        void shouldRejectVirtualFileWithInvalidId() throws Exception {
+            VirtualFile invalidFile = VirtualFile.builder().id("toolongfileid").sendDirectory("/data").build();
+
+            mockMvc.perform(post("/api/v1/config/files").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(invalidFile)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should reject virtual file update with invalid ID")
+        void shouldRejectVirtualFileUpdateWithInvalidId() throws Exception {
+            VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
+
+            mockMvc.perform(put("/api/v1/config/files/invalid-id").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(file)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should return conflict when creating duplicate virtual file")
+        void shouldReturnConflictForDuplicateVirtualFile() throws Exception {
+            when(configService.virtualFileExists("FILE1")).thenReturn(true);
+            VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
+
+            mockMvc.perform(post("/api/v1/config/files").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(file)))
+                    .andExpect(status().isConflict());
+        }
+    }
+
+    @Nested
+    @DisplayName("Not Found Tests")
+    class NotFoundTests {
+
+        @Test
+        @DisplayName("should return 404 when deleting non-existent partner")
+        void shouldReturn404WhenDeletingNonExistentPartner() throws Exception {
+            when(configService.partnerExists("NOTFOUND")).thenReturn(false);
+
+            mockMvc.perform(delete("/api/v1/config/partners/NOTFOUND"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("should return 404 when deleting non-existent virtual file")
+        void shouldReturn404WhenDeletingNonExistentFile() throws Exception {
+            when(configService.virtualFileExists("NOTFOUND")).thenReturn(false);
+
+            mockMvc.perform(delete("/api/v1/config/files/NOTFOUND"))
+                    .andExpect(status().isNotFound());
         }
     }
 }
