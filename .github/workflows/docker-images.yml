@@ -126,13 +126,16 @@ jobs:
             exit 0
           fi
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
           
-          for PACKAGE in pesitwizard-client pesitwizard-client-ui pesitwizard-server; do
-            echo "Setting ${PACKAGE} visibility to public..."
+          for IMAGE in pesitwizard-client pesitwizard-client-ui pesitwizard-server; do
+            # Package name includes repo: pesitwizard/pesitwizard-client -> URL encoded
+            PACKAGE_NAME="${REPO}%2F${IMAGE}"
+            echo "Setting ${REPO}/${IMAGE} visibility to public..."
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              "/orgs/${OWNER}/packages/container/${PACKAGE}" \
-              -f visibility=public || echo "Could not change visibility for ${PACKAGE}"
+              "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}" \
+              -f visibility=public || echo "Could not change visibility for ${IMAGE}"
           done
         continue-on-error: true
