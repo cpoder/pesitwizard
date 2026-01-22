@@ -303,4 +303,86 @@ public class TransferServiceTest {
         transfer = transferService.resumeTransfer(transfer.getTransferId());
         assertEquals(TransferStatus.IN_PROGRESS, transfer.getStatus());
     }
+
+    @Test
+    @DisplayName("Cancel transfer")
+    void testCancelTransfer() {
+        TransferRecord transfer = transferService.createTransfer(
+                "session-33", "server-1", "node-1",
+                "PARTNER_M", "CANCEL_FILE.dat",
+                TransferDirection.SEND, "192.168.1.133");
+
+        transferService.startTransfer(transfer.getTransferId(), 5000L, "/data/cancel.dat");
+        transferService.updateProgress(transfer.getTransferId(), 1000L);
+
+        transfer = transferService.cancelTransfer(transfer.getTransferId(), "User cancelled");
+
+        assertEquals(TransferStatus.CANCELLED, transfer.getStatus());
+        assertEquals("User cancelled", transfer.getErrorMessage());
+        assertNotNull(transfer.getCompletedAt());
+    }
+
+    @Test
+    @DisplayName("Retry transfer")
+    void testRetryTransfer() {
+        TransferRecord transfer = transferService.createTransfer(
+                "session-34", "server-1", "node-1",
+                "PARTNER_N", "RETRY_FILE.dat",
+                TransferDirection.RECEIVE, "192.168.1.134");
+
+        transferService.startTransfer(transfer.getTransferId(), 10000L, "/data/retry.dat");
+        transferService.updateProgress(transfer.getTransferId(), 5000L);
+        transferService.recordSyncPoint(transfer.getTransferId(), 5000L);
+        transferService.interruptTransfer(transfer.getTransferId(), "Connection lost");
+
+        TransferRecord retry = transferService.retryTransfer(transfer.getTransferId());
+
+        assertNotNull(retry);
+        assertNotEquals(transfer.getTransferId(), retry.getTransferId());
+        assertEquals(transfer.getTransferId(), retry.getParentTransferId());
+        assertEquals(5000L, retry.getBytesTransferred()); // Resumes from sync point
+        assertEquals(TransferStatus.INITIATED, retry.getStatus());
+    }
+
+    @Test
+    @DisplayName("Get retryable transfers")
+    void testGetRetryableTransfers() {
+        // Create an interrupted transfer
+        TransferRecord transfer = transferService.createTransfer(
+                "session-35", "server-1", "node-1",
+                "PARTNER_O", "RETRYABLE_FILE.dat",
+                TransferDirection.RECEIVE, "192.168.1.135");
+
+        transferService.startTransfer(transfer.getTransferId(), 10000L, "/data/retryable.dat");
+        transferService.updateProgress(transfer.getTransferId(), 3000L);
+        transferService.recordSyncPoint(transfer.getTransferId(), 3000L);
+        transferService.interruptTransfer(transfer.getTransferId(), "Network error");
+
+        List<TransferRecord> retryable = transferService.getRetryableTransfers();
+        assertTrue(retryable.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
+    }
+
+    @Test
+    @DisplayName("Get transfer or throw exception")
+    void testGetTransferOrThrow() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            transferService.getTransfer("non-existent-id").orElseThrow(
+                    () -> new IllegalArgumentException("Transfer not found"));
+        });
+    }
+
+    @Test
+    @DisplayName("Get active transfers")
+    void testGetActiveTransfers() {
+        // Create an active transfer
+        TransferRecord transfer = transferService.createTransfer(
+                "session-36", "server-1", "node-1",
+                "PARTNER_P", "ACTIVE_FILE.dat",
+                TransferDirection.SEND, "192.168.1.136");
+
+        transferService.startTransfer(transfer.getTransferId(), 5000L, "/data/active.dat");
+
+        List<TransferRecord> active = transferService.getActiveTransfers();
+        assertTrue(active.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
+    }
 }
