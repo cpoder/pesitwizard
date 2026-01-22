@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import java.time.Instant;
 import java.util.List;
 
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -297,6 +298,81 @@ class AuditServiceTest {
                     Instant.now().minusSeconds(3600), Instant.now(), 0, 10);
 
             assertNotNull(result);
+        }
+    }
+
+    @Nested
+    @DisplayName("Statistics Tests")
+    class StatisticsTests {
+
+        @Test
+        @DisplayName("Should get audit statistics")
+        void shouldGetAuditStatistics() {
+            when(auditRepository.count()).thenReturn(100L);
+            when(auditRepository.countFailuresSince(any(Instant.class))).thenReturn(5L);
+            when(auditRepository.countByCategories(any(Instant.class))).thenReturn(List.of(
+                    new Object[]{"TRANSFER", 50L},
+                    new Object[]{"AUTHENTICATION", 30L}
+            ));
+            when(auditRepository.countByOutcomes(any(Instant.class))).thenReturn(List.of(
+                    new Object[]{"SUCCESS", 90L},
+                    new Object[]{"FAILURE", 10L}
+            ));
+
+            AuditService.AuditStatistics stats = auditService.getStatistics(24);
+
+            assertEquals(24, stats.getPeriodHours());
+            assertEquals(100L, stats.getTotalEvents());
+            assertEquals(5L, stats.getFailureCount());
+            assertNotNull(stats.getEventsByCategory());
+            assertNotNull(stats.getEventsByOutcome());
+        }
+    }
+
+    @Nested
+    @DisplayName("Cleanup Tests")
+    class CleanupTests {
+
+        @Test
+        @DisplayName("Should cleanup old events")
+        void shouldCleanupOldEvents() {
+            when(auditRepository.deleteOldEvents(any(Instant.class))).thenReturn(10);
+
+            auditService.cleanupOldEvents();
+
+            verify(auditRepository).deleteOldEvents(any(Instant.class));
+        }
+
+        @Test
+        @DisplayName("Should not log when no events deleted")
+        void shouldNotLogWhenNoEventsDeleted() {
+            when(auditRepository.deleteOldEvents(any(Instant.class))).thenReturn(0);
+
+            auditService.cleanupOldEvents();
+
+            verify(auditRepository).deleteOldEvents(any(Instant.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("AuditStatistics DTO Tests")
+    class AuditStatisticsDtoTests {
+
+        @Test
+        @DisplayName("Should create and access AuditStatistics")
+        void shouldCreateAndAccessAuditStatistics() {
+            AuditService.AuditStatistics stats = new AuditService.AuditStatistics();
+            stats.setPeriodHours(12);
+            stats.setTotalEvents(500L);
+            stats.setFailureCount(25L);
+            stats.setEventsByCategory(Map.of("TRANSFER", 100L));
+            stats.setEventsByOutcome(Map.of("SUCCESS", 475L));
+
+            assertEquals(12, stats.getPeriodHours());
+            assertEquals(500L, stats.getTotalEvents());
+            assertEquals(25L, stats.getFailureCount());
+            assertEquals(100L, stats.getEventsByCategory().get("TRANSFER"));
+            assertEquals(475L, stats.getEventsByOutcome().get("SUCCESS"));
         }
     }
 }
