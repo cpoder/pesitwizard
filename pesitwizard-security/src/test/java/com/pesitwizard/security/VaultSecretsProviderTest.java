@@ -203,4 +203,67 @@ class VaultSecretsProviderTest {
             assertThat(result).isEqualTo("secret");
         }
     }
+
+    @Nested
+    @DisplayName("AppRole Authentication")
+    class AppRoleAuthTests {
+
+        @Test
+        @DisplayName("should not be available with null roleId for AppRole")
+        void shouldNotBeAvailableWithNullRoleIdForAppRole() {
+            VaultSecretsProvider provider = new VaultSecretsProvider(
+                    "http://vault:8200", "secret/data/test", null, "secret-id");
+            assertThat(provider.isAvailable()).isFalse();
+        }
+
+        @Test
+        @DisplayName("should not be available with null secretId for AppRole")
+        void shouldNotBeAvailableWithNullSecretIdForAppRole() {
+            VaultSecretsProvider provider = new VaultSecretsProvider(
+                    "http://vault:8200", "secret/data/test", "role-id", null);
+            assertThat(provider.isAvailable()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("AuthMethod Enum")
+    class AuthMethodEnumTests {
+
+        @Test
+        @DisplayName("should have TOKEN and APPROLE values")
+        void shouldHaveTokenAndApproleValues() {
+            assertThat(VaultSecretsProvider.AuthMethod.TOKEN).isNotNull();
+            assertThat(VaultSecretsProvider.AuthMethod.APPROLE).isNotNull();
+            assertThat(VaultSecretsProvider.AuthMethod.values()).hasSize(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("Null and Edge Cases")
+    class NullAndEdgeCasesTests {
+
+        @Test
+        @DisplayName("encrypt should handle null plaintext")
+        void encryptShouldHandleNullPlaintext() {
+            VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
+            String result = provider.encrypt(null);
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("decrypt should handle null ciphertext")
+        void decryptShouldHandleNullCiphertext() {
+            VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
+            String result = provider.decrypt(null);
+            assertThat(result).isNull();
+        }
+
+        @Test
+        @DisplayName("decrypt should handle empty string")
+        void decryptShouldHandleEmptyString() {
+            VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
+            String result = provider.decrypt("");
+            assertThat(result).isEqualTo("");
+        }
+    }
 }
