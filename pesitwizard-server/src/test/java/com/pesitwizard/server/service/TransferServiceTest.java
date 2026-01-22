@@ -363,4 +363,29 @@ public class TransferServiceTest {
         List<TransferRecord> active = transferService.getActiveTransfers();
         assertTrue(active.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
     }
+
+    @Test
+    @DisplayName("Get transfers by session")
+    void testGetTransfersBySession() {
+        String sessionId = "session-query-test";
+        
+        // Create multiple transfers for the same session
+        transferService.createTransfer(sessionId, "server-1", "node-1",
+                "PARTNER_S", "file1.dat", TransferDirection.SEND, "192.168.1.1");
+        transferService.createTransfer(sessionId, "server-1", "node-1",
+                "PARTNER_S", "file2.dat", TransferDirection.RECEIVE, "192.168.1.1");
+        
+        List<TransferRecord> transfers = transferService.getTransfersBySession(sessionId);
+        
+        assertEquals(2, transfers.size());
+        assertTrue(transfers.stream().allMatch(t -> t.getSessionId().equals(sessionId)));
+    }
+
+    @Test
+    @DisplayName("Get transfer or throw - not found")
+    void testGetTransferOrThrowNotFound() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            transferService.getTransferOrThrow("non-existent-transfer-id");
+        });
+    }
 }
