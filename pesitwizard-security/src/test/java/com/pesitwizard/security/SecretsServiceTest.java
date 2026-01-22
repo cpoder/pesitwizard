@@ -222,4 +222,188 @@ class SecretsServiceTest {
             verify(secretsProvider).deleteSecret("key");
         }
     }
+
+    @Nested
+    @DisplayName("isEncrypted")
+    class IsEncryptedTests {
+
+        @Test
+        @DisplayName("should return true for AES encrypted value")
+        void shouldReturnTrueForAesEncrypted() {
+            assertThat(secretsService.isEncrypted("AES:someencryptedvalue")).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return true for vault encrypted value")
+        void shouldReturnTrueForVaultEncrypted() {
+            assertThat(secretsService.isEncrypted("vault:some/path")).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return true for ENC encrypted value")
+        void shouldReturnTrueForEncEncrypted() {
+            assertThat(secretsService.isEncrypted("ENC:somevalue")).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false for plaintext")
+        void shouldReturnFalseForPlaintext() {
+            assertThat(secretsService.isEncrypted("plaintext")).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false for null")
+        void shouldReturnFalseForNull() {
+            assertThat(secretsService.isEncrypted(null)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("encryptForStorage with context")
+    class EncryptForStorageWithContextTests {
+
+        @Test
+        @DisplayName("should delegate to provider with context path")
+        void shouldDelegateToProviderWithContextPath() {
+            when(secretsProvider.encrypt(eq("password123"), eq("registry/github/password")))
+                    .thenReturn("vault:registry/github/password");
+
+            String result = secretsService.encryptForStorage("password123", "registry", "github", "password");
+
+            assertThat(result).isEqualTo("vault:registry/github/password");
+            verify(secretsProvider).encrypt("password123", "registry/github/password");
+        }
+
+        @Test
+        @DisplayName("should return null for null plaintext with context")
+        void shouldReturnNullForNullPlaintextWithContext() {
+            String result = secretsService.encryptForStorage(null, "registry", "github", "password");
+
+            assertThat(result).isNull();
+            verify(secretsProvider, never()).encrypt(any(), any());
+        }
+
+        @Test
+        @DisplayName("should return blank for blank plaintext with context")
+        void shouldReturnBlankForBlankPlaintextWithContext() {
+            String result = secretsService.encryptForStorage("  ", "registry", "github", "password");
+
+            assertThat(result).isEqualTo("  ");
+            verify(secretsProvider, never()).encrypt(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("isVaultAvailable")
+    class IsVaultAvailableTests {
+
+        @Test
+        @DisplayName("should return true when provider is VAULT and available")
+        void shouldReturnTrueWhenVaultAndAvailable() {
+            when(secretsProvider.getProviderType()).thenReturn("VAULT");
+            when(secretsProvider.isAvailable()).thenReturn(true);
+
+            assertThat(secretsService.isVaultAvailable()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when provider is AES")
+        void shouldReturnFalseWhenAes() {
+            when(secretsProvider.getProviderType()).thenReturn("AES");
+
+            assertThat(secretsService.isVaultAvailable()).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when Vault not available")
+        void shouldReturnFalseWhenVaultNotAvailable() {
+            when(secretsProvider.getProviderType()).thenReturn("VAULT");
+            when(secretsProvider.isAvailable()).thenReturn(false);
+
+            assertThat(secretsService.isVaultAvailable()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("storeInVault")
+    class StoreInVaultTests {
+
+        @Test
+        @DisplayName("should store and return vault reference")
+        void shouldStoreAndReturnVaultReference() {
+            when(secretsProvider.getProviderType()).thenReturn("VAULT");
+            when(secretsProvider.isAvailable()).thenReturn(true);
+
+            String result = secretsService.storeInVault("mykey", "mysecret");
+
+            assertThat(result).isEqualTo("vault:mykey");
+            verify(secretsProvider).storeSecret("mykey", "mysecret");
+        }
+
+        @Test
+        @DisplayName("should throw when Vault not available")
+        void shouldThrowWhenVaultNotAvailable() {
+            when(secretsProvider.getProviderType()).thenReturn("AES");
+
+            assertThatThrownBy(() -> secretsService.storeInVault("key", "value"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Vault is not available");
+        }
+    }
+
+    @Nested
+    @DisplayName("encrypt and decrypt aliases")
+    class EncryptDecryptAliasesTests {
+
+        @Test
+        @DisplayName("encrypt should delegate to encryptForStorage")
+        void encryptShouldDelegateToEncryptForStorage() {
+            when(secretsProvider.encrypt("plain")).thenReturn("AES:encrypted");
+
+            String result = secretsService.encrypt("plain");
+
+            assertThat(result).isEqualTo("AES:encrypted");
+        }
+
+        @Test
+        @DisplayName("decrypt should delegate to decryptFromStorage")
+        void decryptShouldDelegateToDecryptFromStorage() {
+            when(secretsProvider.decrypt("AES:encrypted")).thenReturn("plain");
+
+            String result = secretsService.decrypt("AES:encrypted");
+
+            assertThat(result).isEqualTo("plain");
+        }
+    }
+
+    @Nested
+    @DisplayName("isAvailable")
+    class IsAvailableTests {
+
+        @Test
+        @DisplayName("should delegate to provider isAvailable")
+        void shouldDelegateToProviderIsAvailable() {
+            when(secretsProvider.isAvailable()).thenReturn(true);
+
+            assertThat(secretsService.isAvailable()).isTrue();
+            verify(secretsProvider).isAvailable();
+        }
+    }
+
+    @Nested
+    @DisplayName("getStatus edge cases")
+    class GetStatusEdgeCasesTests {
+
+        @Test
+        @DisplayName("should return error status when not available")
+        void shouldReturnErrorStatusWhenNotAvailable() {
+            when(secretsProvider.getProviderType()).thenReturn("AES");
+            when(secretsProvider.isAvailable()).thenReturn(false);
+
+            var status = secretsService.getStatus();
+
+            assertThat(status.available()).isFalse();
+            assertThat(status.message()).contains("not available");
+        }
+    }
 }
