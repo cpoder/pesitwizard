@@ -106,4 +106,64 @@ class FileSystemControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Path already exists: " + basePath));
     }
+
+    @Test
+    @DisplayName("browse should create non-existent directory under base path")
+    void browseShouldCreateNonExistentDirectory() throws Exception {
+        String newPath = basePath + "/auto-create-" + System.currentTimeMillis();
+
+        mockMvc.perform(get("/api/v1/filesystem/browse?path=" + newPath))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentPath").value(newPath));
+
+        // Clean up
+        Files.deleteIfExists(Path.of(newPath));
+    }
+
+    @Test
+    @DisplayName("browse should reject file path")
+    void browseShouldRejectFilePath() throws Exception {
+        Path testFile = Path.of(basePath, "testfile-browse.txt");
+        Files.writeString(testFile, "test");
+
+        mockMvc.perform(get("/api/v1/filesystem/browse?path=" + testFile))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Path is not a directory: " + testFile));
+
+        Files.deleteIfExists(testFile);
+    }
+
+    @Test
+    @DisplayName("browse should include parent directory entry when not at base")
+    void browseShouldIncludeParentEntry() throws Exception {
+        String subDir = basePath + "/subdir-" + System.currentTimeMillis();
+        Files.createDirectories(Path.of(subDir));
+
+        mockMvc.perform(get("/api/v1/filesystem/browse?path=" + subDir))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[0].name").value(".."))
+                .andExpect(jsonPath("$.entries[0].directory").value(true));
+
+        Files.deleteIfExists(Path.of(subDir));
+    }
+
+    @Test
+    @DisplayName("browse should sort directories before files")
+    void browseShouldSortDirectoriesFirst() throws Exception {
+        String testDir = basePath + "/sort-test-" + System.currentTimeMillis();
+        Files.createDirectories(Path.of(testDir));
+        Files.writeString(Path.of(testDir, "aaa-file.txt"), "content");
+        Files.createDirectories(Path.of(testDir, "zzz-dir"));
+
+        mockMvc.perform(get("/api/v1/filesystem/browse?path=" + testDir))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[0].name").value(".."))
+                .andExpect(jsonPath("$.entries[1].name").value("zzz-dir"))
+                .andExpect(jsonPath("$.entries[1].directory").value(true));
+
+        // Cleanup
+        Files.deleteIfExists(Path.of(testDir, "aaa-file.txt"));
+        Files.deleteIfExists(Path.of(testDir, "zzz-dir"));
+        Files.deleteIfExists(Path.of(testDir));
+    }
 }
