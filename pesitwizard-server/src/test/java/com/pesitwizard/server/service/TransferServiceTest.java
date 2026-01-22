@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -368,15 +369,15 @@ public class TransferServiceTest {
     @DisplayName("Get transfers by session")
     void testGetTransfersBySession() {
         String sessionId = "session-query-test";
-        
+
         // Create multiple transfers for the same session
         transferService.createTransfer(sessionId, "server-1", "node-1",
                 "PARTNER_S", "file1.dat", TransferDirection.SEND, "192.168.1.1");
         transferService.createTransfer(sessionId, "server-1", "node-1",
                 "PARTNER_S", "file2.dat", TransferDirection.RECEIVE, "192.168.1.1");
-        
+
         List<TransferRecord> transfers = transferService.getTransfersBySession(sessionId);
-        
+
         assertEquals(2, transfers.size());
         assertTrue(transfers.stream().allMatch(t -> t.getSessionId().equals(sessionId)));
     }
@@ -387,5 +388,72 @@ public class TransferServiceTest {
         assertThrows(IllegalArgumentException.class, () -> {
             transferService.getTransferOrThrow("non-existent-transfer-id");
         });
+    }
+
+    @Test
+    @DisplayName("Get partner statistics")
+    void testGetPartnerStatistics() {
+        String partnerId = "PARTNER_STATS";
+
+        TransferRecord transfer = transferService.createTransfer(
+                "session-ps", "server-1", "node-1",
+                partnerId, "stats.dat", TransferDirection.SEND, "192.168.1.1");
+        transferService.startTransfer(transfer.getTransferId(), 1000L, "/data/stats.dat");
+        transferService.completeTransfer(transfer.getTransferId(), "checksum123");
+
+        TransferService.PartnerTransferStatistics stats = transferService.getPartnerStatistics(partnerId);
+
+        assertNotNull(stats);
+        assertEquals(partnerId, stats.getPartnerId());
+        assertTrue(stats.getTotalTransfers() >= 1);
+    }
+
+    @Test
+    @DisplayName("Get retry history")
+    void testGetRetryHistory() {
+        TransferRecord original = transferService.createTransfer(
+                "session-rh", "server-1", "node-1",
+                "PARTNER_RH", "retry.dat", TransferDirection.RECEIVE, "192.168.1.1");
+        transferService.startTransfer(original.getTransferId(), 1000L, "/data/retry.dat");
+        transferService.failTransfer(original.getTransferId(), "E001", "Test failure");
+
+        TransferRecord retry = transferService.retryTransfer(original.getTransferId());
+
+        List<TransferRecord> history = transferService.getRetryHistory(original.getTransferId());
+        assertTrue(history.stream().anyMatch(t -> t.getTransferId().equals(retry.getTransferId())));
+    }
+
+    @Test
+    @DisplayName("Mark interrupted transfers")
+    void testMarkInterruptedTransfers() {
+        String nodeId = "node-interrupted";
+
+        TransferRecord transfer = transferService.createTransfer(
+                "session-int", "server-1", nodeId,
+                "PARTNER_INT", "interrupted.dat", TransferDirection.SEND, "192.168.1.1");
+        transferService.startTransfer(transfer.getTransferId(), 1000L, "/data/interrupted.dat");
+
+        int count = transferService.markInterruptedTransfers(nodeId);
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    @DisplayName("Cleanup old transfers")
+    void testCleanupOldTransfers() {
+        assertDoesNotThrow(() -> transferService.cleanupOldTransfers());
+    }
+
+    @Test
+    @DisplayName("Get all transfers with pagination")
+    void testGetAllTransfers() {
+        transferService.createTransfer(
+                "session-all", "server-1", "node-1",
+                "PARTNER_ALL", "all.dat", TransferDirection.SEND, "192.168.1.1");
+
+        Page<TransferRecord> page = transferService.getAllTransfers(PageRequest.of(0, 10));
+
+        assertNotNull(page);
+        assertTrue(page.getTotalElements() >= 1);
     }
 }
