@@ -1,0 +1,105 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  push:
+    branches: [main]
+    paths:
+      - 'pesitwizard-server/**'
+      - 'pesitwizard-client/**'
+      - 'pesitwizard-helm-charts/**'
+      - 'integration-tests/**'
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build artifacts
+        run: mvn package -DskipTests -q
+
+      - name: Set up k3s
+        uses: debianmaster/actions-k3s@master
+        id: k3s
+        with:
+          version: 'v1.28.4-k3s1'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      - name: Build Docker images
+        run: |
+          docker build -t ghcr.io/pesitwizard/pesitwizard-server:latest pesitwizard-server/
+          docker build -t ghcr.io/pesitwizard/pesitwizard-client:latest pesitwizard-client/
+
+      - name: Import images to k3s
+        run: |
+          docker save ghcr.io/pesitwizard/pesitwizard-server:latest | sudo k3s ctr images import -
+          docker save ghcr.io/pesitwizard/pesitwizard-client:latest | sudo k3s ctr images import -
+
+      - name: Create namespace
+        run: kubectl create namespace pesitwizard
+
+      - name: Deploy PostgreSQL
+        run: |
+          kubectl apply -f integration-tests/k8s/postgresql.yaml -n pesitwizard
+          kubectl wait --for=condition=Ready pod -l app=postgresql -n pesitwizard --timeout=120s
+
+      - name: Deploy PeSIT Server
+        run: |
+          helm upgrade --install pesitwizard-server \
+            pesitwizard-helm-charts/pesitwizard-server \
+            -n pesitwizard \
+            -f integration-tests/helm-values/server-values.yaml \
+            --wait --timeout 5m
+
+      - name: Deploy PeSIT Client
+        run: |
+          helm upgrade --install pesitwizard-client \
+            pesitwizard-helm-charts/pesitwizard-client \
+            -n pesitwizard \
+            -f integration-tests/helm-values/client-values.yaml \
+            --wait --timeout 5m
+
+      - name: Port forward services
+        run: |
+          kubectl port-forward svc/pesitwizard-server 30080:8080 -n pesitwizard &
+          kubectl port-forward svc/pesitwizard-client 30081:8080 -n pesitwizard &
+          sleep 10
+
+      - name: Run integration tests
+        run: |
+          export SERVER_API=http://localhost:30080
+          export CLIENT_API=http://localhost:30081
+          ./integration-tests/tests/run-all-tests.sh
+        continue-on-error: true
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-reports
+          path: integration-tests/reports/
+
+      - name: Show pod logs on failure
+        if: failure()
+        run: |
+          echo "=== Server Logs ==="
+          kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=100 || true
+          echo "=== Client Logs ==="
+          kubectl logs -n pesitwizard deployment/pesitwizard-client --tail=100 || true

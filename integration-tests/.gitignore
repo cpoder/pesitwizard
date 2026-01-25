@@ -1,0 +1,11 @@
+# Vagrant
+.vagrant/
+
+# Test reports (keep directory but ignore contents)
+reports/*.md
+reports/*.html
+reports/*.json
+
+# Temporary files
+*.log
+*.tmp

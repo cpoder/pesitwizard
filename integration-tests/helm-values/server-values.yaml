@@ -1,0 +1,62 @@
+# PeSIT Server - Integration Test Values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pesitwizard/pesitwizard-server
+  tag: latest
+  pullPolicy: Never  # Use local image
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30080
+  pesitPort: 5100
+  pesitNodePort: 30500
+  pesitSslPort: 5101
+  pesitSslNodePort: 30501
+
+database:
+  host: postgresql
+  port: 5432
+  name: pesitwizard
+  username: pesitwizard
+  password: pesitwizard-test-password
+
+pesit:
+  server:
+    enabled: true
+    autoStart: true
+    serverId: TEST-SERVER
+    port: 5100
+    sslPort: 5101
+    maxConnections: 100
+    receiveDirectory: /data/receive
+    sendDirectory: /data/send
+
+ssl:
+  enabled: false  # Start without SSL for basic tests
+
+security:
+  enabled: false  # Disable auth for testing
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: local-path
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "test"
+  - name: LOGGING_LEVEL_ROOT
+    value: "INFO"
+  - name: LOGGING_LEVEL_COM_PESITWIZARD
+    value: "DEBUG"

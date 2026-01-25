@@ -1,0 +1,40 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# PeSIT Wizard Integration Testing VM
+# This creates a k3s cluster for full end-to-end testing
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "pesitwizard-test"
+
+  # VM Resources
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "pesitwizard-integration-test"
+    vb.memory = "8192"
+    vb.cpus = 4
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  end
+
+  # Network: forward ports for testing
+  config.vm.network "forwarded_port", guest: 6443, host: 6443   # k3s API
+  config.vm.network "forwarded_port", guest: 80, host: 8080     # Ingress HTTP
+  config.vm.network "forwarded_port", guest: 443, host: 8443    # Ingress HTTPS
+  config.vm.network "forwarded_port", guest: 30500, host: 30500 # PeSIT Server
+  config.vm.network "forwarded_port", guest: 30501, host: 30501 # PeSIT Server SSL
+  config.vm.network "forwarded_port", guest: 30080, host: 30080 # Server API
+  config.vm.network "forwarded_port", guest: 30081, host: 30081 # Client API
+  config.vm.network "forwarded_port", guest: 30082, host: 30082 # Admin API
+
+  # Private network for inter-VM communication (if needed later)
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # Sync project directory
+  config.vm.synced_folder "..", "/home/vagrant/pesitwizard"
+
+  # Provision: install k3s and dependencies
+  config.vm.provision "shell", path: "scripts/provision.sh"
+
+  # Post-provision: deploy the stack
+  config.vm.provision "shell", path: "scripts/deploy.sh", privileged: false
+end
