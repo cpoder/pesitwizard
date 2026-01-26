@@ -1,23 +1,40 @@
 # PeSIT Wizard Integration Tests
 
-This directory contains a complete integration testing environment for PeSIT Wizard using k3s (lightweight Kubernetes).
+Complete integration testing environment for PeSIT Wizard.
 
-## Prerequisites
+## Quick Start - WSL2 / Docker (Recommended)
 
-- [Vagrant](https://www.vagrantup.com/) (2.3+)
-- [VirtualBox](https://www.virtualbox.org/) (7.0+)
-- At least 8GB RAM and 4 CPU cores available
+> **Best option for Windows/WSL2** - uses k3d (k3s in Docker)
 
-## Quick Start
+**Prerequisites:** Docker Desktop with WSL2 backend
 
 ```bash
-# Start the VM and deploy the stack
-vagrant up
+cd integration-tests/scripts
 
-# SSH into the VM
-vagrant ssh
+# 1. Setup k3d cluster (one-time)
+./setup-k3d.sh
 
-# Run the integration tests
+# 2. Build and import images
+./build-images.sh
+
+# 3. Deploy the stack
+./deploy-k3d.sh
+
+# 4. Run tests
+cd ../tests
+./run-all-tests.sh
+
+# Cleanup when done
+cd ../scripts
+./cleanup-k3d.sh
+```
+
+## Alternative - Vagrant (Linux/macOS native only)
+
+> ⚠️ **Vagrant + VirtualBox doesn't work on WSL2** (nested virtualization)
+
+```bash
+vagrant up && vagrant ssh
 cd /home/vagrant/pesitwizard/integration-tests/tests
 ./run-all-tests.sh
 ```
@@ -26,7 +43,7 @@ cd /home/vagrant/pesitwizard/integration-tests/tests
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    k3s Cluster (VM)                         │
+│                  k3d Cluster (Docker)                       │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │  PostgreSQL │  │   PeSIT     │  │      PeSIT          │  │
 │  │   Database  │◄─┤   Server    │◄─┤      Client         │  │
@@ -34,116 +51,23 @@ cd /home/vagrant/pesitwizard/integration-tests/tests
 │  │             │  │  :30500 TCP │  │                     │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-         ▲                ▲                    ▲
-         │                │                    │
-    Port 5432        Port 30080/30500     Port 30081
 ```
 
-## Test Suites
+## Test Suites (~90 tests)
 
 | Suite | Description |
 |-------|-------------|
-| `test-server-api.sh` | Server REST API, server management, health checks |
-| `test-client-api.sh` | Client REST API, partner management, jobs |
-| `test-transfers.sh` | File transfer operations, retry/pause/resume |
-| `test-certificates.sh` | Certificate/keystore/truststore management |
-| `test-partners.sh` | Partner CRUD, virtual files, audit |
-| `test-audit.sh` | Audit events, metrics, monitoring |
-
-## Running Individual Tests
-
-```bash
-# Inside the VM
-cd /home/vagrant/pesitwizard/integration-tests/tests
-
-# Run specific test suite
-source test-server-api.sh
-
-# Or run all tests
-./run-all-tests.sh
-```
-
-## Test Reports
-
-Reports are generated in `reports/` directory:
-- `integration-test-YYYYMMDD_HHMMSS.md` - Markdown report with all results
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SERVER_API` | `http://localhost:30080` | Server API base URL |
-| `CLIENT_API` | `http://localhost:30081` | Client API base URL |
-| `PESIT_HOST` | `localhost` | PeSIT TCP host |
-| `PESIT_PORT` | `30500` | PeSIT TCP port |
+| `test-server-api.sh` | Server API, health, CRUD servers |
+| `test-client-api.sh` | Client API, partners, jobs |
+| `test-transfers.sh` | Transfers, retry/pause/resume |
+| `test-certificates.sh` | Keystores, truststores |
+| `test-partners.sh` | Partner CRUD, files, audit |
+| `test-audit.sh` | Audit, metrics, Prometheus |
 
 ## Troubleshooting
 
-### Check pod status
 ```bash
 kubectl get pods -n pesitwizard
-```
-
-### View logs
-```bash
 kubectl logs -n pesitwizard deployment/pesitwizard-server
-kubectl logs -n pesitwizard deployment/pesitwizard-client
-```
-
-### Restart deployment
-```bash
 kubectl rollout restart deployment/pesitwizard-server -n pesitwizard
-```
-
-### Re-run deployment
-```bash
-vagrant provision --provision-with shell
-```
-
-### Destroy and recreate
-```bash
-vagrant destroy -f
-vagrant up
-```
-
-## Directory Structure
-
-```
-integration-tests/
-├── Vagrantfile              # VM configuration
-├── README.md                # This file
-├── scripts/
-│   ├── provision.sh         # VM setup (k3s, tools)
-│   └── deploy.sh            # Deploy PeSIT stack
-├── k8s/
-│   └── postgresql.yaml      # PostgreSQL deployment
-├── helm-values/
-│   ├── server-values.yaml   # Server Helm values
-│   └── client-values.yaml   # Client Helm values
-├── tests/
-│   ├── run-all-tests.sh     # Main test runner
-│   ├── test-server-api.sh   # Server API tests
-│   ├── test-client-api.sh   # Client API tests
-│   ├── test-transfers.sh    # Transfer tests
-│   ├── test-certificates.sh # Certificate tests
-│   ├── test-partners.sh     # Partner tests
-│   └── test-audit.sh        # Audit tests
-└── reports/                 # Generated test reports
-```
-
-## CI/CD Integration
-
-These tests can be integrated into GitHub Actions:
-
-```yaml
-integration-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - name: Setup k3s
-      uses: debianmaster/actions-k3s@master
-    - name: Deploy stack
-      run: ./integration-tests/scripts/deploy.sh
-    - name: Run tests
-      run: ./integration-tests/tests/run-all-tests.sh
 ```
