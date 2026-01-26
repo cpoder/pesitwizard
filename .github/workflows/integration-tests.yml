@@ -31,26 +31,34 @@ jobs:
       - name: Build artifacts
         run: mvn package -DskipTests -q
 
-      - name: Set up k3s
-        uses: debianmaster/actions-k3s@master
-        id: k3s
-        with:
-          version: 'v1.28.4-k3s1'
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d --version
+
+      - name: Create k3d cluster
+        run: |
+          k3d cluster create pesitwizard \
+            --agents 1 \
+            --wait \
+            --timeout 120s
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v4
         with:
-          version: 'v3.13.0'
+          version: 'v3.14.0'
 
       - name: Build Docker images
         run: |
           docker build -t ghcr.io/pesitwizard/pesitwizard-server:latest pesitwizard-server/
           docker build -t ghcr.io/pesitwizard/pesitwizard-client:latest pesitwizard-client/
 
-      - name: Import images to k3s
+      - name: Import images to k3d
         run: |
-          docker save ghcr.io/pesitwizard/pesitwizard-server:latest | sudo k3s ctr images import -
-          docker save ghcr.io/pesitwizard/pesitwizard-client:latest | sudo k3s ctr images import -
+          k3d image import ghcr.io/pesitwizard/pesitwizard-server:latest -c pesitwizard
+          k3d image import ghcr.io/pesitwizard/pesitwizard-client:latest -c pesitwizard
 
       - name: Create namespace
         run: kubectl create namespace pesitwizard
@@ -103,3 +111,7 @@ jobs:
           kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=100 || true
           echo "=== Client Logs ==="
           kubectl logs -n pesitwizard deployment/pesitwizard-client --tail=100 || true
+
+      - name: Cleanup k3d cluster
+        if: always()
+        run: k3d cluster delete pesitwizard || true
