@@ -1,0 +1,63 @@
+# PeSIT Admin - Enterprise Integration Test Values
+backend:
+  replicaCount: 1
+  
+  image:
+    repository: ghcr.io/pesitwizard/pesitwizard-enterprise/pesitwizard-admin
+    tag: latest
+    pullPolicy: Always
+  
+  imagePullSecrets:
+    - name: ghcr-secret
+  
+  service:
+    type: ClusterIP
+    port: 8081
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  config:
+    adminUsername: admin
+    adminPassword: admin123
+    operatorPassword: operator123
+    datasource:
+      url: jdbc:postgresql://postgresql:5432/pesitwizard
+      username: pesitwizard
+      password: pesitwizard-test-password
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: ghcr.io/pesitwizard/pesitwizard-enterprise/pesitwizard-admin-ui
+    tag: latest
+    pullPolicy: Always
+  
+  imagePullSecrets:
+    - name: ghcr-secret
+  
+  service:
+    type: ClusterIP
+    port: 80
+
+postgresql:
+  enabled: false
+
+serviceAccount:
+  create: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
