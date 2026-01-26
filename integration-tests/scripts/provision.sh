@@ -1,6 +1,6 @@
 #!/bin/bash
 # PeSIT Wizard - VM Provisioning Script
-# Installs k3s and all required dependencies
+# Installs k3d and all required dependencies
 
 set -e
 
@@ -33,24 +33,25 @@ apt-get install -y -qq \
 echo "[3/7] Configuring Docker..."
 systemctl enable docker
 systemctl start docker
-usermod -aG docker vagrant
+usermod -aG docker vagrant || true
 
-# Install k3s
-echo "[4/7] Installing k3s..."
-curl -sfL https://get.k3s.io | sh -s - \
-    --write-kubeconfig-mode 644 \
-    --disable traefik \
-    --node-name pesitwizard-node
+# Install k3d
+echo "[4/7] Installing k3d..."
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 
-# Wait for k3s to be ready
-echo "[5/7] Waiting for k3s to be ready..."
-sleep 10
-kubectl wait --for=condition=Ready node/pesitwizard-node --timeout=120s
+# Create k3d cluster
+echo "[5/7] Creating k3d cluster..."
+k3d cluster create pesitwizard \
+    --agents 1 \
+    --port "30080:30080@server:0" \
+    --port "30081:30081@server:0" \
+    --port "30500:30500@server:0" \
+    --wait
 
-# Setup kubeconfig for vagrant user
+# Setup kubeconfig
 echo "[6/7] Setting up kubeconfig..."
 mkdir -p /home/vagrant/.kube
-cp /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
+k3d kubeconfig get pesitwizard > /home/vagrant/.kube/config
 chown -R vagrant:vagrant /home/vagrant/.kube
 chmod 600 /home/vagrant/.kube/config
 
@@ -68,6 +69,6 @@ kubectl create namespace pesitwizard --dry-run=client -o yaml | kubectl apply -f
 echo ""
 echo "=========================================="
 echo "Provisioning complete!"
-echo "k3s version: $(k3s --version | head -1)"
+echo "k3d version: $(k3d --version)"
 echo "Helm version: $(helm version --short)"
 echo "=========================================="
