@@ -82,6 +82,8 @@ api:
       value: "org.hibernate.dialect.PostgreSQLDialect"
     - name: LOGGING_LEVEL_ROOT
       value: "INFO"
+    - name: PESIT_SECURITY_ENABLED
+      value: "false"
 
 serviceAccount:
   create: true
