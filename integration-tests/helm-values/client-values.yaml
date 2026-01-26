@@ -1,11 +1,17 @@
 # PeSIT Client - Integration Test Values
-
-replicaCount: 1
-
-image:
-  repository: ghcr.io/pesitwizard/pesitwizard-client
-  tag: latest
-  pullPolicy: Never  # Use local image
+api:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/pesitwizard/pesitwizard-client
+    tag: latest
+    pullPolicy: Never
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
 
 service:
   type: NodePort
@@ -19,40 +25,18 @@ database:
   username: pesitwizard
   password: pesitwizard-test-password
 
-pesit:
-  client:
-    defaultServerId: TEST-CLIENT
-    maxConcurrentTransfers: 10
-    retryAttempts: 3
-    retryDelayMs: 5000
-
-# Pre-configured partner for testing
-partners:
-  - partnerId: TEST-SERVER
-    host: pesitwizard-server
-    port: 5100
-    sslEnabled: false
-
-security:
-  enabled: false  # Disable auth for testing
-
 persistence:
-  enabled: true
-  size: 1Gi
-  storageClass: local-path
+  store:
+    enabled: false
+  data:
+    enabled: false
 
-resources:
-  requests:
-    memory: "512Mi"
-    cpu: "250m"
-  limits:
-    memory: "1Gi"
-    cpu: "1000m"
+tls:
+  enabled: false
+
+serviceAccount:
+  create: true
 
 env:
-  - name: SPRING_PROFILES_ACTIVE
-    value: "test"
   - name: LOGGING_LEVEL_ROOT
     value: "INFO"
-  - name: LOGGING_LEVEL_COM_PESITWIZARD
-    value: "DEBUG"

@@ -29,25 +29,40 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "kubernetes"
+            {{- if .Values.database }}
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.database.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: {{ .Values.database.password | quote }}
+            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: "org.postgresql.Driver"
+            - name: SPRING_JPA_DATABASE_PLATFORM
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+            {{- end }}
+            {{- if .Values.pesit }}
             - name: PESIT_SERVER_ID
-              value: {{ .Values.config.pesit.serverId | quote }}
-            - name: PESIT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "pesitwizard-server.fullname" . }}-secrets
-                  key: pesit-password
+              value: {{ .Values.pesit.server.serverId | default "SERVER-01" | quote }}
+            {{- end }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 5
+            failureThreshold: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
