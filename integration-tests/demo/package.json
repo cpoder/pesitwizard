@@ -1,0 +1,13 @@
+{
+  "name": "pesitwizard-demo",
+  "version": "1.0.0",
+  "description": "Video demo recorder for PeSIT Wizard client UI",
+  "scripts": {
+    "demo": "npx playwright test demo.spec.ts --headed",
+    "demo:record": "npx playwright test demo.spec.ts",
+    "demo:install": "npx playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

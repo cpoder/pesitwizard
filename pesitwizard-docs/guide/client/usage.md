@@ -1,5 +1,14 @@
 # Utilisation du Client
 
+## Vidéo de démonstration
+
+Cette vidéo présente le workflow complet de PeSIT Wizard Client : ajout d'un serveur, transfert de fichier, favoris, calendrier et planification.
+
+<video controls width="100%" style="max-width: 800px; border-radius: 8px; margin: 1rem 0;">
+  <source src="/videos/pesitwizard-demo.webm" type="video/webm">
+  Votre navigateur ne supporte pas la balise video.
+</video>
+
 ## Interface web
 
 L'interface web permet de :
