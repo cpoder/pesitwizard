@@ -42,7 +42,7 @@ async function typeSlowly(page: Page, locator: any, text: string, delay = 80) {
 test.describe('PeSIT Wizard Complete Demo', () => {
 
   test('Full Workflow: Server, Transfer, Favorite, Calendar, Schedule', async ({ page }) => {
-    test.setTimeout(600000); // 10 minutes max
+    test.setTimeout(900000); // 15 minutes max (includes 50MB file transfer)
 
     console.log('\n' + '='.repeat(50));
     console.log('   PeSIT Wizard - Complete Demo');
@@ -210,23 +210,29 @@ test.describe('PeSIT Wizard Complete Demo', () => {
         console.log('   Starting transfer...');
         await sendBtn.click();
 
-        // Wait for transfer to complete (max 30 seconds)
+        // Wait for transfer to start
         await pause(page, PAUSE.long);
 
-        // Monitor transfer status
-        for (let i = 0; i < 10; i++) {
+        // Monitor transfer status (50MB file takes longer - up to 2 minutes)
+        for (let i = 0; i < 60; i++) {
           const completed = page.locator('text=COMPLETED');
           const failed = page.locator('text=FAILED');
+          const inProgress = page.locator('text=IN_PROGRESS');
 
           if (await completed.isVisible({ timeout: 1000 }).catch(() => false)) {
             console.log('   ✓ Transfer completed successfully!');
+            await pause(page, PAUSE.medium);
             break;
           }
           if (await failed.isVisible({ timeout: 1000 }).catch(() => false)) {
             console.log('   ✗ Transfer failed');
             break;
           }
-          await pause(page, PAUSE.medium);
+          // Show progress for large file transfer
+          if (i % 5 === 0 && await inProgress.isVisible({ timeout: 500 }).catch(() => false)) {
+            console.log('   ... transfer in progress');
+          }
+          await pause(page, PAUSE.short);
         }
 
         await pause(page, PAUSE.long);

@@ -16,9 +16,9 @@ export default defineConfig({
     trace: 'off',
     video: {
       mode: 'on',
-      size: { width: 1280, height: 720 }
+      size: { width: 1920, height: 1080 }
     },
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 1920, height: 1080 },
     actionTimeout: 15000,
     navigationTimeout: 30000,
   },

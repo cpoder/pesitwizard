@@ -160,10 +160,12 @@ echo "  Creating directories on server..."
 kubectl exec -n pesitwizard pesitwizard-server-api-0 -- mkdir -p /data/send /data/received 2>/dev/null || true
 kubectl exec -n pesitwizard pesitwizard-server-api-1 -- mkdir -p /data/send /data/received 2>/dev/null || true
 
-# Create test file in client pod for SEND transfer
-echo "  Creating test file in client for SEND transfer..."
-kubectl exec -n pesitwizard deployment/pesitwizard-client-api -- sh -c "echo 'PeSIT Wizard Demo Report
-================================
+# Create 1MB test file in client pod for SEND transfer
+echo "  Creating 1MB test file in client for SEND transfer..."
+kubectl exec -n pesitwizard deployment/pesitwizard-client-api -- sh -c "
+# Create header
+echo 'PeSIT Wizard Demo Report
+==========================================
 Generated: $(date)
 
 This is a demonstration file for PeSIT Wizard.
@@ -172,12 +174,12 @@ It will be transferred using the PeSIT protocol.
 The PeSIT protocol is used by French banks
 for secure file transfers.
 
-Features demonstrated:
-- Partner authentication
-- Virtual file mapping
-- Checkpoint/resume support
-- Real-time progress tracking
-' > /tmp/demo-report.txt" 2>/dev/null || true
+' > /tmp/demo-report.txt
+
+# Append random data to reach ~1MB (fast enough for demo)
+dd if=/dev/urandom bs=1M count=1 2>/dev/null | base64 >> /tmp/demo-report.txt
+" 2>/dev/null || true
+echo "  Test file created (~1MB)"
 
 # Get the PeSIT server ID and ensure it's started
 echo "  Checking PeSIT server status..."
