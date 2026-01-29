@@ -395,6 +395,77 @@ class AesSecretsProviderTest {
     }
 
     @Nested
+    @DisplayName("Environment Variable Salt (Multi-Pod K8s)")
+    class EnvironmentSaltTests {
+
+        private static final String VALID_SALT_BASE64 = java.util.Base64.getEncoder()
+                .encodeToString(new byte[32]); // 32 bytes = 256 bits
+
+        @Test
+        @DisplayName("should use base64 salt from environment over file")
+        void shouldUseBase64SaltFromEnvironment() {
+            // Create two providers with same base64 salt (simulating shared K8s secret)
+            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
+            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
+
+            String encrypted = provider1.encrypt("shared-secret");
+            String decrypted = provider2.decrypt(encrypted);
+
+            assertThat(decrypted).isEqualTo("shared-secret");
+        }
+
+        @Test
+        @DisplayName("should reject invalid salt length")
+        void shouldRejectInvalidSaltLength() {
+            String shortSalt = java.util.Base64.getEncoder().encodeToString(new byte[16]); // 16 bytes instead of 32
+
+            assertThatThrownBy(() -> new AesSecretsProvider(VALID_MASTER_KEY, shortSalt, TEST_SALT_FILE))
+                    .isInstanceOf(EncryptionException.class)
+                    .hasCauseInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Failed to initialize");
+        }
+
+        @Test
+        @DisplayName("should fall back to file when env salt is empty")
+        void shouldFallbackToFileWhenEnvSaltEmpty() {
+            // Empty string should fall back to file
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, "", TEST_SALT_FILE);
+
+            assertThat(provider.isAvailable()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should fall back to file when env salt is null")
+        void shouldFallbackToFileWhenEnvSaltNull() {
+            // null should fall back to file
+            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, null, TEST_SALT_FILE);
+
+            assertThat(provider.isAvailable()).isTrue();
+        }
+
+        @Test
+        @DisplayName("different env salts should produce incompatible encryption")
+        void differentEnvSaltsShouldProduceIncompatibleEncryption() {
+            // Use exactly 32 bytes for each salt
+            byte[] saltBytes1 = new byte[32];
+            byte[] saltBytes2 = new byte[32];
+            saltBytes1[0] = 1; // Different first byte
+            saltBytes2[0] = 2;
+            String salt1 = java.util.Base64.getEncoder().encodeToString(saltBytes1);
+            String salt2 = java.util.Base64.getEncoder().encodeToString(saltBytes2);
+
+            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, salt1, TEST_SALT_FILE);
+            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, salt2, TEST_SALT_FILE);
+
+            String encrypted = provider1.encrypt("secret");
+
+            // Should fail to decrypt with different salt
+            assertThatThrownBy(() -> provider2.decrypt(encrypted))
+                    .isInstanceOf(DecryptionException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("Decrypt Exceptions")
     class DecryptExceptionTests {
 

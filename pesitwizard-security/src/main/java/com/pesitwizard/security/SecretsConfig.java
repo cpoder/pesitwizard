@@ -51,6 +51,10 @@ public class SecretsConfig {
     @Value("${pesitwizard.security.salt-file:./config/encryption.salt}")
     private String saltFile;
 
+    // Base64-encoded encryption salt for multi-pod deployments (takes precedence over salt-file)
+    @Value("${pesitwizard.security.encryption-salt:}")
+    private String encryptionSalt;
+
     @Value("${pesitwizard.security.machine-id:}")
     private String machineId;
 
@@ -126,7 +130,7 @@ public class SecretsConfig {
             log.warn("⚠️  This key will be DIFFERENT on another machine/container!");
             log.warn("⚠️  For production, set PESITWIZARD_SECURITY_MASTER_KEY environment variable.");
         }
-        AesSecretsProvider aesProvider = new AesSecretsProvider(keyToUse, saltFile);
+        AesSecretsProvider aesProvider = new AesSecretsProvider(keyToUse, encryptionSalt, saltFile);
 
         // Try Vault if configured
         if (mode == EncryptionMode.VAULT) {

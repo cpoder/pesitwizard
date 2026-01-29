@@ -2,50 +2,53 @@
 
 ## Client UI
 
-### 1. Erreurs 500 sans messages clairs
+### 1. ~~Erreurs 500 sans messages clairs~~ ✅ CORRIGÉ
 **Priorité**: Haute
 **Composant**: pesitwizard-client-api / pesitwizard-client-ui
+**Statut**: ✅ Corrigé (API côté) - UI à compléter pour afficher les messages
 
-Les erreurs HTTP 500 sont affichées de manière brute sans message utilisateur clair. Par exemple, lors de la création d'un calendrier avec un nom déjà existant, le serveur retourne une 500 au lieu d'une 409 Conflict avec un message explicite.
+**Solution implémentée**:
+- Ajout de `GlobalExceptionHandler` avec `@RestControllerAdvice`
+- Retourne maintenant 409 Conflict pour les violations de contrainte unique
+- Retourne 400 Bad Request pour les erreurs de validation
+- Les stack traces ne sont plus exposées aux utilisateurs
+- Configuration `server.error.include-stacktrace: never` ajoutée
 
-**Comportement actuel**:
-- Erreur 500 avec stack trace dans les logs
-- Pas de popup d'erreur claire côté UI
+**Fichiers créés/modifiés**:
+- `pesitwizard-client/src/main/java/com/pesitwizard/client/exception/GlobalExceptionHandler.java`
+- `pesitwizard-client/src/main/java/com/pesitwizard/client/exception/ApiError.java`
+- `pesitwizard-client/src/main/resources/application.yml`
 
-**Comportement attendu**:
-- Retourner des codes HTTP appropriés (409 pour conflit, 400 pour validation)
-- Afficher une popup d'erreur claire avec le message traduit
-- Logger l'erreur côté serveur mais ne pas exposer les détails techniques à l'utilisateur
-
-**Exemple de log**:
+**Format de réponse d'erreur**:
+```json
+{
+  "timestamp": "2026-01-29T20:00:00Z",
+  "status": 409,
+  "error": "CONFLICT",
+  "message": "A resource with name 'Production Calendar' already exists",
+  "path": "/api/v1/calendars"
+}
 ```
-org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException: Unique index or primary key violation:
-"PUBLIC.UKRKIY8C9P7WD8QPDRR0EGO03VG_INDEX_1 ON PUBLIC.BUSINESS_CALENDARS(NAME NULLS FIRST)
-VALUES ( /* 1 */ 'Production Calendar' )"
-```
+
+**Note**: L'UI doit encore être mise à jour pour afficher ces messages dans des popups.
 
 ---
 
-### 2. Bug de planification horaire
+### 2. ~~Bug de planification horaire~~ ✅ CORRIGÉ
 **Priorité**: Haute
 **Composant**: pesitwizard-client-api (ScheduleService)
+**Statut**: ✅ Corrigé
 
 Lors de la création d'une planification quotidienne à 9h30, le transfert s'exécute 24h après l'heure courante au lieu de s'exécuter le lendemain à 9h30.
 
-**Étapes de reproduction**:
-1. Créer un favori
-2. Planifier ce favori en mode "Daily" à 09:30
-3. Observer que l'exécution est programmée pour maintenant + 24h, pas pour demain 09:30
+**Solution implémentée**:
+- Ajout de la méthode `calculateInitialNextRunTime()` dans `TransferSchedulerService`
+- Pour les schedules DAILY, WEEKLY, MONTHLY: utilise maintenant le `dailyTime` configuré
+- Si l'heure du jour est déjà passée aujourd'hui, planifie pour le lendemain
+- Même logique appliquée pour WEEKLY (prochain jour de la semaine) et MONTHLY (prochain mois)
 
-**Comportement actuel**:
-- Si l'heure actuelle est 23:00, le prochain transfert est planifié pour 23:00 le lendemain
-- L'heure configurée (09:30) est ignorée
-
-**Comportement attendu**:
-- Si l'heure actuelle est 23:00 et l'heure configurée est 09:30:
-  - Le prochain transfert devrait être planifié pour 09:30 le lendemain
-- Si l'heure actuelle est 08:00 et l'heure configurée est 09:30:
-  - Le prochain transfert devrait être planifié pour 09:30 le jour même
+**Fichier modifié**:
+- `pesitwizard-client/src/main/java/com/pesitwizard/client/service/TransferSchedulerService.java`
 
 ---
 
@@ -80,46 +83,47 @@ java.io.EOFException: null
 
 ---
 
-### 4. Salt de chiffrement non partagé entre les pods serveur
+### 4. ~~Salt de chiffrement non partagé entre les pods serveur~~ ✅ CORRIGÉ
 **Priorité**: Critique
 **Composant**: pesitwizard-server (déploiement k8s)
+**Statut**: ✅ Corrigé
 
 Chaque pod du StatefulSet génère son propre salt de chiffrement AES lors du démarrage. Les partenaires créés sur un pod ne peuvent pas être authentifiés sur un autre pod car le mot de passe ne peut pas être déchiffré.
 
-**Erreur**:
-```
-ERROR c.p.s.handler.TcpConnectionHandler - Unexpected error: Decryption failed
-    at com.pesitwizard.server.handler.ConnectionValidator.validatePartner
-```
+**Solution implémentée**:
+- Ajout du support de la variable d'environnement `PESITWIZARD_SECURITY_ENCRYPTION_SALT`
+- Le salt peut maintenant être partagé via un Secret Kubernetes (base64-encoded, 32 bytes)
+- Configuration Helm chart: `config.security.encryptionSalt`
+- Génère avec: `openssl rand -base64 32`
 
-**Cause**:
-- Le fichier `./config/encryption.salt` est généré au démarrage s'il n'existe pas
-- Chaque pod génère un salt différent
-- Le mot de passe du partenaire est chiffré avec le salt du pod où il a été créé
-- Les connexions sont load-balancées et peuvent arriver sur un autre pod
-
-**Solutions possibles**:
-1. Utiliser un PersistentVolumeClaim partagé pour le fichier salt
-2. Stocker le salt dans un Secret Kubernetes et le monter sur tous les pods
-3. Utiliser HashiCorp Vault au lieu du chiffrement AES local
-4. Générer le salt de manière déterministe à partir d'une valeur commune
+**Fichiers modifiés**:
+- `pesitwizard-security/src/main/java/com/pesitwizard/security/AesSecretsProvider.java`
+- `pesitwizard-security/src/main/java/com/pesitwizard/security/SecretsConfig.java`
+- `pesitwizard-helm-charts/pesitwizard-server/values.yaml`
+- `pesitwizard-helm-charts/pesitwizard-server/templates/secrets.yaml`
+- `pesitwizard-helm-charts/pesitwizard-server/templates/deployment.yaml`
 
 ---
 
-### 5. Barre de progression des transferts non fonctionnelle
+### 5. ~~Barre de progression des transferts non fonctionnelle~~ ✅ CORRIGÉ
 **Priorité**: Haute
 **Composant**: pesitwizard-client-ui / WebSocket
+**Statut**: ✅ Corrigé
 
-La barre de progression des transferts ne se met pas à jour pendant le transfert. Le statut passe directement de "IN_PROGRESS" à "COMPLETED" sans afficher la progression intermédiaire.
+**Cause identifiée**:
+- Incompatibilité entre la structure du `TransferEvent` backend et l'interface `TransferProgress` du frontend
+- Backend envoyait: `type`, `totalBytes`, `percentComplete`
+- Frontend attendait: `status`, `fileSize`, `percentage`
 
-**Cause probable**:
-- Problème de connexion WebSocket entre le client UI et l'API
-- Les événements de progression ne sont pas émis ou reçus correctement
+**Solution implémentée**:
+- Ajout d'une interface `TransferEventPayload` pour représenter l'événement backend
+- Ajout d'une fonction `normalizeEvent()` pour convertir les champs du backend au format frontend
+- Mapping de `type` (enum) vers `status` (string)
+- Mapping de `totalBytes` vers `fileSize`, `percentComplete` vers `percentage`
+- Ajout du formatage des bytes en KB/MB/GB
 
-**À investiguer**:
-- Vérifier la configuration WebSocket (STOMP/SockJS)
-- Vérifier que les événements `TransferProgressEvent` sont bien publiés
-- Vérifier la souscription côté UI aux topics WebSocket
+**Fichier modifié**:
+- `pesitwizard-client-ui/src/composables/useTransferProgress.ts`
 
 ---
 

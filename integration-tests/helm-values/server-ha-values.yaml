@@ -75,6 +75,14 @@ api:
     timeoutSeconds: 3
     failureThreshold: 10
   
+  # Security settings for multi-pod encryption
+  security:
+    # Master key for AES encryption
+    masterKey: "integration-test-master-key-32b!"
+    # Shared salt for HA deployments - all pods MUST use the same value
+    # Generate with: openssl rand -base64 32
+    encryptionSalt: "dGVzdC1pbnRlZ3JhdGlvbi1zYWx0LTMyYnl0ZXMhIQ=="
+
   extraEnv:
     - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
       value: "org.postgresql.Driver"

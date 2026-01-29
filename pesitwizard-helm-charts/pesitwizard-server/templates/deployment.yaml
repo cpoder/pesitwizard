@@ -45,6 +45,24 @@ spec:
             - name: PESIT_SERVER_ID
               value: {{ .Values.pesit.server.serverId | default "SERVER-01" | quote }}
             {{- end }}
+            {{- if .Values.config }}
+            {{- if .Values.config.security }}
+            {{- if .Values.config.security.masterKey }}
+            - name: PESITWIZARD_SECURITY_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pesitwizard-server.fullname" . }}-secrets
+                  key: master-key
+            {{- end }}
+            {{- if .Values.config.security.encryptionSalt }}
+            - name: PESITWIZARD_SECURITY_ENCRYPTION_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pesitwizard-server.fullname" . }}-secrets
+                  key: encryption-salt
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}

@@ -267,16 +267,99 @@ public class TransferSchedulerService {
      */
     @Transactional
     public ScheduledTransfer createSchedule(ScheduledTransfer schedule) {
-        // Set initial next run time
+        // Set initial next run time based on schedule type and configured time
         if (schedule.getNextRunAt() == null) {
-            if (schedule.getScheduleType() == ScheduleType.ONCE && schedule.getScheduledAt() != null) {
-                schedule.setNextRunAt(schedule.getScheduledAt());
-            } else {
-                schedule.setNextRunAt(Instant.now());
+            Instant initialRunTime = calculateInitialNextRunTime(schedule);
+            schedule.setNextRunAt(initialRunTime);
+        }
+        log.info("Creating schedule: {} - next run at {}", schedule.getName(), schedule.getNextRunAt());
+        return scheduleRepository.save(schedule);
+    }
+
+    /**
+     * Calculate the initial next run time when creating a new schedule.
+     * For DAILY, WEEKLY, MONTHLY: uses the configured time (dailyTime) instead of NOW.
+     */
+    private Instant calculateInitialNextRunTime(ScheduledTransfer schedule) {
+        ZonedDateTime now = ZonedDateTime.now(DEFAULT_ZONE);
+
+        switch (schedule.getScheduleType()) {
+            case ONCE -> {
+                // Use the explicitly scheduled time
+                return schedule.getScheduledAt() != null ? schedule.getScheduledAt() : now.toInstant();
+            }
+            case INTERVAL -> {
+                // Start after the interval duration
+                if (schedule.getIntervalMinutes() != null && schedule.getIntervalMinutes() > 0) {
+                    return now.toInstant().plus(schedule.getIntervalMinutes(), ChronoUnit.MINUTES);
+                }
+                return now.toInstant();
+            }
+            case HOURLY -> {
+                // Start at the next hour boundary
+                return now.plusHours(1).truncatedTo(ChronoUnit.HOURS).toInstant();
+            }
+            case DAILY -> {
+                // Use dailyTime - if the time has passed today, schedule for tomorrow
+                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
+                ZonedDateTime targetDateTime = now.toLocalDate().atTime(targetTime).atZone(DEFAULT_ZONE);
+                if (targetDateTime.isBefore(now) || targetDateTime.equals(now)) {
+                    // Time already passed today, schedule for tomorrow
+                    targetDateTime = targetDateTime.plusDays(1);
+                }
+                return adjustForWorkingDays(schedule, targetDateTime.toInstant());
+            }
+            case WEEKLY -> {
+                // Use dayOfWeek and dailyTime
+                int targetDay = schedule.getDayOfWeek() != null ? schedule.getDayOfWeek() : 1; // Default Monday
+                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
+
+                int currentDay = now.getDayOfWeek().getValue();
+                int daysToAdd = (targetDay - currentDay + 7) % 7;
+                ZonedDateTime targetDateTime = now.toLocalDate().plusDays(daysToAdd).atTime(targetTime).atZone(DEFAULT_ZONE);
+
+                // If same day but time has passed, go to next week
+                if (daysToAdd == 0 && (targetDateTime.isBefore(now) || targetDateTime.equals(now))) {
+                    targetDateTime = targetDateTime.plusWeeks(1);
+                }
+                return adjustForWorkingDays(schedule, targetDateTime.toInstant());
+            }
+            case MONTHLY -> {
+                // Use dayOfMonth and dailyTime
+                int targetDayOfMonth = schedule.getDayOfMonth() != null ? schedule.getDayOfMonth() : 1;
+                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
+
+                LocalDate targetDate = now.toLocalDate().withDayOfMonth(
+                    Math.min(targetDayOfMonth, now.toLocalDate().lengthOfMonth()));
+                ZonedDateTime targetDateTime = targetDate.atTime(targetTime).atZone(DEFAULT_ZONE);
+
+                // If the day has passed this month, go to next month
+                if (targetDateTime.isBefore(now) || targetDateTime.equals(now)) {
+                    LocalDate nextMonth = now.toLocalDate().plusMonths(1);
+                    targetDate = nextMonth.withDayOfMonth(Math.min(targetDayOfMonth, nextMonth.lengthOfMonth()));
+                    targetDateTime = targetDate.atTime(targetTime).atZone(DEFAULT_ZONE);
+                }
+                return adjustForWorkingDays(schedule, targetDateTime.toInstant());
+            }
+            case CRON -> {
+                // Use Spring's CronExpression
+                if (schedule.getCronExpression() != null) {
+                    try {
+                        CronExpression cron = CronExpression.parse(schedule.getCronExpression());
+                        ZonedDateTime next = cron.next(now);
+                        if (next != null) {
+                            return adjustForWorkingDays(schedule, next.toInstant());
+                        }
+                    } catch (Exception e) {
+                        log.error("Invalid cron expression: {}", schedule.getCronExpression());
+                    }
+                }
+                return now.plusDays(1).toInstant();
+            }
+            default -> {
+                return now.toInstant();
             }
         }
-        log.info("Creating schedule: {}", schedule.getName());
-        return scheduleRepository.save(schedule);
     }
 
     /**

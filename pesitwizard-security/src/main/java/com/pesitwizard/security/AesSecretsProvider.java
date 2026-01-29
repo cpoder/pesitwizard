@@ -46,8 +46,16 @@ public class AesSecretsProvider implements SecretsProvider {
     private final SecretKey legacySecretKey;
     private final boolean available;
 
+    /**
+     * Creates an AES secrets provider.
+     *
+     * @param masterKey the master key for encryption/decryption
+     * @param encryptionSalt optional base64-encoded salt (for multi-pod K8s deployments)
+     * @param saltFilePath path to salt file (used only if encryptionSalt is not provided)
+     */
     public AesSecretsProvider(
             @Value("${pesitwizard.security.master-key:}") String masterKey,
+            @Value("${pesitwizard.security.encryption-salt:}") String encryptionSalt,
             @Value("${pesitwizard.security.salt-file:./config/encryption.salt}") String saltFilePath) {
 
         if (masterKey == null || masterKey.isBlank()) {
@@ -57,7 +65,7 @@ public class AesSecretsProvider implements SecretsProvider {
             this.available = false;
         } else {
             try {
-                byte[] salt = loadOrGenerateSalt(Paths.get(saltFilePath));
+                byte[] salt = loadSalt(encryptionSalt, Paths.get(saltFilePath));
                 this.secretKey = deriveKey(masterKey, salt);
                 this.legacySecretKey = deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
                 this.available = true;
@@ -67,6 +75,33 @@ public class AesSecretsProvider implements SecretsProvider {
                 throw new EncryptionException("Failed to initialize AES encryption", e);
             }
         }
+    }
+
+    /**
+     * Creates an AES secrets provider (backwards-compatible constructor).
+     */
+    public AesSecretsProvider(String masterKey, String saltFilePath) {
+        this(masterKey, null, saltFilePath);
+    }
+
+    /**
+     * Loads salt from environment variable (base64) or from file.
+     * Priority: 1) Environment variable, 2) Existing file, 3) Generate new file
+     */
+    private byte[] loadSalt(String encryptionSaltBase64, Path saltFile) throws IOException {
+        // Priority 1: Use base64-encoded salt from environment (for K8s shared secrets)
+        if (encryptionSaltBase64 != null && !encryptionSaltBase64.isBlank()) {
+            byte[] salt = Base64.getDecoder().decode(encryptionSaltBase64);
+            if (salt.length != SALT_LENGTH) {
+                throw new IllegalArgumentException(
+                    "Encryption salt must be " + SALT_LENGTH + " bytes (got " + salt.length + ")");
+            }
+            log.info("Using encryption salt from environment variable (shared across pods)");
+            return salt;
+        }
+
+        // Priority 2 & 3: Load from file or generate new
+        return loadOrGenerateSalt(saltFile);
     }
 
     private byte[] loadOrGenerateSalt(Path saltFile) throws IOException {

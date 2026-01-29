@@ -1,6 +1,21 @@
 import { Client, type IMessage } from '@stomp/stompjs'
 import { onUnmounted, ref } from 'vue'
 
+// Backend TransferEvent structure
+interface TransferEventPayload {
+  transferId: string
+  type: 'PROGRESS' | 'STATE_CHANGE' | 'SYNC_POINT' | 'ERROR' | 'COMPLETED' | 'CANCELLED'
+  timestamp: string
+  bytesTransferred: number
+  totalBytes: number
+  percentComplete: number
+  syncPointNumber?: number
+  syncPointBytePosition?: number
+  errorMessage?: string
+  diagnosticCode?: string
+}
+
+// Normalized progress interface for UI consumption
 export interface TransferProgress {
   transferId: string
   bytesTransferred: number
@@ -11,6 +26,39 @@ export interface TransferProgress {
   errorMessage?: string
   bytesTransferredFormatted?: string
   fileSizeFormatted?: string
+}
+
+// Convert backend event to frontend-friendly format
+function normalizeEvent(event: TransferEventPayload): TransferProgress {
+  // Map backend EventType to frontend status
+  const statusMap: Record<string, string> = {
+    'PROGRESS': 'IN_PROGRESS',
+    'STATE_CHANGE': 'IN_PROGRESS',
+    'SYNC_POINT': 'IN_PROGRESS',
+    'ERROR': 'FAILED',
+    'COMPLETED': 'COMPLETED',
+    'CANCELLED': 'CANCELLED'
+  }
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  return {
+    transferId: event.transferId,
+    bytesTransferred: event.bytesTransferred || 0,
+    fileSize: event.totalBytes || 0,
+    percentage: event.percentComplete || 0,
+    lastSyncPoint: event.syncPointNumber || 0,
+    status: statusMap[event.type] || 'UNKNOWN',
+    errorMessage: event.errorMessage,
+    bytesTransferredFormatted: formatBytes(event.bytesTransferred || 0),
+    fileSizeFormatted: formatBytes(event.totalBytes || 0)
+  }
 }
 
 export function useTransferProgress() {
@@ -96,13 +144,14 @@ export function useTransferProgress() {
 
     const destination = `/topic/transfer/${transferId}/progress`
     console.log('[WS] Subscribing to:', destination)
-    
+
     subscription = stompClient?.subscribe(destination, (message: IMessage) => {
       try {
-        const data = JSON.parse(message.body) as TransferProgress
+        const rawEvent = JSON.parse(message.body) as TransferEventPayload
+        const data = normalizeEvent(rawEvent)
         progress.value = data
-        console.log('[WS] Progress:', data.bytesTransferredFormatted, '/', data.fileSizeFormatted, 
-          data.percentage >= 0 ? `(${data.percentage}%)` : '')
+        console.log('[WS] Progress:', data.bytesTransferredFormatted, '/', data.fileSizeFormatted,
+          `(${data.percentage}%) [${rawEvent.type}]`)
       } catch (e) {
         console.error('[WS] Failed to parse progress message:', e)
       }

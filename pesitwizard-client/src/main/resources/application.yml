@@ -40,6 +40,13 @@ spring:
 # Server configuration
 server:
   port: ${SERVER_PORT:8080}
+  error:
+    # Do not include stack traces in error responses (security)
+    include-stacktrace: never
+    # Include error message in responses
+    include-message: always
+    # Include binding errors in responses
+    include-binding-errors: always
 
 # Actuator endpoints
 management:

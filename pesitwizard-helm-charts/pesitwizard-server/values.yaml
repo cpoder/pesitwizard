@@ -33,7 +33,17 @@ config:
   pesit:
     serverId: "VECTIS01"
     password: "changeme"
-  
+
+  # Security settings for multi-pod deployments
+  security:
+    # Master key for AES encryption (required for password encryption)
+    masterKey: ""
+    # Base64-encoded 32-byte salt for AES encryption
+    # IMPORTANT: In multi-pod deployments, all pods MUST use the same salt
+    # Generate with: openssl rand -base64 32
+    # If empty, each pod generates its own salt (single-pod mode only)
+    encryptionSalt: ""
+
   # Logging
   logging:
     level: INFO
