@@ -54,32 +54,30 @@ Lors de la création d'une planification quotidienne à 9h30, le transfert s'ex�
 
 ## Client API (RECEIVE)
 
-### 3. EOFException lors des transferts RECEIVE
+### 3. ~~EOFException lors des transferts RECEIVE~~ ✅ CORRIGÉ
 **Priorité**: Moyenne
 **Composant**: pesitwizard-client-api (PesitReceiveService)
+**Statut**: ✅ Corrigé
 
-Les transferts en mode RECEIVE échouent avec une EOFException alors que le serveur a correctement envoyé les données.
+**Cause identifiée**:
+Lors du refactoring `e0642d3` (extraction de `TransferService` vers `PesitReceiveService`), l'envoi de `TRANS.END` a été accidentellement supprimé de la séquence de cleanup.
 
-**Logs serveur** (succès):
+**Séquence correcte** (ancien code fonctionnel):
 ```
-READ: starting data transmission for /data/send/DEMOFILE
-Sent ACK(READ)
-Article 1: DTF 49 bytes
-READ: sent 49 bytes in 1 entities, 0 sync points
-Sent DTF.END
-Client disconnected
+TRANS_END → ACK_TRANS_END → CLOSE → ACK_CLOSE → DESELECT → ACK_DESELECT → RELEASE → ACK_RELEASE
 ```
 
-**Logs client** (échec):
+**Séquence buggée** (refactoring):
 ```
-ERROR Receive xxx FAILED: null
-java.io.EOFException: null
-    at com.pesitwizard.client.pesit.PesitReceiveService.receiveData(PesitReceiveService.java:226)
+CLOSE → ACK_CLOSE → ... (serveur ferme car TRANS_END jamais reçu)
 ```
 
-**Hypothèse**: Le serveur ferme la connexion après DTF.END avant que le client n'ait fini de traiter la séquence de fin de transfert.
+**Solution implémentée**:
+- Ajout de `TRANS.END` avant `CLOSE` dans `sendCleanupFpdus()`
+- Réalignement avec la séquence PeSIT correcte
 
----
+**Fichier modifié**:
+- `pesitwizard-client/src/main/java/com/pesitwizard/client/pesit/PesitReceiveService.java`
 
 ---
 
@@ -127,25 +125,33 @@ Chaque pod du StatefulSet génère son propre salt de chiffrement AES lors du d�
 
 ---
 
-### 6. EOFException lors des transferts SEND de gros fichiers
+### 6. ~~EOFException lors des transferts SEND de gros fichiers~~ ✅ CORRIGÉ
 **Priorité**: Haute
 **Composant**: pesitwizard-client-api / pesitwizard-server
+**Statut**: ✅ Corrigé
 
-Les transferts SEND de fichiers volumineux (>50MB) échouent avec une EOFException.
+**Cause identifiée**:
+- L'intervalle de sync point était hardcodé à 10KB (`syncIntervalKb = 10`)
+- Pour un fichier de 50MB, cela créait ~5000 sync points
+- Chaque sync point nécessite un ACK_SYN du serveur
+- L'overhead réseau causait des timeouts → EOFException
 
-**Logs client**:
-```
-ERROR Transfer xxx FAILED: null
-java.io.EOFException: null
-```
+**Solution implémentée**:
+- Utilisation de `config.getSyncPointInterval()` au lieu de la valeur hardcodée
+- La valeur par défaut dans TransferConfig est 100KB (10x moins de sync points)
+- Pour un fichier de 50MB: ~500 sync points au lieu de ~5000
 
-**Hypothèses**:
-- Problème de négociation maxEntitySize (PI_25)
-- Timeout de connexion côté serveur
-- Buffer de lecture/écriture insuffisant
+**Fichier modifié**:
+- `pesitwizard-client/src/main/java/com/pesitwizard/client/pesit/PesitSendService.java`
+
+**Note**: Des tests supplémentaires avec des fichiers de 50MB+ sont recommandés pour valider complètement cette correction.
 
 ---
 
 ## Notes
 
 Ces bugs ont été identifiés lors de la création de la vidéo de démonstration (janvier 2026).
+
+## Historique des corrections
+
+- **2026-01-29**: Correction des 6 bugs identifiés (commits bd72aff, 03196ec et suivants)

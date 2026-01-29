@@ -279,6 +279,12 @@ public class PesitReceiveService {
 
     private void sendCleanupFpdus(PesitSession session, int serverConnId, int connectionId)
             throws IOException, InterruptedException {
+        // Send TRANS.END to signal successful data reception (required before CLOSE)
+        // This tells the server that we've received all the data
+        session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnId)
+                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        log.debug("Sent TRANS.END");
+
         session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnId)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
         session.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(serverConnId)

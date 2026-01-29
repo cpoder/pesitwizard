@@ -103,7 +103,9 @@ public class PesitSendService {
         String virtualFile = request.getVirtualFile() != null ? request.getVirtualFile() : request.getRemoteFilename();
         int recordLength = config.getRecordLength() != null ? config.getRecordLength() : 506;
         boolean syncEnabled = config.isSyncPointsEnabled();
-        int syncIntervalKb = syncEnabled ? 10 : 0;
+        // Use configured sync interval (default 100KB) instead of hardcoded 10KB
+        // This reduces sync point overhead for large files
+        int syncIntervalKb = syncEnabled ? (config.getSyncPointInterval() != null ? config.getSyncPointInterval() : 100) : 0;
 
         ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
                 .demandeur(request.getPartnerId()).serveur(server.getServerId()).writeAccess()
