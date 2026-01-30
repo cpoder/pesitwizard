@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
+import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
@@ -329,24 +330,13 @@ public class PesitSessionHandler {
         // Track transfer failure if there was an active transfer
         if (ctx.getTransferRecordId() != null) {
             ParameterValue pi2 = fpdu.getParameter(ParameterIdentifier.PI_02_DIAG);
-            String errorCode = pi2 != null ? bytesToHex(pi2.getValue()) : "ABORT";
+            String errorCode = pi2 != null ? FpduIO.bytesToHex(pi2.getValue()) : "ABORT";
             transferTracker.trackTransferFailed(ctx, errorCode, "Transfer aborted by peer");
         }
 
         ctx.setAborted(true);
         ctx.transitionTo(ServerState.CN01_REPOS);
         return null; // No response for ABORT
-    }
-
-    /**
-     * Convert bytes to hex string
-     */
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X", b));
-        }
-        return sb.toString();
     }
 
     /**

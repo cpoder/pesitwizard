@@ -17,6 +17,7 @@ import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
+import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
@@ -267,13 +268,10 @@ public class DataTransferHandler {
         }
 
         // Verify sync point number
-        ParameterValue pi20 = fpdu.getParameter(ParameterIdentifier.PI_20_NUM_SYNC);
-        if (pi20 != null) {
-            int receivedSyncPoint = parseNumeric(pi20.getValue());
-            if (receivedSyncPoint != expectedSyncPoint) {
-                log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
-                        ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
-            }
+        int receivedSyncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
+        if (receivedSyncPoint != expectedSyncPoint) {
+            log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
+                    ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
         }
 
         return fpdu;
@@ -384,34 +382,28 @@ public class DataTransferHandler {
         }
 
         // Write data to output stream
-        // Only DTF (type 0x00) can have multi-article format with 2-byte length
-        // prefixes
+        // Only DTF (type 0x00) can have multi-article format with 2-byte length prefixes
         // DTFDA/DTFMA/DTFFA are article segments - no prefixes, write data as-is
+        int articlesInFpdu = 1; // Default: single article per FPDU
         if (data != null && data.length > 0) {
             try {
-                // Only check for multi-article if this is a DTF (not DTFDA/DTFMA/DTFFA)
-                boolean isDtfType = fpdu.getFpduType() == com.pesitwizard.fpdu.FpduType.DTF;
-                boolean isMultiArticle = isDtfType && looksLikeMultiArticle(data);
+                boolean isMultiArticle = FpduIO.isMultiArticleDtf(fpdu);
                 log.debug("[{}] {}: {} bytes, multiArticle={}",
                         ctx.getSessionId(), fpdu.getFpduType(), data.length, isMultiArticle);
+
                 if (isMultiArticle) {
-                    // Extract articles from multi-article format
-                    java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+                    // Extract and write articles using shared utility
+                    java.util.List<byte[]> articles = FpduIO.extractArticles(data);
+                    articlesInFpdu = articles.size();
                     int bytesWritten = 0;
-                    while (buffer.remaining() >= 2) {
-                        int articleLen = buffer.getShort() & 0xFFFF;
-                        if (articleLen == 0 || articleLen > buffer.remaining()) {
-                            break;
-                        }
-                        byte[] articleData = new byte[articleLen];
-                        buffer.get(articleData);
-                        transfer.appendData(articleData);
-                        bytesWritten += articleLen;
+                    for (byte[] article : articles) {
+                        transfer.appendData(article);
+                        bytesWritten += article.length;
                     }
-                    log.debug("[{}] DTF: received {} bytes, wrote {} bytes (multi-article), total: {} bytes",
-                            ctx.getSessionId(), dataLength, bytesWritten, transfer.getBytesTransferred());
+                    log.debug("[{}] DTF: received {} bytes, wrote {} bytes ({} articles), total: {} bytes",
+                            ctx.getSessionId(), dataLength, bytesWritten, articlesInFpdu, transfer.getBytesTransferred());
                 } else {
-                    // Raw data - write as-is
+                    // Raw data - write as-is (single article)
                     transfer.appendData(data);
                     log.debug("[{}] DTF: received and wrote {} bytes, total: {} bytes",
                             ctx.getSessionId(), dataLength, transfer.getBytesTransferred());
@@ -422,8 +414,10 @@ public class DataTransferHandler {
             }
         } else {
             log.debug("[{}] DTF: received {} bytes (no data)", ctx.getSessionId(), dataLength);
+            articlesInFpdu = 0; // No articles in empty FPDU
         }
-        transfer.setRecordsTransferred(transfer.getRecordsTransferred() + 1);
+        // Count actual articles, not FPDUs
+        transfer.setRecordsTransferred(transfer.getRecordsTransferred() + articlesInFpdu);
         return null; // No response for DTF
     }
 
@@ -440,11 +434,7 @@ public class DataTransferHandler {
      * Handle SYN (Synchronization Point) FPDU
      */
     private Fpdu handleSyn(SessionContext ctx, Fpdu fpdu) {
-        ParameterValue pi20 = fpdu.getParameter(ParameterIdentifier.PI_20_NUM_SYNC);
-        int syncPoint = 0;
-        if (pi20 != null) {
-            syncPoint = parseNumeric(pi20.getValue());
-        }
+        int syncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
 
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null) {
@@ -512,36 +502,7 @@ public class DataTransferHandler {
      * Extract restart point from FPDU
      */
     private long extractRestartPoint(Fpdu fpdu) {
-        ParameterValue pi18 = fpdu.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE);
-        if (pi18 != null) {
-            return parseNumeric(pi18.getValue());
-        }
-        return 0;
-    }
-
-    /**
-     * Parse numeric value from bytes (big-endian)
-     */
-    private int parseNumeric(byte[] bytes) {
-        int value = 0;
-        for (byte b : bytes) {
-            value = (value << 8) | (b & 0xFF);
-        }
-        return value;
-    }
-
-    /**
-     * Detect if data looks like multi-article format with 2-byte length prefixes.
-     * Check if first 2 bytes are a valid article length that fits in the data.
-     */
-    private boolean looksLikeMultiArticle(byte[] data) {
-        if (data == null || data.length < 4) {
-            return false;
-        }
-        int firstLen = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
-        // Valid if: length > 0, length <= remaining data, and length is reasonable (<
-        // 64KB)
-        return firstLen > 0 && firstLen <= data.length - 2 && firstLen < 65535;
+        return ParameterParser.parsePI18RestartPoint(fpdu);
     }
 
     /**

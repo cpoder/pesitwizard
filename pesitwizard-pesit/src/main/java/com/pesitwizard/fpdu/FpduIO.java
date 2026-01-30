@@ -3,6 +3,10 @@ package com.pesitwizard.fpdu;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -179,7 +183,7 @@ public class FpduIO {
 
     /**
      * Get the phase and type bytes from raw FPDU data.
-     * 
+     *
      * @param rawData Raw FPDU bytes
      * @return int array [phase, type] or null if invalid
      */
@@ -188,5 +192,148 @@ public class FpduIO {
             return null;
         }
         return new int[] { rawData[2] & 0xFF, rawData[3] & 0xFF };
+    }
+
+    // ============= DTF Type Utilities =============
+
+    /**
+     * Check if an FpduType is a DTF type (data transfer).
+     * DTF types: DTF, DTFDA, DTFMA, DTFFA
+     *
+     * @param type FpduType to check
+     * @return true if this is a DTF type
+     */
+    public static boolean isDtfType(FpduType type) {
+        return type == FpduType.DTF || type == FpduType.DTFDA
+                || type == FpduType.DTFMA || type == FpduType.DTFFA;
+    }
+
+    // ============= Byte Utilities =============
+
+    /**
+     * Convert a byte array to hexadecimal string representation.
+     *
+     * @param bytes Byte array to convert
+     * @return Hexadecimal string (uppercase, no separators)
+     */
+    public static String bytesToHex(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(String.format("%02X", b & 0xFF));
+        }
+        return sb.toString();
+    }
+
+    // ============= Multi-Article DTF Support =============
+
+    /**
+     * Check if a DTF FPDU contains multi-article format based on idSrc.
+     * Per PeSIT spec, idSrc in DTF indicates the number of articles.
+     * idSrc > 1 means multi-article format with 2-byte length prefixes per article.
+     *
+     * @param fpdu The DTF FPDU to check
+     * @return true if multi-article format
+     */
+    public static boolean isMultiArticleDtf(Fpdu fpdu) {
+        if (fpdu == null) {
+            return false;
+        }
+        FpduType type = fpdu.getFpduType();
+        // Only DTF (not DTFDA/DTFMA/DTFFA) can be multi-article
+        return type == FpduType.DTF && fpdu.getIdSrc() > 1;
+    }
+
+    /**
+     * Extract articles from multi-article DTF data.
+     * Multi-article format: [len(2)][article_data][len(2)][article_data]...
+     * Each article is prefixed with a 2-byte big-endian length.
+     *
+     * @param data Raw DTF data payload
+     * @return List of article data (without length prefixes)
+     */
+    public static List<byte[]> extractArticles(byte[] data) {
+        List<byte[]> articles = new ArrayList<>();
+        if (data == null || data.length < 2) {
+            return articles;
+        }
+
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        while (buffer.remaining() >= 2) {
+            int articleLen = buffer.getShort() & 0xFFFF;
+            if (articleLen == 0 || articleLen > buffer.remaining()) {
+                log.warn("Invalid article length {} with {} bytes remaining, stopping extraction",
+                        articleLen, buffer.remaining());
+                break;
+            }
+            byte[] articleData = new byte[articleLen];
+            buffer.get(articleData);
+            articles.add(articleData);
+        }
+        return articles;
+    }
+
+    /**
+     * Extract articles from multi-article DTF data and write directly to output stream.
+     * This avoids intermediate List allocation for better memory efficiency.
+     *
+     * @param data Raw DTF data payload
+     * @param out  OutputStream to write extracted articles to
+     * @return Total bytes written (excluding length prefixes)
+     * @throws IOException if write fails
+     */
+    public static long extractArticlesToStream(byte[] data, OutputStream out) throws IOException {
+        if (data == null || data.length < 2 || out == null) {
+            return 0;
+        }
+
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        long bytesWritten = 0;
+
+        while (buffer.remaining() >= 2) {
+            int articleLen = buffer.getShort() & 0xFFFF;
+            if (articleLen == 0 || articleLen > buffer.remaining()) {
+                log.warn("Invalid article length {} with {} bytes remaining, stopping extraction",
+                        articleLen, buffer.remaining());
+                break;
+            }
+            byte[] articleData = new byte[articleLen];
+            buffer.get(articleData);
+            out.write(articleData);
+            bytesWritten += articleLen;
+        }
+        return bytesWritten;
+    }
+
+    /**
+     * Process DTF data: extracts articles if multi-article format, otherwise returns raw data.
+     * Convenience method that handles both single and multi-article DTF.
+     *
+     * @param fpdu The DTF FPDU
+     * @return Actual file data (articles extracted if multi-article)
+     */
+    public static byte[] processDtfData(Fpdu fpdu) {
+        byte[] data = fpdu.getData();
+        if (data == null || data.length == 0) {
+            return new byte[0];
+        }
+
+        if (isMultiArticleDtf(fpdu)) {
+            // Multi-article: concatenate extracted articles
+            List<byte[]> articles = extractArticles(data);
+            int totalLen = articles.stream().mapToInt(a -> a.length).sum();
+            byte[] result = new byte[totalLen];
+            int pos = 0;
+            for (byte[] article : articles) {
+                System.arraycopy(article, 0, result, pos, article.length);
+                pos += article.length;
+            }
+            return result;
+        } else {
+            // Single article: return raw data
+            return data;
+        }
     }
 }

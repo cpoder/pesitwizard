@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,8 +27,10 @@ import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.exception.PesitException;
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
+import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
@@ -173,7 +176,7 @@ public class PesitReceiveService {
                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, chunkSize));
 
         Fpdu ackSelect = session.sendFpduWithAck(selectFpdu);
-        long expectedSize = parseFileSize(ackSelect);
+        long expectedSize = ParameterParser.parseFileSizeFromAckSelect(ackSelect);
 
         // OPEN
         session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
@@ -226,25 +229,41 @@ public class PesitReceiveService {
                 Fpdu fpdu = reader.read();
                 FpduType type = fpdu.getFpduType();
 
-                if (isDtfType(type)) {
+                if (FpduIO.isDtfType(type)) {
                     byte[] data = fpdu.getData();
                     if (data != null && data.length > 0) {
-                        if (raf != null)
-                            raf.write(data);
-                        else
-                            os.write(data);
-                        totalBytes += data.length;
+                        long bytesWritten = 0;
+
+                        if (FpduIO.isMultiArticleDtf(fpdu)) {
+                            // Multi-article DTF: extract articles without 2-byte length prefixes
+                            List<byte[]> articles = FpduIO.extractArticles(data);
+                            for (byte[] article : articles) {
+                                if (raf != null)
+                                    raf.write(article);
+                                else
+                                    os.write(article);
+                                bytesWritten += article.length;
+                            }
+                        } else {
+                            // Single article or raw data: write directly
+                            if (raf != null)
+                                raf.write(data);
+                            else
+                                os.write(data);
+                            bytesWritten = data.length;
+                        }
+                        totalBytes += bytesWritten;
 
                         // Progress update via TransferContext
-                        ctx.addBytes(data.length);
+                        ctx.addBytes(bytesWritten);
                         long now = System.currentTimeMillis();
                         if (now - lastProgressUpdate >= 100) {
                             lastProgressUpdate = now;
                         }
                     }
                 } else if (type == FpduType.SYN) {
-                    ParameterValue pi20 = fpdu.getParameter(PI_20_NUM_SYNC);
-                    lastSync = pi20 != null && pi20.getValue() != null ? parseNumeric(pi20.getValue()) : lastSync + 1;
+                    int syncNum = ParameterParser.parsePI20SyncNumber(fpdu);
+                    lastSync = syncNum > 0 ? syncNum : lastSync + 1;
                     lastSyncPos = totalBytes;
                     session.sendFpdu(new Fpdu(FpduType.ACK_SYN).withIdDst(serverConnId)
                             .withParameter(new ParameterValue(PI_20_NUM_SYNC, lastSync)));
@@ -295,37 +314,12 @@ public class PesitReceiveService {
 
     // === Helpers ===
 
-    private boolean isDtfType(FpduType type) {
-        return type == FpduType.DTF || type == FpduType.DTFDA || type == FpduType.DTFMA || type == FpduType.DTFFA;
-    }
-
     private boolean resolveSyncEnabled(TransferRequest req, TransferConfig cfg) {
         return req.getSyncPointsEnabled() != null ? req.getSyncPointsEnabled() : cfg.isSyncPointsEnabled();
     }
 
     private boolean resolveResyncEnabled(TransferRequest req, TransferConfig cfg) {
         return req.getResyncEnabled() != null ? req.getResyncEnabled() : cfg.isResyncEnabled();
-    }
-
-    private long parseFileSize(Fpdu ackSelect) {
-        ParameterValue pgi40 = ackSelect.getParameter(ParameterGroupIdentifier.PGI_40_ATTR_PHYSIQUES);
-        if (pgi40 != null && pgi40.getValues() != null) {
-            for (ParameterValue pv : pgi40.getValues()) {
-                if (pv.getParameter() == PI_42_MAX_RESERVATION) {
-                    return parseNumeric(pv.getValue()) * 1024L;
-                }
-            }
-        }
-        return 0;
-    }
-
-    private int parseNumeric(byte[] b) {
-        if (b == null)
-            return 0;
-        int v = 0;
-        for (byte x : b)
-            v = (v << 8) | (x & 0xFF);
-        return v;
     }
 
     private void updateHistorySuccess(String historyId, long bytes) {

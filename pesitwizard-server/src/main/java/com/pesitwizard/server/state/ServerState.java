@@ -1,9 +1,11 @@
 package com.pesitwizard.server.state;
 
+import java.util.Set;
+
 /**
  * PeSIT Server State Machine States
  * Based on PeSIT E specification - Server (Serveur) role
- * 
+ *
  * States ending with 'B' are server-specific states
  * States without suffix are common to both demandeur and serveur
  */
@@ -103,6 +105,49 @@ public enum ServerState {
 
     private final String code;
     private final String description;
+    private Set<ServerState> validTransitions;
+
+    // Define valid state transitions based on PeSIT E specification
+    static {
+        // Connection phase transitions
+        CN01_REPOS.validTransitions = Set.of(CN02B_CONNECT_PENDING);
+        CN02B_CONNECT_PENDING.validTransitions = Set.of(CN03_CONNECTED, CN01_REPOS, ERROR);
+        CN03_CONNECTED.validTransitions = Set.of(SF01B_CREATE_PENDING, SF02B_SELECT_PENDING, CN04B_RELEASE_PENDING, ERROR);
+        CN04B_RELEASE_PENDING.validTransitions = Set.of(CN01_REPOS, ERROR);
+
+        // File selection phase transitions
+        SF01B_CREATE_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
+        SF02B_SELECT_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
+        SF03_FILE_SELECTED.validTransitions = Set.of(OF01B_OPEN_PENDING, SF04B_DESELECT_PENDING, ERROR);
+        SF04B_DESELECT_PENDING.validTransitions = Set.of(CN03_CONNECTED, ERROR);
+
+        // File open phase transitions
+        OF01B_OPEN_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, SF03_FILE_SELECTED, ERROR);
+        OF02_TRANSFER_READY.validTransitions = Set.of(TDE01B_WRITE_PENDING, TDL01B_READ_PENDING, OF03B_CLOSE_PENDING, ERROR);
+        OF03B_CLOSE_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, ERROR);
+
+        // Data transfer (receive/write) phase transitions
+        TDE01B_WRITE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDE02B_RECEIVING_DATA.validTransitions = Set.of(TDE02B_RECEIVING_DATA, TDE03_RESYNC_PENDING, TDE05_IDT_PENDING, TDE07_WRITE_END, ERROR);
+        TDE03_RESYNC_PENDING.validTransitions = Set.of(TDE04_RESYNC_RESPONSE_PENDING, TDE02B_RECEIVING_DATA, ERROR);
+        TDE04_RESYNC_RESPONSE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, ERROR);
+        TDE05_IDT_PENDING.validTransitions = Set.of(TDE06_CANCEL_PENDING, OF02_TRANSFER_READY, ERROR);
+        TDE06_CANCEL_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
+        TDE07_WRITE_END.validTransitions = Set.of(TDE08B_TRANS_END_PENDING, ERROR);
+        TDE08B_TRANS_END_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
+
+        // Data transfer (send/read) phase transitions
+        TDL01B_READ_PENDING.validTransitions = Set.of(TDL02B_SENDING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDL02B_SENDING_DATA.validTransitions = Set.of(TDL02B_SENDING_DATA, TDL07_READ_END, OF02_TRANSFER_READY, ERROR);
+        TDL07_READ_END.validTransitions = Set.of(TDL08B_TRANS_END_PENDING, ERROR);
+        TDL08B_TRANS_END_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
+
+        // Message phase transitions
+        MSG_RECEIVING.validTransitions = Set.of(MSG_RECEIVING, CN03_CONNECTED, ERROR);
+
+        // Error can transition back to initial state
+        ERROR.validTransitions = Set.of(CN01_REPOS);
+    }
 
     ServerState(String code, String description) {
         this.code = code;
@@ -115,6 +160,23 @@ public enum ServerState {
 
     public String getDescription() {
         return description;
+    }
+
+    /**
+     * Get the set of valid states that can be transitioned to from this state.
+     */
+    public Set<ServerState> getValidTransitions() {
+        return validTransitions;
+    }
+
+    /**
+     * Check if transitioning to the given state is valid according to PeSIT protocol.
+     *
+     * @param nextState The target state to transition to
+     * @return true if the transition is valid
+     */
+    public boolean canTransitionTo(ServerState nextState) {
+        return validTransitions != null && validTransitions.contains(nextState);
     }
 
     /**

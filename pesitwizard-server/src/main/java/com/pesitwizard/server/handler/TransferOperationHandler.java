@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterIdentifier;
+import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.config.LogicalFileConfig;
 import com.pesitwizard.server.config.PesitServerProperties;
@@ -213,21 +215,13 @@ public class TransferOperationHandler {
         ParameterValue pi2 = fpdu.getParameter(ParameterIdentifier.PI_02_DIAG);
         if (pi2 != null && pi2.getValue() != null) {
             byte[] diagBytes = pi2.getValue();
-            String diagHex = bytesToHex(diagBytes);
+            String diagHex = FpduIO.bytesToHex(diagBytes);
             log.warn("[{}] DESELECT: diagnostic code={} (hex)", ctx.getSessionId(), diagHex);
         }
         log.info("[{}] DESELECT: file deselected", ctx.getSessionId());
         ctx.endTransfer();
         ctx.transitionTo(ServerState.CN03_CONNECTED);
         return FpduResponseBuilder.buildAckDeselect(ctx);
-    }
-
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X", b & 0xFF));
-        }
-        return sb.toString();
     }
 
     /**
@@ -239,7 +233,7 @@ public class TransferOperationHandler {
             // PI 11 - File Type
             ParameterValue pi11 = pgi9.getParameter(ParameterIdentifier.PI_11_TYPE_FICHIER);
             if (pi11 != null && pi11.getValue() != null) {
-                transfer.setFileType(parseNumeric(pi11.getValue()));
+                transfer.setFileType(ParameterParser.parseNumeric(pi11.getValue()));
             }
             // PI 12 - Filename
             ParameterValue pi12 = pgi9.getParameter(ParameterIdentifier.PI_12_NOM_FICHIER);
@@ -256,7 +250,7 @@ public class TransferOperationHandler {
         // PI 13 (Transfer ID)
         ParameterValue pi13 = fpdu.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
         if (pi13 != null) {
-            transfer.setTransferId(parseNumeric(pi13.getValue()));
+            transfer.setTransferId(ParameterParser.parseNumeric(pi13.getValue()));
         }
 
         // PI 17 (Priority)
@@ -268,7 +262,7 @@ public class TransferOperationHandler {
         // PI 25 (Max Entity Size)
         ParameterValue pi25 = fpdu.getParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE);
         if (pi25 != null) {
-            transfer.setMaxEntitySize(parseNumeric(pi25.getValue()));
+            transfer.setMaxEntitySize(ParameterParser.parseNumeric(pi25.getValue()));
         }
 
         // PI 15 (Transfer Restart)
@@ -292,7 +286,7 @@ public class TransferOperationHandler {
             // PI 32 - Record Length
             ParameterValue pi32 = pgi30.getParameter(ParameterIdentifier.PI_32_LONG_ARTICLE);
             if (pi32 != null && pi32.getValue() != null) {
-                transfer.setRecordLength(parseNumeric(pi32.getValue()));
+                transfer.setRecordLength(ParameterParser.parseNumeric(pi32.getValue()));
             }
             // PI 33 - File Organization
             ParameterValue pi33 = pgi30.getParameter(ParameterIdentifier.PI_33_ORG_FICHIER);
@@ -349,16 +343,5 @@ public class TransferOperationHandler {
             return Paths.get(fileConfig.getSendDirectory()).resolve(transfer.getFilename());
         }
         return Paths.get(properties.getSendDirectory()).resolve(transfer.getFilename());
-    }
-
-    /**
-     * Parse numeric value from bytes (big-endian)
-     */
-    private int parseNumeric(byte[] bytes) {
-        int value = 0;
-        for (byte b : bytes) {
-            value = (value << 8) | (b & 0xFF);
-        }
-        return value;
     }
 }

@@ -188,4 +188,76 @@ class ServerStateTest {
             assertThat(ServerState.MSG_RECEIVING.getCode()).isEqualTo("MSG");
         }
     }
+
+    @Nested
+    @DisplayName("State Transition Validation Tests")
+    class TransitionValidationTests {
+
+        @Test
+        @DisplayName("CN01_REPOS should only allow transition to CN02B_CONNECT_PENDING")
+        void cn01ShouldOnlyAllowTransitionToConnect() {
+            assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.CN02B_CONNECT_PENDING)).isTrue();
+            assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.CN03_CONNECTED)).isFalse();
+        }
+
+        @Test
+        @DisplayName("CN02B should allow transition to CN03 or CN01 or ERROR")
+        void cn02bShouldAllowValidTransitions() {
+            assertThat(ServerState.CN02B_CONNECT_PENDING.canTransitionTo(ServerState.CN03_CONNECTED)).isTrue();
+            assertThat(ServerState.CN02B_CONNECT_PENDING.canTransitionTo(ServerState.CN01_REPOS)).isTrue();
+            assertThat(ServerState.CN02B_CONNECT_PENDING.canTransitionTo(ServerState.ERROR)).isTrue();
+            assertThat(ServerState.CN02B_CONNECT_PENDING.canTransitionTo(ServerState.SF03_FILE_SELECTED)).isFalse();
+        }
+
+        @Test
+        @DisplayName("CN03 should allow transition to file operations or release")
+        void cn03ShouldAllowFileOperationsOrRelease() {
+            assertThat(ServerState.CN03_CONNECTED.canTransitionTo(ServerState.SF01B_CREATE_PENDING)).isTrue();
+            assertThat(ServerState.CN03_CONNECTED.canTransitionTo(ServerState.SF02B_SELECT_PENDING)).isTrue();
+            assertThat(ServerState.CN03_CONNECTED.canTransitionTo(ServerState.CN04B_RELEASE_PENDING)).isTrue();
+            assertThat(ServerState.CN03_CONNECTED.canTransitionTo(ServerState.ERROR)).isTrue();
+        }
+
+        @Test
+        @DisplayName("OF02 should allow transition to read, write, or close")
+        void of02ShouldAllowTransferOrClose() {
+            assertThat(ServerState.OF02_TRANSFER_READY.canTransitionTo(ServerState.TDE01B_WRITE_PENDING)).isTrue();
+            assertThat(ServerState.OF02_TRANSFER_READY.canTransitionTo(ServerState.TDL01B_READ_PENDING)).isTrue();
+            assertThat(ServerState.OF02_TRANSFER_READY.canTransitionTo(ServerState.OF03B_CLOSE_PENDING)).isTrue();
+        }
+
+        @Test
+        @DisplayName("TDE02B should allow staying in same state or transitioning to sync/end")
+        void tde02bShouldAllowDataReceptionTransitions() {
+            assertThat(ServerState.TDE02B_RECEIVING_DATA.canTransitionTo(ServerState.TDE02B_RECEIVING_DATA)).isTrue();
+            assertThat(ServerState.TDE02B_RECEIVING_DATA.canTransitionTo(ServerState.TDE07_WRITE_END)).isTrue();
+            assertThat(ServerState.TDE02B_RECEIVING_DATA.canTransitionTo(ServerState.TDE03_RESYNC_PENDING)).isTrue();
+        }
+
+        @Test
+        @DisplayName("TDL02B should allow staying in same state or transitioning to end")
+        void tdl02bShouldAllowDataSendingTransitions() {
+            assertThat(ServerState.TDL02B_SENDING_DATA.canTransitionTo(ServerState.TDL02B_SENDING_DATA)).isTrue();
+            assertThat(ServerState.TDL02B_SENDING_DATA.canTransitionTo(ServerState.TDL07_READ_END)).isTrue();
+            assertThat(ServerState.TDL02B_SENDING_DATA.canTransitionTo(ServerState.OF02_TRANSFER_READY)).isTrue();
+        }
+
+        @Test
+        @DisplayName("ERROR should allow transition back to CN01_REPOS")
+        void errorShouldAllowTransitionToRepos() {
+            assertThat(ServerState.ERROR.canTransitionTo(ServerState.CN01_REPOS)).isTrue();
+            assertThat(ServerState.ERROR.canTransitionTo(ServerState.CN03_CONNECTED)).isFalse();
+        }
+
+        @Test
+        @DisplayName("All states should have valid transitions defined")
+        void allStatesShouldHaveValidTransitions() {
+            for (ServerState state : ServerState.values()) {
+                assertThat(state.getValidTransitions())
+                        .as("State %s should have valid transitions defined", state)
+                        .isNotNull()
+                        .isNotEmpty();
+            }
+        }
+    }
 }

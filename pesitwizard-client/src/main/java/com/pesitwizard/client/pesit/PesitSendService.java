@@ -26,6 +26,7 @@ import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.CreateMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
+import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
@@ -120,12 +121,12 @@ public class PesitSendService {
         ctx.connectAck();
         int serverConnId = aconnect.getIdSrc();
 
-        int negotiatedSyncKb = parsePI7(aconnect);
+        int negotiatedSyncKb = ParameterParser.parsePI07SyncInterval(aconnect);
         long syncIntervalBytes = negotiatedSyncKb * 1024L;
         if (negotiatedSyncKb == 0)
             syncEnabled = false;
 
-        int serverMaxEntity = parsePI25(aconnect);
+        int serverMaxEntity = ParameterParser.parsePI25MaxEntitySize(aconnect);
         int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
         long fileSizeKB = (ctx.getTotalBytes() + 1023) / 1024;
         int initialPi25 = serverMaxEntity > 0 ? serverMaxEntity : 65535;
@@ -211,25 +212,6 @@ public class PesitSendService {
                 .build(serverConnId);
         session.sendFpduWithAck(create);
         return pi25;
-    }
-
-    private int parsePI7(Fpdu fpdu) {
-        ParameterValue pv = fpdu.getParameter(PI_07_SYNC_POINTS);
-        if (pv != null && pv.getValue() != null && pv.getValue().length >= 2) {
-            return ((pv.getValue()[0] & 0xFF) << 8) | (pv.getValue()[1] & 0xFF);
-        }
-        return 0;
-    }
-
-    private int parsePI25(Fpdu fpdu) {
-        ParameterValue pv = fpdu.getParameter(PI_25_TAILLE_MAX_ENTITE);
-        if (pv != null && pv.getValue() != null) {
-            int val = 0;
-            for (byte b : pv.getValue())
-                val = (val << 8) | (b & 0xFF);
-            return val;
-        }
-        return 0;
     }
 
     private void updateHistorySuccess(String historyId, long bytes) {

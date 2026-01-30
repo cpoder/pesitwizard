@@ -47,6 +47,11 @@ public class Fpdu {
         return this;
     }
 
+    public Fpdu withData(byte[] data) {
+        this.data = data;
+        return this;
+    }
+
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Fpdu{fpduType=").append(fpduType)
