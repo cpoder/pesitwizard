@@ -1,6 +1,6 @@
 # PeSIT Wizard - Roadmap vers la Production
 
-## État Actuel: 80% (Beta Avancé)
+## État Actuel: 85% (Beta Avancé)
 
 Dernière mise à jour: 2026-01-31
 
@@ -127,10 +127,10 @@ Dernière mise à jour: 2026-01-31
 
 | ID | Tâche | Effort | Status |
 |----|-------|--------|--------|
-| 7.1 | Guide de dépannage: erreurs PeSIT, diagnostics réseau | 3h | ⬜ |
-| 7.2 | Runbook opérationnel: backup, restore, maintenance | 3h | ⬜ |
-| 7.3 | Guide Connect:Express: interopérabilité, configuration | 2h | ⬜ |
-| 7.4 | Guide performance: tuning, benchmarks, limites | 2h | ⬜ |
+| 7.1 | Guide de dépannage: erreurs PeSIT, diagnostics réseau | 3h | ✅ |
+| 7.2 | Runbook opérationnel: backup, restore, maintenance | 3h | ✅ |
+| 7.3 | Guide Connect:Express: interopérabilité, configuration | 2h | ✅ |
+| 7.4 | Guide performance: tuning, benchmarks, limites | 2h | ✅ |
 
 **Critère de succès**: Ops peut résoudre les problèmes courants sans escalade
 

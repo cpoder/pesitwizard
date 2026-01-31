@@ -54,6 +54,15 @@ export default defineConfig({
             { text: 'Connecteurs de stockage', link: '/guide/server/connectors' },
             { text: 'Observabilité', link: '/guide/server/observability' }
           ]
+        },
+        {
+          text: 'Opérations',
+          items: [
+            { text: 'Dépannage', link: '/guide/troubleshooting' },
+            { text: 'Runbook opérationnel', link: '/guide/operations' },
+            { text: 'Performance', link: '/guide/performance' },
+            { text: 'Connect:Express', link: '/guide/connect-express' }
+          ]
         }
       ],
       '/api/': [
