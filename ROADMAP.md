@@ -1,8 +1,8 @@
 # PeSIT Wizard - Roadmap vers la Production
 
-## État Actuel: 88% (Beta Avancé)
+## État Actuel: 90% (Beta Avancé)
 
-Dernière mise à jour: 2026-01-31
+Dernière mise à jour: 2026-02-01
 
 ---
 
@@ -52,14 +52,16 @@ Dernière mise à jour: 2026-01-31
 |----|-------|--------|--------|
 | 3.1 | Test: kill -9 pendant transfert, vérifier restart | 2h | ⬜ |
 | 3.2 | Test: coupure réseau (iptables drop) pendant transfert | 2h | ⬜ |
-| 3.3 | Test: timeout serveur distant (connexion lente) | 1h | ⬜ |
+| 3.3 | Test: timeout serveur distant (connexion lente) | 1h | ✅ |
 | 3.4 | Test: disque plein côté réception | 1h | ⬜ |
 | 3.5 | Test: certificat expiré (TLS) | 1h | ⬜ |
-| 3.6 | Test: rollback après échec partiel | 2h | ⬜ |
+| 3.6 | Test: rollback après échec partiel | 2h | ✅ |
 | 3.7 | Implémenter retry automatique avec backoff exponentiel | 4h | ⬜ |
 | 3.8 | Ajouter circuit breaker pour serveurs défaillants | 4h | ⬜ |
 
 **Critère de succès**: Tous les scénarios de panne gérés gracieusement
+
+> Note: Tests de résilience automatisés créés (run-resilience-tests.sh, run-restart-tests.sh)
 
 ---
 
@@ -183,4 +185,6 @@ Dernière mise à jour: 2026-01-31
 
 | Date | Version | Changements |
 |------|---------|-------------|
+| 2026-02-01 | 1.2 | Ajout tests résilience et restart, scripts benchmark |
+| 2026-01-31 | 1.1 | Ajout infrastructure TLS et scripts performance |
 | 2026-01-31 | 1.0 | Création initiale après validation CX integration |

@@ -1,0 +1,81 @@
+# Docker Compose for Resilience Testing
+# Usage: docker compose -f docker-compose-resilience.yml up --abort-on-container-exit
+
+services:
+  pw-server:
+    build:
+      context: ./pw-server
+      dockerfile: Dockerfile
+    container_name: pw-server-resilience
+    environment:
+      - SPRING_PROFILES_ACTIVE=integration-test
+    volumes:
+      - pw-send-resilience:/data/send
+      - pw-received-resilience:/data/received
+    ports:
+      - "5003:5001"
+      - "8083:8080"
+    networks:
+      - pesit-resilience-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  pw-client:
+    build:
+      context: ./pw-client
+      dockerfile: Dockerfile
+    container_name: pw-client-resilience
+    environment:
+      - SPRING_PROFILES_ACTIVE=integration-test,nosecurity
+    volumes:
+      - pw-client-send-resilience:/data/send
+      - pw-client-received-resilience:/data/received
+    ports:
+      - "9083:9081"
+    networks:
+      - pesit-resilience-network
+    depends_on:
+      pw-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  resilience-test-runner:
+    image: eclipse-temurin:21-jre
+    container_name: resilience-test-runner
+    volumes:
+      - ./tests:/tests:ro
+      - pw-client-send-resilience:/tmp/pw-client-send
+      - pw-received-resilience:/tmp/pw-received
+    networks:
+      - pesit-resilience-network
+    environment:
+      - PW_CLIENT_API=http://pw-client:9081
+      - PW_SERVER_API=http://pw-server:8080
+      - SERVER_NAME=pw-server
+      - PARTNER_ID=PWSRV01
+      - VIRTUAL_FILE=PWRECV
+    depends_on:
+      pw-server:
+        condition: service_healthy
+      pw-client:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c", "/tests/run-resilience-tests.sh && /tests/run-restart-tests.sh"]
+
+networks:
+  pesit-resilience-network:
+    driver: bridge
+
+volumes:
+  pw-send-resilience:
+  pw-received-resilience:
+  pw-client-send-resilience:
+  pw-client-received-resilience:
