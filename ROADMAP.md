@@ -1,6 +1,6 @@
 # PeSIT Wizard - Roadmap vers la Production
 
-## État Actuel: 75% (Beta Avancé)
+## État Actuel: 80% (Beta Avancé)
 
 Dernière mise à jour: 2026-01-31
 
@@ -116,18 +116,23 @@ Dernière mise à jour: 2026-01-31
 
 ## Phase 7: Documentation (Priorité: MOYENNE)
 
-**Objectif**: Documentation complète pour utilisateurs et opérations
+**Objectif**: Compléter la documentation existante (pesitwizard-docs)
+
+**Documentation existante** (✅ déjà fait):
+- Guide Client: installation, configuration, usage, vidéo démo, screenshots
+- Guide Serveur: installation, configuration, connecteurs, secrets, observabilité
+- Sécurité: TLS/mTLS complet (550 lignes), CA privée, workflows certificats
+- API Reference: authentification, client API, server API
+- Déploiement: Docker, Kubernetes, Helm
 
 | ID | Tâche | Effort | Status |
 |----|-------|--------|--------|
-| 7.1 | Guide d'installation (bare metal, Docker, Kubernetes) | 4h | ⬜ |
-| 7.2 | Guide utilisateur: UI client, API REST | 4h | ⬜ |
-| 7.3 | Guide d'administration: configuration, monitoring | 4h | ⬜ |
-| 7.4 | Guide de dépannage: erreurs courantes, diagnostics | 4h | ⬜ |
-| 7.5 | Runbook opérationnel: procédures de maintenance | 2h | ⬜ |
-| 7.6 | Architecture Decision Records (ADR) | 2h | ⬜ |
+| 7.1 | Guide de dépannage: erreurs PeSIT, diagnostics réseau | 3h | ⬜ |
+| 7.2 | Runbook opérationnel: backup, restore, maintenance | 3h | ⬜ |
+| 7.3 | Guide Connect:Express: interopérabilité, configuration | 2h | ⬜ |
+| 7.4 | Guide performance: tuning, benchmarks, limites | 2h | ⬜ |
 
-**Critère de succès**: Un nouvel utilisateur peut déployer et utiliser sans aide
+**Critère de succès**: Ops peut résoudre les problèmes courants sans escalade
 
 ---
 
@@ -151,10 +156,13 @@ Dernière mise à jour: 2026-01-31
 | Priorité | Phases | Effort Total | Impact |
 |----------|--------|--------------|--------|
 | **HAUTE** | 1, 2, 3, 4 | ~60h | Bloquant pour production |
-| **MOYENNE** | 5, 6, 7 | ~50h | Nécessaire pour opérations |
+| **MOYENNE** | 5, 6, 7 | ~38h | Nécessaire pour opérations |
 | **BASSE** | 8 | ~12h | Nice-to-have |
 
-**Total estimé**: ~120h de travail (3-4 semaines à temps plein)
+**Total estimé**: ~110h de travail (3 semaines à temps plein)
+
+> Note: La documentation existante (pesitwizard-docs) couvre déjà ~80% des besoins.
+> Seuls les guides dépannage, runbook ops et CX interop restent à faire.
 
 ---
 
@@ -164,7 +172,7 @@ Dernière mise à jour: 2026-01-31
 - [ ] Benchmarks documentés et acceptables (Phase 2)
 - [ ] Tests de résilience passent (Phase 3)
 - [ ] Audit sécurité sans critique (Phase 4)
-- [ ] Documentation utilisateur complète (Phase 7)
+- [x] Documentation utilisateur complète (pesitwizard-docs ✅)
 - [ ] Monitoring et alerting en place (Phase 6)
 - [ ] Runbook opérationnel validé (Phase 7)
 - [ ] Test avec volume réel pendant 1 semaine (Phase 2)
