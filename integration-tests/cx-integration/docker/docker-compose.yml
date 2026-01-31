@@ -1,0 +1,109 @@
+services:
+  # PeSIT Wizard Server
+  pw-server:
+    build:
+      context: ./pw-server
+      dockerfile: Dockerfile
+    container_name: pw-server
+    environment:
+      - PESIT_API_KEY=integration-test-key
+      - SPRING_PROFILES_ACTIVE=integration-test
+    ports:
+      - "5001:5001"  # PeSIT protocol
+      - "8080:8080"  # REST API
+    volumes:
+      - pw-received:/data/received
+      - pw-send:/data/send
+    networks:
+      - pesit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # PeSIT Wizard Client (for sending files to CX)
+  pw-client:
+    build:
+      context: ./pw-client
+      dockerfile: Dockerfile
+    container_name: pw-client
+    environment:
+      - SPRING_PROFILES_ACTIVE=integration-test
+    ports:
+      - "9081:9081"  # REST API
+    volumes:
+      - pw-client-send:/data/send
+      - pw-client-received:/data/received
+    networks:
+      - pesit-network
+    depends_on:
+      cx-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # Connect:Express
+  cx-server:
+    build:
+      context: ./cx
+      dockerfile: Dockerfile
+    container_name: cx-server
+    environment:
+      - RUN_TRANSFER_TESTS=true
+    ports:
+      - "5000:5000"  # PeSIT protocol
+    volumes:
+      - cx-send:/tmp/cx-send
+      - cx-received:/tmp/cx-received
+    networks:
+      - pesit-network
+    depends_on:
+      pw-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep -q ':5000 ' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Test runner container
+  test-runner:
+    image: ubuntu:22.04
+    container_name: test-runner
+    volumes:
+      - cx-send:/tmp/cx-send
+      - cx-received:/tmp/cx-received
+      - pw-received:/tmp/pw-received
+      - pw-send:/tmp/pw-send
+      - pw-client-send:/tmp/pw-client-send
+      - pw-client-received:/tmp/pw-client-received
+      - ./tests:/tests
+    networks:
+      - pesit-network
+    depends_on:
+      pw-server:
+        condition: service_healthy
+      cx-server:
+        condition: service_healthy
+      pw-client:
+        condition: service_healthy
+    entrypoint: ["/tests/run-tests.sh"]
+
+networks:
+  pesit-network:
+    driver: bridge
+
+volumes:
+  pw-received:
+  pw-send:
+  cx-send:
+  cx-received:
+  pw-client-send:
+  pw-client-received:
