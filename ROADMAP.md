@@ -1,6 +1,6 @@
 # PeSIT Wizard - Roadmap vers la Production
 
-## État Actuel: 85% (Beta Avancé)
+## État Actuel: 88% (Beta Avancé)
 
 Dernière mise à jour: 2026-01-31
 
@@ -31,14 +31,14 @@ Dernière mise à jour: 2026-01-31
 
 | ID | Tâche | Effort | Status |
 |----|-------|--------|--------|
-| 2.1 | Créer script de benchmark avec JMeter ou Gatling | 4h | ⬜ |
-| 2.2 | Test: 10 transferts concurrents de 100MB | 2h | ⬜ |
-| 2.3 | Test: 100 transferts concurrents de 1MB | 2h | ⬜ |
+| 2.1 | Créer script de benchmark avec JMeter ou Gatling | 4h | ✅ |
+| 2.2 | Test: 10 transferts concurrents de 100MB | 2h | ✅ |
+| 2.3 | Test: 100 transferts concurrents de 1MB | 2h | ✅ |
 | 2.4 | Test: 1 transfert de 10GB (fichier volumineux) | 2h | ⬜ |
 | 2.5 | Test: transferts pendant 24h (stabilité long terme) | 1h setup | ⬜ |
-| 2.6 | Mesurer: latence, throughput, CPU, mémoire | 2h | ⬜ |
+| 2.6 | Mesurer: latence, throughput, CPU, mémoire | 2h | ✅ |
 | 2.7 | Identifier et corriger les goulots d'étranglement | Variable | ⬜ |
-| 2.8 | Documenter les benchmarks et limites recommandées | 2h | ⬜ |
+| 2.8 | Documenter les benchmarks et limites recommandées | 2h | ✅ |
 
 **Critère de succès**: Benchmarks documentés, pas de memory leak sur 24h
 
