@@ -151,6 +151,58 @@ Key parameters:
 
 Used for character encoding conversion. For binary transfers, leave blank (` `).
 
+## TLS/SSL Configuration (Not Yet Implemented)
+
+TLS/SSL support between PeSIT Wizard and Connect:Express requires configuration on both sides.
+
+### PeSIT Wizard TLS Configuration
+
+PeSIT Wizard has full TLS support:
+
+```yaml
+# Environment variables for PW Server
+PESIT_SSL_ENABLED=true
+PESIT_SSL_KEYSTORE_NAME=default-keystore
+PESIT_SSL_TRUSTSTORE_NAME=pesit-ca-truststore
+PESIT_SSL_PROTOCOL=TLSv1.3
+PESIT_SSL_CLIENT_AUTH=NONE  # NONE, WANT, or NEED for mTLS
+```
+
+Certificates are managed via REST API:
+- `POST /api/v1/servers/{serverId}/tls/truststore` - Upload CA cert
+- `POST /api/v1/servers/{serverId}/tls/keystore` - Upload client cert (mTLS)
+
+### Connect:Express TLS Configuration
+
+CX TLS requires:
+
+1. **Change partner nature** from `T` (TCP/IP) to `S` (SSL):
+   ```c
+   memcpy(param->uni.zreq_tom_part.nature, "S", 1);  /* SSL instead of T */
+   ```
+
+2. **Configure SSL parameter tables** (SSLPARM1, SSLPARM2):
+   - These define certificates, cipher suites, protocol versions
+   - Configured via `$sterm` or CX API
+
+3. **Import certificates**:
+   - Use CX scripts: `CXAPISCA`, `CXROOTCA`, `SSLPARM1`
+   - Location: `$TOM_DIR/config/ssl/`
+
+### Known Issues / Investigation Needed
+
+- [ ] CX SSL parameter table configuration not documented
+- [ ] Certificate format compatibility (PEM vs PKCS12)
+- [ ] Cipher suite negotiation between PW (Java) and CX (OpenSSL)
+- [ ] mTLS (mutual TLS) testing
+- [ ] TLS version compatibility (TLSv1.2 vs TLSv1.3)
+
+### CX OpenSSL Package
+
+CX includes OpenSSL in `cxopenssl.tar`, installed to:
+- `$TOM_DIR/config/ssl/openssl/` - OpenSSL binaries
+- `$TOM_DIR/lib/libssl*`, `$TOM_DIR/lib/libcrypto*` - Libraries
+
 ## Troubleshooting
 
 ### CX Return Codes
