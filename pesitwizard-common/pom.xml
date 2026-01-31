@@ -43,6 +43,13 @@
             <version>2.0.9</version>
         </dependency>
 
+        <!-- Jakarta Validation API for @SafePath annotation -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
