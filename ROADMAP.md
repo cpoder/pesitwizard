@@ -1,6 +1,6 @@
 # PeSIT Wizard - Roadmap vers la Production
 
-## État Actuel: 90% (Beta Avancé)
+## État Actuel: 92% (Beta Avancé)
 
 Dernière mise à jour: 2026-02-01
 
@@ -74,7 +74,7 @@ Dernière mise à jour: 2026-02-01
 | 4.1 | Audit OWASP: injection, XSS, CSRF sur API REST | 4h | ⬜ |
 | 4.2 | Vérifier chiffrement des secrets (passwords, keystores) | 2h | ⬜ |
 | 4.3 | Implémenter rate limiting sur API REST | 2h | ⬜ |
-| 4.4 | Ajouter validation stricte des entrées (filenames, paths) | 2h | ⬜ |
+| 4.4 | Ajouter validation stricte des entrées (filenames, paths) | 2h | ✅ |
 | 4.5 | Scan de dépendances (OWASP Dependency Check) | 1h | ⬜ |
 | 4.6 | Configurer Content Security Policy pour l'UI | 1h | ⬜ |
 | 4.7 | Documenter la politique de sécurité | 2h | ⬜ |
@@ -105,8 +105,8 @@ Dernière mise à jour: 2026-02-01
 
 | ID | Tâche | Effort | Status |
 |----|-------|--------|--------|
-| 6.1 | Dashboard Grafana: transferts, erreurs, latence | 4h | ⬜ |
-| 6.2 | Alertes: transfert échoué, queue pleine, certificat expire | 2h | ⬜ |
+| 6.1 | Dashboard Grafana: transferts, erreurs, latence | 4h | ✅ |
+| 6.2 | Alertes: transfert échoué, queue pleine, certificat expire | 2h | ✅ |
 | 6.3 | Métriques business: volume/jour, taux de succès, partenaires | 2h | ⬜ |
 | 6.4 | Intégration avec système d'alerting (PagerDuty, Slack) | 2h | ⬜ |
 | 6.5 | Logs structurés (JSON) pour ELK/Splunk | 2h | ⬜ |

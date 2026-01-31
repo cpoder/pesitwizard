@@ -1,0 +1,181 @@
+# Prometheus Alerting Rules for PeSIT Wizard
+# Import this into your Prometheus or Alertmanager configuration
+
+groups:
+  - name: pesit_wizard_transfers
+    rules:
+      # Alert when transfer failure rate exceeds 10%
+      - alert: HighTransferFailureRate
+        expr: |
+          (
+            sum(rate(pesit_transfers_total{status="failed"}[5m]))
+            /
+            sum(rate(pesit_transfers_total[5m]))
+          ) * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High transfer failure rate"
+          description: "Transfer failure rate is {{ $value | printf \"%.1f\" }}% over the last 5 minutes"
+          runbook_url: "https://pesitwizard.io/docs/operations#troubleshooting-failed-transfers"
+
+      # Alert when failure rate exceeds 25%
+      - alert: CriticalTransferFailureRate
+        expr: |
+          (
+            sum(rate(pesit_transfers_total{status="failed"}[5m]))
+            /
+            sum(rate(pesit_transfers_total[5m]))
+          ) * 100 > 25
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical transfer failure rate"
+          description: "Transfer failure rate is {{ $value | printf \"%.1f\" }}% - immediate attention required"
+          runbook_url: "https://pesitwizard.io/docs/operations#troubleshooting-failed-transfers"
+
+      # Alert when queue is backing up
+      - alert: TransferQueueBacklog
+        expr: pesit_transfers_queued > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transfer queue backlog"
+          description: "{{ $value }} transfers are queued - may indicate slow processing or connection issues"
+          runbook_url: "https://pesitwizard.io/docs/performance#queue-management"
+
+      # Alert when no transfers for extended period (during business hours)
+      - alert: NoTransferActivity
+        expr: |
+          increase(pesit_transfers_total[1h]) == 0
+          and ON() hour() >= 8
+          and ON() hour() <= 18
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No transfer activity"
+          description: "No transfers detected in the last hour during business hours"
+
+  - name: pesit_wizard_connections
+    rules:
+      # Alert on high connection failures
+      - alert: HighConnectionFailures
+        expr: rate(pesit_connection_failures_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High connection failure rate"
+          description: "{{ $value | printf \"%.1f\" }} connection failures per second to {{ $labels.server }}"
+          runbook_url: "https://pesitwizard.io/docs/troubleshooting#connection-issues"
+
+      # Alert when server is unreachable
+      - alert: ServerUnreachable
+        expr: pesit_server_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PeSIT server unreachable"
+          description: "Cannot connect to server {{ $labels.server }}"
+          runbook_url: "https://pesitwizard.io/docs/troubleshooting#server-connectivity"
+
+  - name: pesit_wizard_tls
+    rules:
+      # Alert on TLS certificate expiration (30 days warning)
+      - alert: TLSCertificateExpiringSoon
+        expr: pesit_tls_certificate_expiry_days < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate for {{ $labels.server }} expires in {{ $value }} days"
+          runbook_url: "https://pesitwizard.io/docs/security#certificate-renewal"
+
+      # Alert on TLS certificate expiration (7 days critical)
+      - alert: TLSCertificateExpiringCritical
+        expr: pesit_tls_certificate_expiry_days < 7
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TLS certificate expiring very soon"
+          description: "Certificate for {{ $labels.server }} expires in {{ $value }} days - RENEW IMMEDIATELY"
+          runbook_url: "https://pesitwizard.io/docs/security#certificate-renewal"
+
+      # Alert on TLS handshake failures
+      - alert: TLSHandshakeFailures
+        expr: rate(pesit_tls_handshake_failures_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS handshake failures"
+          description: "{{ $value | printf \"%.1f\" }} TLS handshake failures per second"
+          runbook_url: "https://pesitwizard.io/docs/troubleshooting#tls-issues"
+
+  - name: pesit_wizard_performance
+    rules:
+      # Alert on slow transfers
+      - alert: SlowTransfers
+        expr: |
+          histogram_quantile(0.95, rate(pesit_transfer_duration_seconds_bucket[10m])) > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow transfers detected"
+          description: "P95 transfer duration is {{ $value | humanizeDuration }} (>5 minutes)"
+          runbook_url: "https://pesitwizard.io/docs/performance#slow-transfers"
+
+      # Alert on low throughput
+      - alert: LowThroughput
+        expr: |
+          sum(rate(pesit_bytes_transferred_total[5m])) < 1024
+          and sum(pesit_transfers_active) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low transfer throughput"
+          description: "Throughput is only {{ $value | humanize1024 }}B/s while transfers are active"
+
+  - name: pesit_wizard_resources
+    rules:
+      # Alert on high JVM memory usage
+      - alert: HighJVMMemoryUsage
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High JVM heap memory usage"
+          description: "JVM heap usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.instance }}"
+          runbook_url: "https://pesitwizard.io/docs/performance#jvm-tuning"
+
+      # Alert on high CPU usage
+      - alert: HighCPUUsage
+        expr: process_cpu_usage * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.instance }}"
+
+      # Alert on service down
+      - alert: PesitWizardDown
+        expr: up{job=~".*pesit.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PeSIT Wizard service down"
+          description: "Service {{ $labels.instance }} is not responding"
+          runbook_url: "https://pesitwizard.io/docs/operations#service-recovery"
