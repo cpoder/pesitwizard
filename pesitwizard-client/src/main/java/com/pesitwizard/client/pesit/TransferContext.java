@@ -21,6 +21,8 @@ public class TransferContext {
     private long totalBytes = 0;
     @Getter
     private int lastSyncPoint = 0;
+    @Getter
+    private long bytesAtLastSyncPoint = 0;
 
     private final TransferEventBus eventBus;
     private long lastProgressUpdate = 0;
@@ -61,6 +63,7 @@ public class TransferContext {
 
     public void syncPoint(int syncNum, long bytePos) {
         lastSyncPoint = syncNum;
+        bytesAtLastSyncPoint = bytePos;
         if (eventBus != null) {
             eventBus.syncPoint(transferId, syncNum, bytePos);
         }

@@ -83,11 +83,11 @@ public class PesitSendService {
             ctx.completed();
         } catch (PesitException e) {
             log.error("Transfer {} FAILED: {} ({})", historyId, e.getMessage(), e.getDiagnosticCodeHex());
-            updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex());
+            updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex(), ctx);
             ctx.error(e.getMessage(), e.getDiagnosticCodeHex());
         } catch (Exception e) {
             log.error("Transfer {} FAILED: {}", historyId, e.getMessage(), e);
-            updateHistoryFailed(historyId, e.getMessage(), null);
+            updateHistoryFailed(historyId, e.getMessage(), null, ctx);
             ctx.error(e.getMessage(), null);
         } finally {
             cancelledTransfers.remove(historyId);
@@ -223,12 +223,17 @@ public class PesitSendService {
         });
     }
 
-    private void updateHistoryFailed(String historyId, String error, String diagCode) {
+    private void updateHistoryFailed(String historyId, String error, String diagCode, TransferContext ctx) {
         historyRepository.findById(historyId).ifPresent(h -> {
             h.setStatus(TransferStatus.FAILED);
             h.setErrorMessage(error);
             h.setDiagnosticCode(diagCode);
             h.setCompletedAt(Instant.now());
+            h.setBytesTransferred(ctx.getBytesTransferred());
+            if (ctx.getLastSyncPoint() > 0) {
+                h.setLastSyncPoint(ctx.getLastSyncPoint());
+                h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+            }
             historyRepository.save(h);
         });
     }

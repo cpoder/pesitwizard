@@ -112,19 +112,19 @@ public class PesitReceiveService {
                     restartPoint = e.getSyncPoint();
                     restartBytePos = e.getBytePosition();
                 } else {
-                    updateHistoryFailed(historyId, "Max restart attempts exceeded: " + e.getMessage(), null);
-                    // Error event already published by TransferContext.error()
+                    updateHistoryFailed(historyId, "Max restart attempts exceeded: " + e.getMessage(), null, ctx);
+                    ctx.error("Max restart attempts exceeded: " + e.getMessage(), null);
                     return;
                 }
             } catch (PesitException e) {
                 log.error("Receive {} FAILED: {} ({})", historyId, e.getMessage(), e.getDiagnosticCodeHex());
-                updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex());
-                // Error event already published by TransferContext.error()
+                updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex(), ctx);
+                ctx.error(e.getMessage(), e.getDiagnosticCodeHex());
                 return;
             } catch (Exception e) {
                 log.error("Receive {} FAILED: {}", historyId, e.getMessage(), e);
-                updateHistoryFailed(historyId, e.getMessage(), null);
-                // Error event already published by TransferContext.error()
+                updateHistoryFailed(historyId, e.getMessage(), null, ctx);
+                ctx.error(e.getMessage(), null);
                 return;
             } finally {
                 closeQuietly(connector);
@@ -265,6 +265,7 @@ public class PesitReceiveService {
                     int syncNum = ParameterParser.parsePI20SyncNumber(fpdu);
                     lastSync = syncNum > 0 ? syncNum : lastSync + 1;
                     lastSyncPos = totalBytes;
+                    ctx.syncPoint(lastSync, lastSyncPos);
                     session.sendFpdu(new Fpdu(FpduType.ACK_SYN).withIdDst(serverConnId)
                             .withParameter(new ParameterValue(PI_20_NUM_SYNC, lastSync)));
                     log.debug("ACK_SYN {} at {} bytes", lastSync, totalBytes);
@@ -332,12 +333,17 @@ public class PesitReceiveService {
         });
     }
 
-    private void updateHistoryFailed(String historyId, String error, String diagCode) {
+    private void updateHistoryFailed(String historyId, String error, String diagCode, TransferContext ctx) {
         historyRepository.findById(historyId).ifPresent(h -> {
             h.setStatus(TransferStatus.FAILED);
             h.setErrorMessage(error);
             h.setDiagnosticCode(diagCode);
             h.setCompletedAt(Instant.now());
+            h.setBytesTransferred(ctx.getBytesTransferred());
+            if (ctx.getLastSyncPoint() > 0) {
+                h.setLastSyncPoint(ctx.getLastSyncPoint());
+                h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+            }
             historyRepository.save(h);
         });
     }
