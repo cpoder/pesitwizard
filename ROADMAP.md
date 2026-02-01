@@ -14,14 +14,17 @@ Dernière mise à jour: 2026-02-01
 |----|-------|--------|--------|
 | 1.1 | Configurer SSL parameter tables (SSLPARM1/SSLPARM2) dans CX | 2h | ✅ |
 | 1.2 | Créer certificats de test (CA, server, client) compatibles PW/CX | 1h | ✅ |
-| 1.3 | Modifier `cx-setup-partner` pour supporter `nature='S'` | 1h | ✅ |
-| 1.4 | Tester TLS unidirectionnel (server auth only) PW -> CX | 2h | ⬜ |
-| 1.5 | Tester TLS unidirectionnel CX -> PW | 2h | ⬜ |
-| 1.6 | Tester mTLS (mutual TLS) bidirectionnel | 2h | ⬜ |
-| 1.7 | Ajouter tests TLS au Docker integration suite | 2h | ✅ |
-| 1.8 | Documenter procédure de configuration TLS | 1h | ✅ |
+| 1.3 | Modifier `cx-setup-partner` pour supporter SSLPARM | 1h | ✅ |
+| 1.4 | Configurer keystores TLS dans PW Server | 2h | ⬜ |
+| 1.5 | Tester TLS unidirectionnel PW Client -> CX | 2h | ⬜ |
+| 1.6 | Tester TLS unidirectionnel CX -> PW Server | 2h | ⬜ |
+| 1.7 | Tester mTLS (mutual TLS) bidirectionnel | 2h | ⬜ |
+| 1.8 | Ajouter tests TLS au Docker integration suite | 2h | ✅ |
 
 **Critère de succès**: Tests Docker TLS passent, documentation complète
+
+> Note: Configuration CX SSL complète (certificats via certmgr.sh, SSLPARM tables, LINK=T+SSLPARM).
+> En attente: Configuration keystores PW Server via base de données (les keystores ne sont pas lus depuis fichiers).
 
 ---
 
@@ -185,6 +188,7 @@ Dernière mise à jour: 2026-02-01
 
 | Date | Version | Changements |
 |------|---------|-------------|
+| 2026-02-01 | 1.3 | Fix CX SSL config (certmgr.sh, SSLPARM tables, noms courts) |
 | 2026-02-01 | 1.2 | Ajout tests résilience et restart, scripts benchmark |
 | 2026-01-31 | 1.1 | Ajout infrastructure TLS et scripts performance |
 | 2026-01-31 | 1.0 | Création initiale après validation CX integration |
