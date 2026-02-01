@@ -12,9 +12,9 @@ Dernière mise à jour: 2026-02-01
 
 | ID | Tâche | Effort | Status |
 |----|-------|--------|--------|
-| 1.1 | Configurer SSL parameter tables (SSLPARM1/SSLPARM2) dans CX | 2h | ⬜ |
+| 1.1 | Configurer SSL parameter tables (SSLPARM1/SSLPARM2) dans CX | 2h | ✅ |
 | 1.2 | Créer certificats de test (CA, server, client) compatibles PW/CX | 1h | ✅ |
-| 1.3 | Modifier `cx-setup-partner` pour supporter `nature='S'` | 1h | ⬜ |
+| 1.3 | Modifier `cx-setup-partner` pour supporter `nature='S'` | 1h | ✅ |
 | 1.4 | Tester TLS unidirectionnel (server auth only) PW -> CX | 2h | ⬜ |
 | 1.5 | Tester TLS unidirectionnel CX -> PW | 2h | ⬜ |
 | 1.6 | Tester mTLS (mutual TLS) bidirectionnel | 2h | ⬜ |

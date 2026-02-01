@@ -1,0 +1,139 @@
+# Docker Compose for TLS testing between PeSIT Wizard and Connect:Express
+# Tests bidirectional TLS/mTLS communication
+#
+# Usage:
+#   # First generate certificates
+#   cd certs && ./generate-certs.sh && cd ..
+#
+#   # Run TLS tests
+#   docker compose -f docker-compose-cx-tls.yml up --abort-on-container-exit
+
+services:
+  # Connect:Express server with TLS enabled
+  cx-server-tls:
+    build:
+      context: ./cx
+      dockerfile: Dockerfile
+    container_name: cx-server-tls
+    environment:
+      - TOM_DIR=/opt/cxu/runtime
+      - CX_SSL_ENABLED=true
+      - CX_SSL_NATURE=S
+      - CX_SSL_SSLPARM_SERVER=SSLPARM1
+      - CX_SSL_SSLPARM_CLIENT=SSLPARM2
+      - RUN_TRANSFER_TESTS=false
+    volumes:
+      - cx-send-tls:/tmp/cx-send
+      - cx-received-tls:/tmp/cx-received
+      - ./certs:/app/certs:ro
+    ports:
+      - "5010:5000"
+    networks:
+      - pesit-cx-tls-network
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "tom_mon"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # PW Server with TLS enabled
+  pw-server-tls:
+    build:
+      context: ./pw-server
+      dockerfile: Dockerfile
+    container_name: pw-server-cx-tls
+    environment:
+      - SPRING_PROFILES_ACTIVE=integration-test
+      - PESIT_SSL_ENABLED=true
+      - PESIT_SSL_KEYSTORE_PATH=/app/certs/pw-server-keystore.p12
+      - PESIT_SSL_KEYSTORE_PASSWORD=changeit
+      - PESIT_SSL_TRUSTSTORE_PATH=/app/certs/ca-truststore.p12
+      - PESIT_SSL_TRUSTSTORE_PASSWORD=changeit
+      - PESIT_SSL_CLIENT_AUTH=NONE
+      - PESIT_SSL_PROTOCOL=TLSv1.2
+    volumes:
+      - pw-send-cx-tls:/data/send
+      - pw-received-cx-tls:/data/received
+      - ./certs:/app/certs:ro
+    ports:
+      - "5011:5001"
+      - "8090:8080"
+    networks:
+      - pesit-cx-tls-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # PW Client with TLS enabled
+  pw-client-tls:
+    build:
+      context: ./pw-client
+      dockerfile: Dockerfile
+    container_name: pw-client-cx-tls
+    environment:
+      - SPRING_PROFILES_ACTIVE=integration-test,nosecurity
+      - PESIT_CLIENT_SSL_KEYSTORE_PATH=/app/certs/pw-client-keystore.p12
+      - PESIT_CLIENT_SSL_KEYSTORE_PASSWORD=changeit
+      - PESIT_CLIENT_SSL_TRUSTSTORE_PATH=/app/certs/ca-truststore.p12
+      - PESIT_CLIENT_SSL_TRUSTSTORE_PASSWORD=changeit
+    volumes:
+      - pw-client-send-cx-tls:/data/send
+      - pw-client-received-cx-tls:/data/received
+      - ./certs:/app/certs:ro
+    ports:
+      - "9090:9081"
+    networks:
+      - pesit-cx-tls-network
+    depends_on:
+      pw-server-tls:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # TLS test runner
+  cx-tls-test-runner:
+    image: eclipse-temurin:21-jre
+    container_name: cx-tls-test-runner
+    volumes:
+      - ./tests:/tests:ro
+      - ./certs:/certs:ro
+      - pw-client-send-cx-tls:/tmp/pw-client-send
+      - pw-received-cx-tls:/tmp/pw-received
+      - cx-received-tls:/tmp/cx-received
+    networks:
+      - pesit-cx-tls-network
+    environment:
+      - PW_CLIENT_API=http://pw-client-tls:9081
+      - PW_SERVER_API=http://pw-server-tls:8080
+      - SERVER_NAME=cx-server-tls
+      - PARTNER_ID=PWSRV01
+      - VIRTUAL_FILE=PWRECV
+      - TLS_ENABLED=true
+    depends_on:
+      cx-server-tls:
+        condition: service_healthy
+      pw-server-tls:
+        condition: service_healthy
+      pw-client-tls:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/tests/run-cx-tls-tests.sh"]
+
+networks:
+  pesit-cx-tls-network:
+    driver: bridge
+
+volumes:
+  cx-send-tls:
+  cx-received-tls:
+  pw-send-cx-tls:
+  pw-received-cx-tls:
+  pw-client-send-cx-tls:
+  pw-client-received-cx-tls:
