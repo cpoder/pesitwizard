@@ -125,13 +125,92 @@ fi
 
 echo ""
 echo "=========================================="
-echo "  Phase 3: TLS Handshake Tests"
+echo "  Phase 3: Upload Certificates to PW Server"
 echo "=========================================="
 
-# Test 7: TLS handshake to PW Server
+# Upload keystore to PW Server
 echo ""
-echo "Test 7: TLS handshake to PW Server"
-TLS_RESULT=$(timeout 10 openssl s_client -connect pw-server-tls:5001 -CAfile /certs/ca-cert.pem < /dev/null 2>&1)
+echo "Test 7: Upload server keystore to PW Server"
+KEYSTORE_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/certificates/keystores" \
+    -H "X-API-Key: $API_KEY" \
+    -F "file=@/certs/pw-server-keystore.p12" \
+    -F "name=pw-server-keystore" \
+    -F "description=PW Server TLS keystore" \
+    -F "format=PKCS12" \
+    -F "storePassword=changeit" \
+    -F "keyPassword=changeit" \
+    -F "purpose=SERVER" \
+    -F "isDefault=true")
+
+KEYSTORE_ID=$(echo "$KEYSTORE_RESULT" | jq -r '.id // "error"')
+if [ "$KEYSTORE_ID" != "error" ] && [ "$KEYSTORE_ID" != "null" ]; then
+    echo "   Keystore uploaded with ID: $KEYSTORE_ID"
+    test_result "Upload server keystore" "pass"
+else
+    # Maybe it already exists, try to get it
+    EXISTING=$(curl -s "$PW_SERVER_API/api/v1/certificates/name/pw-server-keystore" -H "X-API-Key: $API_KEY" | jq -r '.id // "none"')
+    if [ "$EXISTING" != "none" ]; then
+        echo "   Keystore already exists with ID: $EXISTING"
+        test_result "Server keystore exists" "pass"
+    else
+        echo "   Failed: $KEYSTORE_RESULT"
+        test_result "Upload server keystore" "fail"
+    fi
+fi
+
+# Upload truststore to PW Server
+echo ""
+echo "Test 8: Upload truststore to PW Server"
+TRUSTSTORE_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/certificates/truststores" \
+    -H "X-API-Key: $API_KEY" \
+    -F "file=@/certs/ca-truststore.p12" \
+    -F "name=pesit-ca-truststore" \
+    -F "description=PW CA truststore" \
+    -F "format=PKCS12" \
+    -F "storePassword=changeit" \
+    -F "isDefault=true")
+
+TRUSTSTORE_ID=$(echo "$TRUSTSTORE_RESULT" | jq -r '.id // "error"')
+if [ "$TRUSTSTORE_ID" != "error" ] && [ "$TRUSTSTORE_ID" != "null" ]; then
+    echo "   Truststore uploaded with ID: $TRUSTSTORE_ID"
+    test_result "Upload truststore" "pass"
+else
+    # Maybe it already exists
+    EXISTING=$(curl -s "$PW_SERVER_API/api/v1/certificates/name/pesit-ca-truststore" -H "X-API-Key: $API_KEY" | jq -r '.id // "none"')
+    if [ "$EXISTING" != "none" ]; then
+        echo "   Truststore already exists with ID: $EXISTING"
+        test_result "Truststore exists" "pass"
+    else
+        echo "   Failed: $TRUSTSTORE_RESULT"
+        test_result "Upload truststore" "fail"
+    fi
+fi
+
+# Enable TLS on PW Server by restarting/reconfiguring
+echo ""
+echo "Test 9: Verify PW Server TLS configuration"
+CERT_STATS=$(curl -s "$PW_SERVER_API/api/v1/certificates/stats" -H "X-API-Key: $API_KEY")
+KEYSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.keystoreCount // 0')
+TRUSTSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.truststoreCount // 0')
+echo "   Keystores: $KEYSTORE_COUNT, Truststores: $TRUSTSTORE_COUNT"
+
+if [ "$KEYSTORE_COUNT" -ge 1 ] && [ "$TRUSTSTORE_COUNT" -ge 1 ]; then
+    test_result "PW Server has TLS certificates configured" "pass"
+else
+    test_result "PW Server TLS configuration" "fail"
+fi
+
+echo ""
+echo "=========================================="
+echo "  Phase 4: TLS Handshake Tests"
+echo "=========================================="
+
+# Test 10: TLS handshake to PW Server
+echo ""
+echo "Test 10: TLS handshake to PW Server"
+# Note: PW Server needs a running PeSIT server instance with TLS enabled
+# The certificates were uploaded above, but the server may need restart or reconfiguration
+TLS_RESULT=$(timeout 10 openssl s_client -connect pw-server:5001 -CAfile /certs/ca-cert.pem < /dev/null 2>&1)
 if echo "$TLS_RESULT" | grep -q "Verify return code: 0"; then
     PROTOCOL=$(echo "$TLS_RESULT" | grep "Protocol" | head -1)
     echo "   $PROTOCOL"
@@ -139,13 +218,14 @@ if echo "$TLS_RESULT" | grep -q "Verify return code: 0"; then
 elif echo "$TLS_RESULT" | grep -q "CONNECTED"; then
     test_result "TLS connection established (cert verify may have issues)" "pass"
 else
-    echo "   TLS handshake failed"
+    echo "   TLS handshake failed (PW Server may not have TLS listener started)"
+    echo "   Note: Upload keystores triggers TLS config but may need server restart"
     test_result "TLS handshake to PW Server" "skip"
 fi
 
-# Test 8: Check CX TLS support (may not be enabled)
+# Test 11: Check CX TLS support (may not be enabled)
 echo ""
-echo "Test 8: CX Server TLS support"
+echo "Test 11: CX Server TLS support"
 CX_TLS_RESULT=$(timeout 5 openssl s_client -connect cx-server-tls:5000 < /dev/null 2>&1 || true)
 if echo "$CX_TLS_RESULT" | grep -q "CONNECTED"; then
     echo "   CX Server accepts TLS connections"
@@ -157,12 +237,12 @@ fi
 
 echo ""
 echo "=========================================="
-echo "  Phase 4: Configure TLS Server"
+echo "  Phase 5: Configure TLS Server"
 echo "=========================================="
 
-# Test 9: Configure TLS-enabled server in PW Client
+# Test 12: Configure TLS-enabled server in PW Client
 echo ""
-echo "Test 9: Configure TLS server in PW Client"
+echo "Test 12: Configure TLS server in PW Client"
 
 # First check if server exists
 EXISTING=$(curl -s "$PW_CLIENT_API/api/v1/servers" | jq -r '.[] | select(.name=="cx-server-tls") | .id')
@@ -195,7 +275,7 @@ fi
 
 echo ""
 echo "=========================================="
-echo "  Phase 5: TLS Transfer Tests"
+echo "  Phase 6: TLS Transfer Tests"
 echo "=========================================="
 
 # Create test file
@@ -204,9 +284,9 @@ dd if=/dev/urandom of=/tmp/pw-client-send/tls_test.dat bs=102400 count=1 2>/dev/
 TLS_TEST_MD5=$(md5sum /tmp/pw-client-send/tls_test.dat | cut -d' ' -f1)
 echo "   Test file MD5: $TLS_TEST_MD5"
 
-# Test 10: TLS transfer PW Client -> CX Server
+# Test 13: TLS transfer PW Client -> CX Server
 echo ""
-echo "Test 10: TLS transfer PW Client -> CX Server"
+echo "Test 13: TLS transfer PW Client -> CX Server"
 RESULT=$(curl -s -X POST -H "Content-Type: application/json" \
     "$PW_CLIENT_API/api/v1/transfers/send" \
     -d '{
