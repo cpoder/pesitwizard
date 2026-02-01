@@ -38,8 +38,9 @@ USER root
 COPY entrypoint.sh /entrypoint.sh
 COPY --chown=cxuser:cxuser cx-main.sh /cx-main.sh
 COPY --chown=cxuser:cxuser setup-partners.sh /setup-partners.sh
+COPY --chown=cxuser:cxuser setup-ssl.sh /setup-ssl.sh
 COPY --chown=cxuser:cxuser run-transfer.sh /run-transfer.sh
-RUN chmod +x /entrypoint.sh /cx-main.sh /setup-partners.sh /run-transfer.sh
+RUN chmod +x /entrypoint.sh /cx-main.sh /setup-partners.sh /setup-ssl.sh /run-transfer.sh
 
 # Keep root user for entrypoint (it will switch to cxuser after fixing permissions)
 WORKDIR /home/cxuser
