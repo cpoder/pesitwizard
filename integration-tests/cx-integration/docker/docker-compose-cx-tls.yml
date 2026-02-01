@@ -16,7 +16,7 @@ services:
       dockerfile: Dockerfile
     container_name: cx-server-tls
     environment:
-      - TOM_DIR=/opt/cxu/runtime
+      - TOM_DIR=/home/cxuser/cx
       - CX_SSL_ENABLED=true
       - CX_SSL_NATURE=S
       - CX_SSL_SSLPARM_SERVER=SSLPARM1
@@ -37,8 +37,8 @@ services:
       retries: 10
       start_period: 30s
 
-  # PW Server with TLS enabled
-  pw-server-tls:
+  # PW Server with TLS enabled (aliased as pw-server for CX compatibility)
+  pw-server:
     build:
       context: ./pw-server
       dockerfile: Dockerfile
@@ -58,7 +58,7 @@ services:
       - ./certs:/app/certs:ro
     ports:
       - "5011:5001"
-      - "8090:8080"
+      - "8091:8080"
     networks:
       - pesit-cx-tls-network
     healthcheck:
@@ -89,7 +89,7 @@ services:
     networks:
       - pesit-cx-tls-network
     depends_on:
-      pw-server-tls:
+      pw-server:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9081/actuator/health"]
@@ -112,7 +112,7 @@ services:
       - pesit-cx-tls-network
     environment:
       - PW_CLIENT_API=http://pw-client-tls:9081
-      - PW_SERVER_API=http://pw-server-tls:8080
+      - PW_SERVER_API=http://pw-server:8080
       - SERVER_NAME=cx-server-tls
       - PARTNER_ID=PWSRV01
       - VIRTUAL_FILE=PWRECV
@@ -120,7 +120,7 @@ services:
     depends_on:
       cx-server-tls:
         condition: service_healthy
-      pw-server-tls:
+      pw-server:
         condition: service_healthy
       pw-client-tls:
         condition: service_healthy
