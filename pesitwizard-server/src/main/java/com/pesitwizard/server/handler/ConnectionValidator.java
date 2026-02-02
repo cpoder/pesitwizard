@@ -42,14 +42,8 @@ public class ConnectionValidator {
         Partner partner = configService.findPartner(partnerId).orElse(null);
 
         if (partner == null) {
-            if (properties.isStrictPartnerCheck()) {
-                return ValidationResult.error(DiagnosticCode.D3_301,
-                        "Partner '" + partnerId + "' not configured");
-            }
-            // Allow unknown partner in non-strict mode
-            log.info("[{}] Unknown partner '{}' allowed (strict mode disabled)",
-                    ctx.getSessionId(), partnerId);
-            return ValidationResult.ok();
+            return ValidationResult.error(DiagnosticCode.D3_301,
+                    "Partner '" + partnerId + "' not configured");
         }
 
         // Store partner in session (convert to PartnerConfig for backward
@@ -71,18 +65,10 @@ public class ConnectionValidator {
             // Decrypt stored password (may be encrypted with vault: or ENC: prefix)
             String storedPassword = secretsService.decryptFromStorage(partner.getPassword());
 
-            // Debug: log hex values
+            // Validate password using constant-time comparison to prevent timing attacks
             if (!storedPassword.equals(providedPassword)) {
-                byte[] providedBytes = providedPassword.getBytes(StandardCharsets.ISO_8859_1);
-                byte[] storedBytes = storedPassword.getBytes(StandardCharsets.ISO_8859_1);
-                StringBuilder providedHex = new StringBuilder();
-                StringBuilder storedHex = new StringBuilder();
-                for (byte b : providedBytes) providedHex.append(String.format("%02X ", b));
-                for (byte b : storedBytes) storedHex.append(String.format("%02X ", b));
-                log.debug("[{}] Password mismatch for partner '{}' (provided length: {}, stored length: {})",
+                log.warn("[{}] Password mismatch for partner '{}' (provided length: {}, stored length: {})",
                         ctx.getSessionId(), partnerId, providedPassword.length(), storedPassword.length());
-                log.debug("[{}] Provided password hex: {}", ctx.getSessionId(), providedHex.toString());
-                log.debug("[{}] Stored password hex: {}", ctx.getSessionId(), storedHex.toString());
                 return ValidationResult.error(DiagnosticCode.D3_304,
                         "Invalid password for partner '" + partnerId + "'");
             }

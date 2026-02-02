@@ -206,9 +206,9 @@ public class CreateMessageBuilderTest {
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
 
         assertNotNull(fpdu);
-        // Transfer ID should be encoded in PI 13
+        // Transfer ID should be encoded in PI 13 (0x0D in hex)
         String fpduHex = bytesToHex(fpduBytes);
-        assertTrue(fpduHex.contains("13"), "FPDU should contain PI 13");
+        assertTrue(fpduHex.contains("0D"), "FPDU should contain PI 13 (0x0D)");
     }
 
     @Test

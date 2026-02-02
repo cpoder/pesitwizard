@@ -94,7 +94,7 @@ public class PesitServerManager implements ClusterEventListener {
                 startServer(config.getServerId());
                 log.info("Auto-started server: {}", config.getServerId());
             } catch (Exception e) {
-                log.error("Failed to auto-start server {}: {}", config.getServerId(), e.getMessage());
+                log.error("Failed to auto-start server {}: {}", config.getServerId(), e.getMessage(), e);
             }
         }
     }
@@ -105,7 +105,7 @@ public class PesitServerManager implements ClusterEventListener {
                 stopServer(serverId);
                 log.info("Stopped server due to leadership loss: {}", serverId);
             } catch (Exception e) {
-                log.error("Error stopping server {}: {}", serverId, e.getMessage());
+                log.error("Error stopping server {}: {}", serverId, e.getMessage(), e);
             }
         }
     }
@@ -117,7 +117,7 @@ public class PesitServerManager implements ClusterEventListener {
             try {
                 stopServer(serverId);
             } catch (Exception e) {
-                log.error("Error stopping server {}: {}", serverId, e.getMessage());
+                log.error("Error stopping server {}: {}", serverId, e.getMessage(), e);
             }
         }
     }
@@ -173,8 +173,6 @@ public class PesitServerManager implements ClusterEventListener {
         existing.setMaxEntitySize(updates.getMaxEntitySize());
         existing.setSyncPointsEnabled(updates.isSyncPointsEnabled());
         existing.setResyncEnabled(updates.isResyncEnabled());
-        existing.setStrictPartnerCheck(updates.isStrictPartnerCheck());
-        existing.setStrictFileCheck(updates.isStrictFileCheck());
         existing.setAutoStart(updates.isAutoStart());
 
         return configRepository.save(existing);
@@ -392,8 +390,6 @@ public class PesitServerManager implements ClusterEventListener {
         log.debug("Created properties from config: serverId={}, syncPointsEnabled={}, syncIntervalKb={}",
                 config.getServerId(), config.isSyncPointsEnabled(), config.getSyncIntervalKb());
         props.setResyncEnabled(config.isResyncEnabled());
-        props.setStrictPartnerCheck(config.isStrictPartnerCheck());
-        props.setStrictFileCheck(config.isStrictFileCheck());
         // Copy session recording settings from global properties
         props.setSessionRecordingEnabled(globalProperties.isSessionRecordingEnabled());
         props.setSessionRecordingDirectory(globalProperties.getSessionRecordingDirectory());

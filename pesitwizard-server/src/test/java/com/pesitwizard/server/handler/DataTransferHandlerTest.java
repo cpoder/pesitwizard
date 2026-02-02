@@ -67,13 +67,23 @@ class DataTransferHandlerTest {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = ctx.startTransfer();
         transfer.setRecordsTransferred(0);
+        // Open output stream to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
 
         Fpdu fpdu = new Fpdu(FpduType.DTF);
+        fpdu.setData(new byte[100]); // DTF with data counts as 1 record
 
-        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+        try {
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
 
-        assertNull(response); // No response for DTF
-        assertEquals(1, transfer.getRecordsTransferred());
+            assertNull(response); // No response for DTF
+            assertEquals(1, transfer.getRecordsTransferred());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
@@ -222,13 +232,23 @@ class DataTransferHandlerTest {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = ctx.startTransfer();
         transfer.setRecordsTransferred(0);
+        // Open output stream to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
 
         Fpdu fpdu = new Fpdu(FpduType.DTFDA);
+        fpdu.setData(new byte[50]); // DTFDA with data counts as 1 record
 
-        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+        try {
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
 
-        assertNull(response);
-        assertEquals(1, transfer.getRecordsTransferred());
+            assertNull(response);
+            assertEquals(1, transfer.getRecordsTransferred());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
@@ -237,13 +257,23 @@ class DataTransferHandlerTest {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = ctx.startTransfer();
         transfer.setRecordsTransferred(0);
+        // Open output stream to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
 
         Fpdu fpdu = new Fpdu(FpduType.DTFMA);
+        fpdu.setData(new byte[50]); // DTFMA with data counts as 1 record
 
-        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+        try {
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
 
-        assertNull(response);
-        assertEquals(1, transfer.getRecordsTransferred());
+            assertNull(response);
+            assertEquals(1, transfer.getRecordsTransferred());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
@@ -252,13 +282,23 @@ class DataTransferHandlerTest {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = ctx.startTransfer();
         transfer.setRecordsTransferred(0);
+        // Open output stream to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
 
         Fpdu fpdu = new Fpdu(FpduType.DTFFA);
+        fpdu.setData(new byte[50]); // DTFFA with data counts as 1 record
 
-        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+        try {
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
 
-        assertNull(response);
-        assertEquals(1, transfer.getRecordsTransferred());
+            assertNull(response);
+            assertEquals(1, transfer.getRecordsTransferred());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
