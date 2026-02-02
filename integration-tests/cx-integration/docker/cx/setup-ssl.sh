@@ -58,11 +58,12 @@ if [ ! -d "$CERT_DIR" ]; then
 fi
 
 # Check for required certificate files
+# IMPORTANT: CX has filename length limits - use short names matching CX conventions
 CA_CERT="$CERT_DIR/ca-cert.pem"
-SERVER_CERT="$CERT_DIR/cx-server-cert.pem"
-SERVER_KEY="$CERT_DIR/cx-server-key.pem"
-CLIENT_CERT="$CERT_DIR/cx-client-cert.pem"
-CLIENT_KEY="$CERT_DIR/cx-client-key.pem"
+SERVER_CERT="$CERT_DIR/CXSRV.pem"
+SERVER_KEY="$CERT_DIR/CXSRVKEY.pem"
+CLIENT_CERT="$CERT_DIR/CXCLI.pem"
+CLIENT_KEY="$CERT_DIR/CXCLIKEY.pem"
 
 if [ ! -f "$CA_CERT" ]; then
     echo "WARNING: CA certificate not found at $CA_CERT"
@@ -87,6 +88,12 @@ if [ "$CERTMGR_AVAILABLE" = true ]; then
     $CERTMGR -y create PWCA "$CA_CERT" 2>/dev/null && \
         echo "   CA certificate imported successfully" || \
         echo "   CA certificate already exists or import failed"
+    # Create symlink to ensure PWCA.pem exists (certmgr uses original filename)
+    # CX looks for CERTNAM (PWCA.pem) but certmgr copies with original basename
+    CA_BASENAME=$(basename "$CA_CERT")
+    if [ "$CA_BASENAME" != "PWCA.pem" ]; then
+        ln -sf "$CA_BASENAME" "$SSL_DIR/lcert/PWCA.pem" 2>/dev/null || true
+    fi
 else
     # Manual import: copy cert to lcert directory and create hash link
     echo "   Copying CA certificate manually..."
@@ -163,13 +170,14 @@ fi
 # Step 4: Configure SSLPARM1 (Server mode - accept incoming TLS)
 # -------------------------------------------------------------------
 echo ""
-echo "Step 4: Configuring SSLPARM1 (Server mode)..."
+echo "Step 4: Configuring SSLPARM1 (Server mode on port 5001)..."
 
 # SSLPARM format from tom_prm:
 #   SSLMODE = S (server), C (client), A (any)
 #   VERIFY_OPT = 0 (no verify), 1 (verify peer), 2 (require peer cert)
 #   CERT_ID = certificate name from CERT table
 #   CA_LIST = comma-separated list of CA cert names
+#   PORT = creates a dedicated SSL listener on this port (required for server mode)
 
 cat > /tmp/sslparm1.prm << EOF
 SSLPARM
@@ -180,13 +188,13 @@ SSLPARM
     CERT_ID = CXSRV,
     CIPHER_LIST = ,
     TLSV1 = Y,
-    SSLV3 = N,
+    SSLV3 = Y,
     SSLV2 = N,
     DH_PARAM = '',
     CA_LIST = 'PWCA',
     NETWORK = T,
     ADDRESS = ,
-    PORT = ,
+    PORT = 05001,
     TCPIP_HEADER = N,
     MODE = REPLACE
 EOF
@@ -242,12 +250,13 @@ echo "  CXSRV - CX Server certificate (for incoming TLS)"
 echo "  CXCLI - CX Client certificate (for outgoing TLS)"
 echo ""
 echo "SSLPARM tables configured:"
-echo "  SSLPARM1 - Server mode (SSLMODE=S, CERT=CXSRV)"
+echo "  SSLPARM1 - Server mode (SSLMODE=S, CERT=CXSRV, PORT=5001)"
 echo "  SSLPARM2 - Client mode (SSLMODE=C, CERT=CXCLI)"
 echo ""
-echo "Partner configuration:"
-echo "  For incoming TLS: NATURE=S, SSLPARM=SSLPARM1"
-echo "  For outgoing TLS: NATURE=S, SSLPARM=SSLPARM2"
+echo "Listeners:"
+echo "  Port 5000 - Plain TCP (standard PeSIT)"
+echo "  Port 5001 - TLS/SSL (secure PeSIT via SSLPARM1)"
 echo ""
-echo "Example:"
-echo "  tom_prm PARTNER 'NAME=PWSRV01,...,NATURE=S,SSLPARM=SSLPARM1,...'"
+echo "Partner configuration:"
+echo "  For incoming TLS: SSLPARM=SSLPARM1"
+echo "  For outgoing TLS: SSLPARM=SSLPARM2"

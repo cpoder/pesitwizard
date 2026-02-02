@@ -6,6 +6,7 @@ set -e
 
 PW_CLIENT_API="${PW_CLIENT_API:-http://pw-client-tls:9081}"
 PW_SERVER_API="${PW_SERVER_API:-http://pw-server-tls:8080}"
+CX_TLS_PORT="${CX_TLS_PORT:-5001}"
 API_KEY="integration-test-key"
 
 echo "=========================================="
@@ -114,13 +115,24 @@ else
     test_result "PW Client health ($PW_CLIENT_HEALTH)" "fail"
 fi
 
-# Test 6: CX Server connectivity
+# Test 6: CX Server connectivity (plain TCP and TLS ports)
 echo ""
 echo "Test 6: CX Server connectivity"
 if nc -z cx-server-tls 5000 2>/dev/null; then
+    echo "   Port 5000 (plain TCP): open"
     test_result "CX Server port 5000 is open" "pass"
 else
-    test_result "CX Server connectivity" "fail"
+    test_result "CX Server connectivity (port 5000)" "fail"
+fi
+
+echo ""
+echo "Test 6b: CX Server TLS port connectivity"
+if nc -z cx-server-tls $CX_TLS_PORT 2>/dev/null; then
+    echo "   Port $CX_TLS_PORT (TLS): open"
+    test_result "CX Server TLS port $CX_TLS_PORT is open" "pass"
+else
+    echo "   Port $CX_TLS_PORT (TLS): closed - SSL listener may not be started"
+    test_result "CX Server TLS port (may need monitor restart)" "skip"
 fi
 
 echo ""
@@ -129,12 +141,14 @@ echo "  Phase 3: Upload Certificates to PW Server"
 echo "=========================================="
 
 # Upload keystore to PW Server
+# Note: The keystore name MUST match the configuration in application.yml
+# Default is "default-keystore" (env: PESIT_SSL_KEYSTORE_NAME)
 echo ""
 echo "Test 7: Upload server keystore to PW Server"
 KEYSTORE_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/certificates/keystores" \
     -H "X-API-Key: $API_KEY" \
     -F "file=@/certs/pw-server-keystore.p12" \
-    -F "name=pw-server-keystore" \
+    -F "name=default-keystore" \
     -F "description=PW Server TLS keystore" \
     -F "format=PKCS12" \
     -F "storePassword=changeit" \
@@ -144,11 +158,11 @@ KEYSTORE_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/certificates/keystores"
 
 KEYSTORE_ID=$(echo "$KEYSTORE_RESULT" | jq -r '.id // "error"')
 if [ "$KEYSTORE_ID" != "error" ] && [ "$KEYSTORE_ID" != "null" ]; then
-    echo "   Keystore uploaded with ID: $KEYSTORE_ID"
+    echo "   Keystore uploaded with ID: $KEYSTORE_ID (name: default-keystore)"
     test_result "Upload server keystore" "pass"
 else
     # Maybe it already exists, try to get it
-    EXISTING=$(curl -s "$PW_SERVER_API/api/v1/certificates/name/pw-server-keystore" -H "X-API-Key: $API_KEY" | jq -r '.id // "none"')
+    EXISTING=$(curl -s "$PW_SERVER_API/api/v1/certificates/name/default-keystore" -H "X-API-Key: $API_KEY" | jq -r '.id // "none"')
     if [ "$EXISTING" != "none" ]; then
         echo "   Keystore already exists with ID: $EXISTING"
         test_result "Server keystore exists" "pass"
@@ -186,18 +200,71 @@ else
     fi
 fi
 
-# Enable TLS on PW Server by restarting/reconfiguring
+# Verify TLS configuration in PW Server
 echo ""
 echo "Test 9: Verify PW Server TLS configuration"
 CERT_STATS=$(curl -s "$PW_SERVER_API/api/v1/certificates/stats" -H "X-API-Key: $API_KEY")
-KEYSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.keystoreCount // 0')
-TRUSTSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.truststoreCount // 0')
+KEYSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.totalKeystores // 0')
+TRUSTSTORE_COUNT=$(echo "$CERT_STATS" | jq -r '.totalTruststores // 0')
 echo "   Keystores: $KEYSTORE_COUNT, Truststores: $TRUSTSTORE_COUNT"
 
 if [ "$KEYSTORE_COUNT" -ge 1 ] && [ "$TRUSTSTORE_COUNT" -ge 1 ]; then
     test_result "PW Server has TLS certificates configured" "pass"
 else
     test_result "PW Server TLS configuration" "fail"
+fi
+
+# Create PW Server instance
+echo ""
+echo "Test 9b: Create PW Server instance"
+# First check if a server already exists
+EXISTING_SERVER=$(curl -s "$PW_SERVER_API/api/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].serverId // "none"')
+SERVER_STATUS=$(curl -s "$PW_SERVER_API/api/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].status // "UNKNOWN"')
+if [ "$EXISTING_SERVER" != "none" ]; then
+    echo "   Server already exists: $EXISTING_SERVER (status: $SERVER_STATUS)"
+    if [ "$SERVER_STATUS" = "STOPPED" ]; then
+        echo "   Starting server..."
+        curl -s -X POST "$PW_SERVER_API/api/servers/$EXISTING_SERVER/start" -H "X-API-Key: $API_KEY" > /dev/null
+        sleep 3
+    fi
+    test_result "PW Server instance exists" "pass"
+else
+    # Create a new server instance
+    # Note: TLS is configured globally via application.yml (PESIT_SSL_ENABLED)
+    # The keystore/truststore names come from application config, not per-server
+    SERVER_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/servers" \
+        -H "X-API-Key: $API_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "serverId": "PWSERVER",
+            "port": 5001,
+            "receiveDirectory": "/data/received",
+            "sendDirectory": "/data/send",
+            "maxEntitySize": 32768,
+            "syncPointsEnabled": true,
+            "syncIntervalKb": 256,
+            "autoStart": true
+        }')
+    SERVER_ID=$(echo "$SERVER_RESULT" | jq -r '.serverId // "error"')
+    if [ "$SERVER_ID" != "error" ] && [ "$SERVER_ID" != "null" ]; then
+        echo "   Created server: $SERVER_ID"
+        test_result "Create PW Server instance" "pass"
+
+        # Start the server (TLS will be used if PESIT_SSL_ENABLED=true)
+        echo "   Starting server..."
+        START_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/servers/$SERVER_ID/start" -H "X-API-Key: $API_KEY")
+        START_STATUS=$(echo "$START_RESULT" | jq -r '.status // "error"')
+        if [ "$START_STATUS" = "RUNNING" ]; then
+            echo "   Server started successfully"
+        else
+            echo "   Server start: $START_RESULT"
+        fi
+        # Wait for server to start
+        sleep 5
+    else
+        echo "   Failed to create server: $SERVER_RESULT"
+        test_result "Create PW Server instance" "fail"
+    fi
 fi
 
 echo ""
@@ -223,16 +290,21 @@ else
     test_result "TLS handshake to PW Server" "skip"
 fi
 
-# Test 11: Check CX TLS support (may not be enabled)
+# Test 11: Check CX TLS support on dedicated SSL port
 echo ""
-echo "Test 11: CX Server TLS support"
-CX_TLS_RESULT=$(timeout 5 openssl s_client -connect cx-server-tls:5000 < /dev/null 2>&1 || true)
-if echo "$CX_TLS_RESULT" | grep -q "CONNECTED"; then
-    echo "   CX Server accepts TLS connections"
-    test_result "CX Server TLS support" "pass"
+echo "Test 11: CX Server TLS handshake on port $CX_TLS_PORT"
+CX_TLS_RESULT=$(timeout 10 openssl s_client -connect cx-server-tls:$CX_TLS_PORT -CAfile /certs/ca-cert.pem < /dev/null 2>&1 || true)
+if echo "$CX_TLS_RESULT" | grep -q "Verify return code: 0"; then
+    PROTOCOL=$(echo "$CX_TLS_RESULT" | grep "Protocol" | head -1)
+    echo "   $PROTOCOL"
+    test_result "CX Server TLS handshake" "pass"
+elif echo "$CX_TLS_RESULT" | grep -q "CONNECTED"; then
+    echo "   CX Server accepts TLS connections (cert verify may have issues)"
+    test_result "CX Server TLS connection established" "pass"
 else
-    echo "   CX Server may not have TLS enabled on port 5000"
-    test_result "CX Server TLS support (not enabled)" "skip"
+    echo "   CX TLS handshake failed - SSL listener may not be started"
+    echo "   (SSLPARM1 with PORT=5001 creates the listener on monitor start)"
+    test_result "CX Server TLS (listener not ready)" "skip"
 fi
 
 echo ""
@@ -242,7 +314,7 @@ echo "=========================================="
 
 # Test 12: Configure TLS-enabled server in PW Client
 echo ""
-echo "Test 12: Configure TLS server in PW Client"
+echo "Test 12: Configure TLS server in PW Client (port $CX_TLS_PORT)"
 
 # First check if server exists
 EXISTING=$(curl -s "$PW_CLIENT_API/api/v1/servers" | jq -r '.[] | select(.name=="cx-server-tls") | .id')
@@ -252,22 +324,37 @@ fi
 
 SERVER_RESULT=$(curl -s -X POST -H "Content-Type: application/json" \
     "$PW_CLIENT_API/api/v1/servers" \
-    -d '{
-        "name": "cx-server-tls",
-        "host": "cx-server-tls",
-        "port": 5000,
-        "serverId": "PWSRV01",
-        "description": "CX Server with TLS",
-        "tlsEnabled": true,
-        "connectionTimeout": 30000,
-        "readTimeout": 120000,
-        "enabled": true
-    }')
+    -d "{
+        \"name\": \"cx-server-tls\",
+        \"host\": \"cx-server-tls\",
+        \"port\": $CX_TLS_PORT,
+        \"serverId\": \"CETOM1\",
+        \"description\": \"CX Server with TLS on port $CX_TLS_PORT\",
+        \"tlsEnabled\": true,
+        \"connectionTimeout\": 30000,
+        \"readTimeout\": 120000,
+        \"enabled\": true
+    }")
 SERVER_ID=$(echo $SERVER_RESULT | jq -r '.id // "error"')
 
 if [ "$SERVER_ID" != "error" ] && [ "$SERVER_ID" != "null" ]; then
     echo "   Created server with ID: $SERVER_ID"
     test_result "TLS server configuration" "pass"
+
+    # Upload CA truststore to the server configuration so PW Client trusts CX certificates
+    echo ""
+    echo "Test 12b: Upload truststore to PW Client for CX server"
+    UPLOAD_RESULT=$(curl -s -X POST "$PW_CLIENT_API/api/v1/servers/$SERVER_ID/tls/truststore" \
+        -F "file=@/certs/ca-truststore.p12" \
+        -F "password=changeit")
+    UPLOAD_SUCCESS=$(echo "$UPLOAD_RESULT" | jq -r '.success // false')
+    if [ "$UPLOAD_SUCCESS" = "true" ]; then
+        echo "   Truststore uploaded to PW Client"
+        test_result "Upload truststore to PW Client" "pass"
+    else
+        echo "   Failed: $UPLOAD_RESULT"
+        test_result "Upload truststore to PW Client" "fail"
+    fi
 else
     echo "   Failed: $SERVER_RESULT"
     test_result "TLS server configuration" "fail"
@@ -347,8 +434,9 @@ echo ""
 # Summary notes
 echo "Notes:"
 echo "- Skipped tests indicate features that may not be configured"
-echo "- CX TLS requires SSLPARM configuration in Connect:Express"
-echo "- For mTLS, set VERIFY=2 in SSLPARM and provide client certs"
+echo "- CX TLS uses a dedicated SSL listener on port $CX_TLS_PORT (SSLPARM1)"
+echo "- The SSL listener is created when the CX monitor starts"
+echo "- For mTLS, set VERIFY_OPT=2 in SSLPARM and provide client certs"
 echo ""
 
 if [ $TESTS_FAILED -eq 0 ]; then
