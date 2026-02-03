@@ -9,12 +9,14 @@ on:
 env:
   REGISTRY: ghcr.io
 
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -116,7 +118,51 @@ jobs:
           cache-from: type=gha,scope=server
           cache-to: type=gha,mode=max,scope=server
 
-      # Make packages public (GHCR packages are private by default)
+  # Scan Docker images for vulnerabilities
+  scan:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        image:
+          - name: pesitwizard-server
+            meta-id: meta-server
+          - name: pesitwizard-client
+            meta-id: meta-client
+          - name: pesitwizard-client-ui
+            meta-id: meta-client-ui
+
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image.name }}:latest'
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.image.name }}.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.image.name }}.sarif'
+          category: 'trivy-${{ matrix.image.name }}'
+
+      - name: Run Trivy for table output
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image.name }}:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+  # Make packages public (GHCR packages are private by default)
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build, scan]
+
+    steps:
       - name: Make packages public
         env:
           GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
@@ -127,7 +173,7 @@ jobs:
           fi
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
-          
+
           for IMAGE in pesitwizard-client pesitwizard-client-ui pesitwizard-server; do
             # Package name includes repo: pesitwizard/pesitwizard-client -> URL encoded
             PACKAGE_NAME="${REPO}%2F${IMAGE}"

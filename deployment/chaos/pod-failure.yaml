@@ -1,0 +1,291 @@
+---
+# Chaos Mesh configuration for PeSIT Wizard chaos engineering
+#
+# Prerequisites:
+#   1. Install Chaos Mesh: helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-testing
+#   2. Apply: kubectl apply -f pod-failure.yaml
+#
+# Documentation: https://chaos-mesh.org/docs/
+
+# Pod Kill - Simulate node failure
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pesitwizard-leader-failure
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: pod-kill
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+      role: leader
+  scheduler:
+    cron: '@every 1h'
+---
+# Pod Failure - Simulate random node failure
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pesitwizard-random-failure
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: pod-failure
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  duration: '60s'
+  scheduler:
+    cron: '0 */2 * * *'  # Every 2 hours
+---
+# Network Partition - Simulate split brain
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: pesitwizard-network-partition
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: network-partition
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  direction: both
+  target:
+    mode: one
+    selector:
+      namespaces:
+        - staging
+      labelSelectors:
+        app: pesitwizard-server
+  duration: '30s'
+---
+# Network Latency - Simulate slow network
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: pesitwizard-network-latency
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: network-delay
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  delay:
+    latency: '500ms'
+    correlation: '50'
+    jitter: '100ms'
+  duration: '5m'
+  scheduler:
+    cron: '30 */4 * * *'  # Every 4 hours at :30
+---
+# Network Packet Loss
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: pesitwizard-packet-loss
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: packet-loss
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  loss:
+    loss: '10'
+    correlation: '50'
+  duration: '5m'
+---
+# IO Chaos - Disk latency
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: pesitwizard-io-latency
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: io-delay
+spec:
+  action: latency
+  mode: one
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  volumePath: /data
+  delay: '100ms'
+  percent: 50
+  duration: '5m'
+---
+# Stress Chaos - CPU stress
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: pesitwizard-cpu-stress
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: cpu-stress
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+  duration: '5m'
+  scheduler:
+    cron: '0 */6 * * *'  # Every 6 hours
+---
+# Stress Chaos - Memory pressure
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: pesitwizard-memory-stress
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: memory-stress
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - staging
+    labelSelectors:
+      app: pesitwizard-server
+  stressors:
+    memory:
+      workers: 2
+      size: '512Mi'
+  duration: '5m'
+---
+# Workflow - Combined chaos scenario
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: pesitwizard-failover-test
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: workflow
+spec:
+  entry: failover-sequence
+  templates:
+    - name: failover-sequence
+      templateType: Serial
+      children:
+        - step1-kill-leader
+        - step2-wait-recovery
+        - step3-verify-health
+
+    - name: step1-kill-leader
+      templateType: PodChaos
+      deadline: '2m'
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - staging
+          labelSelectors:
+            app: pesitwizard-server
+
+    - name: step2-wait-recovery
+      templateType: Suspend
+      deadline: '2m'
+      suspend:
+        duration: '60s'
+
+    - name: step3-verify-health
+      templateType: Task
+      deadline: '2m'
+      task:
+        container:
+          name: health-check
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              for i in $(seq 1 30); do
+                if curl -sf http://pesitwizard-server:8080/actuator/health; then
+                  echo "Health check passed"
+                  exit 0
+                fi
+                sleep 2
+              done
+              echo "Health check failed"
+              exit 1
+---
+# Schedule - Regular chaos testing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: pesitwizard-daily-chaos
+  namespace: staging
+  labels:
+    app: pesitwizard
+    chaos-type: schedule
+spec:
+  schedule: '0 3 * * *'  # Daily at 3 AM
+  type: 'Workflow'
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  workflow:
+    entry: failover-sequence
+    templates:
+      - name: failover-sequence
+        templateType: Serial
+        children:
+          - kill-random-pod
+          - wait-recovery
+
+      - name: kill-random-pod
+        templateType: PodChaos
+        deadline: '5m'
+        podChaos:
+          action: pod-kill
+          mode: one
+          selector:
+            namespaces:
+              - staging
+            labelSelectors:
+              app: pesitwizard-server
+
+      - name: wait-recovery
+        templateType: Suspend
+        deadline: '5m'
+        suspend:
+          duration: '3m'

@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 import com.pesitwizard.server.entity.ApiKey;
 import com.pesitwizard.server.security.ApiKeyService;
 import com.pesitwizard.server.security.ApiKeyService.ApiKeyResult;
@@ -72,7 +79,7 @@ public class ApiKeyController {
      * Create a new API key
      */
     @PostMapping
-    public ResponseEntity<?> createApiKey(@RequestBody CreateApiKeyRequest request, Principal principal) {
+    public ResponseEntity<?> createApiKey(@Valid @RequestBody CreateApiKeyRequest request, Principal principal) {
         try {
             ApiKeyResult result = apiKeyService.createApiKey(
                     request.getName(),
@@ -100,7 +107,7 @@ public class ApiKeyController {
      * Update an API key
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateApiKey(@PathVariable Long id, @RequestBody UpdateApiKeyRequest request) {
+    public ResponseEntity<?> updateApiKey(@PathVariable Long id, @Valid @RequestBody UpdateApiKeyRequest request) {
         try {
             ApiKey key = apiKeyService.updateApiKey(
                     id,
@@ -165,22 +172,47 @@ public class ApiKeyController {
 
     @lombok.Data
     public static class CreateApiKeyRequest {
+        @NotBlank(message = "Name is required")
+        @Size(min = 1, max = 100, message = "Name must be between 1 and 100 characters")
+        @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Name can only contain alphanumeric characters, underscores, and hyphens")
         private String name;
+
+        @Size(max = 500, message = "Description must not exceed 500 characters")
         private String description;
-        private List<String> roles;
+
+        @Size(max = 10, message = "Maximum 10 roles allowed")
+        private List<@Pattern(regexp = "^(USER|OPERATOR|ADMIN)$", message = "Invalid role. Must be USER, OPERATOR, or ADMIN") String> roles;
+
         private Instant expiresAt;
+
+        @Size(max = 1000, message = "Allowed IPs must not exceed 1000 characters")
         private String allowedIps;
+
+        @Min(value = 1, message = "Rate limit must be at least 1")
+        @Max(value = 10000, message = "Rate limit must not exceed 10000")
         private Integer rateLimit;
+
+        @Size(max = 64, message = "Partner ID must not exceed 64 characters")
         private String partnerId;
     }
 
     @lombok.Data
     public static class UpdateApiKeyRequest {
+        @Size(max = 500, message = "Description must not exceed 500 characters")
         private String description;
-        private List<String> roles;
+
+        @Size(max = 10, message = "Maximum 10 roles allowed")
+        private List<@Pattern(regexp = "^(USER|OPERATOR|ADMIN)$", message = "Invalid role. Must be USER, OPERATOR, or ADMIN") String> roles;
+
         private Boolean active;
+
         private Instant expiresAt;
+
+        @Size(max = 1000, message = "Allowed IPs must not exceed 1000 characters")
         private String allowedIps;
+
+        @Min(value = 1, message = "Rate limit must be at least 1")
+        @Max(value = 10000, message = "Rate limit must not exceed 10000")
         private Integer rateLimit;
     }
 

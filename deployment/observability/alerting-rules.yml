@@ -1,16 +1,26 @@
 # Prometheus Alerting Rules for PeSIT Wizard
 # Import this into your Prometheus or Alertmanager configuration
+#
+# Metrics Reference:
+# - pesitwizard.transfer.total{status} - Transfer counters by status
+# - pesitwizard.transfer.duration - Transfer duration histogram
+# - pesitwizard.connections.active - Active connection count
+# - pesitwizard.transfers.active - Active transfer count
+# - pesitwizard.error.total{type} - Error counters by type
+# - pesitwizard.fpdu.total{type} - FPDU counters by type
+# - pesitwizard.syncpoint.total{operation} - Sync point operations
+# - pesitwizard.restart.total{status} - Restart operations
 
 groups:
-  - name: pesit_wizard_transfers
+  - name: pesitwizard_transfers
     rules:
       # Alert when transfer failure rate exceeds 10%
       - alert: HighTransferFailureRate
         expr: |
           (
-            sum(rate(pesit_transfers_total{status="failed"}[5m]))
+            sum(rate(pesitwizard_transfer_total{status="failed"}[5m]))
             /
-            sum(rate(pesit_transfers_total[5m]))
+            sum(rate(pesitwizard_transfer_total[5m]))
           ) * 100 > 10
         for: 5m
         labels:
@@ -24,9 +34,9 @@ groups:
       - alert: CriticalTransferFailureRate
         expr: |
           (
-            sum(rate(pesit_transfers_total{status="failed"}[5m]))
+            sum(rate(pesitwizard_transfer_total{status="failed"}[5m]))
             /
-            sum(rate(pesit_transfers_total[5m]))
+            sum(rate(pesitwizard_transfer_total[5m]))
           ) * 100 > 25
         for: 2m
         labels:
@@ -36,21 +46,21 @@ groups:
           description: "Transfer failure rate is {{ $value | printf \"%.1f\" }}% - immediate attention required"
           runbook_url: "https://pesitwizard.io/docs/operations#troubleshooting-failed-transfers"
 
-      # Alert when queue is backing up
-      - alert: TransferQueueBacklog
-        expr: pesit_transfers_queued > 50
+      # Alert when active transfers exceed capacity
+      - alert: HighActiveTransfers
+        expr: pesitwizard_transfers_active > 180
         for: 10m
         labels:
           severity: warning
         annotations:
-          summary: "Transfer queue backlog"
-          description: "{{ $value }} transfers are queued - may indicate slow processing or connection issues"
-          runbook_url: "https://pesitwizard.io/docs/performance#queue-management"
+          summary: "High active transfers"
+          description: "{{ $value }} active transfers - approaching capacity limit (200)"
+          runbook_url: "https://github.com/pesitwizard/pesitwizard/blob/main/docs/runbooks/high-active-transfers.md"
 
       # Alert when no transfers for extended period (during business hours)
       - alert: NoTransferActivity
         expr: |
-          increase(pesit_transfers_total[1h]) == 0
+          increase(pesitwizard_transfer_total[1h]) == 0
           and ON() hour() >= 8
           and ON() hour() <= 18
         for: 1h
@@ -60,11 +70,11 @@ groups:
           summary: "No transfer activity"
           description: "No transfers detected in the last hour during business hours"
 
-  - name: pesit_wizard_connections
+  - name: pesitwizard_connections
     rules:
       # Alert on high connection failures
       - alert: HighConnectionFailures
-        expr: rate(pesit_connection_failures_total[5m]) > 5
+        expr: rate(pesitwizard_error_total{type="connection"}[5m]) > 5
         for: 5m
         labels:
           severity: warning
@@ -73,18 +83,29 @@ groups:
           description: "{{ $value | printf \"%.1f\" }} connection failures per second to {{ $labels.server }}"
           runbook_url: "https://pesitwizard.io/docs/troubleshooting#connection-issues"
 
-      # Alert when server is unreachable
-      - alert: ServerUnreachable
-        expr: pesit_server_up == 0
+      # Alert when connections drop to zero
+      - alert: NoActiveConnections
+        expr: pesitwizard_connections_active == 0 and pesitwizard_transfers_active > 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "PeSIT server unreachable"
-          description: "Cannot connect to server {{ $labels.server }}"
-          runbook_url: "https://pesitwizard.io/docs/troubleshooting#server-connectivity"
+          summary: "Connection issue detected"
+          description: "Active transfers ({{ $value }}) with no active connections - possible connection leak"
+          runbook_url: "https://github.com/pesitwizard/pesitwizard/blob/main/docs/runbooks/connection-issues.md"
 
-  - name: pesit_wizard_tls
+      # Alert on high protocol error rate
+      - alert: HighProtocolErrorRate
+        expr: rate(pesitwizard_error_total{type="protocol"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High protocol error rate"
+          description: "{{ $value | printf \"%.1f\" }} protocol errors per second"
+          runbook_url: "https://github.com/pesitwizard/pesitwizard/blob/main/docs/runbooks/protocol-errors.md"
+
+  - name: pesitwizard_tls
     rules:
       # Alert on TLS certificate expiration (30 days warning)
       - alert: TLSCertificateExpiringSoon
@@ -119,12 +140,12 @@ groups:
           description: "{{ $value | printf \"%.1f\" }} TLS handshake failures per second"
           runbook_url: "https://pesitwizard.io/docs/troubleshooting#tls-issues"
 
-  - name: pesit_wizard_performance
+  - name: pesitwizard_performance
     rules:
       # Alert on slow transfers
       - alert: SlowTransfers
         expr: |
-          histogram_quantile(0.95, rate(pesit_transfer_duration_seconds_bucket[10m])) > 300
+          histogram_quantile(0.95, rate(pesitwizard_transfer_duration_seconds_bucket[10m])) > 300
         for: 10m
         labels:
           severity: warning
@@ -136,8 +157,8 @@ groups:
       # Alert on low throughput
       - alert: LowThroughput
         expr: |
-          sum(rate(pesit_bytes_transferred_total[5m])) < 1024
-          and sum(pesit_transfers_active) > 0
+          sum(rate(pesitwizard_bytes_transferred_total[5m])) < 1024
+          and sum(pesitwizard_transfers_active) > 0
         for: 5m
         labels:
           severity: warning
@@ -145,7 +166,7 @@ groups:
           summary: "Low transfer throughput"
           description: "Throughput is only {{ $value | humanize1024 }}B/s while transfers are active"
 
-  - name: pesit_wizard_resources
+  - name: pesitwizard_resources
     rules:
       # Alert on high JVM memory usage
       - alert: HighJVMMemoryUsage

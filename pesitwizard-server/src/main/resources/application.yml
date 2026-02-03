@@ -43,6 +43,14 @@ spring:
 # Server configuration
 server:
   port: 8080  # HTTP management port (REST API)
+  # Request size limits
+  tomcat:
+    max-http-form-post-size: 100MB
+    max-swallow-size: 100MB
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
 
 # PeSIT Protocol Configuration
 pesit:
@@ -375,6 +383,28 @@ pesit.security:
     # mappings:
     #   idp-admin: ADMIN
     #   idp-operator: OPERATOR
+
+  # Rate limiting configuration
+  rate-limiting:
+    # Enable rate limiting (recommended for production)
+    enabled: ${PESIT_RATE_LIMITING_ENABLED:false}
+    # Requests per minute per IP
+    requests-per-minute: ${PESIT_RATE_LIMIT_RPM:100}
+    # Burst multiplier (allows temporary spikes)
+    burst-multiplier: 2
+    # API key header name
+    api-key-header: X-API-Key
+    # API key query parameter
+    api-key-query-param: api_key
+    # Paths excluded from rate limiting
+    whitelisted-paths:
+      - /actuator/health
+      - /actuator/health/**
+      - /actuator/info
+    # Enable Redis for distributed rate limiting (cluster-wide)
+    redis-enabled: ${PESIT_RATE_LIMIT_REDIS_ENABLED:false}
+    redis-key-prefix: "pesitwizard:ratelimit:"
+    redis-ttl-seconds: 300
 
 # Secrets Management
 pesit.secrets:

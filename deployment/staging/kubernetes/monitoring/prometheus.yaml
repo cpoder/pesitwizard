@@ -1,0 +1,211 @@
+---
+# Prometheus ServiceMonitor for PeSIT Wizard
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pesitwizard-server
+  namespace: staging
+  labels:
+    app: pesitwizard-server
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pesitwizard-server
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - staging
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pesitwizard-client
+  namespace: staging
+  labels:
+    app: pesitwizard-client
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: pesitwizard-client
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - staging
+---
+# PrometheusRule for PeSIT Wizard alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pesitwizard-alerts
+  namespace: staging
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: pesitwizard.rules
+      rules:
+        # Transfer Success Rate
+        - alert: PesitTransferSuccessRateLow
+          expr: |
+            (
+              sum(rate(pesitwizard_transfers_total{status="completed"}[5m])) /
+              sum(rate(pesitwizard_transfers_total[5m]))
+            ) < 0.99
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PeSIT transfer success rate is below 99%"
+            description: "Transfer success rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/transfer-success-rate.md"
+
+        - alert: PesitTransferSuccessRateCritical
+          expr: |
+            (
+              sum(rate(pesitwizard_transfers_total{status="completed"}[5m])) /
+              sum(rate(pesitwizard_transfers_total[5m]))
+            ) < 0.95
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PeSIT transfer success rate is critically low"
+            description: "Transfer success rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/transfer-success-rate.md"
+
+        # High Transfer Latency
+        - alert: PesitHighTransferLatency
+          expr: |
+            histogram_quantile(0.95, sum(rate(pesitwizard_transfer_duration_seconds_bucket[5m])) by (le)) > 60
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PeSIT transfer P95 latency is high"
+            description: "P95 transfer latency is {{ $value | humanizeDuration }}"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/high-latency.md"
+
+        # Pod Health
+        - alert: PesitServerPodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="staging", pod=~"pesitwizard-server-.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PeSIT Server pod is not ready"
+            description: "Pod {{ $labels.pod }} has been not ready for more than 5 minutes"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/pod-not-ready.md"
+
+        # Connection Pool Exhaustion
+        - alert: PesitConnectionPoolNearlyExhausted
+          expr: |
+            hikaricp_connections_active / hikaricp_connections_max > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Database connection pool is nearly exhausted"
+            description: "Connection pool usage is at {{ $value | humanizePercentage }}"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/connection-pool.md"
+
+        - alert: PesitConnectionPoolExhausted
+          expr: |
+            hikaricp_connections_active / hikaricp_connections_max > 0.95
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Database connection pool is exhausted"
+            description: "Connection pool usage is at {{ $value | humanizePercentage }}"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/connection-pool.md"
+
+        # Cluster Health
+        - alert: PesitClusterNodeDown
+          expr: |
+            pesitwizard_cluster_members < 3
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PeSIT cluster has fewer than 3 nodes"
+            description: "Cluster currently has {{ $value }} nodes, expected 3"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/cluster-node-down.md"
+
+        - alert: PesitClusterLeaderMissing
+          expr: |
+            sum(pesitwizard_cluster_is_leader) == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PeSIT cluster has no leader"
+            description: "No node is currently the cluster leader"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/no-cluster-leader.md"
+
+        # Memory Usage
+        - alert: PesitHighMemoryUsage
+          expr: |
+            jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "JVM heap memory usage is high"
+            description: "Heap usage is at {{ $value | humanizePercentage }}"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/high-memory.md"
+
+        # Error Rate
+        - alert: PesitHighErrorRate
+          expr: |
+            sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) /
+            sum(rate(http_server_requests_seconds_count[5m])) > 0.01
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HTTP error rate is above 1%"
+            description: "Error rate is {{ $value | humanizePercentage }}"
+            runbook_url: "https://github.com/pesitwizard/pesitwizard/docs/runbooks/high-error-rate.md"
+
+        # Rate Limiting
+        - alert: PesitRateLimitingTriggered
+          expr: |
+            sum(rate(pesitwizard_rate_limit_exceeded_total[5m])) > 10
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "Rate limiting is being triggered frequently"
+            description: "{{ $value }} rate limit rejections per second"
+
+    - name: pesitwizard.slo
+      rules:
+        # SLO: 99.9% transfer success rate
+        - record: pesitwizard:slo:transfer_success_rate:5m
+          expr: |
+            sum(rate(pesitwizard_transfers_total{status="completed"}[5m])) /
+            sum(rate(pesitwizard_transfers_total[5m]))
+
+        # SLO: 99.95% API availability
+        - record: pesitwizard:slo:api_availability:5m
+          expr: |
+            1 - (
+              sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) /
+              sum(rate(http_server_requests_seconds_count[5m]))
+            )
+
+        # Error budget burn rate
+        - record: pesitwizard:slo:error_budget_burn_rate:1h
+          expr: |
+            (1 - pesitwizard:slo:transfer_success_rate:5m) / (1 - 0.999)

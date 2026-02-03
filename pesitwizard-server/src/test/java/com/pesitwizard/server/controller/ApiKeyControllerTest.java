@@ -96,7 +96,7 @@ class ApiKeyControllerTest {
                                 {
                                     "name": "newkey",
                                     "description": "Test key",
-                                    "roles": ["ROLE_API"]
+                                    "roles": ["USER"]
                                 }
                                 """;
 
@@ -110,15 +110,16 @@ class ApiKeyControllerTest {
         }
 
         @Test
-        @DisplayName("createApiKey should return 400 on invalid request")
-        void createApiKeyShouldReturn400OnInvalidRequest() throws Exception {
+        @DisplayName("createApiKey should return 400 on duplicate name")
+        void createApiKeyShouldReturn400OnDuplicateName() throws Exception {
                 when(apiKeyService.createApiKey(anyString(), any(), any(), any(), any(), any(), any(), any()))
                                 .thenThrow(new IllegalArgumentException("Name already exists"));
 
                 String requestBody = """
                                 {
                                     "name": "duplicate",
-                                    "roles": ["ROLE_API"]
+                                    "description": "Test key",
+                                    "roles": ["USER"]
                                 }
                                 """;
 
@@ -128,6 +129,25 @@ class ApiKeyControllerTest {
                                 .content(requestBody))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.error").value("Name already exists"));
+        }
+
+        @Test
+        @DisplayName("createApiKey should return 400 on validation error")
+        void createApiKeyShouldReturn400OnValidationError() throws Exception {
+                // Invalid role that doesn't match pattern ^(USER|OPERATOR|ADMIN)$
+                String requestBody = """
+                                {
+                                    "name": "testkey",
+                                    "roles": ["INVALID_ROLE"]
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/apikeys")
+                                .principal(() -> "testuser")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("Validation Failed"));
         }
 
         @Test

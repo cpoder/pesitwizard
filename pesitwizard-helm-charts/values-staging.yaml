@@ -1,0 +1,296 @@
+# PeSIT Wizard Staging Environment Values
+#
+# This file provides staging-specific overrides for production-like testing.
+# Use with: helm upgrade --install pesitwizard-staging ./pesitwizard-server -f values-staging.yaml
+#
+# Staging environment characteristics:
+# - 3 replicas for HA testing
+# - PostgreSQL with replication
+# - Redis for rate limiting
+# - Enhanced monitoring
+# - Resource limits similar to production
+
+# Application replicas
+replicaCount: 3
+
+image:
+  repository: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server
+  tag: latest
+  pullPolicy: Always
+
+# Cluster mode enabled for HA
+cluster:
+  enabled: true
+  # JGroups configuration for Kubernetes
+  jgroups:
+    stack: kubernetes
+    namespace: staging
+    labels: "app=pesitwizard-server"
+
+service:
+  type: ClusterIP
+  pesitPort: 5000
+  pesitTlsPort: 5001
+  httpPort: 8080
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/actuator/prometheus"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  hosts:
+    - host: pesitwizard-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pesitwizard-staging-tls
+      hosts:
+        - pesitwizard-staging.example.com
+
+# Resource limits for staging (production-like)
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+
+# Persistence for transfer data
+persistence:
+  enabled: true
+  storageClass: gp3
+  accessMode: ReadWriteOnce
+  size: 100Gi
+
+# Server configuration
+config:
+  pesit:
+    serverId: "STAGESRV"
+    maxConnections: 200
+    syncPointsEnabled: true
+    resyncEnabled: true
+    sessionRecordingEnabled: false
+
+  security:
+    enabled: true
+    rateLimiting:
+      enabled: true
+      requestsPerMinute: 100
+      redisEnabled: true
+    headers:
+      enabled: true
+
+  observability:
+    tracing:
+      enabled: true
+      samplingRate: 1.0
+    metrics:
+      enabled: true
+
+  logging:
+    level: INFO
+
+# PostgreSQL subchart configuration
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        postgresPassword: "${POSTGRES_ADMIN_PASSWORD}"
+        username: pesitwizard
+        password: "${POSTGRES_PASSWORD}"
+        database: pesitwizard
+
+  primary:
+    persistence:
+      enabled: true
+      storageClass: gp3
+      size: 100Gi
+
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+    # Performance tuning
+    extendedConfiguration: |
+      max_connections = 200
+      shared_buffers = 1GB
+      effective_cache_size = 3GB
+      maintenance_work_mem = 256MB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 16MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      min_wal_size = 1GB
+      max_wal_size = 4GB
+      max_worker_processes = 4
+      max_parallel_workers_per_gather = 2
+      max_parallel_workers = 4
+      log_statement = 'all'
+      log_min_duration_statement = 1000
+
+  # Read replica
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: gp3
+      size: 100Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+# Redis subchart configuration
+redis:
+  enabled: true
+  architecture: standalone
+
+  auth:
+    enabled: true
+    password: "${REDIS_PASSWORD}"
+
+  master:
+    persistence:
+      enabled: true
+      storageClass: gp3
+      size: 10Gi
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+
+  # ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: prometheus
+
+  # Prometheus rules
+  prometheusRules:
+    enabled: true
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations:
+    # For AWS IRSA
+    eks.amazonaws.com/role-arn: ""
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Probes
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Topology spread constraints for HA
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app: pesitwizard-server
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Pod anti-affinity for HA
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: pesitwizard-server
+          topologyKey: kubernetes.io/hostname
+
+# Extra environment variables
+extraEnv:
+  - name: SPRING_PROFILES_ACTIVE
+    value: staging,postgres
+  - name: OTEL_ENABLED
+    value: "true"
+  - name: PESIT_RATE_LIMITING_ENABLED
+    value: "true"
+  - name: PESIT_RATE_LIMIT_REDIS_ENABLED
+    value: "true"
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []

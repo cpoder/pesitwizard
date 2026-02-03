@@ -22,6 +22,10 @@ import com.pesitwizard.server.entity.SecretEntry.SecretType;
 import com.pesitwizard.server.service.SecretService;
 import com.pesitwizard.server.service.SecretService.SecretStatistics;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -131,7 +135,7 @@ public class SecretController {
      * Create a new secret
      */
     @PostMapping
-    public ResponseEntity<?> createSecret(@RequestBody CreateSecretRequest request, Principal principal) {
+    public ResponseEntity<?> createSecret(@Valid @RequestBody CreateSecretRequest request, Principal principal) {
         try {
             SecretEntry secret = secretService.createSecret(
                     request.getName(),
@@ -255,24 +259,42 @@ public class SecretController {
 
     @lombok.Data
     public static class CreateSecretRequest {
+        @NotBlank(message = "Name is required")
+        @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
+        @Pattern(regexp = "^[a-zA-Z0-9_.-]+$", message = "Name can only contain alphanumeric characters, underscores, dots, and hyphens")
         private String name;
+
+        @NotBlank(message = "Value is required")
+        @Size(max = 65536, message = "Value must not exceed 64KB")
         private String value;
+
+        @Size(max = 500, message = "Description must not exceed 500 characters")
         private String description;
+
         private SecretType type;
         private SecretScope scope;
+
+        @Size(max = 64, message = "Partner ID must not exceed 64 characters")
         private String partnerId;
+
+        @Size(max = 64, message = "Server ID must not exceed 64 characters")
         private String serverId;
+
         private Instant expiresAt;
     }
 
     @lombok.Data
     public static class UpdateSecretValueRequest {
+        @NotBlank(message = "Value is required")
+        @Size(max = 65536, message = "Value must not exceed 64KB")
         private String value;
     }
 
     @lombok.Data
     public static class UpdateSecretMetadataRequest {
+        @Size(max = 500, message = "Description must not exceed 500 characters")
         private String description;
+
         private SecretType type;
         private Boolean active;
         private Instant expiresAt;
