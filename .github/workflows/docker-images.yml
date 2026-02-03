@@ -143,11 +143,12 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results-${{ matrix.image.name }}.sarif'
           category: 'trivy-${{ matrix.image.name }}'
+        continue-on-error: true
 
       - name: Run Trivy for table output
         uses: aquasecurity/trivy-action@master
