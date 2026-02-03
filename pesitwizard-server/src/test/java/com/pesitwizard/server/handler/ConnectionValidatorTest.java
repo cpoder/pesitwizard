@@ -130,29 +130,13 @@ class ConnectionValidatorTest {
     }
 
     @Test
-    @DisplayName("validatePartner should return ok for unknown partner in non-strict mode")
-    void validatePartnerShouldReturnOkForUnknownPartnerNonStrict() {
+    @DisplayName("validatePartner should return error for unknown partner")
+    void validatePartnerShouldReturnErrorForUnknownPartner() {
         SessionContext ctx = new SessionContext("test-session");
         ctx.setClientIdentifier("UNKNOWN_PARTNER");
         Fpdu fpdu = new Fpdu(FpduType.CONNECT);
 
         when(configService.findPartner("UNKNOWN_PARTNER")).thenReturn(Optional.empty());
-        when(properties.isStrictPartnerCheck()).thenReturn(false);
-
-        ValidationResult result = validator.validatePartner(ctx, fpdu);
-
-        assertTrue(result.isValid());
-    }
-
-    @Test
-    @DisplayName("validatePartner should return error for unknown partner in strict mode")
-    void validatePartnerShouldReturnErrorForUnknownPartnerStrict() {
-        SessionContext ctx = new SessionContext("test-session");
-        ctx.setClientIdentifier("UNKNOWN_PARTNER");
-        Fpdu fpdu = new Fpdu(FpduType.CONNECT);
-
-        when(configService.findPartner("UNKNOWN_PARTNER")).thenReturn(Optional.empty());
-        when(properties.isStrictPartnerCheck()).thenReturn(true);
 
         ValidationResult result = validator.validatePartner(ctx, fpdu);
 

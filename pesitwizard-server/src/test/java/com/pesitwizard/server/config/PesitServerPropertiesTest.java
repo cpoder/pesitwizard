@@ -32,8 +32,6 @@ class PesitServerPropertiesTest {
         assertTrue(properties.isSyncPointsEnabled());
         assertTrue(properties.isResyncEnabled());
         assertFalse(properties.isCrcEnabled());
-        assertTrue(properties.isStrictPartnerCheck());
-        assertFalse(properties.isStrictFileCheck());
     }
 
     @Test
@@ -180,8 +178,6 @@ class PesitServerPropertiesTest {
         properties.setSyncPointsEnabled(false);
         properties.setResyncEnabled(false);
         properties.setCrcEnabled(true);
-        properties.setStrictPartnerCheck(false);
-        properties.setStrictFileCheck(true);
 
         assertEquals(6000, properties.getPort());
         assertEquals(6001, properties.getTlsPort());
@@ -196,7 +192,5 @@ class PesitServerPropertiesTest {
         assertFalse(properties.isSyncPointsEnabled());
         assertFalse(properties.isResyncEnabled());
         assertTrue(properties.isCrcEnabled());
-        assertFalse(properties.isStrictPartnerCheck());
-        assertTrue(properties.isStrictFileCheck());
     }
 }

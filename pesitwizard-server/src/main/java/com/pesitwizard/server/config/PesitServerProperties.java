@@ -58,12 +58,6 @@ public class PesitServerProperties {
     /** Enable CRC checking */
     private boolean crcEnabled = false;
 
-    /** Require partner to be configured (if false, unknown partners are allowed) */
-    private boolean strictPartnerCheck = true;
-
-    /** Require logical file to be configured (if false, any filename is allowed) */
-    private boolean strictFileCheck = false;
-
     /** Enable session recording for debugging/testing */
     private boolean sessionRecordingEnabled = false;
 

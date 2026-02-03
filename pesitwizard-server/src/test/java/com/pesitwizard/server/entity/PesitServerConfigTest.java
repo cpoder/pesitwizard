@@ -27,8 +27,6 @@ class PesitServerConfigTest {
         assertEquals(4096, config.getMaxEntitySize());
         assertTrue(config.isSyncPointsEnabled());
         assertTrue(config.isResyncEnabled());
-        assertTrue(config.isStrictPartnerCheck());
-        assertTrue(config.isStrictFileCheck());
         assertFalse(config.isAutoStart());
         assertEquals(ServerStatus.STOPPED, config.getStatus());
     }
@@ -52,8 +50,6 @@ class PesitServerConfigTest {
                 .maxEntitySize(8192)
                 .syncPointsEnabled(false)
                 .resyncEnabled(false)
-                .strictPartnerCheck(false)
-                .strictFileCheck(false)
                 .autoStart(true)
                 .status(ServerStatus.RUNNING)
                 .createdAt(now)
@@ -75,8 +71,6 @@ class PesitServerConfigTest {
         assertEquals(8192, config.getMaxEntitySize());
         assertFalse(config.isSyncPointsEnabled());
         assertFalse(config.isResyncEnabled());
-        assertFalse(config.isStrictPartnerCheck());
-        assertFalse(config.isStrictFileCheck());
         assertTrue(config.isAutoStart());
         assertEquals(ServerStatus.RUNNING, config.getStatus());
         assertEquals(now, config.getCreatedAt());

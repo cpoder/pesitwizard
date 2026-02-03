@@ -85,14 +85,6 @@ public class PesitServerConfig {
 
     @Column
     @Builder.Default
-    private boolean strictPartnerCheck = true;
-
-    @Column
-    @Builder.Default
-    private boolean strictFileCheck = true;
-
-    @Column
-    @Builder.Default
     private boolean autoStart = false;
 
     @Column

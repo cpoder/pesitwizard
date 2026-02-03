@@ -40,31 +40,14 @@ class FileValidatorTest {
     }
 
     @Test
-    @DisplayName("validateForCreate should return ok for unknown file in non-strict mode")
-    void validateForCreateShouldReturnOkForUnknownFileNonStrict() {
+    @DisplayName("validateForCreate should return error for unknown file")
+    void validateForCreateShouldReturnErrorForUnknownFile() {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = new TransferContext();
         transfer.setFilename("UNKNOWN_FILE");
 
         when(configService.findVirtualFile("UNKNOWN_FILE")).thenReturn(Optional.empty());
         when(properties.getLogicalFile("UNKNOWN_FILE")).thenReturn(null);
-        when(properties.isStrictFileCheck()).thenReturn(false);
-
-        ValidationResult result = validator.validateForCreate(ctx, transfer);
-
-        assertTrue(result.isValid());
-    }
-
-    @Test
-    @DisplayName("validateForCreate should return error for unknown file in strict mode")
-    void validateForCreateShouldReturnErrorForUnknownFileStrict() {
-        SessionContext ctx = new SessionContext("test-session");
-        TransferContext transfer = new TransferContext();
-        transfer.setFilename("UNKNOWN_FILE");
-
-        when(configService.findVirtualFile("UNKNOWN_FILE")).thenReturn(Optional.empty());
-        when(properties.getLogicalFile("UNKNOWN_FILE")).thenReturn(null);
-        when(properties.isStrictFileCheck()).thenReturn(true);
 
         ValidationResult result = validator.validateForCreate(ctx, transfer);
 
@@ -164,31 +147,14 @@ class FileValidatorTest {
     }
 
     @Test
-    @DisplayName("validateForSelect should return ok for unknown file in non-strict mode")
-    void validateForSelectShouldReturnOkForUnknownFileNonStrict() {
+    @DisplayName("validateForSelect should return error for unknown file")
+    void validateForSelectShouldReturnErrorForUnknownFile() {
         SessionContext ctx = new SessionContext("test-session");
         TransferContext transfer = new TransferContext();
         transfer.setFilename("UNKNOWN_FILE");
 
         when(configService.findVirtualFile("UNKNOWN_FILE")).thenReturn(Optional.empty());
         when(properties.getLogicalFile("UNKNOWN_FILE")).thenReturn(null);
-        when(properties.isStrictFileCheck()).thenReturn(false);
-
-        ValidationResult result = validator.validateForSelect(ctx, transfer);
-
-        assertTrue(result.isValid());
-    }
-
-    @Test
-    @DisplayName("validateForSelect should return error for unknown file in strict mode")
-    void validateForSelectShouldReturnErrorForUnknownFileStrict() {
-        SessionContext ctx = new SessionContext("test-session");
-        TransferContext transfer = new TransferContext();
-        transfer.setFilename("UNKNOWN_FILE");
-
-        when(configService.findVirtualFile("UNKNOWN_FILE")).thenReturn(Optional.empty());
-        when(properties.getLogicalFile("UNKNOWN_FILE")).thenReturn(null);
-        when(properties.isStrictFileCheck()).thenReturn(true);
 
         ValidationResult result = validator.validateForSelect(ctx, transfer);
 

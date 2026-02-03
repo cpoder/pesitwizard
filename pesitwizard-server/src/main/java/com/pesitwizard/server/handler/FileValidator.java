@@ -35,14 +35,8 @@ public class FileValidator {
         LogicalFileConfig fileConfig = resolveFileConfig(ctx, filename);
 
         if (fileConfig == null) {
-            if (properties.isStrictFileCheck()) {
-                return ValidationResult.error(DiagnosticCode.D2_205,
-                        "Logical file '" + filename + "' not configured");
-            }
-            // Allow unknown file in non-strict mode
-            log.info("[{}] Unknown logical file '{}' allowed (strict mode disabled)",
-                    ctx.getSessionId(), filename);
-            return ValidationResult.ok();
+            return ValidationResult.error(DiagnosticCode.D2_205,
+                    "Logical file '" + filename + "' not configured");
         }
 
         // Store config in session
@@ -81,14 +75,8 @@ public class FileValidator {
         LogicalFileConfig fileConfig = resolveFileConfig(ctx, filename);
 
         if (fileConfig == null) {
-            if (properties.isStrictFileCheck()) {
-                return ValidationResult.error(DiagnosticCode.D2_205,
-                        "Logical file '" + filename + "' not configured");
-            }
-            // Allow unknown file in non-strict mode
-            log.info("[{}] Unknown logical file '{}' allowed (strict mode disabled)",
-                    ctx.getSessionId(), filename);
-            return ValidationResult.ok();
+            return ValidationResult.error(DiagnosticCode.D2_205,
+                    "Logical file '" + filename + "' not configured");
         }
 
         // Store config in session
