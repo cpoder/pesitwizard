@@ -73,8 +73,6 @@ class PesitFileTransferIntegrationTest {
         testProperties.setPort(TEST_PORT);
         testProperties.setServerId(TEST_SERVER_ID);
         testProperties.setMaxConnections(10);
-        testProperties.setStrictPartnerCheck(false);
-        testProperties.setStrictFileCheck(false);
         testProperties.setReceiveDirectory(tempDir.toString());
 
         // Add a test partner

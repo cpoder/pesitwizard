@@ -246,15 +246,11 @@ public class ClusterFailoverTest {
         config.setServerId(serverId);
         config.setPort(port);
         config.setMaxConnections(10);
-        config.setStrictPartnerCheck(false);
-        config.setStrictFileCheck(false);
 
         PesitServerProperties properties = new PesitServerProperties();
         properties.setServerId(serverId);
         properties.setPort(port);
         properties.setMaxConnections(10);
-        properties.setStrictPartnerCheck(false);
-        properties.setStrictFileCheck(false);
         properties.setReceiveDirectory("./test-received");
         properties.setSendDirectory("./test-send");
 

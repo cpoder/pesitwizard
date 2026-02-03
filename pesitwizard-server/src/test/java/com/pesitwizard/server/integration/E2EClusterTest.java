@@ -300,15 +300,11 @@ public class E2EClusterTest {
         config.setServerId(serverId);
         config.setPort(port);
         config.setMaxConnections(20);
-        config.setStrictPartnerCheck(false);
-        config.setStrictFileCheck(false);
 
         PesitServerProperties properties = new PesitServerProperties();
         properties.setServerId(serverId);
         properties.setPort(port);
         properties.setMaxConnections(20);
-        properties.setStrictPartnerCheck(false);
-        properties.setStrictFileCheck(false);
         properties.setReceiveDirectory("./test-received/" + serverId);
         properties.setSendDirectory("./test-send/" + serverId);
 
