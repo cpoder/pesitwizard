@@ -50,8 +50,8 @@ ENV TOM_DIR=/home/cxuser/cx
 ENV PATH="${TOM_DIR}/strf:${TOM_DIR}/itom:${PATH}"
 ENV LD_LIBRARY_PATH="${TOM_DIR}/lib:${LD_LIBRARY_PATH}"
 
-# Expose PeSIT port
-EXPOSE 5000
+# Expose PeSIT ports (5000=plain TCP, 5001=TLS/SSL)
+EXPOSE 5000 5001
 
 # Health check - test if TCP port 5000 is listening (more reliable than pgrep)
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \

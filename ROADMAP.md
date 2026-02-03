@@ -15,16 +15,24 @@ Dernière mise à jour: 2026-02-01
 | 1.1 | Configurer SSL parameter tables (SSLPARM1/SSLPARM2) dans CX | 2h | ✅ |
 | 1.2 | Créer certificats de test (CA, server, client) compatibles PW/CX | 1h | ✅ |
 | 1.3 | Modifier `cx-setup-partner` pour supporter SSLPARM | 1h | ✅ |
-| 1.4 | Configurer keystores TLS dans PW Server | 2h | ⬜ |
-| 1.5 | Tester TLS unidirectionnel PW Client -> CX | 2h | ⬜ |
+| 1.4 | Configurer keystores TLS dans PW Server via API | 2h | ✅ |
+| 1.5 | Tester TLS unidirectionnel PW Client -> CX | 2h | 🔄 |
 | 1.6 | Tester TLS unidirectionnel CX -> PW Server | 2h | ⬜ |
 | 1.7 | Tester mTLS (mutual TLS) bidirectionnel | 2h | ⬜ |
 | 1.8 | Ajouter tests TLS au Docker integration suite | 2h | ✅ |
 
 **Critère de succès**: Tests Docker TLS passent, documentation complète
 
-> Note: Configuration CX SSL complète (certificats via certmgr.sh, SSLPARM tables, LINK=T+SSLPARM).
-> En attente: Configuration keystores PW Server via base de données (les keystores ne sont pas lus depuis fichiers).
+> **Progrès (2026-02-01):**
+> - PW Server TLS fonctionne (upload keystore/truststore via API, handshake TLS validé)
+> - PW Client TLS configuré (upload truststore via API, protocole TLSv1.2)
+> - CX SSL listener démarre (tom_apm -s SSLPARM1 -p 05001) mais ne répond pas aux handshakes
+> - Investigation en cours: le listener CX accepte les connexions TCP mais ferme immédiatement
+>
+> **À investiguer:**
+> - Format des certificats CX (le certmgr.sh importe mais tom_apm ne charge peut-être pas)
+> - Logs SSL dans CX (aucune erreur visible dans LOG)
+> - Tester avec certificats CX natifs au lieu de certificats générés par OpenSSL
 
 ---
 

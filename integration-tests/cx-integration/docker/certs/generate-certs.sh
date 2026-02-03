@@ -84,9 +84,12 @@ openssl pkcs12 -export -in pw-client-cert.pem -inkey pw-client-key.pem \
 echo "   Client keystore: pw-client-keystore.p12"
 
 # 4. Generate CX Server certificate (for CX to accept TLS connections)
+# CX requires encrypted RSA keys in traditional format (BEGIN RSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED)
+# OpenSSL 3.x defaults to PKCS#8 format, so we use -traditional flag
+# IMPORTANT: CX has filename length limits - use short names like CX built-in certs
 echo "4. Generating CX Server certificate..."
-openssl genrsa -out cx-server-key.pem $KEY_SIZE 2>/dev/null
-openssl req -new -key cx-server-key.pem -out cx-server.csr \
+openssl genrsa -traditional -des3 -passout pass:$PASSWORD -out CXSRVKEY.pem $KEY_SIZE 2>/dev/null
+openssl req -new -key CXSRVKEY.pem -passin pass:$PASSWORD -out cx-server.csr \
     -subj "$CX_SERVER_SUBJECT" 2>/dev/null
 
 cat > cx-server-ext.cnf << EOF
@@ -103,17 +106,20 @@ IP.1 = 127.0.0.1
 EOF
 
 openssl x509 -req -days $VALIDITY_DAYS -in cx-server.csr -CA ca-cert.pem -CAkey ca-key.pem \
-    -CAcreateserial -out cx-server-cert.pem -extfile cx-server-ext.cnf 2>/dev/null
+    -CAcreateserial -out CXSRV.pem -extfile cx-server-ext.cnf 2>/dev/null
 
-openssl pkcs12 -export -in cx-server-cert.pem -inkey cx-server-key.pem \
-    -certfile ca-cert.pem -out cx-server-keystore.p12 -name cx-server \
+openssl pkcs12 -export -in CXSRV.pem -inkey CXSRVKEY.pem \
+    -passin pass:$PASSWORD -certfile ca-cert.pem -out cx-server-keystore.p12 -name cx-server \
     -password pass:$PASSWORD 2>/dev/null
 echo "   CX server keystore: cx-server-keystore.p12"
 
 # 5. Generate CX Client certificate (for CX to initiate TLS connections to PW)
+# CX requires encrypted RSA keys in traditional format (BEGIN RSA PRIVATE KEY with Proc-Type: 4,ENCRYPTED)
+# OpenSSL 3.x defaults to PKCS#8 format, so we use -traditional flag
+# IMPORTANT: CX has filename length limits - use short names like CX built-in certs
 echo "5. Generating CX Client certificate..."
-openssl genrsa -out cx-client-key.pem $KEY_SIZE 2>/dev/null
-openssl req -new -key cx-client-key.pem -out cx-client.csr \
+openssl genrsa -traditional -des3 -passout pass:$PASSWORD -out CXCLIKEY.pem $KEY_SIZE 2>/dev/null
+openssl req -new -key CXCLIKEY.pem -passin pass:$PASSWORD -out cx-client.csr \
     -subj "$CX_CLIENT_SUBJECT" 2>/dev/null
 
 cat > cx-client-ext.cnf << EOF
@@ -131,10 +137,10 @@ IP.1 = 127.0.0.1
 EOF
 
 openssl x509 -req -days $VALIDITY_DAYS -in cx-client.csr -CA ca-cert.pem -CAkey ca-key.pem \
-    -CAcreateserial -out cx-client-cert.pem -extfile cx-client-ext.cnf 2>/dev/null
+    -CAcreateserial -out CXCLI.pem -extfile cx-client-ext.cnf 2>/dev/null
 
-openssl pkcs12 -export -in cx-client-cert.pem -inkey cx-client-key.pem \
-    -certfile ca-cert.pem -out cx-client-keystore.p12 -name cx-client \
+openssl pkcs12 -export -in CXCLI.pem -inkey CXCLIKEY.pem \
+    -passin pass:$PASSWORD -certfile ca-cert.pem -out cx-client-keystore.p12 -name cx-client \
     -password pass:$PASSWORD 2>/dev/null
 echo "   CX client keystore: cx-client-keystore.p12"
 
@@ -155,8 +161,8 @@ echo "Files created:"
 echo "  CA:         ca-cert.pem, ca-key.pem"
 echo "  PW Server:  pw-server-keystore.p12, pw-server-cert.pem, pw-server-key.pem"
 echo "  PW Client:  pw-client-keystore.p12, pw-client-cert.pem, pw-client-key.pem"
-echo "  CX Server:  cx-server-keystore.p12, cx-server-cert.pem, cx-server-key.pem"
-echo "  CX Client:  cx-client-keystore.p12, cx-client-cert.pem, cx-client-key.pem"
+echo "  CX Server:  cx-server-keystore.p12, CXSRV.pem, CXSRVKEY.pem"
+echo "  CX Client:  cx-client-keystore.p12, CXCLI.pem, CXCLIKEY.pem"
 echo "  Truststore: ca-truststore.p12"
 echo ""
 echo "Password for all keystores: $PASSWORD"

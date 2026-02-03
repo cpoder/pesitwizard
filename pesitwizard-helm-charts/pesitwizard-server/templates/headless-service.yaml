@@ -1,0 +1,18 @@
+{{- if and .Values.cluster .Values.cluster.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pesitwizard-server.fullname" . }}-headless
+  labels:
+    {{- include "pesitwizard-server.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 7800
+      targetPort: jgroups
+      protocol: TCP
+      name: jgroups
+  selector:
+    {{- include "pesitwizard-server.selectorLabels" . | nindent 4 }}
+{{- end }}

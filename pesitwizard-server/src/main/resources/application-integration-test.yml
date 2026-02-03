@@ -1,0 +1,42 @@
+# Integration test profile for PeSIT Wizard Server
+# Used in Docker containers for automated testing
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+
+pesit:
+  server:
+    port: 5001
+    server-id: PWSERVER
+    max-connections: 100
+    receive-directory: /data/received
+    send-directory: /data/send
+    max-entity-size: 32768
+    sync-points-enabled: true
+    sync-interval-kb: 256
+    resync-enabled: true
+    session-recording-enabled: true
+    session-recording-directory: /data/recordings
+
+  security:
+    enabled: true
+    api-key:
+      admin-key: ${PESIT_API_KEY:integration-test-key}
+
+# Logging
+logging:
+  level:
+    com.pesitwizard: DEBUG
+    org.springframework: INFO

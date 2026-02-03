@@ -4,6 +4,10 @@ metadata:
   name: {{ include "pesitwizard-server.fullname" . }}
   labels:
     {{- include "pesitwizard-server.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -11,6 +15,12 @@ spec:
       targetPort: pesit
       protocol: TCP
       name: pesit
+    {{- if .Values.service.pesitTlsPort }}
+    - port: {{ .Values.service.pesitTlsPort }}
+      targetPort: {{ .Values.service.pesitTlsPort }}
+      protocol: TCP
+      name: pesit-tls
+    {{- end }}
     - port: {{ .Values.service.httpPort }}
       targetPort: http
       protocol: TCP

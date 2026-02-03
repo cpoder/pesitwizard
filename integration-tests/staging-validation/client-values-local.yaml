@@ -1,0 +1,80 @@
+# PeSIT Wizard Client - Local k3d Values
+#
+# Simplified client deployment for local k3d validation.
+
+# API Backend
+api:
+  replicaCount: 1
+
+  image:
+    repository: pesitwizard-client
+    tag: latest
+    pullPolicy: Never  # Images loaded into k3d
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Web UI
+ui:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: pesitwizard-client-ui
+    tag: latest
+    pullPolicy: Never
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+
+# No ingress for local; use port-forward
+ingress:
+  enabled: false
+
+# TLS disabled for local testing
+tls:
+  enabled: false
+
+# Persistence with k3d local-path provisioner
+persistence:
+  store:
+    enabled: true
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    size: 512Mi
+    mountPath: /app/data
+
+  data:
+    enabled: true
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    mountPath: /app/files
+
+# Service Account
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,155 @@
+# PeSIT Wizard Server - Local k3d Values
+#
+# Mirrors values-staging.yaml with local adaptations for k3d validation.
+# Use with: helm install pesitwizard-server ./pesitwizard-server -f values-local.yaml
+
+replicaCount: 3
+
+image:
+  repository: pesitwizard-server
+  tag: latest
+  pullPolicy: Never  # Images loaded into k3d with k3d image import
+
+# Cluster mode enabled for HA (same as staging)
+cluster:
+  enabled: true
+  jgroups:
+    stack: kubernetes
+    namespace: pesitwizard
+    labels: "app.kubernetes.io/name=pesitwizard-server"
+
+service:
+  type: ClusterIP
+  pesitPort: 5000
+  httpPort: 8080
+  annotations: {}
+
+# No ingress controller config needed for local; use port-forward
+ingress:
+  enabled: false
+
+# Reduced resources for local (staging uses 1000m/2Gi)
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# Persistence with k3d local-path provisioner
+persistence:
+  enabled: true
+  storageClass: local-path
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+# Server configuration
+config:
+  pesit:
+    serverId: "LOCALSRV"
+    password: "local-test-password"
+
+  security:
+    masterKey: "local-test-master-key-32bytes!!"
+    encryptionSalt: "Lwxq0sp0j3GAep+KvV38Tkb1m33HBh7Y4RG4kWsAqxk="
+
+  logging:
+    level: INFO
+
+# PostgreSQL connection (pointing to local deployment)
+database:
+  host: postgresql.pesitwizard.svc.cluster.local
+  port: 5432
+  name: pesitwizard
+  username: pesitwizard
+  password: pesitwizard-local-password
+
+# Pod Disruption Budget (same as staging)
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# No autoscaling locally (no metrics-server)
+autoscaling:
+  enabled: false
+
+# Service Account
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Pod security context (same as staging)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context (same as staging)
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Configurable probes (same as staging)
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# No topology spread on single-node k3d
+topologySpreadConstraints: []
+
+# Soft anti-affinity (single-node, so must be soft)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: pesitwizard-server
+          topologyKey: kubernetes.io/hostname
+
+nodeSelector: {}
+tolerations: []
+
+# Extra environment variables (mirrors staging)
+extraEnv:
+  - name: SPRING_PROFILES_ACTIVE
+    value: staging,postgres
+  # Override ddl-auto=none from postgres profile; no pesitwizard-admin locally
+  - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+    value: update
+  - name: PESIT_RATE_LIMITING_ENABLED
+    value: "true"
+  - name: PESIT_RATE_LIMIT_REDIS_ENABLED
+    value: "true"
+  - name: PESIT_RATE_LIMIT_REDIS_HOST
+    value: "redis.pesitwizard.svc.cluster.local"
+  - name: PESIT_RATE_LIMIT_REDIS_PORT
+    value: "6379"
+  - name: PESIT_RATE_LIMIT_REDIS_PASSWORD
+    value: "redis-local-password"
+
+# No monitoring locally (no Prometheus operator)
+monitoring:
+  enabled: false

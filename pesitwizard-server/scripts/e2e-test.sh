@@ -199,8 +199,6 @@ deploy_pesit_server() {
         --set pesitService.nodePort=30500 \
         --set service.type=NodePort \
         --set service.nodePort=30080 \
-        --set pesit.strictPartnerCheck=false \
-        --set pesit.strictFileCheck=false \
         --set postgresql.auth.password=pesit123 \
         --wait \
         --timeout 5m
@@ -278,9 +276,7 @@ create_test_server() {
             "port": 5000,
             "maxConnections": 50,
             "receiveDirectory": "/data/received",
-            "sendDirectory": "/data/send",
-            "strictPartnerCheck": false,
-            "strictFileCheck": false
+            "sendDirectory": "/data/send"
         }')
     echo "$RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$RESPONSE"
     

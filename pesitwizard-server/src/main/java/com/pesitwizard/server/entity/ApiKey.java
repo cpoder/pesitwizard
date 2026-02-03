@@ -65,6 +65,13 @@ public class ApiKey {
     private String keyPrefix;
 
     /**
+     * Transient field to hold the plain key for rate limiting lookups.
+     * Never persisted to database.
+     */
+    @jakarta.persistence.Transient
+    private transient String key;
+
+    /**
      * Roles assigned to this API key
      */
     @ElementCollection(fetch = FetchType.EAGER)

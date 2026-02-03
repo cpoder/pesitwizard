@@ -27,7 +27,8 @@ services:
       - cx-received-tls:/tmp/cx-received
       - ./certs:/app/certs:ro
     ports:
-      - "5010:5000"
+      - "5010:5000"   # Plain TCP
+      - "5012:5001"   # TLS/SSL listener (SSLPARM1)
     networks:
       - pesit-cx-tls-network
     healthcheck:
@@ -80,6 +81,8 @@ services:
       - PESIT_CLIENT_SSL_KEYSTORE_PASSWORD=changeit
       - PESIT_CLIENT_SSL_TRUSTSTORE_PATH=/app/certs/ca-truststore.p12
       - PESIT_CLIENT_SSL_TRUSTSTORE_PASSWORD=changeit
+      # Force TLSv1.2 for compatibility with Connect:Express (doesn't support TLSv1.3)
+      - JAVA_TOOL_OPTIONS=-Dpesit.tls.protocol=TLSv1.2
     volumes:
       - pw-client-send-cx-tls:/data/send
       - pw-client-received-cx-tls:/data/received
@@ -114,6 +117,7 @@ services:
       - PW_CLIENT_API=http://pw-client-tls:9081
       - PW_SERVER_API=http://pw-server:8080
       - SERVER_NAME=cx-server-tls
+      - CX_TLS_PORT=5001
       - PARTNER_ID=PWSRV01
       - VIRTUAL_FILE=PWRECV
       - TLS_ENABLED=true
