@@ -107,7 +107,6 @@ class RateLimitingFilterTest {
                 .name("test-key")
                 .keyHash("hash")
                 .keyPrefix("test1234")
-                .key("test1234-abcd-efgh-ijkl")
                 .rateLimit(5) // Custom rate limit
                 .active(true)
                 .build();
@@ -170,7 +169,6 @@ class RateLimitingFilterTest {
                 .name("query-key")
                 .keyHash("hash2")
                 .keyPrefix("query123")
-                .key("query123-abcd-efgh-ijkl")
                 .rateLimit(5)
                 .active(true)
                 .build();
