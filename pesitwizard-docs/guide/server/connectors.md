@@ -1,18 +1,18 @@
-# Connecteurs de stockage
+# Storage Connectors
 
-Les connecteurs permettent de stocker les fichiers transférés sur différents backends de stockage.
+Connectors allow storing transferred files on different storage backends.
 
-## Connecteurs disponibles
+## Available Connectors
 
-| Connecteur | Module | Description |
-|------------|--------|-------------|
-| `local` | `pesitwizard-connector-local` | Système de fichiers local |
-| `sftp` | `pesitwizard-connector-sftp` | Serveur SFTP distant |
-| `s3` | `pesitwizard-connector-s3` | AWS S3 ou compatible (MinIO) |
+| Connector | Module | Description |
+|-----------|--------|-------------|
+| `local` | `pesitwizard-connector-local` | Local filesystem |
+| `sftp` | `pesitwizard-connector-sftp` | Remote SFTP server |
+| `s3` | `pesitwizard-connector-s3` | AWS S3 or compatible (MinIO) |
 
-## Connecteur Local
+## Local Connector
 
-Stockage sur le système de fichiers local du serveur.
+Storage on the server's local filesystem.
 
 ```yaml
 pesitwizard:
@@ -23,21 +23,21 @@ pesitwizard:
       create-directories: true
 ```
 
-### Structure des répertoires
+### Directory Structure
 
 ```
 /data/pesitwizard/files/
-├── received/           # Fichiers reçus
+├── received/           # Received files
 │   └── 2024/01/15/
 │       └── file.dat
-└── send/               # Fichiers à envoyer
+└── send/               # Files to send
     └── 2024/01/15/
         └── report.csv
 ```
 
-## Connecteur SFTP
+## SFTP Connector
 
-Stockage sur un serveur SFTP distant.
+Storage on a remote SFTP server.
 
 ```yaml
 pesitwizard:
@@ -47,9 +47,9 @@ pesitwizard:
       host: sftp.example.com
       port: 22
       username: pesitwizard
-      # Authentification par mot de passe
+      # Password authentication
       password: ${SFTP_PASSWORD}
-      # OU authentification par clé
+      # OR key authentication
       private-key-file: /app/secrets/id_rsa
       private-key-passphrase: ${KEY_PASSPHRASE}
       # Options
@@ -58,17 +58,17 @@ pesitwizard:
       strict-host-key-checking: true
 ```
 
-### Génération de clé SSH
+### SSH Key Generation
 
 ```bash
-# Générer une paire de clés ED25519
+# Generate an ED25519 key pair
 ssh-keygen -t ed25519 -f id_rsa -N "" -C "pesitwizard@server"
 
-# Copier la clé publique sur le serveur SFTP
+# Copy the public key to the SFTP server
 ssh-copy-id -i id_rsa.pub user@sftp.example.com
 ```
 
-### Kubernetes Secret pour SFTP
+### Kubernetes Secret for SFTP
 
 ```yaml
 apiVersion: v1
@@ -85,9 +85,9 @@ stringData:
     sftp.example.com ssh-ed25519 AAAA...
 ```
 
-## Connecteur S3
+## S3 Connector
 
-Stockage sur AWS S3 ou un stockage compatible (MinIO, Ceph, etc.).
+Storage on AWS S3 or a compatible storage system (MinIO, Ceph, etc.).
 
 ```yaml
 pesitwizard:
@@ -101,10 +101,10 @@ pesitwizard:
       secret-key: ${AWS_SECRET_ACCESS_KEY}
       # Options
       prefix: transfers/
-      path-style-access: false  # true pour MinIO
+      path-style-access: false  # true for MinIO
 ```
 
-### Configuration MinIO
+### MinIO Configuration
 
 ```yaml
 pesitwizard:
@@ -119,7 +119,7 @@ pesitwizard:
       path-style-access: true
 ```
 
-### IAM Policy AWS
+### AWS IAM Policy
 
 ```json
 {
@@ -142,12 +142,12 @@ pesitwizard:
 }
 ```
 
-### Authentification IRSA (EKS)
+### IRSA Authentication (EKS)
 
-Pour EKS, utilisez IRSA au lieu des clés d'accès :
+For EKS, use IRSA instead of access keys:
 
 ```yaml
-# ServiceAccount avec annotation IRSA
+# ServiceAccount with IRSA annotation
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -157,71 +157,97 @@ metadata:
 ```
 
 ```yaml
-# Configuration sans clés
+# Configuration without keys
 pesitwizard:
   connector:
     type: s3
     s3:
       region: eu-west-1
       bucket: pesitwizard-files
-      # Pas de access-key/secret-key = utilise les credentials du pod
+      # No access-key/secret-key = uses pod credentials
 ```
 
-## API Connector
+## Connector API
 
-L'interface `StorageConnector` expose les opérations de base :
+The `StorageConnector` interface exposes the following operations:
 
 ```java
 public interface StorageConnector {
-    // Écrire un fichier
-    void write(String path, InputStream content) throws IOException;
-    
-    // Lire un fichier
+    // Write a file (returns an OutputStream)
+    OutputStream write(String path) throws IOException;
+
+    // Write a file with append support
+    OutputStream write(String path, boolean append) throws IOException;
+
+    // Read a file
     InputStream read(String path) throws IOException;
-    
-    // Supprimer un fichier
+
+    // Read a file with offset support (for resume)
+    InputStream read(String path, long offset) throws IOException;
+
+    // Delete a file
     void delete(String path) throws IOException;
-    
-    // Vérifier l'existence
+
+    // Check existence
     boolean exists(String path) throws IOException;
-    
-    // Lister les fichiers
-    List<String> list(String prefix) throws IOException;
+
+    // List files (returns FileMetadata objects)
+    List<FileMetadata> list(String path) throws IOException;
+
+    // Create a directory
+    void mkdir(String path) throws IOException;
+
+    // Rename a file
+    void rename(String from, String to) throws IOException;
+
+    // Get file metadata
+    FileMetadata getMetadata(String path) throws IOException;
+
+    // Test the connection to the storage backend
+    void testConnection() throws IOException;
+
+    // Initialize the connector with configuration
+    void initialize(Map<String, String> config);
 }
 ```
 
-## Connecteur personnalisé
+## Custom Connector
 
-Vous pouvez créer votre propre connecteur en implémentant l'interface :
+You can create your own connector by implementing the interface:
 
 ```java
 @Component
 @ConditionalOnProperty(name = "pesitwizard.connector.type", havingValue = "custom")
 public class CustomConnector implements StorageConnector {
-    
+
     @Override
-    public void write(String path, InputStream content) throws IOException {
-        // Votre implémentation
+    public OutputStream write(String path) throws IOException {
+        // Your implementation
     }
-    
-    // ... autres méthodes
+
+    @Override
+    public OutputStream write(String path, boolean append) throws IOException {
+        // Your implementation with append support
+    }
+
+    // ... other methods
 }
 ```
 
-## Variables d'environnement
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `PESITWIZARD_CONNECTOR_TYPE` | Type de connecteur (`local`, `sftp`, `s3`) |
-| `SFTP_PASSWORD` | Mot de passe SFTP |
-| `AWS_ACCESS_KEY_ID` | Clé d'accès AWS |
-| `AWS_SECRET_ACCESS_KEY` | Clé secrète AWS |
+| `PESITWIZARD_CONNECTOR_TYPE` | Connector type (`local`, `sftp`, `s3`) |
+| `SFTP_PASSWORD` | SFTP password |
+| `AWS_ACCESS_KEY_ID` | AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
 
-## Bonnes pratiques
+## Best Practices
 
-::: tip Recommandations
-- Utilisez S3 ou équivalent pour la haute disponibilité
-- Activez le chiffrement côté serveur (SSE-S3 ou SSE-KMS)
-- Configurez des politiques de rétention/lifecycle
-- Utilisez IRSA sur EKS plutôt que des clés statiques
+::: tip Recommendations
+- Use S3 or equivalent for high availability
+- Enable server-side encryption (SSE-S3 or SSE-KMS)
+- Configure retention/lifecycle policies
+- Use IRSA on EKS instead of static keys
 :::

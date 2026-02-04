@@ -91,7 +91,7 @@ $TOM_DIR/itom/p1b8preq /SFN=PWSEND/DIR=T/SPN=PWSERVER/SID=PWSRV01 /DSN=/tmp/cx-s
 Check PW server API:
 
 ```bash
-curl -H "X-API-Key: integration-test-key" http://localhost:8080/api/servers
+curl -H "X-API-Key: integration-test-key" http://localhost:8080/api/v1/servers
 ```
 
 ## Test Cases

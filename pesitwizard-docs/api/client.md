@@ -1,32 +1,33 @@
 # Client API
 
-Base URL : `http://localhost:9081/api/v1`
+Base URL: `http://localhost:8080/api/v1`
 
-## Serveurs
+## Servers
 
-### Liste des serveurs
+### List Servers
 
 ```http
 GET /api/v1/servers
 ```
 
-**Réponse** :
+**Response**:
 ```json
 [
   {
     "id": 1,
     "name": "BNP Paribas",
     "host": "pesitwizard.bnpparibas.com",
-    "port": 5000,
+    "port": 6502,
+    "tlsPort": 5001,
     "serverId": "BNPP_SERVER",
-    "clientId": "MON_ENTREPRISE",
+    "clientId": "MY_COMPANY",
     "tlsEnabled": true,
     "status": "CONNECTED"
   }
 ]
 ```
 
-### Créer un serveur
+### Create a Server
 
 ```http
 POST /api/v1/servers
@@ -35,15 +36,16 @@ Content-Type: application/json
 {
   "name": "BNP Paribas",
   "host": "pesitwizard.bnpparibas.com",
-  "port": 5000,
+  "port": 6502,
+  "tlsPort": 5001,
   "serverId": "BNPP_SERVER",
-  "clientId": "MON_ENTREPRISE",
+  "clientId": "MY_COMPANY",
   "password": "secret123",
   "tlsEnabled": true
 }
 ```
 
-### Modifier un serveur
+### Update a Server
 
 ```http
 PUT /api/v1/servers/{id}
@@ -55,19 +57,19 @@ Content-Type: application/json
 }
 ```
 
-### Supprimer un serveur
+### Delete a Server
 
 ```http
 DELETE /api/v1/servers/{id}
 ```
 
-### Tester la connexion
+### Test Connection
 
 ```http
 POST /api/v1/servers/{id}/test
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "success": true,
@@ -77,28 +79,30 @@ POST /api/v1/servers/{id}/test
 }
 ```
 
-## Transferts
+## Transfers
 
-### Envoyer un fichier
+### Send a File
 
 ```http
 POST /api/v1/transfers/send
 Content-Type: application/json
 
-file: (binary)
-serverId: 1
-remoteFilename: VIREMENT_20250110.XML
-partnerId: MON_ENTREPRISE
-virtualFile: VIREMENTS
+{
+  "serverId": 1,
+  "remoteFilename": "TRANSFER_20250110.XML",
+  "partnerId": "MY_COMPANY",
+  "virtualFile": "TRANSFERS",
+  "fileContent": "<base64-encoded content>"
+}
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "COMPLETED",
   "direction": "SEND",
-  "filename": "VIREMENT_20250110.XML",
+  "filename": "TRANSFER_20250110.XML",
   "size": 15234,
   "startTime": "2025-01-10T10:30:00Z",
   "endTime": "2025-01-10T10:30:05Z",
@@ -106,7 +110,7 @@ virtualFile: VIREMENTS
 }
 ```
 
-### Recevoir un fichier
+### Receive a File
 
 ```http
 POST /api/v1/transfers/receive
@@ -114,52 +118,67 @@ Content-Type: application/json
 
 {
   "serverId": 1,
-  "remoteFilename": "RELEVE_20250110.XML",
-  "partnerId": "MON_ENTREPRISE",
-  "virtualFile": "RELEVES"
+  "remoteFilename": "STATEMENT_20250110.XML",
+  "partnerId": "MY_COMPANY",
+  "virtualFile": "STATEMENTS"
 }
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
   "status": "COMPLETED",
   "direction": "RECEIVE",
-  "filename": "RELEVE_20250110.XML",
-  "localPath": "/data/received/RELEVE_20250110.XML",
+  "filename": "STATEMENT_20250110.XML",
+  "localPath": "/data/received/STATEMENT_20250110.XML",
   "size": 8542
 }
 ```
 
-### Télécharger un fichier reçu
+### Get Transfer Details
 
 ```http
 GET /api/v1/transfers/{id}
 ```
 
-Retourne le fichier binaire avec les headers appropriés.
+Returns a `TransferHistory` JSON object with full transfer details:
 
-### Liste des transferts
+**Response**:
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "COMPLETED",
+  "direction": "SEND",
+  "filename": "TRANSFER_20250110.XML",
+  "serverName": "BNP Paribas",
+  "size": 15234,
+  "startTime": "2025-01-10T10:30:00Z",
+  "endTime": "2025-01-10T10:30:05Z",
+  "duration": 5000
+}
+```
+
+### Transfer History
 
 ```http
 GET /api/v1/transfers/history?page=0&size=20
 ```
 
-**Query parameters** :
+**Query parameters**:
 
-| Paramètre | Type | Description |
+| Parameter | Type | Description |
 |-----------|------|-------------|
-| `page` | int | Numéro de page (0-indexed) |
-| `size` | int | Taille de page (défaut: 20) |
-| `sort` | string | Tri (ex: `startTime,desc`) |
-| `status` | string | Filtrer par statut |
-| `direction` | string | SEND ou RECEIVE |
-| `serverId` | int | Filtrer par serveur |
-| `from` | date | Date de début |
-| `to` | date | Date de fin |
+| `page` | int | Page number (0-indexed) |
+| `size` | int | Page size (default: 20) |
+| `sort` | string | Sort order (e.g., `startTime,desc`) |
+| `status` | string | Filter by status |
+| `direction` | string | SEND or RECEIVE |
+| `serverId` | int | Filter by server |
+| `from` | date | Start date |
+| `to` | date | End date |
 
-**Réponse** :
+**Response**:
 ```json
 {
   "content": [
@@ -167,7 +186,7 @@ GET /api/v1/transfers/history?page=0&size=20
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "status": "COMPLETED",
       "direction": "SEND",
-      "filename": "VIREMENT_20250110.XML",
+      "filename": "TRANSFER_20250110.XML",
       "serverName": "BNP Paribas",
       "size": 15234,
       "startTime": "2025-01-10T10:30:00Z"
@@ -180,42 +199,36 @@ GET /api/v1/transfers/history?page=0&size=20
 }
 ```
 
-### Détail d'un transfert
-
-```http
-GET /api/v1/transfers/{id}
-```
-
-### Rejouer un transfert
+### Replay a Transfer
 
 ```http
 POST /api/v1/transfers/{id}/replay
 ```
 
-### Statistiques
+### Statistics
 
 ```http
 GET /api/v1/transfers/stats
 ```
 
-## Statuts de transfert
+## Transfer Statuses
 
-| Statut | Description |
+| Status | Description |
 |--------|-------------|
-| `PENDING` | En attente |
-| `IN_PROGRESS` | En cours |
-| `COMPLETED` | Terminé avec succès |
-| `FAILED` | Échec |
-| `CANCELLED` | Annulé |
+| `PENDING` | Waiting |
+| `IN_PROGRESS` | In progress |
+| `COMPLETED` | Completed successfully |
+| `FAILED` | Failed |
+| `CANCELLED` | Cancelled |
 
-## Codes d'erreur
+## Error Codes
 
 | Code | Description |
 |------|-------------|
-| `SERVER_NOT_FOUND` | Serveur non trouvé |
-| `CONNECTION_FAILED` | Connexion impossible |
-| `AUTH_FAILED` | Authentification échouée |
-| `PARTNER_UNKNOWN` | Partenaire non reconnu |
-| `FILE_NOT_FOUND` | Fichier non trouvé |
-| `TRANSFER_FAILED` | Échec du transfert |
-| `TIMEOUT` | Délai dépassé |
+| `SERVER_NOT_FOUND` | Server not found |
+| `CONNECTION_FAILED` | Connection failed |
+| `AUTH_FAILED` | Authentication failed |
+| `PARTNER_UNKNOWN` | Partner not recognized |
+| `FILE_NOT_FOUND` | File not found |
+| `TRANSFER_FAILED` | Transfer failed |
+| `TIMEOUT` | Timeout exceeded |

@@ -1,52 +1,53 @@
-# Guide de déploiement
+# Deployment Guide
 
-Ce guide explique comment déployer PeSIT Wizard dans différents environnements.
+This guide explains how to deploy PeSIT Wizard in different environments.
 
-## Prérequis
+## Prerequisites
 
-- **Kubernetes** 1.25+ (K3s, EKS, GKE, AKS, ou autre)
-- **kubectl** configuré avec accès au cluster
-- **Helm** 3.x (optionnel, recommandé)
-- **PostgreSQL** 14+ (peut être externe ou déployé dans le cluster)
+- **Kubernetes** 1.25+ (K3s, EKS, GKE, AKS, or other)
+- **kubectl** configured with cluster access
+- **Helm** 3.x (optional, recommended)
+- **PostgreSQL** 14+ (can be external or deployed in the cluster)
 
-## Option 1 : Déploiement rapide avec Helm
+## Option 1: Quick Deployment with Helm
 
 ### Installation
 
 ```bash
-# Ajouter le repo Helm PeSIT Wizard
+# Add the PeSIT Wizard Helm repo
 helm repo add pesitwizard https://charts.pesitwizard.com
 helm repo update
 
-# Installer PeSIT Wizard Server
+# Install PeSIT Wizard Server
 helm install pesitwizard-server pesitwizard/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace \
   --set postgresql.enabled=true \
   --set replicas=3
 
-# Vérifier le déploiement
+# Verify the deployment
 kubectl get pods -n pesitwizard
 ```
 
 ### Configuration
 
-Créer un fichier `values.yaml` personnalisé :
+Create a custom `values.yaml` file:
 
 ```yaml
 # values.yaml
 replicas: 3
 
 server:
-  serverId: "MY_VECTIS_SERVER"
-  port: 5000
+  serverId: "MY_PESIT_SERVER"
+  port: 6502
+  tlsPort: 5001
   tls:
     enabled: true
     certSecret: pesitwizard-tls-cert
 
 postgresql:
   enabled: true
-  # Ou utiliser une base externe :
+  # Or use an external database:
   # enabled: false
   # external:
   #   host: my-postgres.example.com
@@ -73,7 +74,7 @@ resources:
     cpu: "1000m"
 ```
 
-Appliquer :
+Apply:
 
 ```bash
 helm upgrade --install pesitwizard-server pesitwizard/pesitwizard-server \
@@ -81,15 +82,15 @@ helm upgrade --install pesitwizard-server pesitwizard/pesitwizard-server \
   -f values.yaml
 ```
 
-## Option 2 : Déploiement manuel (kubectl)
+## Option 2: Manual Deployment (kubectl)
 
-### 1. Créer le namespace
+### 1. Create the Namespace
 
 ```bash
 kubectl create namespace pesitwizard
 ```
 
-### 2. Déployer PostgreSQL (si nécessaire)
+### 2. Deploy PostgreSQL (if needed)
 
 ```bash
 kubectl apply -f - <<EOF
@@ -142,7 +143,7 @@ spec:
 EOF
 ```
 
-### 3. Déployer PeSIT Wizard Server
+### 3. Deploy PeSIT Wizard Server
 
 ```bash
 kubectl apply -f - <<EOF
@@ -163,12 +164,12 @@ spec:
     spec:
       containers:
       - name: pesitwizard-server
-        image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
+        image: ghcr.io/pesitwizard/pesitwizard-server:latest
         env:
-        - name: VECTIS_SERVER_ID
-          value: "MY_VECTIS_SERVER"
-        - name: VECTIS_SERVER_PORT
-          value: "5000"
+        - name: PESIT_SERVER_ID
+          value: "MY_PESIT_SERVER"
+        - name: PESIT_SERVER_PORT
+          value: "6502"
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/pesitwizard"
         - name: SPRING_DATASOURCE_USERNAME
@@ -176,8 +177,10 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: "pesitwizard"
         ports:
-        - containerPort: 5000
-          name: pesitwizard
+        - containerPort: 6502
+          name: pesit
+        - containerPort: 5001
+          name: pesit-tls
         - containerPort: 8080
           name: http
         - containerPort: 7800
@@ -193,18 +196,21 @@ spec:
   selector:
     app: pesitwizard-server
   ports:
-  - name: pesitwizard
-    port: 5000
-    targetPort: 5000
+  - name: pesit
+    port: 6502
+    targetPort: 6502
+  - name: pesit-tls
+    port: 5001
+    targetPort: 5001
 EOF
 ```
 
-## Déploiement sur Cloud Providers
+## Deployment on Cloud Providers
 
 ### AWS EKS
 
 ```bash
-# Créer le cluster EKS
+# Create the EKS cluster
 eksctl create cluster \
   --name pesitwizard-cluster \
   --region eu-west-1 \
@@ -212,10 +218,10 @@ eksctl create cluster \
   --node-type t3.medium \
   --nodes 3
 
-# Configurer kubectl
+# Configure kubectl
 aws eks update-kubeconfig --name pesitwizard-cluster --region eu-west-1
 
-# Installer PeSIT Wizard
+# Install PeSIT Wizard
 helm install pesitwizard-server pesitwizard/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace \
@@ -225,16 +231,16 @@ helm install pesitwizard-server pesitwizard/pesitwizard-server \
 ### Google GKE
 
 ```bash
-# Créer le cluster GKE
+# Create the GKE cluster
 gcloud container clusters create pesitwizard-cluster \
   --zone europe-west1-b \
   --num-nodes 3 \
   --machine-type e2-medium
 
-# Configurer kubectl
+# Configure kubectl
 gcloud container clusters get-credentials pesitwizard-cluster --zone europe-west1-b
 
-# Installer PeSIT Wizard
+# Install PeSIT Wizard
 helm install pesitwizard-server pesitwizard/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace
@@ -243,10 +249,10 @@ helm install pesitwizard-server pesitwizard/pesitwizard-server \
 ### Azure AKS
 
 ```bash
-# Créer le groupe de ressources
+# Create the resource group
 az group create --name pesitwizard-rg --location westeurope
 
-# Créer le cluster AKS
+# Create the AKS cluster
 az aks create \
   --resource-group pesitwizard-rg \
   --name pesitwizard-cluster \
@@ -254,10 +260,10 @@ az aks create \
   --node-vm-size Standard_B2s \
   --generate-ssh-keys
 
-# Configurer kubectl
+# Configure kubectl
 az aks get-credentials --resource-group pesitwizard-rg --name pesitwizard-cluster
 
-# Installer PeSIT Wizard
+# Install PeSIT Wizard
 helm install pesitwizard-server pesitwizard/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace
@@ -266,22 +272,22 @@ helm install pesitwizard-server pesitwizard/pesitwizard-server \
 ### K3s (On-Premise / Edge)
 
 ```bash
-# Installer K3s sur le serveur principal
+# Install K3s on the main server
 curl -sfL https://get.k3s.io | sh -
 
-# Récupérer le kubeconfig
+# Get the kubeconfig
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-# Installer PeSIT Wizard
+# Install PeSIT Wizard
 helm install pesitwizard-server pesitwizard/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace \
   --set service.type=NodePort
 ```
 
-## Configuration TLS
+## TLS Configuration
 
-### Générer un certificat auto-signé (développement)
+### Generate a Self-Signed Certificate (development)
 
 ```bash
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -293,15 +299,15 @@ kubectl create secret tls pesitwizard-tls \
   -n pesitwizard
 ```
 
-### Utiliser Let's Encrypt (production)
+### Use Let's Encrypt (production)
 
-Installer cert-manager :
+Install cert-manager:
 
 ```bash
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
 ```
 
-Créer un ClusterIssuer :
+Create a ClusterIssuer:
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -324,14 +330,14 @@ spec:
 
 ### Prometheus & Grafana
 
-PeSIT Wizard expose des métriques Prometheus sur `/actuator/prometheus`.
+PeSIT Wizard exposes Prometheus metrics on `/actuator/prometheus`.
 
 ```bash
-# Installer kube-prometheus-stack
+# Install kube-prometheus-stack
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
 
-# Configurer le ServiceMonitor pour PeSIT Wizard
+# Configure the ServiceMonitor for PeSIT Wizard
 kubectl apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -362,46 +368,46 @@ kubectl exec -i -n pesitwizard deploy/postgres -- \
   psql -U pesitwizard pesitwizard < backup.sql
 ```
 
-### Backup des certificats
+### Backup Certificates
 
 ```bash
 kubectl get secret pesitwizard-tls -n pesitwizard -o yaml > pesitwizard-tls-backup.yaml
 ```
 
-## Mise à jour
+## Upgrades
 
 ```bash
-# Mettre à jour le chart Helm
+# Update the Helm chart
 helm repo update
 helm upgrade pesitwizard-server pesitwizard/pesitwizard-server -n pesitwizard
 
-# Ou mettre à jour l'image manuellement
+# Or update the image manually
 kubectl set image deployment/pesitwizard-server \
-  pesitwizard-server=ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:v1.2.0 \
+  pesitwizard-server=ghcr.io/pesitwizard/pesitwizard-server:v1.2.0 \
   -n pesitwizard
 ```
 
-## Dépannage
+## Troubleshooting
 
-### Vérifier les logs
+### Check the Logs
 
 ```bash
 kubectl logs -f deployment/pesitwizard-server -n pesitwizard
 ```
 
-### Vérifier la connectivité
+### Verify Connectivity
 
 ```bash
-# Tester la connexion PeSIT
-kubectl run test-client --rm -it --image=ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest \
-  -- java -jar pesitwizard-client.jar --host pesitwizard-server --port 5000 --test
+# Test the PeSIT connection
+kubectl run test-client --rm -it --image=ghcr.io/pesitwizard/pesitwizard-client:latest \
+  -- java -jar pesitwizard-client.jar --host pesitwizard-server --port 6502 --test
 ```
 
-### Problèmes courants
+### Common Issues
 
-| Problème | Solution |
-|----------|----------|
-| Pods en CrashLoopBackOff | Vérifier les logs, souvent un problème de connexion DB |
-| LoadBalancer Pending | Vérifier que le cloud provider supporte les LoadBalancer |
-| Certificat invalide | Vérifier que le secret TLS existe et est valide |
-| Leader election échoue | Vérifier que JGroups peut communiquer (port 7800) |
+| Issue | Solution |
+|-------|----------|
+| Pods in CrashLoopBackOff | Check logs, often a DB connection issue |
+| LoadBalancer Pending | Verify cloud provider supports LoadBalancer |
+| Invalid certificate | Verify that the TLS secret exists and is valid |
+| Leader election fails | Verify that JGroups can communicate (port 7800) |

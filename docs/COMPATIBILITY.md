@@ -50,14 +50,14 @@
 
 | Version | Status | Notes |
 |---------|--------|-------|
-| PeSIT E (Hors-SIT) | **Fully supported** | September 1989 spec |
+| PeSIT E (non-SIT) | **Fully supported** | September 1989 spec |
 | PeSIT SIT | Not supported | Banking-specific extensions |
 
 ### Transport Protocols
 
 | Transport | Status | Port | Notes |
 |-----------|--------|------|-------|
-| TCP | Supported | 5000 | Plain text |
+| TCP | Supported | 6502 | Plain text |
 | TLS 1.2 | Supported | 5001 | Required for CX |
 | TLS 1.3 | Supported | 5001 | Preferred |
 | X.25 | Not supported | - | Legacy |
@@ -181,7 +181,7 @@ To test compatibility with a new partner system:
 1. **TCP connectivity:**
    ```bash
    # Test port connectivity
-   nc -zv partner-host 5000
+   nc -zv partner-host 6502
    ```
 
 2. **TLS handshake:**
@@ -193,7 +193,7 @@ To test compatibility with a new partner system:
 3. **Protocol test:**
    ```bash
    # Use PW Client to send a small file
-   curl -X POST http://localhost:9081/api/v1/transfers/send \
+   curl -X POST http://localhost:8080/api/v1/transfers/send \
      -H "Content-Type: application/json" \
      -d '{"server":"partner","filename":"/test.txt","remoteFilename":"TESTFILE"}'
    ```
@@ -201,7 +201,7 @@ To test compatibility with a new partner system:
 4. **Verify transfer:**
    ```bash
    # Check transfer status
-   curl http://localhost:9081/api/v1/transfers/{id}
+   curl http://localhost:8080/api/v1/transfers/{id}
    ```
 
 ## Known Limitations

@@ -36,7 +36,7 @@ mvn test -Dtest=SendLargeFileWithRestartTest#testSendLargeFile
 
 ### Running Applications
 
-**Server** (PeSIT protocol on port 5000, REST API on port 8080):
+**Server** (PeSIT protocol on port 6502, REST API on port 8080):
 ```bash
 cd pesitwizard-server
 mvn spring-boot:run
@@ -44,7 +44,7 @@ mvn spring-boot:run
 java -jar target/pesitwizard-server-1.0.0-SNAPSHOT.jar
 ```
 
-**Client** (REST API on port 9081):
+**Client** (REST API on port 8080):
 ```bash
 cd pesitwizard-client
 mvn spring-boot:run
@@ -78,10 +78,12 @@ npm run build   # Build static site
 
 The project is organized as a Maven multi-module build:
 
+- **pesitwizard-common**: Shared utilities (crypto, security helpers)
 - **pesitwizard-pesit**: Core protocol implementation (FPDU encoding/decoding, session management)
 - **pesitwizard-client**: Client application with REST API for sending/receiving files
 - **pesitwizard-server**: Server application that listens for PeSIT connections
 - **pesitwizard-security**: Secrets management (AES encryption, HashiCorp Vault integration)
+- **pesitwizard-backup**: Backup and recovery functionality
 - **pesitwizard-connector-api**: SPI for storage backends
 - **pesitwizard-connector-local**: Local filesystem connector
 - **pesitwizard-connector-sftp**: SFTP connector

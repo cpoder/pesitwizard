@@ -1,202 +1,202 @@
-# PeSIT Wizard - Roadmap vers la Production
+# PeSIT Wizard - Roadmap to Production
 
-## État Actuel: 92% (Beta Avancé)
+## Current State: 92% (Advanced Beta)
 
-Dernière mise à jour: 2026-02-01
+Last updated: 2026-02-01
 
 ---
 
-## Phase 1: Validation TLS/SSL (Priorité: HAUTE)
+## Phase 1: TLS/SSL Validation (Priority: HIGH)
 
-**Objectif**: Sécuriser les communications avec Connect:Express
+**Objective**: Secure communications with Connect:Express
 
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 1.1 | Configurer SSL parameter tables (SSLPARM1/SSLPARM2) dans CX | 2h | ✅ |
-| 1.2 | Créer certificats de test (CA, server, client) compatibles PW/CX | 1h | ✅ |
-| 1.3 | Modifier `cx-setup-partner` pour supporter SSLPARM | 1h | ✅ |
-| 1.4 | Configurer keystores TLS dans PW Server via API | 2h | ✅ |
-| 1.5 | Tester TLS unidirectionnel PW Client -> CX | 2h | 🔄 |
-| 1.6 | Tester TLS unidirectionnel CX -> PW Server | 2h | ⬜ |
-| 1.7 | Tester mTLS (mutual TLS) bidirectionnel | 2h | ⬜ |
-| 1.8 | Ajouter tests TLS au Docker integration suite | 2h | ✅ |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 1.1 | Configure SSL parameter tables (SSLPARM1/SSLPARM2) in CX | 2h | ✅ |
+| 1.2 | Create test certificates (CA, server, client) compatible with PW/CX | 1h | ✅ |
+| 1.3 | Modify `cx-setup-partner` to support SSLPARM | 1h | ✅ |
+| 1.4 | Configure TLS keystores in PW Server via API | 2h | ✅ |
+| 1.5 | Test unidirectional TLS PW Client -> CX | 2h | In Progress |
+| 1.6 | Test unidirectional TLS CX -> PW Server | 2h | Pending |
+| 1.7 | Test mutual TLS (mTLS) bidirectional | 2h | Pending |
+| 1.8 | Add TLS tests to Docker integration suite | 2h | ✅ |
 
-**Critère de succès**: Tests Docker TLS passent, documentation complète
+**Success Criteria**: Docker TLS tests pass, documentation complete
 
-> **Progrès (2026-02-01):**
-> - PW Server TLS fonctionne (upload keystore/truststore via API, handshake TLS validé)
-> - PW Client TLS configuré (upload truststore via API, protocole TLSv1.2)
-> - CX SSL listener démarre (tom_apm -s SSLPARM1 -p 05001) mais ne répond pas aux handshakes
-> - Investigation en cours: le listener CX accepte les connexions TCP mais ferme immédiatement
+> **Progress (2026-02-01):**
+> - PW Server TLS is working (upload keystore/truststore via API, TLS handshake validated)
+> - PW Client TLS configured (upload truststore via API, TLSv1.2 protocol)
+> - CX SSL listener starts (tom_apm -s SSLPARM1 -p 05001) but does not respond to handshakes
+> - Investigation in progress: CX listener accepts TCP connections but closes immediately
 >
-> **À investiguer:**
-> - Format des certificats CX (le certmgr.sh importe mais tom_apm ne charge peut-être pas)
-> - Logs SSL dans CX (aucune erreur visible dans LOG)
-> - Tester avec certificats CX natifs au lieu de certificats générés par OpenSSL
+> **To investigate:**
+> - CX certificate format (certmgr.sh imports but tom_apm may not load them)
+> - SSL logs in CX (no errors visible in LOG)
+> - Test with native CX certificates instead of OpenSSL-generated ones
 
 ---
 
-## Phase 2: Tests de Performance (Priorité: HAUTE)
+## Phase 2: Performance Testing (Priority: HIGH)
 
-**Objectif**: Établir les limites et garantir la stabilité sous charge
+**Objective**: Establish limits and ensure stability under load
 
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 2.1 | Créer script de benchmark avec JMeter ou Gatling | 4h | ✅ |
-| 2.2 | Test: 10 transferts concurrents de 100MB | 2h | ✅ |
-| 2.3 | Test: 100 transferts concurrents de 1MB | 2h | ✅ |
-| 2.4 | Test: 1 transfert de 10GB (fichier volumineux) | 2h | ⬜ |
-| 2.5 | Test: transferts pendant 24h (stabilité long terme) | 1h setup | ⬜ |
-| 2.6 | Mesurer: latence, throughput, CPU, mémoire | 2h | ✅ |
-| 2.7 | Identifier et corriger les goulots d'étranglement | Variable | ⬜ |
-| 2.8 | Documenter les benchmarks et limites recommandées | 2h | ✅ |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 2.1 | Create benchmark script with JMeter or Gatling | 4h | ✅ |
+| 2.2 | Test: 10 concurrent transfers of 100MB | 2h | ✅ |
+| 2.3 | Test: 100 concurrent transfers of 1MB | 2h | ✅ |
+| 2.4 | Test: 1 transfer of 10GB (large file) | 2h | Pending |
+| 2.5 | Test: transfers over 24h (long-term stability) | 1h setup | Pending |
+| 2.6 | Measure: latency, throughput, CPU, memory | 2h | ✅ |
+| 2.7 | Identify and fix bottlenecks | Variable | Pending |
+| 2.8 | Document benchmarks and recommended limits | 2h | ✅ |
 
-**Critère de succès**: Benchmarks documentés, pas de memory leak sur 24h
-
----
-
-## Phase 3: Tests de Résilience (Priorité: HAUTE)
-
-**Objectif**: Garantir la robustesse face aux pannes
-
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 3.1 | Test: kill -9 pendant transfert, vérifier restart | 2h | ⬜ |
-| 3.2 | Test: coupure réseau (iptables drop) pendant transfert | 2h | ⬜ |
-| 3.3 | Test: timeout serveur distant (connexion lente) | 1h | ✅ |
-| 3.4 | Test: disque plein côté réception | 1h | ⬜ |
-| 3.5 | Test: certificat expiré (TLS) | 1h | ⬜ |
-| 3.6 | Test: rollback après échec partiel | 2h | ✅ |
-| 3.7 | Implémenter retry automatique avec backoff exponentiel | 4h | ⬜ |
-| 3.8 | Ajouter circuit breaker pour serveurs défaillants | 4h | ⬜ |
-
-**Critère de succès**: Tous les scénarios de panne gérés gracieusement
-
-> Note: Tests de résilience automatisés créés (run-resilience-tests.sh, run-restart-tests.sh)
+**Success Criteria**: Benchmarks documented, no memory leak over 24h
 
 ---
 
-## Phase 4: Sécurité (Priorité: HAUTE)
+## Phase 3: Resilience Testing (Priority: HIGH)
 
-**Objectif**: Audit et renforcement de la sécurité
+**Objective**: Ensure robustness in the face of failures
 
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 4.1 | Audit OWASP: injection, XSS, CSRF sur API REST | 4h | ⬜ |
-| 4.2 | Vérifier chiffrement des secrets (passwords, keystores) | 2h | ⬜ |
-| 4.3 | Implémenter rate limiting sur API REST | 2h | ⬜ |
-| 4.4 | Ajouter validation stricte des entrées (filenames, paths) | 2h | ✅ |
-| 4.5 | Scan de dépendances (OWASP Dependency Check) | 1h | ⬜ |
-| 4.6 | Configurer Content Security Policy pour l'UI | 1h | ⬜ |
-| 4.7 | Documenter la politique de sécurité | 2h | ⬜ |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 3.1 | Test: kill -9 during transfer, verify restart | 2h | Pending |
+| 3.2 | Test: network cut (iptables drop) during transfer | 2h | Pending |
+| 3.3 | Test: remote server timeout (slow connection) | 1h | ✅ |
+| 3.4 | Test: disk full on receiving side | 1h | Pending |
+| 3.5 | Test: expired certificate (TLS) | 1h | Pending |
+| 3.6 | Test: rollback after partial failure | 2h | ✅ |
+| 3.7 | Implement automatic retry with exponential backoff | 4h | Pending |
+| 3.8 | Add circuit breaker for failing servers | 4h | Pending |
 
-**Critère de succès**: Aucune vulnérabilité critique/haute
+**Success Criteria**: All failure scenarios handled gracefully
 
----
-
-## Phase 5: Haute Disponibilité (Priorité: MOYENNE)
-
-**Objectif**: Clustering et failover en production
-
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 5.1 | Tester cluster 2 nodes avec load balancer | 4h | ⬜ |
-| 5.2 | Tester failover: kill node primaire pendant transfert | 2h | ⬜ |
-| 5.3 | Tester reprise de transfert après failover | 2h | ⬜ |
-| 5.4 | Valider cohérence BDD avec PostgreSQL en cluster | 2h | ⬜ |
-| 5.5 | Documenter architecture HA recommandée | 2h | ⬜ |
-
-**Critère de succès**: Failover transparent, pas de perte de données
+> Note: Automated resilience tests created (run-resilience-tests.sh, run-restart-tests.sh)
 
 ---
 
-## Phase 6: Observabilité Production (Priorité: MOYENNE)
+## Phase 4: Security (Priority: HIGH)
 
-**Objectif**: Monitoring et alerting pour opérations
+**Objective**: Security audit and hardening
 
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 6.1 | Dashboard Grafana: transferts, erreurs, latence | 4h | ✅ |
-| 6.2 | Alertes: transfert échoué, queue pleine, certificat expire | 2h | ✅ |
-| 6.3 | Métriques business: volume/jour, taux de succès, partenaires | 2h | ⬜ |
-| 6.4 | Intégration avec système d'alerting (PagerDuty, Slack) | 2h | ⬜ |
-| 6.5 | Logs structurés (JSON) pour ELK/Splunk | 2h | ⬜ |
-| 6.6 | Tracing distribué (Jaeger/Zipkin) pour debug | 4h | ⬜ |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 4.1 | OWASP audit: injection, XSS, CSRF on REST API | 4h | Pending |
+| 4.2 | Verify encryption of secrets (passwords, keystores) | 2h | Pending |
+| 4.3 | Implement rate limiting on REST API | 2h | Pending |
+| 4.4 | Add strict input validation (filenames, paths) | 2h | ✅ |
+| 4.5 | Dependency scan (OWASP Dependency Check) | 1h | Pending |
+| 4.6 | Configure Content Security Policy for the UI | 1h | Pending |
+| 4.7 | Document the security policy | 2h | Pending |
 
-**Critère de succès**: Visibilité complète des opérations
-
----
-
-## Phase 7: Documentation (Priorité: MOYENNE)
-
-**Objectif**: Compléter la documentation existante (pesitwizard-docs)
-
-**Documentation existante** (✅ déjà fait):
-- Guide Client: installation, configuration, usage, vidéo démo, screenshots
-- Guide Serveur: installation, configuration, connecteurs, secrets, observabilité
-- Sécurité: TLS/mTLS complet (550 lignes), CA privée, workflows certificats
-- API Reference: authentification, client API, server API
-- Déploiement: Docker, Kubernetes, Helm
-
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 7.1 | Guide de dépannage: erreurs PeSIT, diagnostics réseau | 3h | ✅ |
-| 7.2 | Runbook opérationnel: backup, restore, maintenance | 3h | ✅ |
-| 7.3 | Guide Connect:Express: interopérabilité, configuration | 2h | ✅ |
-| 7.4 | Guide performance: tuning, benchmarks, limites | 2h | ✅ |
-
-**Critère de succès**: Ops peut résoudre les problèmes courants sans escalade
+**Success Criteria**: No critical/high vulnerabilities
 
 ---
 
-## Phase 8: Conformité et Audit (Priorité: BASSE)
+## Phase 5: High Availability (Priority: MEDIUM)
 
-**Objectif**: Traçabilité pour audits bancaires
+**Objective**: Clustering and failover in production
 
-| ID | Tâche | Effort | Status |
-|----|-------|--------|--------|
-| 8.1 | Log d'audit immutable (qui, quoi, quand) | 4h | ⬜ |
-| 8.2 | Rétention des logs configurable | 2h | ⬜ |
-| 8.3 | Export des logs pour audit externe | 2h | ⬜ |
-| 8.4 | Rapport de conformité automatisé | 4h | ⬜ |
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 5.1 | Test 2-node cluster with load balancer | 4h | Pending |
+| 5.2 | Test failover: kill primary node during transfer | 2h | Pending |
+| 5.3 | Test transfer resumption after failover | 2h | Pending |
+| 5.4 | Validate DB consistency with clustered PostgreSQL | 2h | Pending |
+| 5.5 | Document recommended HA architecture | 2h | Pending |
 
-**Critère de succès**: Piste d'audit complète pour régulateurs
+**Success Criteria**: Transparent failover, no data loss
 
 ---
 
-## Résumé par Priorité
+## Phase 6: Production Observability (Priority: MEDIUM)
 
-| Priorité | Phases | Effort Total | Impact |
+**Objective**: Monitoring and alerting for operations
+
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 6.1 | Grafana dashboard: transfers, errors, latency | 4h | ✅ |
+| 6.2 | Alerts: failed transfer, full queue, certificate expiry | 2h | ✅ |
+| 6.3 | Business metrics: daily volume, success rate, partners | 2h | Pending |
+| 6.4 | Integration with alerting system (PagerDuty, Slack) | 2h | Pending |
+| 6.5 | Structured logs (JSON) for ELK/Splunk | 2h | Pending |
+| 6.6 | Distributed tracing (Jaeger/Zipkin) for debugging | 4h | Pending |
+
+**Success Criteria**: Full operational visibility
+
+---
+
+## Phase 7: Documentation (Priority: MEDIUM)
+
+**Objective**: Complete existing documentation (pesitwizard-docs)
+
+**Existing Documentation** (already done):
+- Client Guide: installation, configuration, usage, demo video, screenshots
+- Server Guide: installation, configuration, connectors, secrets, observability
+- Security: full TLS/mTLS (550 lines), private CA, certificate workflows
+- API Reference: authentication, client API, server API
+- Deployment: Docker, Kubernetes, Helm
+
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 7.1 | Troubleshooting guide: PeSIT errors, network diagnostics | 3h | ✅ |
+| 7.2 | Operational runbook: backup, restore, maintenance | 3h | ✅ |
+| 7.3 | Connect:Express guide: interoperability, configuration | 2h | ✅ |
+| 7.4 | Performance guide: tuning, benchmarks, limits | 2h | ✅ |
+
+**Success Criteria**: Ops can resolve common issues without escalation
+
+---
+
+## Phase 8: Compliance and Audit (Priority: LOW)
+
+**Objective**: Traceability for banking audits
+
+| ID | Task | Effort | Status |
+|----|------|--------|--------|
+| 8.1 | Immutable audit log (who, what, when) | 4h | Pending |
+| 8.2 | Configurable log retention | 2h | Pending |
+| 8.3 | Log export for external audit | 2h | Pending |
+| 8.4 | Automated compliance report | 4h | Pending |
+
+**Success Criteria**: Complete audit trail for regulators
+
+---
+
+## Summary by Priority
+
+| Priority | Phases | Total Effort | Impact |
 |----------|--------|--------------|--------|
-| **HAUTE** | 1, 2, 3, 4 | ~60h | Bloquant pour production |
-| **MOYENNE** | 5, 6, 7 | ~38h | Nécessaire pour opérations |
-| **BASSE** | 8 | ~12h | Nice-to-have |
+| **HIGH** | 1, 2, 3, 4 | ~60h | Blocking for production |
+| **MEDIUM** | 5, 6, 7 | ~38h | Required for operations |
+| **LOW** | 8 | ~12h | Nice-to-have |
 
-**Total estimé**: ~110h de travail (3 semaines à temps plein)
+**Total estimated**: ~110h of work (3 weeks full-time)
 
-> Note: La documentation existante (pesitwizard-docs) couvre déjà ~80% des besoins.
-> Seuls les guides dépannage, runbook ops et CX interop restent à faire.
-
----
-
-## Checklist Go/No-Go Production
-
-- [ ] TLS validé avec partenaire réel (Phase 1)
-- [ ] Benchmarks documentés et acceptables (Phase 2)
-- [ ] Tests de résilience passent (Phase 3)
-- [ ] Audit sécurité sans critique (Phase 4)
-- [x] Documentation utilisateur complète (pesitwizard-docs ✅)
-- [ ] Monitoring et alerting en place (Phase 6)
-- [ ] Runbook opérationnel validé (Phase 7)
-- [ ] Test avec volume réel pendant 1 semaine (Phase 2)
+> Note: Existing documentation (pesitwizard-docs) already covers ~80% of needs.
+> Only troubleshooting guides, ops runbook, and CX interop remain to be done.
 
 ---
 
-## Historique
+## Production Go/No-Go Checklist
 
-| Date | Version | Changements |
-|------|---------|-------------|
-| 2026-02-01 | 1.3 | Fix CX SSL config (certmgr.sh, SSLPARM tables, noms courts) |
-| 2026-02-01 | 1.2 | Ajout tests résilience et restart, scripts benchmark |
-| 2026-01-31 | 1.1 | Ajout infrastructure TLS et scripts performance |
-| 2026-01-31 | 1.0 | Création initiale après validation CX integration |
+- [ ] TLS validated with a real partner (Phase 1)
+- [ ] Benchmarks documented and acceptable (Phase 2)
+- [ ] Resilience tests pass (Phase 3)
+- [ ] Security audit with no critical findings (Phase 4)
+- [x] User documentation complete (pesitwizard-docs)
+- [ ] Monitoring and alerting in place (Phase 6)
+- [ ] Operational runbook validated (Phase 7)
+- [ ] Test with real-world volume for 1 week (Phase 2)
+
+---
+
+## History
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2026-02-01 | 1.3 | Fix CX SSL config (certmgr.sh, SSLPARM tables, short names) |
+| 2026-02-01 | 1.2 | Add resilience and restart tests, benchmark scripts |
+| 2026-01-31 | 1.1 | Add TLS infrastructure and performance scripts |
+| 2026-01-31 | 1.0 | Initial creation after CX integration validation |

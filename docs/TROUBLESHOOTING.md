@@ -16,7 +16,7 @@ This guide covers common issues and their solutions when running PeSIT Wizard.
 
 2. Verify the correct port is configured and not blocked:
    ```bash
-   netstat -tlnp | grep 5001
+   netstat -tlnp | grep 6502
    ```
 
 3. Check firewall rules allow the PeSIT port.
@@ -97,14 +97,14 @@ This guide covers common issues and their solutions when running PeSIT Wizard.
 
 **Solutions:**
 1. Both sides must agree on max entity size (PI 25).
-2. PeSIT Wizard default: 32768 bytes
+2. PeSIT Wizard default: 4096 bytes
 3. Connect:Express typically uses 4096 bytes
 4. The smaller value is used during negotiation.
 
 ### TLS vs TCP Protocol Framing
 **Important:** TCP and TLS use different framing:
-- **TCP (port 5000/5010):** expects `[2-byte length prefix] + [FPDU]`
-- **TLS (port 5001/5012):** expects just `[FPDU]` (uses FPDU's built-in length)
+- **TCP (port 6502):** expects `[2-byte length prefix] + [FPDU]`
+- **TLS (port 5001):** expects just `[FPDU]` (uses FPDU's built-in length)
 
 If transfers work over TCP but fail over TLS, ensure:
 1. You're using the correct port for each protocol

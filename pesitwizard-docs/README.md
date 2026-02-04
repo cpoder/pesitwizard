@@ -1,18 +1,18 @@
 # PeSIT Wizard Documentation
 
-Documentation open source pour PeSIT Wizard, construit avec VitePress.
+Open source documentation for PeSIT Wizard, built with VitePress.
 
-## Développement
+## Development
 
 ```bash
-# Installer les dépendances
+# Install dependencies
 npm install
 
-# Lancer le serveur de développement
+# Start the development server
 npm run dev
 ```
 
-Le site sera accessible sur http://localhost:5173
+The site will be accessible at http://localhost:5173
 
 ## Build
 
@@ -20,43 +20,43 @@ Le site sera accessible sur http://localhost:5173
 npm run build
 ```
 
-Les fichiers statiques seront générés dans `.vitepress/dist/`.
+Static files will be generated in `.vitepress/dist/`.
 
 ## Structure
 
 ```
 pesitwizard-docs/
 ├── .vitepress/
-│   └── config.ts          # Configuration VitePress
+│   └── config.ts          # VitePress configuration
 ├── public/
-│   └── api/               # Fichiers OpenAPI (OAS)
+│   └── api/               # OpenAPI (OAS) files
 │       ├── openapi-client.yaml
 │       └── openapi-server.yaml
 ├── guide/
-│   ├── index.md           # Introduction (Qu'est-ce que PeSIT ?)
-│   ├── quickstart.md      # Démarrage rapide
+│   ├── index.md           # Introduction (What is PeSIT?)
+│   ├── quickstart.md      # Quick start
 │   ├── architecture.md    # Architecture
-│   ├── client/            # Documentation client
-│   └── server/            # Documentation serveur
+│   ├── client/            # Client documentation
+│   └── server/            # Server documentation
 ├── api/
-│   ├── index.md           # Vue d'ensemble API
-│   ├── authentication.md  # Authentification
+│   ├── index.md           # API overview
+│   ├── authentication.md  # Authentication
 │   ├── client.md          # Client API
 │   └── server.md          # Server API
-└── index.md               # Page d'accueil
+└── index.md               # Home page
 ```
 
-## Déploiement
+## Deployment
 
 ### Netlify
 
-1. Connecter le repo GitHub à Netlify
-2. Configuration :
-   - Build command : `npm run build`
-   - Publish directory : `.vitepress/dist`
-   - Base directory : `pesitwizard-docs`
+1. Connect the GitHub repo to Netlify
+2. Configuration:
+   - Build command: `npm run build`
+   - Publish directory: `.vitepress/dist`
+   - Base directory: `pesitwizard-docs`
 
-Ou via CLI :
+Or via CLI:
 ```bash
 npm install -g netlify-cli
 netlify login
@@ -75,7 +75,7 @@ vercel
 
 ### GitHub Pages
 
-Créer `.github/workflows/docs.yml` :
+Create `.github/workflows/docs.yml`:
 
 ```yaml
 name: Deploy Docs
@@ -106,7 +106,7 @@ jobs:
           publish_dir: pesitwizard-docs/.vitepress/dist
 ```
 
-### Docker (auto-hébergé)
+### Docker (Self-Hosted)
 
 ```dockerfile
 FROM node:20-alpine AS builder
@@ -126,11 +126,11 @@ docker build -t pesitwizard-docs -f Dockerfile.docs .
 docker run -p 8080:80 pesitwizard-docs
 ```
 
-## Fichiers OpenAPI
+## OpenAPI Files
 
-Les spécifications OpenAPI sont disponibles dans `public/api/` :
+OpenAPI specifications are available in `public/api/`:
 
-- `openapi-client.yaml` - API Client (port 9081)
-- `openapi-server.yaml` - API Server (port 8080)
+- `openapi-client.yaml` - Client API (port 8080)
+- `openapi-server.yaml` - Server API (port 8080)
 
-Ces fichiers peuvent être importés dans Postman, Insomnia, ou utilisés pour générer des clients SDK.
+These files can be imported into Postman, Insomnia, or used to generate SDK clients.

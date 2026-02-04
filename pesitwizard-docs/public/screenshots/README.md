@@ -1,12 +1,12 @@
-# Screenshots pour la documentation
+# Documentation Screenshots
 
-Ce dossier contient les captures d'écran utilisées dans la documentation.
+This folder contains screenshots used in the documentation.
 
 ## Structure
 
 ```
 screenshots/
-├── client/           # Screenshots du client PeSIT Wizard
+├── client/           # PeSIT Wizard client screenshots
 │   ├── dashboard.png
 │   ├── transfer-send.png
 │   ├── transfer-receive.png
@@ -17,7 +17,7 @@ screenshots/
 │   ├── schedule-create.png
 │   └── calendars.png
 │
-└── admin/            # Screenshots de l'admin PeSIT Wizard
+└── admin/            # PeSIT Wizard admin screenshots
     ├── dashboard.png
     ├── clusters.png
     ├── virtual-files.png
@@ -26,63 +26,63 @@ screenshots/
     └── transfers.png
 ```
 
-## Comment générer les screenshots
+## How to Generate Screenshots
 
-### Prérequis
+### Prerequisites
 
-1. Démarrer les services :
+1. Start the services:
    ```bash
-   cd /home/cpo/pesitwizard/scripts
+   cd scripts
    ./start-all.sh
    ```
 
-2. Accéder aux interfaces :
-   - Client UI : http://localhost:5173
-   - Admin UI : http://localhost:3000
+2. Access the interfaces:
+   - Client UI: http://localhost:5173
+   - Admin UI: http://localhost:3000
 
-### Screenshots à capturer
+### Screenshots to Capture
 
 #### Client UI (http://localhost:5173)
 
-| Fichier | Page | Description |
-|---------|------|-------------|
-| `dashboard.png` | Dashboard | Vue d'ensemble avec statistiques |
-| `transfer-send.png` | Transfer | Formulaire SEND avec champs remplis |
-| `transfer-receive.png` | Transfer | Formulaire RECEIVE avec placeholders |
-| `path-placeholders.png` | Transfer | Composant placeholders avec tags visibles |
-| `favorites.png` | Favorites | Liste des favoris avec cartes |
-| `favorite-edit.png` | Favorites | Modal d'édition d'un favori |
-| `schedules.png` | Schedules | Liste des planifications |
-| `schedule-create.png` | Favorites | Modal de création de planification |
-| `calendars.png` | Calendars | Liste des calendriers métier |
-| `tls-config-nav.png` | Navigation | Menu latéral avec TLS Config surligné |
-| `tls-import-truststore.png` | TLS Config | Modal import truststore (CA) |
-| `tls-import-keystore.png` | TLS Config | Modal import keystore (client cert) |
-| `tls-enabled.png` | TLS Config | Vue avec TLS activé et certificats configurés |
-| `tls-status.png` | TLS Config | Statut TLS avec informations certificats |
+| File | Page | Description |
+|------|------|-------------|
+| `dashboard.png` | Dashboard | Overview with statistics |
+| `transfer-send.png` | Transfer | SEND form with filled fields |
+| `transfer-receive.png` | Transfer | RECEIVE form with placeholders |
+| `path-placeholders.png` | Transfer | Placeholders component with visible tags |
+| `favorites.png` | Favorites | List of favorites with cards |
+| `favorite-edit.png` | Favorites | Edit favorite modal |
+| `schedules.png` | Schedules | List of scheduled transfers |
+| `schedule-create.png` | Favorites | Create schedule modal |
+| `calendars.png` | Calendars | List of business calendars |
+| `tls-config-nav.png` | Navigation | Sidebar with TLS Config highlighted |
+| `tls-import-truststore.png` | TLS Config | Import truststore (CA) modal |
+| `tls-import-keystore.png` | TLS Config | Import keystore (client cert) modal |
+| `tls-enabled.png` | TLS Config | View with TLS enabled and certificates configured |
+| `tls-status.png` | TLS Config | TLS status with certificate information |
 
 #### Admin UI (http://localhost:3000)
 
-| Fichier | Page | Description |
-|---------|------|-------------|
-| `dashboard.png` | Dashboard | Vue d'ensemble des clusters |
-| `clusters.png` | Clusters | Liste des clusters |
-| `virtual-files.png` | Virtual Files | Liste des fichiers virtuels |
-| `virtual-file-placeholders.png` | Virtual Files | Formulaire avec placeholders |
-| `partners.png` | Partners | Liste des partenaires |
-| `transfers.png` | Transfers | Historique des transferts |
+| File | Page | Description |
+|------|------|-------------|
+| `dashboard.png` | Dashboard | Cluster overview |
+| `clusters.png` | Clusters | List of clusters |
+| `virtual-files.png` | Virtual Files | List of virtual files |
+| `virtual-file-placeholders.png` | Virtual Files | Form with placeholders |
+| `partners.png` | Partners | List of partners |
+| `transfers.png` | Transfers | Transfer history |
 
-### Conseils pour les captures
+### Screenshot Guidelines
 
-1. **Résolution** : 1280x800 minimum
-2. **Format** : PNG
-3. **Contenu** : Utiliser des données réalistes (ex: "BNP Paribas", "VIREMENTS_SEPA")
-4. **Thème** : Mode clair
-5. **Recadrage** : Éviter les barres de navigateur
+1. **Resolution**: 1280x800 minimum
+2. **Format**: PNG
+3. **Content**: Use realistic data (e.g., "BNP Paribas", "SEPA_TRANSFERS")
+4. **Theme**: Light mode
+5. **Cropping**: Avoid browser toolbars
 
-### Outils recommandés
+### Recommended Tools
 
-- **macOS** : Cmd+Shift+4 puis Espace pour capturer une fenêtre
-- **Linux** : Flameshot, GNOME Screenshot
-- **Windows** : Snipping Tool, ShareX
-- **Navigateur** : Extension "Full Page Screen Capture"
+- **macOS**: Cmd+Shift+4 then Space to capture a window
+- **Linux**: Flameshot, GNOME Screenshot
+- **Windows**: Snipping Tool, ShareX
+- **Browser**: "Full Page Screen Capture" extension

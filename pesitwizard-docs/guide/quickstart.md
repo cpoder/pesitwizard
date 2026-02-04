@@ -1,74 +1,74 @@
-# Démarrage rapide
+# Quick Start
 
-Ce guide vous permettra d'effectuer votre premier transfert PeSIT Wizard en moins de 15 minutes.
+This guide will help you complete your first PeSIT Wizard transfer in under 15 minutes.
 
-## Prérequis
+## Prerequisites
 
-- Docker et Docker Compose
-- Accès à un serveur PeSIT Wizard (votre banque ou notre serveur de test)
+- Docker and Docker Compose
+- Access to a PeSIT Wizard server (your bank or our test server)
 
-## 1. Lancer le client PeSIT Wizard
+## 1. Launch the PeSIT Wizard Client
 
 ```bash
-# Télécharger et lancer le client
+# Download and launch the client
 docker run -d \
   --name pesitwizard-client \
-  -p 9081:9081 \
-  -e SPRING_DATASOURCE_URL=jdbc:h2:mem:pesitwizard \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:h2:file:./data/pesitwizard-client \
   ghcr.io/pesitwizard/pesitwizard-client:latest
 ```
 
-L'interface web est accessible sur http://localhost:9081
+The web interface is accessible at http://localhost:8080
 
-## 2. Configurer un serveur cible
+## 2. Configure a Target Server
 
-Dans l'interface web, allez dans **Serveurs** > **Ajouter** :
+In the web interface, go to **Servers** > **Add**:
 
-| Champ | Valeur |
-|-------|--------|
-| Nom | Ma Banque |
-| Hôte | pesitwizard.mabanque.fr |
-| Port | 5000 |
-| Identifiant serveur | BANK_SERVER |
-| Identifiant client | MON_ENTREPRISE |
-| Mot de passe | (fourni par la banque) |
+| Field | Value |
+|-------|-------|
+| Name | My Bank |
+| Host | pesitwizard.mybank.com |
+| Port | 6502 |
+| Server ID | BANK_SERVER |
+| Client ID | MY_COMPANY |
+| Password | (provided by the bank) |
 
-## 3. Envoyer un fichier
+## 3. Send a File
 
-1. Allez dans **Transferts** > **Envoyer**
-2. Sélectionnez le serveur configuré
-3. Choisissez le fichier à envoyer
-4. Renseignez le nom distant (ex: `VIREMENT_20250110.XML`)
-5. Cliquez sur **Envoyer**
+1. Go to **Transfers** > **Send**
+2. Select the configured server
+3. Choose the file to send
+4. Enter the remote name (e.g., `PAYMENT_20250110.XML`)
+5. Click **Send**
 
-## 4. Recevoir un fichier
+## 4. Receive a File
 
-1. Allez dans **Transferts** > **Recevoir**
-2. Sélectionnez le serveur
-3. Renseignez le nom du fichier distant (ex: `RELEVE_20250110.XML`)
-4. Cliquez sur **Recevoir**
+1. Go to **Transfers** > **Receive**
+2. Select the server
+3. Enter the remote file name (e.g., `STATEMENT_20250110.XML`)
+4. Click **Receive**
 
-## Environnement de test
+## Test Environment
 
-Pour tester sans accès bancaire, vous pouvez lancer notre serveur de test :
+To test without bank access, you can launch our test server:
 
 ```bash
-# Lancer un serveur PeSIT Wizard de test
+# Launch a PeSIT Wizard test server
 docker run -d \
   --name pesitwizard-server \
-  -p 5000:5000 \
+  -p 6502:6502 \
   -p 8080:8080 \
   ghcr.io/pesitwizard/pesitwizard-server:latest
 ```
 
-Puis configurez le client avec :
-- Hôte : `localhost`
-- Port : `5000`
-- Identifiant serveur : `PESIT_SERVER`
-- Identifiant client : `TEST_CLIENT`
+Then configure the client with:
+- Host: `localhost`
+- Port: `6502`
+- Server ID: `PESIT_SERVER`
+- Client ID: `TEST_CLIENT`
 
-## Prochaines étapes
+## Next Steps
 
-- [Configuration avancée du client](/guide/client/configuration)
-- [Intégration avec votre ERP](/guide/client/erp-integration)
-- [Déploiement en production](/guide/server/installation)
+- [Advanced client configuration](/guide/client/configuration)
+- [ERP integration](/guide/client/erp-integration)
+- [Production deployment](/guide/server/installation)

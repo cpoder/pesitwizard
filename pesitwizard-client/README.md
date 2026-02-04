@@ -1,15 +1,15 @@
 # PeSIT Wizard Client
 
-Client Java pour effectuer des transferts de fichiers via le protocole PeSIT. Expose une API REST utilisée par l'interface web `pesitwizard-client-ui`.
+Java client for performing file transfers via the PeSIT protocol. Exposes a REST API used by the `pesitwizard-client-ui` web interface.
 
-## Fonctionnalités
+## Features
 
-- **Envoi de fichiers** vers des serveurs PeSIT
-- **Réception de fichiers** depuis des serveurs PeSIT
-- **Gestion des serveurs** : Configuration de plusieurs serveurs PeSIT cibles
-- **Historique des transferts** : Stockage en base de données
+- **File Sending** to PeSIT servers
+- **File Receiving** from PeSIT servers
+- **Server Management**: Configuration of multiple target PeSIT servers
+- **Transfer History**: Database storage
 
-## Prérequis
+## Prerequisites
 
 - Java 21+
 - Maven 3.9+
@@ -17,72 +17,74 @@ Client Java pour effectuer des transferts de fichiers via le protocole PeSIT. Ex
 ## Build
 
 ```bash
-# Installer d'abord la bibliothèque PeSIT
+# First install the PeSIT library
 cd ../pesitwizard-pesit
 mvn install -DskipTests
 
-# Builder le client
+# Build the client
 cd ../pesitwizard-client
 mvn package -DskipTests
 ```
 
-## Exécution
+## Running
 
 ```bash
 java -jar target/pesitwizard-client-1.0.0-SNAPSHOT.jar
 ```
 
-Le serveur démarre sur le port **9081**.
+The server starts on port **8080**.
 
 ## Configuration
 
-Fichier `application.yml` :
+`application.yml` file:
 
 ```yaml
 server:
-  port: 9081
+  port: 8080
 
 spring:
   datasource:
-    url: jdbc:h2:file:./data/pesitwizard-client-db
+    url: jdbc:h2:file:./data/pesitwizard-client
 ```
 
-## API REST
+## REST API
 
-### Serveurs
+### Servers
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/v1/servers` | Liste des serveurs configurés |
-| POST | `/api/v1/servers` | Ajouter un serveur |
-| DELETE | `/api/v1/servers/{id}` | Supprimer un serveur |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/servers` | List configured servers |
+| POST | `/api/v1/servers` | Add a server |
+| DELETE | `/api/v1/servers/{id}` | Delete a server |
 
-### Transferts
+### Transfers
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/api/v1/transfers/send` | Envoyer un fichier |
-| POST | `/api/v1/transfers/receive` | Recevoir un fichier |
-| GET | `/api/v1/transfers` | Historique des transferts |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/transfers/send` | Send a file |
+| POST | `/api/v1/transfers/receive` | Receive a file |
+| GET | `/api/v1/transfers` | Transfer history |
 
-### Exemple d'envoi
+### Send Example
 
 ```bash
-curl -X POST http://localhost:9081/api/v1/transfers/send \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@document.pdf" \
-  -F "serverId=1" \
-  -F "remoteFilename=DOCUMENT.PDF"
+curl -X POST http://localhost:8080/api/v1/transfers/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverId": 1,
+    "remoteFilename": "DOCUMENT.PDF",
+    "fileContent": "<base64-encoded content>"
+  }'
 ```
 
 ## Docker
 
 ```bash
 docker build -t pesitwizard-client .
-docker run -p 9081:9081 pesitwizard-client
+docker run -p 8080:8080 pesitwizard-client
 ```
 
-## Stack technique
+## Tech Stack
 
 - Spring Boot 3.x
 - Java 21

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: pesitwizard-server
-description: Vectis Server - PeSIT file transfer server (standalone mode)
+description: PeSIT Wizard Server - PeSIT file transfer server (standalone mode)
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
@@ -10,4 +10,4 @@ keywords:
   - file-transfer
   - server
 maintainers:
-  - name: Vectis Team
+  - name: PeSIT Wizard Team

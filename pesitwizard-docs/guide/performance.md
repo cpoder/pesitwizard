@@ -1,146 +1,146 @@
-# Performance et Tuning
+# Performance and Tuning
 
-Guide d'optimisation des performances pour PeSIT Wizard.
+Performance optimization guide for PeSIT Wizard.
 
-## Métriques de référence
+## Reference Metrics
 
-### Benchmarks typiques
+### Typical Benchmarks
 
-| Scénario | Taille | Débit attendu | Latence |
-|----------|--------|---------------|---------|
+| Scenario | Size | Expected Throughput | Latency |
+|----------|------|---------------------|---------|
 | LAN (1Gbps) | 100MB | 80-100 MB/s | < 1s setup |
 | WAN (100Mbps) | 100MB | 10-12 MB/s | 50-200ms RTT |
 | Internet | 100MB | 1-5 MB/s | Variable |
 
-### Facteurs limitants
+### Limiting Factors
 
-1. **Bande passante réseau** - Principal facteur
-2. **Latence réseau** - Impact sur le handshake et sync points
-3. **Taille des chunks** - Overhead par FPDU
-4. **CPU** - Chiffrement TLS, checksums
-5. **I/O disque** - Lecture/écriture fichiers
+1. **Network bandwidth** - Primary factor
+2. **Network latency** - Impact on handshake and sync points
+3. **Chunk size** - Overhead per FPDU
+4. **CPU** - TLS encryption, checksums
+5. **Disk I/O** - File read/write
 
 ---
 
-## Configuration optimale
+## Optimal Configuration
 
-### Taille des chunks (PI_25)
+### Chunk Size (PI_25)
 
-La taille maximale des FPDU impacte directement les performances:
+The maximum FPDU size directly impacts performance:
 
 ```yaml
 # application.yml
 pesitwizard:
   transfer:
-    max-entity-size: 65535  # Maximum PeSIT (64KB - 1)
-    chunk-size: 32768       # 32KB par défaut
+    max-entity-size: 4096   # Default PeSIT entity size
+    chunk-size: 32768       # 32KB default
 ```
 
-| Taille | Overhead | Recommandation |
-|--------|----------|----------------|
-| 4096 | ~0.15% | Compatibilité anciens systèmes |
+| Size | Overhead | Recommendation |
+|------|----------|----------------|
+| 4096 | ~0.15% | Compatibility with legacy systems |
 | 16384 | ~0.04% | Standard |
-| 32768 | ~0.02% | Recommandé |
-| 65535 | ~0.01% | Performance maximale |
+| 32768 | ~0.02% | Recommended |
+| 65535 | ~0.01% | Maximum performance |
 
-**Note**: La valeur effective est négociée avec le partenaire (minimum des deux).
+**Note**: The effective value is negotiated with the partner (minimum of the two).
 
 ### Sync Points
 
-Les sync points permettent la reprise mais ajoutent de l'overhead:
+Sync points enable restart but add overhead:
 
 ```yaml
 pesitwizard:
   transfer:
     sync-points-enabled: true
-    sync-point-interval: 256  # KB entre sync points
+    sync-point-interval: 256  # KB between sync points
 ```
 
-| Intervalle | Overhead | Cas d'usage |
-|------------|----------|-------------|
-| 10 KB | ~10% | Réseau très instable |
+| Interval | Overhead | Use Case |
+|----------|----------|----------|
+| 10 KB | ~10% | Very unstable network |
 | 100 KB | ~1% | Standard |
-| 256 KB | ~0.4% | Recommandé production |
-| 1024 KB | ~0.1% | Réseau fiable |
-| Désactivé | 0% | Réseau très fiable, petits fichiers |
+| 256 KB | ~0.4% | Recommended for production |
+| 1024 KB | ~0.1% | Reliable network |
+| Disabled | 0% | Very reliable network, small files |
 
 ### Buffer sizes
 
 ```yaml
 pesitwizard:
   transfer:
-    read-buffer-size: 65536   # Buffer lecture fichier
-    write-buffer-size: 65536  # Buffer écriture fichier
-    socket-buffer-size: 65536 # Buffer socket TCP
+    read-buffer-size: 65536   # File read buffer
+    write-buffer-size: 65536  # File write buffer
+    socket-buffer-size: 65536 # TCP socket buffer
 ```
 
 ---
 
-## Configuration JVM
+## JVM Configuration
 
 ### Heap memory
 
 ```bash
-# Pour des transferts volumineux
+# For large transfers
 JAVA_OPTS="-Xms512m -Xmx2g"
 
-# Pour des petits fichiers nombreux
+# For many small files
 JAVA_OPTS="-Xms256m -Xmx1g"
 ```
 
-**Règle générale**:
+**General rule**:
 - Heap min: 256MB
-- Heap max: 2-4GB selon volume
+- Heap max: 2-4GB depending on volume
 
 ### Garbage Collector
 
 ```bash
-# G1GC recommandé pour latence prévisible
+# G1GC recommended for predictable latency
 JAVA_OPTS="-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
-# ZGC pour très faible latence (Java 17+)
+# ZGC for very low latency (Java 17+)
 JAVA_OPTS="-XX:+UseZGC"
 ```
 
 ### Threads
 
 ```yaml
-# Nombre de threads pour transferts concurrents
+# Number of threads for concurrent transfers
 pesitwizard:
   transfer:
     executor:
-      core-pool-size: 4    # Threads permanents
+      core-pool-size: 4    # Permanent threads
       max-pool-size: 20    # Maximum
-      queue-capacity: 100  # File d'attente
+      queue-capacity: 100  # Queue
 ```
 
-**Dimensionnement**:
-- `core-pool-size`: Nombre de transferts simultanés typiques
-- `max-pool-size`: Pic de charge
-- `queue-capacity`: Buffer pour pics courts
+**Sizing**:
+- `core-pool-size`: Typical number of simultaneous transfers
+- `max-pool-size`: Peak load
+- `queue-capacity`: Buffer for short peaks
 
 ---
 
-## Optimisation réseau
+## Network Optimization
 
 ### TCP Tuning (Linux)
 
 ```bash
 # /etc/sysctl.conf
 
-# Augmenter les buffers TCP
+# Increase TCP buffers
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
 net.ipv4.tcp_rmem = 4096 87380 16777216
 net.ipv4.tcp_wmem = 4096 65536 16777216
 
-# Activer le window scaling
+# Enable window scaling
 net.ipv4.tcp_window_scaling = 1
 
-# Réduire le TIME_WAIT
+# Reduce TIME_WAIT
 net.ipv4.tcp_fin_timeout = 30
 
-# Appliquer
+# Apply
 sysctl -p
 ```
 
@@ -149,12 +149,12 @@ sysctl -p
 ```yaml
 pesitwizard:
   transfer:
-    connection-timeout: 30000   # 30s pour établir la connexion
-    read-timeout: 120000        # 2min pour lire des données
-    write-timeout: 120000       # 2min pour écrire
+    connection-timeout: 30000   # 30s to establish the connection
+    read-timeout: 120000        # 2min to read data
+    write-timeout: 120000       # 2min to write
 ```
 
-**Pour fichiers volumineux** (> 1GB):
+**For large files** (> 1GB):
 ```yaml
 pesitwizard:
   transfer:
@@ -164,23 +164,23 @@ pesitwizard:
 
 ---
 
-## Optimisation TLS
+## TLS Optimization
 
-### Cipher suites rapides
+### Fast Cipher Suites
 
 ```yaml
 pesit:
   ssl:
     protocol: TLSv1.3
     cipher-suites:
-      - TLS_AES_256_GCM_SHA384       # Plus rapide avec AES-NI
+      - TLS_AES_256_GCM_SHA384       # Faster with AES-NI
       - TLS_AES_128_GCM_SHA256
-      - TLS_CHACHA20_POLY1305_SHA256 # Rapide sans AES-NI
+      - TLS_CHACHA20_POLY1305_SHA256 # Fast without AES-NI
 ```
 
 ### Session caching
 
-Le TLS session caching réduit l'overhead des handshakes répétés:
+TLS session caching reduces overhead from repeated handshakes:
 
 ```yaml
 pesit:
@@ -189,20 +189,20 @@ pesit:
     session-timeout: 86400  # 24h
 ```
 
-### Vérifier AES-NI
+### Verify AES-NI
 
 ```bash
-# Vérifier le support CPU
+# Check CPU support
 grep -o aes /proc/cpuinfo | head -1
 
-# Si présent, AES-GCM sera accéléré matériellement
+# If present, AES-GCM will be hardware-accelerated
 ```
 
 ---
 
-## Monitoring des performances
+## Performance Monitoring
 
-### Métriques Micrometer
+### Micrometer Metrics
 
 ```yaml
 management:
@@ -215,17 +215,17 @@ management:
       application: pesitwizard
 ```
 
-### Métriques clés
+### Key Metrics
 
-| Métrique | Description | Alerte si |
-|----------|-------------|-----------|
-| `pesit.transfer.duration` | Durée des transferts | > 300s pour 100MB |
-| `pesit.transfer.throughput` | Débit en bytes/s | < 1 MB/s LAN |
-| `jvm.memory.used` | Mémoire heap | > 80% max |
-| `jvm.gc.pause` | Pauses GC | > 500ms |
-| `system.cpu.usage` | CPU système | > 80% |
+| Metric | Description | Alert if |
+|--------|-------------|----------|
+| `pesit.transfer.duration` | Transfer duration | > 300s for 100MB |
+| `pesit.transfer.throughput` | Throughput in bytes/s | < 1 MB/s LAN |
+| `jvm.memory.used` | Heap memory | > 80% max |
+| `jvm.gc.pause` | GC pauses | > 500ms |
+| `system.cpu.usage` | System CPU | > 80% |
 
-### Dashboard Grafana
+### Grafana Dashboard
 
 ```json
 {
@@ -254,15 +254,15 @@ management:
 
 ---
 
-## Benchmark de performance
+## Performance Benchmark
 
-### Script de benchmark
+### Benchmark Script
 
 ```bash
 #!/bin/bash
-# benchmark.sh - Test de performance PeSIT Wizard
+# benchmark.sh - PeSIT Wizard performance test
 
-API_URL=${1:-http://localhost:9081}
+API_URL=${1:-http://localhost:8080}
 SERVER=${2:-cx-server}
 PARTNER=${3:-PWSRV01}
 SIZES="1M 10M 100M"
@@ -276,7 +276,7 @@ echo ""
 for size in $SIZES; do
   echo "--- Testing $size file ---"
 
-  # Créer fichier test
+  # Create test file
   dd if=/dev/urandom of=/tmp/bench_$size.dat bs=$size count=1 2>/dev/null
   FILESIZE=$(stat -c%s /tmp/bench_$size.dat)
 
@@ -296,7 +296,7 @@ for size in $SIZES; do
 
     id=$(echo $result | jq -r '.transferId // .id')
 
-    # Attendre la fin
+    # Wait for completion
     while true; do
       status=$(curl -s "$API_URL/api/v1/transfers/$id" | jq -r '.status')
       [ "$status" = "COMPLETED" ] || [ "$status" = "FAILED" ] && break
@@ -320,10 +320,10 @@ for size in $SIZES; do
 done
 ```
 
-### Résultats attendus
+### Expected Results
 
-| Taille | LAN 1Gbps | WAN 100Mbps | Internet |
-|--------|-----------|-------------|----------|
+| Size | LAN 1Gbps | WAN 100Mbps | Internet |
+|------|-----------|-------------|----------|
 | 1 MB | < 0.5s | < 1s | 1-5s |
 | 10 MB | < 1s | 2-3s | 10-30s |
 | 100 MB | 2-5s | 15-30s | 2-5min |
@@ -331,9 +331,9 @@ done
 
 ---
 
-## Optimisations avancées
+## Advanced Optimizations
 
-### Compression (si supportée)
+### Compression (if supported)
 
 ```yaml
 pesitwizard:
@@ -341,14 +341,14 @@ pesitwizard:
     compression:
       enabled: true
       algorithm: GZIP
-      level: 6  # 1-9, compromise vitesse/ratio
+      level: 6  # 1-9, speed/ratio tradeoff
 ```
 
-**Note**: La compression PeSIT n'est pas toujours supportée par les partenaires.
+**Note**: PeSIT compression is not always supported by partners.
 
 ### Connection pooling
 
-Pour de nombreux petits transferts vers le même serveur:
+For many small transfers to the same server:
 
 ```yaml
 pesitwizard:
@@ -361,10 +361,10 @@ pesitwizard:
 
 ### Parallel transfers
 
-Pour transférer plusieurs fichiers en parallèle:
+To transfer multiple files in parallel:
 
 ```bash
-# Via API - les transferts sont naturellement parallèles
+# Via API - transfers are naturally parallel
 for file in /data/outbox/*.dat; do
   curl -X POST "$API_URL/api/v1/transfers/send" \
     -H "Content-Type: application/json" \
@@ -375,23 +375,23 @@ wait
 
 ---
 
-## Limites connues
+## Known Limits
 
-| Limite | Valeur | Contournement |
-|--------|--------|---------------|
-| Taille max fichier | Illimitée* | Utiliser sync points |
-| FPDU max | 65535 bytes | Limitation PeSIT |
-| Sessions simultanées | ~100 | Configurable |
-| Mémoire par transfert | ~1-2 MB | Streaming, pas de buffer complet |
+| Limit | Value | Workaround |
+|-------|-------|------------|
+| Max file size | Unlimited* | Use sync points |
+| Max FPDU | 65535 bytes | PeSIT limitation |
+| Simultaneous sessions | ~100 | Configurable |
+| Memory per transfer | ~1-2 MB | Streaming, no full buffer |
 
-*Les fichiers de plusieurs GB ont été testés avec succès.
+*Files of several GB have been tested successfully.
 
-## Checklist performance
+## Performance Checklist
 
-- [ ] `max-entity-size` configuré à 32768 ou plus
-- [ ] `sync-point-interval` adapté au réseau (256KB recommandé)
-- [ ] JVM heap dimensionné correctement
-- [ ] TCP buffers augmentés (Linux)
-- [ ] TLS avec cipher AES-GCM (si AES-NI disponible)
-- [ ] Monitoring Prometheus/Grafana en place
-- [ ] Benchmarks de référence établis
+- [ ] `max-entity-size` configured to 4096 or higher
+- [ ] `sync-point-interval` adapted to the network (256KB recommended)
+- [ ] JVM heap sized correctly
+- [ ] TCP buffers increased (Linux)
+- [ ] TLS with AES-GCM cipher (if AES-NI available)
+- [ ] Prometheus/Grafana monitoring in place
+- [ ] Reference benchmarks established

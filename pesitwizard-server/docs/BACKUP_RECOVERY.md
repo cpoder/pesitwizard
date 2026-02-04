@@ -150,27 +150,6 @@ pg_restore -h localhost -U pesit -d pesit pesit_backup.dump
 # 4. Start the PeSIT server
 ```
 
-### MySQL/MariaDB
-
-**Backup:**
-```bash
-# Full database backup
-mysqldump -h localhost -u pesit -p pesit > pesit_backup.sql
-
-# With routines and triggers
-mysqldump -h localhost -u pesit -p --routines --triggers pesit > pesit_backup.sql
-```
-
-**Restore:**
-```bash
-# 1. Stop the PeSIT server
-
-# 2. Restore from backup
-mysql -h localhost -u pesit -p pesit < pesit_backup.sql
-
-# 3. Start the PeSIT server
-```
-
 ## Kubernetes Backup
 
 ### Using CronJob

@@ -1,10 +1,10 @@
-# Runbook Opérationnel
+# Operations Runbook
 
-Procédures de maintenance et d'exploitation pour PeSIT Wizard.
+Maintenance and operations procedures for PeSIT Wizard.
 
-## Opérations quotidiennes
+## Daily Operations
 
-### Vérification santé
+### Health Check
 
 ```bash
 #!/bin/bash
@@ -17,7 +17,7 @@ echo ""
 # 1. API Health
 echo "1. API Health..."
 curl -sf http://localhost:8080/actuator/health | jq -r '.status' || echo "FAIL"
-curl -sf http://localhost:9081/actuator/health | jq -r '.status' || echo "FAIL"
+curl -sf http://localhost:8080/actuator/health | jq -r '.status' || echo "FAIL"
 
 # 2. Disk space
 echo ""
@@ -27,7 +27,7 @@ df -h /data | tail -1 | awk '{print "Used: "$5" Free: "$4}'
 # 3. Transfers last 24h
 echo ""
 echo "3. Transfers (last 24h)..."
-curl -sf "http://localhost:9081/api/v1/transfers?from=$(date -d '24 hours ago' +%Y-%m-%d)" | \
+curl -sf "http://localhost:8080/api/v1/transfers?from=$(date -d '24 hours ago' +%Y-%m-%d)" | \
   jq '{total: .totalElements, completed: [.content[] | select(.status=="COMPLETED")] | length, failed: [.content[] | select(.status=="FAILED")] | length}'
 
 # 4. Certificate expiry
@@ -36,26 +36,26 @@ echo "4. Certificate Expiry..."
 curl -sf http://localhost:8080/api/v1/certificates | jq -r '.[] | "\(.alias): \(.expiresAt)"'
 ```
 
-### Surveillance des transferts
+### Transfer Monitoring
 
 ```bash
-# Transferts en cours
-curl -s http://localhost:9081/api/v1/transfers?status=IN_PROGRESS | jq
+# In-progress transfers
+curl -s http://localhost:8080/api/v1/transfers?status=IN_PROGRESS | jq
 
-# Transferts échoués (dernières 24h)
-curl -s "http://localhost:9081/api/v1/transfers?status=FAILED&from=$(date -d '24 hours ago' +%Y-%m-%d)" | jq
+# Failed transfers (last 24h)
+curl -s "http://localhost:8080/api/v1/transfers?status=FAILED&from=$(date -d '24 hours ago' +%Y-%m-%d)" | jq
 
-# Statistiques
-curl -s http://localhost:9081/api/v1/transfers/stats | jq
+# Statistics
+curl -s http://localhost:8080/api/v1/transfers/stats | jq
 ```
 
 ---
 
-## Sauvegarde et restauration
+## Backup and Restore
 
-### Sauvegarde
+### Backup
 
-#### Base de données (H2 embedded)
+#### Database (H2 embedded)
 
 ```bash
 #!/bin/bash
@@ -64,23 +64,23 @@ curl -s http://localhost:9081/api/v1/transfers/stats | jq
 BACKUP_DIR=/backup/pesitwizard
 DATE=$(date +%Y%m%d_%H%M%S)
 
-# Arrêter proprement le service (optionnel mais recommandé)
+# Gracefully stop the service (optional but recommended)
 # systemctl stop pesitwizard-client
 
-# Sauvegarder la base H2
+# Back up the H2 database
 mkdir -p $BACKUP_DIR
 cp -r /app/db/* $BACKUP_DIR/db_$DATE/
 
-# Sauvegarder la configuration
+# Back up the configuration
 cp /app/application.yml $BACKUP_DIR/config_$DATE.yml
 
 echo "Backup completed: $BACKUP_DIR/*_$DATE"
 
-# Rotation: garder 30 jours
+# Rotation: keep 30 days
 find $BACKUP_DIR -type d -mtime +30 -exec rm -rf {} \;
 ```
 
-#### Base de données PostgreSQL
+#### PostgreSQL Database
 
 ```bash
 #!/bin/bash
@@ -101,7 +101,7 @@ echo "Backup completed: $BACKUP_DIR/pesitwizard_$DATE.sql.gz"
 find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
 ```
 
-#### Certificats
+#### Certificates
 
 ```bash
 #!/bin/bash
@@ -112,18 +112,18 @@ DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
-# Exporter tous les certificats via API
+# Export all certificates via API
 curl -s -u admin:admin http://localhost:8080/api/v1/certificates/export > $BACKUP_DIR/certs_$DATE.json
 
-# Sauvegarder les keystores
+# Back up keystores
 cp /app/keystores/* $BACKUP_DIR/keystores_$DATE/ 2>/dev/null || true
 
 echo "Certificates backup completed"
 ```
 
-### Restauration
+### Restore
 
-#### Restaurer la base H2
+#### Restore H2 Database
 
 ```bash
 #!/bin/bash
@@ -136,20 +136,20 @@ if [ -z "$BACKUP_PATH" ]; then
   exit 1
 fi
 
-# Arrêter le service
+# Stop the service
 systemctl stop pesitwizard-client
 
-# Restaurer
+# Restore
 rm -rf /app/db/*
 cp -r $BACKUP_PATH/* /app/db/
 
-# Redémarrer
+# Restart
 systemctl start pesitwizard-client
 
 echo "Database restored from $BACKUP_PATH"
 ```
 
-#### Restaurer PostgreSQL
+#### Restore PostgreSQL
 
 ```bash
 #!/bin/bash
@@ -162,10 +162,10 @@ if [ -z "$BACKUP_FILE" ]; then
   exit 1
 fi
 
-# Arrêter les connexions
+# Terminate connections
 psql -h localhost -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='pesitwizard';"
 
-# Restaurer
+# Restore
 gunzip -c $BACKUP_FILE | psql -h localhost -U pesitwizard -d pesitwizard
 
 echo "Database restored from $BACKUP_FILE"
@@ -173,9 +173,9 @@ echo "Database restored from $BACKUP_FILE"
 
 ---
 
-## Maintenance planifiée
+## Scheduled Maintenance
 
-### Purge des anciens transferts
+### Purge Old Transfers
 
 ```bash
 #!/bin/bash
@@ -185,15 +185,15 @@ RETENTION_DAYS=${1:-90}
 
 echo "Purging transfers older than $RETENTION_DAYS days..."
 
-# Via API (si endpoint disponible)
-curl -X DELETE "http://localhost:9081/api/v1/transfers/purge?olderThanDays=$RETENTION_DAYS"
+# Via API (if endpoint is available)
+curl -X DELETE "http://localhost:8080/api/v1/transfers/purge?olderThanDays=$RETENTION_DAYS"
 
-# Ou directement en base (H2)
+# Or directly in the database (H2)
 # java -cp h2.jar org.h2.tools.Shell -url jdbc:h2:/app/db/pesitwizard -sql \
 #   "DELETE FROM transfer_history WHERE started_at < DATEADD('DAY', -$RETENTION_DAYS, CURRENT_TIMESTAMP)"
 ```
 
-### Purge des fichiers reçus
+### Purge Received Files
 
 ```bash
 #!/bin/bash
@@ -210,7 +210,7 @@ find $RECEIVED_DIR -type d -empty -delete
 echo "Purge completed"
 ```
 
-### Rotation des logs
+### Log Rotation
 
 ```yaml
 # logback-spring.xml
@@ -224,13 +224,13 @@ echo "Purge completed"
 </appender>
 ```
 
-### Renouvellement des certificats
+### Certificate Renewal
 
 ```bash
 #!/bin/bash
 # renew-certificates.sh
 
-# Vérifier les certificats expirant dans 30 jours
+# Check certificates expiring within 30 days
 EXPIRING=$(curl -s -u admin:admin http://localhost:8080/api/v1/certificates | \
   jq -r '.[] | select(.daysUntilExpiry < 30) | .alias')
 
@@ -243,9 +243,9 @@ done
 
 ---
 
-## Mise à jour
+## Upgrades
 
-### Mise à jour Docker
+### Docker Upgrade
 
 ```bash
 #!/bin/bash
@@ -283,7 +283,7 @@ sleep 30
 echo "Upgrade completed"
 ```
 
-### Mise à jour Kubernetes
+### Kubernetes Upgrade
 
 ```bash
 #!/bin/bash
@@ -333,101 +333,101 @@ kubectl rollout undo deployment/pesitwizard-client -n pesitwizard
 
 ---
 
-## Gestion des incidents
+## Incident Management
 
-### Incident: Transferts bloqués
+### Incident: Stuck Transfers
 
-**Symptômes**: Files d'attente qui s'accumulent, transferts IN_PROGRESS depuis longtemps
+**Symptoms**: Queues building up, transfers stuck in IN_PROGRESS for a long time
 
 **Actions**:
 ```bash
-# 1. Identifier les transferts bloqués
-curl -s "http://localhost:9081/api/v1/transfers?status=IN_PROGRESS" | \
+# 1. Identify stuck transfers
+curl -s "http://localhost:8080/api/v1/transfers?status=IN_PROGRESS" | \
   jq '.content[] | select(.startedAt < (now - 3600 | todate)) | {id, startedAt, bytesTransferred}'
 
-# 2. Annuler les transferts bloqués
+# 2. Cancel stuck transfers
 for id in $(curl -s ... | jq -r '.[].id'); do
-  curl -X POST "http://localhost:9081/api/v1/transfers/$id/cancel"
+  curl -X POST "http://localhost:8080/api/v1/transfers/$id/cancel"
 done
 
-# 3. Vérifier les ressources
+# 3. Check resources
 docker stats --no-stream
 
-# 4. Redémarrer si nécessaire
+# 4. Restart if necessary
 docker compose restart pw-client
 ```
 
-### Incident: Espace disque critique
+### Incident: Critical Disk Space
 
-**Symptômes**: Erreurs "No space left on device"
+**Symptoms**: "No space left on device" errors
 
 **Actions**:
 ```bash
-# 1. Identifier l'utilisation
+# 1. Identify usage
 df -h
 du -sh /data/* | sort -rh | head -10
 
-# 2. Purge d'urgence
+# 2. Emergency purge
 find /data/received -type f -mtime +7 -delete
 find /var/log/pesitwizard -name "*.log.*" -mtime +7 -delete
 
-# 3. Vérifier
+# 3. Verify
 df -h /data
 ```
 
-### Incident: Certificat expiré
+### Incident: Expired Certificate
 
-**Symptômes**: Erreurs TLS, connexions refusées
+**Symptoms**: TLS errors, refused connections
 
 **Actions**:
 ```bash
-# 1. Identifier le certificat expiré
+# 1. Identify the expired certificate
 curl -s -u admin:admin http://localhost:8080/api/v1/certificates | \
   jq '.[] | select(.daysUntilExpiry <= 0)'
 
-# 2. Renouveler
+# 2. Renew
 curl -X POST "http://localhost:8080/api/v1/certificates/CERT_ALIAS/renew" \
   -u admin:admin
 
-# 3. Distribuer aux partenaires si nécessaire
-# 4. Redémarrer les connexions
+# 3. Distribute to partners if necessary
+# 4. Restart connections
 ```
 
-### Incident: Base de données corrompue
+### Incident: Corrupted Database
 
-**Symptômes**: Erreurs SQL, application ne démarre pas
+**Symptoms**: SQL errors, application fails to start
 
 **Actions**:
 ```bash
-# 1. Arrêter le service
+# 1. Stop the service
 systemctl stop pesitwizard-client
 
-# 2. Tenter une réparation H2
+# 2. Attempt H2 repair
 java -cp h2.jar org.h2.tools.Recover -dir /app/db -db pesitwizard
 
-# 3. Si échec, restaurer depuis backup
+# 3. If repair fails, restore from backup
 ./restore-database.sh /backup/pesitwizard/db_LATEST
 
-# 4. Redémarrer
+# 4. Restart
 systemctl start pesitwizard-client
 ```
 
 ---
 
-## Monitoring et alertes
+## Monitoring and Alerts
 
-### Métriques clés à surveiller
+### Key Metrics to Monitor
 
-| Métrique | Seuil Warning | Seuil Critical |
-|----------|---------------|----------------|
-| Taux d'erreur transferts | > 5% | > 20% |
-| Temps de transfert moyen | > 60s | > 300s |
-| Queue de transferts | > 50 | > 200 |
-| Espace disque | < 20% | < 10% |
-| Mémoire JVM | > 80% | > 95% |
-| Certificats expiration | < 30 jours | < 7 jours |
+| Metric | Warning Threshold | Critical Threshold |
+|--------|-------------------|--------------------|
+| Transfer error rate | > 5% | > 20% |
+| Average transfer time | > 60s | > 300s |
+| Transfer queue | > 50 | > 200 |
+| Disk space | < 20% | < 10% |
+| JVM memory | > 80% | > 95% |
+| Certificate expiration | < 30 days | < 7 days |
 
-### Configuration Prometheus
+### Prometheus Configuration
 
 ```yaml
 # prometheus.yml
@@ -440,10 +440,10 @@ scrape_configs:
   - job_name: 'pesitwizard-client'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['pesitwizard-client:9081']
+      - targets: ['pesitwizard-client:8080']
 ```
 
-### Alertes AlertManager
+### AlertManager Alerts
 
 ```yaml
 # alertmanager-rules.yml
@@ -477,16 +477,16 @@ groups:
 
 ---
 
-## Contacts et escalade
+## Contacts and Escalation
 
-| Niveau | Délai | Contact |
-|--------|-------|---------|
-| L1 - Opérations | 15 min | ops@example.com |
-| L2 - Support technique | 1h | support@example.com |
-| L3 - Développement | 4h | dev@example.com |
+| Level | Timeframe | Contact |
+|-------|-----------|---------|
+| L1 - Operations | 15 min | ops@example.com |
+| L2 - Technical Support | 1h | support@example.com |
+| L3 - Development | 4h | dev@example.com |
 
-### Procédure d'escalade
+### Escalation Procedure
 
-1. **L1**: Vérifier les logs, redémarrer si nécessaire
-2. **L2**: Diagnostic approfondi, restauration backup
-3. **L3**: Analyse code, correctif d'urgence
+1. **L1**: Check logs, restart if necessary
+2. **L2**: In-depth diagnosis, backup restoration
+3. **L3**: Code analysis, emergency fix

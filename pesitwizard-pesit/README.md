@@ -1,13 +1,13 @@
 # PeSIT Wizard PeSIT
 
-Bibliothèque Java implémentant le protocole PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécompensation).
+Java library implementing the PeSIT protocol (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation).
 
-## Fonctionnalités
+## Features
 
-- **Encodage/décodage FPDU** : Sérialisation binaire conforme à la spécification PeSIT E
-- **Tous les types de messages** : CONNECT, CREATE, SELECT, OPEN, WRITE, READ, DTF, etc.
-- **Paramètres PeSIT** : Support complet des PI et PGI
-- **Session PeSIT** : Gestion des connexions TCP et échanges de messages
+- **FPDU Encoding/Decoding**: Binary serialization compliant with PeSIT E specification
+- **All Message Types**: CONNECT, CREATE, SELECT, OPEN, WRITE, READ, DTF, etc.
+- **PeSIT Parameters**: Full support for PI and PGI
+- **PeSIT Session**: TCP connection management and message exchange
 
 ## Installation
 
@@ -25,9 +25,9 @@ Bibliothèque Java implémentant le protocole PeSIT (Protocole d'Échange pour u
 mvn clean install
 ```
 
-## Utilisation
+## Usage
 
-### Créer un message CONNECT
+### Create a CONNECT Message
 
 ```java
 import com.pesitwizard.fpdu.Fpdu;
@@ -43,10 +43,10 @@ Fpdu connect = new Fpdu(FpduType.CONNECT)
 byte[] data = connect.toBytes();
 ```
 
-### Décoder un FPDU
+### Decode an FPDU
 
 ```java
-byte[] received = // ... données reçues du réseau
+byte[] received = // ... data received from the network
 Fpdu fpdu = Fpdu.fromBytes(received);
 
 if (fpdu.getType() == FpduType.ACONNECT) {
@@ -54,11 +54,11 @@ if (fpdu.getType() == FpduType.ACONNECT) {
 }
 ```
 
-## Prérequis
+## Prerequisites
 
 - Java 21+
 - Maven 3.6+
 
-## Référence
+## Reference
 
-- Spécification PeSIT Version E (Septembre 1989) - GSIT
+- PeSIT Specification Version E (September 1989) - GSIT

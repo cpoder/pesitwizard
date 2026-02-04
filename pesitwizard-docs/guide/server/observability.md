@@ -1,8 +1,8 @@
-# Observabilité
+# Observability
 
-PeSIT Wizard intègre des fonctionnalités d'observabilité complètes : métriques, tracing et logging.
+PeSIT Wizard integrates comprehensive observability features: metrics, tracing, and logging.
 
-## Métriques Prometheus
+## Prometheus Metrics
 
 ### Configuration
 
@@ -23,19 +23,20 @@ management:
 
 ### Endpoint
 
-Les métriques sont exposées sur : `http://localhost:8080/actuator/prometheus`
+Metrics are exposed at: `http://localhost:8080/actuator/prometheus`
 
-### Métriques disponibles
+### Available Metrics
 
-| Métrique | Type | Description |
-|----------|------|-------------|
-| `pesit_transfers_total` | Counter | Nombre total de transferts |
-| `pesit_transfers_bytes_total` | Counter | Volume total transféré (bytes) |
-| `pesit_transfer_duration_seconds` | Histogram | Durée des transferts |
-| `pesit_active_connections` | Gauge | Connexions PeSIT actives |
-| `pesit_partners_total` | Gauge | Nombre de partenaires configurés |
+| Metric | Type | Description |
+|--------|------|-------------|
+| `pesitwizard.fpdu.total` | Counter | Total number of FPDUs processed |
+| `pesitwizard.transfers.total` | Counter | Total number of transfers |
+| `pesitwizard.transfers.bytes.total` | Counter | Total volume transferred (bytes) |
+| `pesitwizard.transfers.duration` | Histogram | Transfer duration |
+| `pesitwizard.connections.active` | Gauge | Active PeSIT connections |
+| `pesitwizard.partners.total` | Gauge | Number of configured partners |
 
-### ServiceMonitor Kubernetes
+### Kubernetes ServiceMonitor
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -54,19 +55,19 @@ spec:
       interval: 30s
 ```
 
-### Dashboard Grafana
+### Grafana Dashboard
 
-Importez le dashboard ID `XXXXX` ou utilisez le fichier `grafana-dashboard.json` :
+Import dashboard ID `XXXXX` or use the `grafana-dashboard.json` file:
 
 ```json
 {
   "title": "PeSIT Wizard",
   "panels": [
     {
-      "title": "Transferts par minute",
+      "title": "Transfers per minute",
       "targets": [
         {
-          "expr": "rate(pesit_transfers_total[5m])"
+          "expr": "rate(pesitwizard_transfers_total[5m])"
         }
       ]
     }
@@ -74,7 +75,7 @@ Importez le dashboard ID `XXXXX` ou utilisez le fichier `grafana-dashboard.json`
 }
 ```
 
-## Tracing OpenTelemetry
+## OpenTelemetry Tracing
 
 ### Configuration
 
@@ -83,7 +84,7 @@ management:
   tracing:
     enabled: true
     sampling:
-      probability: 1.0  # 100% des traces (réduire en production)
+      probability: 1.0  # 100% of traces (reduce in production)
 
 otel:
   exporter:
@@ -93,7 +94,7 @@ otel:
     name: pesitwizard-server
 ```
 
-### Variables d'environnement
+### Environment Variables
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
@@ -104,7 +105,7 @@ OTEL_TRACES_SAMPLER_ARG=0.1  # 10% sampling
 
 ### Jaeger
 
-Déployer Jaeger pour visualiser les traces :
+Deploy Jaeger to visualize traces:
 
 ```yaml
 apiVersion: apps/v1
@@ -123,9 +124,9 @@ spec:
             - containerPort: 4318   # OTLP HTTP
 ```
 
-### Spans personnalisés
+### Custom Spans
 
-Les transferts PeSIT génèrent automatiquement des spans :
+PeSIT transfers automatically generate spans:
 
 ```
 pesit-transfer (root span)
@@ -138,9 +139,9 @@ pesit-transfer (root span)
 └── pesit-disconnect
 ```
 
-## Logging structuré
+## Structured Logging
 
-### Configuration Logback
+### Logback Configuration
 
 ```xml
 <!-- logback-spring.xml -->
@@ -153,14 +154,14 @@ pesit-transfer (root span)
       <includeMdcKeyName>transferId</includeMdcKeyName>
     </encoder>
   </appender>
-  
+
   <root level="INFO">
     <appender-ref ref="JSON"/>
   </root>
 </configuration>
 ```
 
-### Format JSON
+### JSON Format
 
 ```json
 {
@@ -179,7 +180,7 @@ pesit-transfer (root span)
 
 ### Loki / ELK
 
-Collectez les logs avec Promtail/Loki ou Filebeat/Elasticsearch :
+Collect logs with Promtail/Loki or Filebeat/Elasticsearch:
 
 ```yaml
 # Promtail config
@@ -199,7 +200,7 @@ scrape_configs:
 
 | Endpoint | Description |
 |----------|-------------|
-| `/actuator/health` | État global |
+| `/actuator/health` | Overall status |
 | `/actuator/health/liveness` | Liveness probe (Kubernetes) |
 | `/actuator/health/readiness` | Readiness probe (Kubernetes) |
 
@@ -242,7 +243,7 @@ spec:
 
 ## Alerting
 
-### Règles Prometheus
+### Prometheus Rules
 
 ```yaml
 groups:
@@ -255,17 +256,17 @@ groups:
           severity: critical
         annotations:
           summary: "PeSIT Wizard is down"
-          
+
       - alert: HighTransferErrorRate
-        expr: rate(pesit_transfers_total{status="error"}[5m]) > 0.1
+        expr: rate(pesitwizard_transfers_total{status="error"}[5m]) > 0.1
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High transfer error rate"
-          
+
       - alert: SlowTransfers
-        expr: histogram_quantile(0.95, rate(pesit_transfer_duration_seconds_bucket[5m])) > 60
+        expr: histogram_quantile(0.95, rate(pesitwizard_transfers_duration_bucket[5m])) > 60
         for: 10m
         labels:
           severity: warning
@@ -273,9 +274,9 @@ groups:
           summary: "Transfers are slow (p95 > 60s)"
 ```
 
-## Stack complète
+## Full Stack
 
-Pour une observabilité complète, déployez :
+For comprehensive observability, deploy:
 
 ```bash
 # Prometheus + Grafana

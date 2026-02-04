@@ -1,12 +1,12 @@
 # Architecture
 
-## Vue d'ensemble
+## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        PeSIT Wizard Cloud                               │
+│                        PeSIT Wizard                       │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
+│                                                                 │
 │  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
 │  │ Client UI    │     │ Admin UI     │     │ Server       │    │
 │  │ (Vue.js)     │     │ (Vue.js)     │     │ (Spring Boot)│    │
@@ -14,91 +14,91 @@
 │         │                    │                    │             │
 │         ▼                    ▼                    ▼             │
 │  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
-│  │ Client API   │     │ Admin API    │     │ PeSIT Wizard        │    │
+│  │ Client API   │     │ Admin API    │     │ PeSIT Wizard │    │
 │  │ (Spring Boot)│     │ (Spring Boot)│     │ Protocol     │    │
-│  │ Port 9081    │     │ Port 9080    │     │ Port 5000    │    │
+│  │ Port 8080    │     │ Port 8080    │     │ Port 6502    │    │
 │  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘    │
 │         │                    │                    │             │
 │         └────────────────────┼────────────────────┘             │
 │                              │                                  │
 │                              ▼                                  │
-│                       ┌──────────────┐                         │
-│                       │ PostgreSQL   │                         │
-│                       │ Database     │                         │
-│                       └──────────────┘                         │
-│                                                                  │
+│                       ┌──────────────┐                          │
+│                       │ PostgreSQL   │                          │
+│                       │ Database     │                          │
+│                       └──────────────┘                          │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Composants
+## Components
 
-### Client PeSIT Wizard
+### PeSIT Wizard Client
 
-Le **client** permet d'envoyer et recevoir des fichiers vers/depuis des serveurs PeSIT Wizard externes (banques).
+The **client** allows sending and receiving files to/from external PeSIT Wizard servers (banks).
 
-| Composant | Description | Port |
+| Component | Description | Port |
 |-----------|-------------|------|
-| pesitwizard-client | Backend Spring Boot | 9081 |
-| pesitwizard-client-ui | Interface Vue.js | 3001 |
+| pesitwizard-client | Spring Boot backend | 8080 |
+| pesitwizard-client-ui | Vue.js interface | 3001 |
 
-**Fonctionnalités** :
-- Envoi de fichiers (virements, prélèvements)
-- Réception de fichiers (relevés, avis)
-- Historique des transferts
-- Configuration multi-serveurs
+**Features**:
+- File sending (payments, direct debits)
+- File receiving (statements, notices)
+- Transfer history
+- Multi-server configuration
 
-### Serveur PeSIT Wizard
+### PeSIT Wizard Server
 
-Le **serveur** permet de recevoir des fichiers de partenaires externes.
+The **server** allows receiving files from external partners.
 
-| Composant | Description | Port |
+| Component | Description | Port |
 |-----------|-------------|------|
-| pesitwizard-server | Serveur PeSIT + API | 5000 (PeSIT), 8080 (HTTP) |
+| pesitwizard-server | PeSIT Server + API | 6502 (PeSIT), 5001 (PeSIT TLS), 8080 (HTTP) |
 
-**Fonctionnalités** :
-- Réception de fichiers
-- Envoi de fichiers (sur demande)
-- Gestion des partenaires
-- Fichiers virtuels
-- Clustering haute disponibilité
+**Features**:
+- File receiving
+- File sending (on demand)
+- Partner management
+- Virtual files
+- High-availability clustering
 
-## Déploiement Kubernetes
+## Kubernetes Deployment
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Kubernetes Cluster                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │                    Namespace: pesitwizard                  │   │
-│  │                                                      │   │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐            │   │
-│  │  │ Pod 1   │  │ Pod 2   │  │ Pod 3   │            │   │
-│  │  │ (Leader)│  │         │  │         │            │   │
-│  │  └────┬────┘  └─────────┘  └─────────┘            │   │
-│  │       │                                            │   │
-│  │       │ pesitwizard-leader=true                         │   │
-│  │       ▼                                            │   │
-│  │  ┌─────────────────────────────────────────┐      │   │
-│  │  │         LoadBalancer Service            │      │   │
-│  │  │         (selector: pesitwizard-leader=true)   │      │   │
-│  │  └─────────────────────────────────────────┘      │   │
-│  │                                                      │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                    Namespace: pesitwizard            │    │
+│  │                                                      │    │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │    │
+│  │  │ Pod 1   │  │ Pod 2   │  │ Pod 3   │             │    │
+│  │  │ (Leader)│  │         │  │         │             │    │
+│  │  └────┬────┘  └─────────┘  └─────────┘             │    │
+│  │       │                                             │    │
+│  │       │ pesitwizard-leader=true                     │    │
+│  │       ▼                                             │    │
+│  │  ┌─────────────────────────────────────────┐        │    │
+│  │  │         LoadBalancer Service             │        │    │
+│  │  │  (selector: pesitwizard-leader=true)     │        │    │
+│  │  └─────────────────────────────────────────┘        │    │
+│  │                                                      │    │
+│  └─────────────────────────────────────────────────────┘    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Haute disponibilité
+### High Availability
 
-- **3 replicas** par défaut
-- **Élection de leader** via JGroups
-- **Labeling automatique** du pod leader
-- **LoadBalancer** route vers le leader uniquement
+- **3 replicas** by default
+- **Leader election** via JGroups
+- **Automatic labeling** of the leader pod
+- **LoadBalancer** routes to the leader only
 
-## Base de données
+## Database
 
-Chaque cluster PeSIT Wizard dispose de son propre schéma PostgreSQL :
+Each PeSIT Wizard cluster has its own PostgreSQL schema:
 
 ```
 pesitwizard (database)
@@ -114,29 +114,29 @@ pesitwizard (database)
     └── transfer_history
 ```
 
-## Flux de données
+## Data Flows
 
-### Envoi de fichier (Client → Banque)
-
-```
-1. Utilisateur upload fichier via UI
-2. Client API stocke le fichier temporairement
-3. Client API ouvre connexion PeSIT vers la banque
-4. Échange CONNECT/ACONNECT
-5. Échange CREATE/ACK
-6. Envoi des données (DTF)
-7. Fermeture (DESELECT, RELEASE)
-8. Historique mis à jour en base
-```
-
-### Réception de fichier (Banque → Client)
+### Sending a File (Client to Bank)
 
 ```
-1. Utilisateur demande fichier via UI
-2. Client API ouvre connexion PeSIT vers la banque
-3. Échange CONNECT/ACONNECT (mode lecture)
-4. Échange SELECT/ACK
-5. Réception des données (DTF)
-6. Fichier stocké localement
-7. Historique mis à jour en base
+1. User uploads file via UI
+2. Client API stores the file temporarily
+3. Client API opens PeSIT connection to the bank
+4. CONNECT/ACONNECT exchange
+5. CREATE/ACK exchange
+6. Data transfer (DTF)
+7. Close (DESELECT, RELEASE)
+8. History updated in database
+```
+
+### Receiving a File (Bank to Client)
+
+```
+1. User requests file via UI
+2. Client API opens PeSIT connection to the bank
+3. CONNECT/ACONNECT exchange (read mode)
+4. SELECT/ACK exchange
+5. Data reception (DTF)
+6. File stored locally
+7. History updated in database
 ```

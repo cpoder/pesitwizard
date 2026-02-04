@@ -1,98 +1,98 @@
-# Configuration du Client
+# Client Configuration
 
-## Variables d'environnement
+## Environment Variables
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `SERVER_PORT` | Port HTTP de l'API | 9081 |
-| `SPRING_DATASOURCE_URL` | URL JDBC PostgreSQL | jdbc:h2:mem:pesitwizard |
-| `SPRING_DATASOURCE_USERNAME` | Utilisateur DB | pesitwizard |
-| `SPRING_DATASOURCE_PASSWORD` | Mot de passe DB | pesitwizard |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVER_PORT` | HTTP API port | 8080 |
+| `SPRING_DATASOURCE_URL` | JDBC database URL | jdbc:h2:file:./data/pesitwizard-client |
+| `SPRING_DATASOURCE_USERNAME` | DB user | pesitwizard |
+| `SPRING_DATASOURCE_PASSWORD` | DB password | pesitwizard |
 
-## Fichier application.yml
+## application.yml File
 
 ```yaml
 server:
-  port: 9081
+  port: 8080
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/pesitwizard
-    username: pesitwizard
-    password: pesitwizard
+    url: jdbc:h2:file:./data/pesitwizard-client;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
     hibernate:
       ddl-auto: update
 
-# Configuration des transferts
+# Transfer configuration
 pesitwizard:
   client:
-    # Répertoire de stockage des fichiers reçus
-    receive-directory: /data/received
-    
-    # Répertoire temporaire pour les uploads
-    temp-directory: /data/temp
-    
-    # Timeout de connexion (ms)
+    id: PESIT_CLIENT
+
+    # Directory for received files
+    receive-directory: ./received
+
+    # Connection timeout (ms)
     connection-timeout: 30000
-    
-    # Timeout de lecture (ms)
+
+    # Read timeout (ms)
     read-timeout: 60000
-    
-    # Nombre de tentatives en cas d'échec
+
+    # Number of retry attempts on failure
     retry-count: 3
-    
-    # Délai entre les tentatives (ms)
+
+    # Delay between retry attempts (ms)
     retry-delay: 5000
 
 # Logging
 logging:
   level:
     com.pesitwizard: INFO
-    # Pour debug PeSIT Wizard
-    # com.pesitwizard.protocol: DEBUG
+    # For PeSIT Wizard debug
+    # com.pesitwizard: DEBUG
 ```
 
-## Configuration des serveurs cibles
+## Target Server Configuration
 
-Les serveurs PeSIT cibles sont configurés via l'API ou l'interface web.
+Target PeSIT servers are configured via the API or the web interface.
 
 ### Via API
 
 ```bash
-curl -X POST http://localhost:9081/api/servers \
+curl -X POST http://localhost:8080/api/servers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "BNP Paribas",
     "host": "pesitwizard.bnpparibas.com",
-    "port": 5000,
+    "port": 6502,
     "serverId": "BNPP_SERVER",
-    "clientId": "MON_ENTREPRISE",
+    "clientId": "MY_COMPANY",
     "password": "secret123",
     "tlsEnabled": true
   }'
 ```
 
-### Paramètres serveur
+### Server Parameters
 
-| Paramètre | Description | Obligatoire |
-|-----------|-------------|-------------|
-| `name` | Nom affiché | Oui |
-| `host` | Adresse du serveur | Oui |
-| `port` | Port PeSIT | Oui (défaut: 5000) |
-| `serverId` | Identifiant serveur (PI_04) | Oui |
-| `clientId` | Votre identifiant (PI_03) | Oui |
-| `password` | Mot de passe (PI_05) | Non |
-| `tlsEnabled` | Activer TLS | Non (défaut: false) |
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `name` | Display name | Yes |
+| `host` | Server address | Yes |
+| `port` | PeSIT port | Yes (default: 6502) |
+| `serverId` | Server identifier (PI_04) | Yes |
+| `clientId` | Your identifier (PI_03) | Yes |
+| `password` | Password (PI_05) | No |
+| `tlsEnabled` | Enable TLS | No (default: false) |
 
-## Configuration TLS
+## TLS Configuration
 
-Pour les connexions sécurisées (PeSIT-E) :
+For secure connections (PeSIT-E):
 
-### Générer un keystore client
+### Generate a Client Keystore
 
 ```bash
-# Générer une paire de clés
+# Generate a key pair
 keytool -genkeypair \
   -alias client \
   -keyalg RSA \
@@ -101,9 +101,9 @@ keytool -genkeypair \
   -keystore client-keystore.p12 \
   -storetype PKCS12 \
   -storepass changeit \
-  -dname "CN=Mon Entreprise, O=Mon Entreprise, C=FR"
+  -dname "CN=My Company, O=My Company, C=FR"
 
-# Exporter le certificat (à envoyer à la banque)
+# Export the certificate (to send to the bank)
 keytool -exportcert \
   -alias client \
   -keystore client-keystore.p12 \
@@ -112,20 +112,20 @@ keytool -exportcert \
   -file client.crt
 ```
 
-### Importer le certificat de la banque
+### Import the Bank's Certificate
 
 ```bash
-# Importer le certificat serveur dans le truststore
+# Import the server certificate into the truststore
 keytool -importcert \
-  -alias banque \
-  -file banque-server.crt \
+  -alias bank \
+  -file bank-server.crt \
   -keystore client-truststore.p12 \
   -storetype PKCS12 \
   -storepass changeit \
   -noprompt
 ```
 
-### Configuration application.yml
+### application.yml Configuration
 
 ```yaml
 pesitwizard:
@@ -138,24 +138,24 @@ pesitwizard:
       truststore-password: changeit
 ```
 
-## Proxy HTTP
+## HTTP Proxy
 
-Si vous êtes derrière un proxy :
+If you are behind a proxy:
 
 ```yaml
 pesitwizard:
   client:
     proxy:
       enabled: true
-      host: proxy.entreprise.com
+      host: proxy.company.com
       port: 8080
-      username: user  # optionnel
-      password: pass  # optionnel
+      username: user  # optional
+      password: pass  # optional
 ```
 
-## Logs et debug
+## Logs and Debug
 
-Pour activer les logs détaillés du protocole PeSIT :
+To enable detailed PeSIT protocol logs:
 
 ```yaml
 logging:
@@ -164,7 +164,7 @@ logging:
     com.pesitwizard.client.service: DEBUG
 ```
 
-Les logs afficheront :
-- Connexions/déconnexions
-- Messages FPDU échangés
-- Données transférées (en hexadécimal)
+The logs will show:
+- Connections/disconnections
+- Exchanged FPDU messages
+- Transferred data (in hexadecimal)

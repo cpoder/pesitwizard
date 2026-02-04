@@ -20,7 +20,7 @@ PeSIT Wizard supports High Availability through:
         ┌─────▼─────┐  ┌─────▼─────┐  ┌─────▼─────┐
         │  Node 1   │  │  Node 2   │  │  Node 3   │
         │ (Leader)  │  │ (Standby) │  │ (Standby) │
-        │ PeSIT:5001│  │ REST only │  │ REST only │
+        │ PeSIT:6502│  │ REST only │  │ REST only │
         │ REST:8080 │  │ REST:8080 │  │ REST:8080 │
         └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
               │              │              │
@@ -91,7 +91,7 @@ services:
       - PESIT_CLUSTER_ID=node-1
     ports:
       - "8081:8080"
-      - "5001:5001"
+      - "6502:6502"
     depends_on:
       - postgres
 
@@ -130,7 +130,7 @@ services:
     image: haproxy:2.8
     ports:
       - "8080:8080"  # REST API
-      - "5000:5000"  # PeSIT (routes to leader)
+      - "6502:6502"  # PeSIT (routes to leader)
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
@@ -233,7 +233,7 @@ backend rest_servers
 
 # PeSIT - route to leader only
 frontend pesit_tcp
-    bind *:5000
+    bind *:6502
     mode tcp
     default_backend pesit_server
 
@@ -241,9 +241,9 @@ backend pesit_server
     mode tcp
     balance first
     option tcp-check
-    server node1 pesitwizard-1:5001 check port 8080
-    server node2 pesitwizard-2:5001 check port 8080 backup
-    server node3 pesitwizard-3:5001 check port 8080 backup
+    server node1 pesitwizard-1:6502 check port 8080
+    server node2 pesitwizard-2:6502 check port 8080 backup
+    server node3 pesitwizard-3:6502 check port 8080 backup
 ```
 
 ## Failover Procedures

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: pesitwizard-client
-description: Vectis Client - PeSIT file transfer client with web UI
+description: PeSIT Wizard Client - PeSIT file transfer client with web UI
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
@@ -10,4 +10,4 @@ keywords:
   - file-transfer
   - client
 maintainers:
-  - name: Vectis Team
+  - name: PeSIT Wizard Team

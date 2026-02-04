@@ -51,7 +51,7 @@ class LocalFileConnectorTest {
 
     @Test
     void testWriteAndRead() throws Exception {
-        String content = "Hello, Vectis!";
+        String content = "Hello, PeSIT Wizard!";
 
         try (OutputStream os = connector.write("test.txt")) {
             os.write(content.getBytes());

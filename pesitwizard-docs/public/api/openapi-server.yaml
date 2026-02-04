@@ -1,38 +1,36 @@
 openapi: 3.0.3
 info:
   title: PeSIT Server API
-  description: API de configuration du serveur PeSIT
+  description: PeSIT Wizard server configuration and management API
   version: 1.0.0
-  contact:
-    email: contact@pesit.cloud
 
 servers:
   - url: http://localhost:8080
-    description: Serveur local
+    description: Local server
 
 security:
   - basicAuth: []
 
 tags:
   - name: Servers
-    description: Gestion des serveurs PeSIT
+    description: PeSIT server management
   - name: Partners
-    description: Gestion des partenaires
+    description: Partner management
   - name: Virtual Files
-    description: Gestion des fichiers virtuels
+    description: Virtual file management
   - name: Cluster
-    description: État du cluster
+    description: Cluster status
   - name: Transfers
-    description: Historique des transferts
+    description: Transfer history
 
 paths:
   /api/servers:
     get:
       tags: [Servers]
-      summary: Liste des serveurs PeSIT
+      summary: List PeSIT servers
       responses:
         '200':
-          description: Liste des serveurs
+          description: List of servers
           content:
             application/json:
               schema:
@@ -41,7 +39,7 @@ paths:
                   $ref: '#/components/schemas/PesitServer'
     post:
       tags: [Servers]
-      summary: Créer un serveur PeSIT
+      summary: Create a PeSIT server
       requestBody:
         required: true
         content:
@@ -50,12 +48,12 @@ paths:
               $ref: '#/components/schemas/PesitServerCreate'
       responses:
         '201':
-          description: Serveur créé
+          description: Server created
 
   /api/servers/{serverId}/start:
     post:
       tags: [Servers]
-      summary: Démarrer un serveur
+      summary: Start a server
       parameters:
         - name: serverId
           in: path
@@ -64,7 +62,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Serveur démarré
+          description: Server started
           content:
             application/json:
               schema:
@@ -73,7 +71,7 @@ paths:
   /api/servers/{serverId}/stop:
     post:
       tags: [Servers]
-      summary: Arrêter un serveur
+      summary: Stop a server
       parameters:
         - name: serverId
           in: path
@@ -82,12 +80,12 @@ paths:
             type: string
       responses:
         '200':
-          description: Serveur arrêté
+          description: Server stopped
 
   /api/servers/{serverId}/status:
     get:
       tags: [Servers]
-      summary: Statut d'un serveur
+      summary: Get server status
       parameters:
         - name: serverId
           in: path
@@ -96,19 +94,19 @@ paths:
             type: string
       responses:
         '200':
-          description: Statut du serveur
+          description: Server status
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerStatus'
 
-  /api/partners:
+  /api/v1/config/partners:
     get:
       tags: [Partners]
-      summary: Liste des partenaires
+      summary: List partners
       responses:
         '200':
-          description: Liste des partenaires
+          description: List of partners
           content:
             application/json:
               schema:
@@ -117,7 +115,7 @@ paths:
                   $ref: '#/components/schemas/Partner'
     post:
       tags: [Partners]
-      summary: Créer un partenaire
+      summary: Create a partner
       requestBody:
         required: true
         content:
@@ -126,28 +124,28 @@ paths:
               $ref: '#/components/schemas/PartnerCreate'
       responses:
         '201':
-          description: Partenaire créé
+          description: Partner created
 
-  /api/partners/{partnerId}:
+  /api/v1/config/partners/{id}:
     parameters:
-      - name: partnerId
+      - name: id
         in: path
         required: true
         schema:
           type: string
     get:
       tags: [Partners]
-      summary: Détail d'un partenaire
+      summary: Get partner details
       responses:
         '200':
-          description: Détail du partenaire
+          description: Partner details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Partner'
     put:
       tags: [Partners]
-      summary: Modifier un partenaire
+      summary: Update a partner
       requestBody:
         required: true
         content:
@@ -156,46 +154,21 @@ paths:
               $ref: '#/components/schemas/PartnerUpdate'
       responses:
         '200':
-          description: Partenaire modifié
+          description: Partner updated
     delete:
       tags: [Partners]
-      summary: Supprimer un partenaire
+      summary: Delete a partner
       responses:
         '204':
-          description: Partenaire supprimé
+          description: Partner deleted
 
-  /api/partners/{partnerId}/password:
-    post:
-      tags: [Partners]
-      summary: Changer le mot de passe
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - password
-              properties:
-                password:
-                  type: string
-      responses:
-        '200':
-          description: Mot de passe changé
-
-  /api/virtual-files:
+  /api/v1/config/files:
     get:
       tags: [Virtual Files]
-      summary: Liste des fichiers virtuels
+      summary: List virtual files
       responses:
         '200':
-          description: Liste des fichiers virtuels
+          description: List of virtual files
           content:
             application/json:
               schema:
@@ -204,7 +177,7 @@ paths:
                   $ref: '#/components/schemas/VirtualFile'
     post:
       tags: [Virtual Files]
-      summary: Créer un fichier virtuel
+      summary: Create a virtual file
       requestBody:
         required: true
         content:
@@ -213,28 +186,28 @@ paths:
               $ref: '#/components/schemas/VirtualFileCreate'
       responses:
         '201':
-          description: Fichier virtuel créé
+          description: Virtual file created
 
-  /api/virtual-files/{fileId}:
+  /api/v1/config/files/{id}:
     parameters:
-      - name: fileId
+      - name: id
         in: path
         required: true
         schema:
           type: string
     get:
       tags: [Virtual Files]
-      summary: Détail d'un fichier virtuel
+      summary: Get virtual file details
       responses:
         '200':
-          description: Détail du fichier virtuel
+          description: Virtual file details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VirtualFile'
     put:
       tags: [Virtual Files]
-      summary: Modifier un fichier virtuel
+      summary: Update a virtual file
       requestBody:
         required: true
         content:
@@ -243,30 +216,30 @@ paths:
               $ref: '#/components/schemas/VirtualFileUpdate'
       responses:
         '200':
-          description: Fichier virtuel modifié
+          description: Virtual file updated
     delete:
       tags: [Virtual Files]
-      summary: Supprimer un fichier virtuel
+      summary: Delete a virtual file
       responses:
         '204':
-          description: Fichier virtuel supprimé
+          description: Virtual file deleted
 
   /api/cluster/status:
     get:
       tags: [Cluster]
-      summary: Statut du cluster
+      summary: Cluster status
       responses:
         '200':
-          description: Statut du cluster
+          description: Cluster status
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClusterStatus'
 
-  /api/transfers:
+  /api/v1/transfers:
     get:
       tags: [Transfers]
-      summary: Historique des transferts
+      summary: Transfer history
       parameters:
         - name: page
           in: query
@@ -294,7 +267,7 @@ paths:
             enum: [COMPLETED, FAILED]
       responses:
         '200':
-          description: Liste des transferts
+          description: List of transfers
           content:
             application/json:
               schema:

@@ -1,32 +1,32 @@
-# Installation du Client PeSIT Wizard
+# PeSIT Wizard Client Installation
 
-## Options de déploiement
+## Deployment Options
 
-| Mode | Description | Recommandé pour |
+| Mode | Description | Recommended For |
 |------|-------------|-----------------|
-| Docker | Container autonome | Tests, petites installations |
-| Docker Compose | Avec PostgreSQL | Production simple |
-| Kubernetes | Helm chart | Production, haute disponibilité |
-| JAR | Exécution directe | Développement |
+| Docker | Standalone container | Testing, small installations |
+| Docker Compose | With PostgreSQL | Simple production |
+| Kubernetes | Helm chart | Production, high availability |
+| JAR | Direct execution | Development |
 
-## Docker (recommandé)
+## Docker (recommended)
 
-### Démarrage rapide
+### Quick Start
 
 ```bash
 docker run -d \
   --name pesitwizard-client \
-  -p 9081:9081 \
+  -p 8080:8080 \
   -v pesitwizard-data:/data \
   ghcr.io/pesitwizard/pesitwizard-client:latest
 ```
 
-### Avec PostgreSQL
+### With PostgreSQL
 
 ```bash
 docker run -d \
   --name pesitwizard-client \
-  -p 9081:9081 \
+  -p 8080:8080 \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
   -e SPRING_DATASOURCE_USERNAME=pesitwizard \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
@@ -35,16 +35,15 @@ docker run -d \
 
 ## Docker Compose
 
-Créez un fichier `docker-compose.yml` :
+Create a `docker-compose.yml` file:
 
 ```yaml
 services:
   pesitwizard-client-api:
     image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
     ports:
-      - "9081:9081"
+      - "8080:8080"
     environment:
-      SERVER_PORT: 9081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
       SPRING_DATASOURCE_USERNAME: pesitwizard
       SPRING_DATASOURCE_PASSWORD: pesitwizard
@@ -62,7 +61,7 @@ services:
     environment:
       NGINX_PORT: 8080
       API_HOST: pesitwizard-client-api
-      API_PORT: 9081
+      API_PORT: 8080
     depends_on:
       - pesitwizard-client-api
     networks:
@@ -94,9 +93,9 @@ Lancez avec :
 docker compose up -d
 ```
 
-### Avec HashiCorp Vault
+### With HashiCorp Vault
 
-Pour une gestion sécurisée des secrets avec HashiCorp Vault :
+For secure secrets management with HashiCorp Vault:
 
 ```yaml
 services:
@@ -138,9 +137,8 @@ services:
   pesitwizard-client-api:
     image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
     ports:
-      - "9081:9081"
+      - "8080:8080"
     environment:
-      SERVER_PORT: 9081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
       SPRING_DATASOURCE_USERNAME: pesitwizard
       SPRING_DATASOURCE_PASSWORD: pesitwizard
@@ -165,7 +163,7 @@ services:
     environment:
       NGINX_PORT: 8080
       API_HOST: pesitwizard-client-api
-      API_PORT: 9081
+      API_PORT: 8080
     depends_on:
       - pesitwizard-client-api
     networks:
@@ -191,24 +189,24 @@ volumes:
   postgres-data:
 ```
 
-> ⚠️ **Production** : Remplacez le token dev par une authentification **AppRole** avec `PESITWIZARD_SECURITY_VAULT_ROLE_ID` et `PESITWIZARD_SECURITY_VAULT_SECRET_ID`.
+> **Production**: Replace the dev token with **AppRole** authentication using `PESITWIZARD_SECURITY_VAULT_ROLE_ID` and `PESITWIZARD_SECURITY_VAULT_SECRET_ID`.
 
 ## Kubernetes (Helm)
 
 ```bash
-# Ajouter le repo Helm
+# Add the Helm repo
 helm repo add pesitwizard https://pesitwizard.github.io/pesitwizard-helm-charts
 
-# Installer le client
+# Install the client
 helm install pesitwizard-client pesitwizard/pesitwizard-client \
   --namespace pesitwizard \
   --create-namespace \
   --set postgresql.enabled=true
 ```
 
-## JAR (développement)
+## JAR (development)
 
-### Prérequis
+### Prerequisites
 
 - Java 21+
 - Maven 3.9+
@@ -222,7 +220,7 @@ cd pesitwizard-client
 mvn package -DskipTests
 ```
 
-### Exécution
+### Run
 
 ```bash
 java -jar target/pesitwizard-client-1.0.0-SNAPSHOT.jar \
@@ -231,24 +229,24 @@ java -jar target/pesitwizard-client-1.0.0-SNAPSHOT.jar \
   --spring.datasource.password=pesitwizard
 ```
 
-## Vérification
+## Verification
 
-Une fois démarré, vérifiez que le service fonctionne :
+Once started, verify that the service is running:
 
 ```bash
 # Health check
-curl http://localhost:9081/actuator/health
+curl http://localhost:8080/actuator/health
 
-# Réponse attendue
+# Expected response
 {"status":"UP"}
 ```
 
-L'interface web est accessible sur :
-- API : http://localhost:9081
-- UI : http://localhost:3001 (si déployée séparément)
-- Swagger : http://localhost:9081/swagger-ui.html
+The web interface is available at:
+- API: http://localhost:8080
+- UI: http://localhost:3001 (if deployed separately)
+- Swagger: http://localhost:8080/swagger-ui.html
 
-## Prochaines étapes
+## Next Steps
 
 - [Configuration](/guide/client/configuration)
-- [Utilisation](/guide/client/usage)
+- [Usage](/guide/client/usage)

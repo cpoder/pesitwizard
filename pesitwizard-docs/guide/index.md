@@ -1,38 +1,38 @@
-# Qu'est-ce que PeSIT ?
+# What is PeSIT?
 
-**PeSIT** (Protocole d'Échange pour un Système Interbancaire de Télécompensation) est un protocole de transfert de fichiers développé par le secteur bancaire français dans les années 1980.
+**PeSIT** (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation) is a file transfer protocol developed by the French banking sector in the 1980s.
 
-## Historique
+## History
 
-Le protocole a été créé par le **GSIT** (Groupement pour un Système Interbancaire de Télécompensation) pour permettre les échanges de fichiers entre banques et avec leurs clients entreprises.
+The protocol was created by the **GSIT** (Groupement pour un Systeme Interbancaire de Telecompensation) to enable file exchanges between banks and their corporate clients.
 
-## Caractéristiques
+## Characteristics
 
-- **Fiabilité** : Mécanismes de reprise sur erreur, points de synchronisation
-- **Sécurité** : Authentification des partenaires, chiffrement (PeSIT-E sur TLS)
-- **Traçabilité** : Historique complet des transferts
-- **Interopérabilité** : Standard reconnu par toutes les banques françaises
+- **Reliability**: Error recovery mechanisms, synchronization points
+- **Security**: Partner authentication, encryption (PeSIT-E over TLS)
+- **Traceability**: Complete transfer history
+- **Interoperability**: Standard recognized by all French banks
 
 ## Versions
 
-| Version | Transport | Sécurité |
+| Version | Transport | Security |
 |---------|-----------|----------|
-| PeSIT D | TCP/IP | Authentification simple |
-| PeSIT E | TCP/IP + TLS | Chiffrement, certificats |
+| PeSIT D | TCP/IP | Simple authentication |
+| PeSIT E | TCP/IP + TLS | Encryption, certificates |
 
-## Qui utilise PeSIT ?
+## Who Uses PeSIT?
 
-- **Banques** : BNP Paribas, Société Générale, BPCE, Crédit Agricole...
-- **Entreprises** : Pour automatiser les échanges de fichiers bancaires
-- **Éditeurs** : Intégration dans les ERP et logiciels comptables
-- **Prestataires** : Centres de traitement, PSP
+- **Banks**: BNP Paribas, Societe Generale, BPCE, Credit Agricole...
+- **Companies**: To automate banking file exchanges
+- **Software vendors**: Integration in ERP and accounting software
+- **Service providers**: Processing centers, PSPs
 
-## Notre solution : PeSIT Wizard
+## Our Solution: PeSIT Wizard
 
-**PeSIT Wizard** implémente le protocole PeSIT dans une architecture moderne :
+**PeSIT Wizard** implements the PeSIT protocol in a modern architecture:
 
-- **PeSIT Wizard Client** : Pour envoyer/recevoir des fichiers vers les banques
-- **PeSIT Wizard Server** : Pour recevoir des fichiers de partenaires
-- **Console d'administration** : Pour gérer l'ensemble
+- **PeSIT Wizard Client**: To send/receive files to/from banks
+- **PeSIT Wizard Server**: To receive files from partners
+- **Administration Console**: To manage the entire system
 
-[Démarrer rapidement →](/guide/quickstart)
+[Get started quickly -->](/guide/quickstart)

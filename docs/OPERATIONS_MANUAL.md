@@ -652,14 +652,14 @@ curl -X POST https://api.pesit.example.com/api/v1/transfers/send \
 
 2. **Create partner configuration**
    ```bash
-   curl -X POST https://api.pesit.example.com/api/v1/partners \
+   curl -X POST https://api.pesit.example.com/api/v1/config/partners \
      -H "Authorization: Bearer $ADMIN_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{
        "partnerId": "NEWPART1",
        "name": "New Partner Corp",
        "host": "pesit.newpartner.com",
-       "port": 5001,
+       "port": 6502,
        "tlsEnabled": true,
        "description": "New partner for file exchange"
      }'
@@ -681,7 +681,7 @@ curl -X POST https://api.pesit.example.com/api/v1/transfers/send \
 
 5. **Test connectivity**
    ```bash
-   curl -X POST https://api.pesit.example.com/api/v1/partners/NEWPART1/test \
+   curl -X POST https://api.pesit.example.com/api/v1/config/partners/NEWPART1/test \
      -H "Authorization: Bearer $API_KEY"
    ```
 
@@ -696,7 +696,7 @@ curl -X POST https://api.pesit.example.com/api/v1/transfers/send \
 
 3. **Disable partner**
    ```bash
-   curl -X PATCH https://api.pesit.example.com/api/v1/partners/OLDPART1 \
+   curl -X PATCH https://api.pesit.example.com/api/v1/config/partners/OLDPART1 \
      -H "Authorization: Bearer $ADMIN_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"enabled": false}'
@@ -711,7 +711,7 @@ curl -X POST https://api.pesit.example.com/api/v1/transfers/send \
 
 6. **Delete partner** (after retention period)
    ```bash
-   curl -X DELETE https://api.pesit.example.com/api/v1/partners/OLDPART1 \
+   curl -X DELETE https://api.pesit.example.com/api/v1/config/partners/OLDPART1 \
      -H "Authorization: Bearer $ADMIN_API_KEY"
    ```
 
@@ -723,12 +723,12 @@ curl -X POST https://api.pesit.example.com/api/v1/transfers/send \
 
 echo "=== Partner Connectivity Test ==="
 
-PARTNERS=$(curl -sf https://api.pesit.example.com/api/v1/partners \
+PARTNERS=$(curl -sf https://api.pesit.example.com/api/v1/config/partners \
   -H "Authorization: Bearer $API_KEY" | jq -r '.[].partnerId')
 
 for PARTNER in $PARTNERS; do
     echo -n "Testing $PARTNER... "
-    RESULT=$(curl -sf -X POST "https://api.pesit.example.com/api/v1/partners/$PARTNER/test" \
+    RESULT=$(curl -sf -X POST "https://api.pesit.example.com/api/v1/config/partners/$PARTNER/test" \
       -H "Authorization: Bearer $API_KEY" | jq -r '.status')
 
     if [ "$RESULT" = "success" ]; then
@@ -912,7 +912,7 @@ SELECT * FROM pg_stat_replication;
 | `SPRING_DATASOURCE_URL` | Database JDBC URL | Required |
 | `SPRING_DATASOURCE_USERNAME` | Database username | Required |
 | `SPRING_DATASOURCE_PASSWORD` | Database password | Required |
-| `PESIT_SERVER_PORT` | PeSIT protocol port | `5000` |
+| `PESIT_SERVER_PORT` | PeSIT protocol port | `6502` |
 | `PESIT_TLS_ENABLED` | Enable TLS for PeSIT | `true` |
 | `PESIT_TLS_KEYSTORE` | Path to keystore | Required if TLS |
 | `PESIT_TLS_KEYSTORE_PASSWORD` | Keystore password | Required if TLS |
@@ -923,8 +923,7 @@ SELECT * FROM pg_stat_replication;
 
 | Port | Protocol | Service |
 |------|----------|---------|
-| 5000 | TCP | PeSIT (plain) |
-| 5001 | TCP | PeSIT (TLS) |
+| 6502 | TCP | PeSIT protocol |
 | 7000 | TCP | Cluster communication |
 | 8080 | HTTP | REST API / Actuator |
 | 8443 | HTTPS | REST API (TLS) |

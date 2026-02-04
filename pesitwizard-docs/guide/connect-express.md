@@ -1,75 +1,75 @@
-# Interopérabilité Connect:Express
+# Connect:Express Interoperability
 
-Guide de configuration pour l'interopérabilité entre PeSIT Wizard et IBM Sterling Connect:Express (CX).
+Configuration guide for interoperability between PeSIT Wizard and IBM Sterling Connect:Express (CX).
 
-## Vue d'ensemble
+## Overview
 
-PeSIT Wizard est entièrement compatible avec Connect:Express pour les transferts bidirectionnels:
+PeSIT Wizard is fully compatible with Connect:Express for bidirectional transfers:
 
 | Direction | Source | Destination | Status |
 |-----------|--------|-------------|--------|
-| CX → PW Server | Connect:Express | PeSIT Wizard Server | ✅ Validé |
-| PW Client → CX | PeSIT Wizard Client | Connect:Express | ✅ Validé |
+| CX → PW Server | Connect:Express | PeSIT Wizard Server | ✅ Validated |
+| PW Client → CX | PeSIT Wizard Client | Connect:Express | ✅ Validated |
 
-## Prérequis
+## Prerequisites
 
 ### Connect:Express
-- Version 1.5.x ou supérieure
-- Licence PeSIT activée
-- Accès aux commandes `$sterm`, `$p1b8preq`
+- Version 1.5.x or higher
+- PeSIT license activated
+- Access to `$sterm`, `$p1b8preq` commands
 
 ### PeSIT Wizard
-- Server ou Client version 1.0.0+
+- Server or Client version 1.0.0+
 - Java 21+
 
 ---
 
 ## Configuration CX → PW Server
 
-Cette configuration permet à Connect:Express d'envoyer des fichiers vers PeSIT Wizard Server.
+This configuration allows Connect:Express to send files to PeSIT Wizard Server.
 
-### 1. Créer le partenaire dans CX
+### 1. Create the partner in CX
 
 ```bash
-# Via l'outil cx-setup-partner
+# Using the cx-setup-partner tool
 ./cx-setup-partner PWSERVER pw-server 05001 PWSRV01
 
-# Ou manuellement via $sterm:
+# Or manually via $sterm:
 # C P (Create Partner)
-# Nom symbolique: PWSERVER
+# Symbolic name: PWSERVER
 # Nature: T (TCP/IP)
-# Protocole: 3 (PeSIT)
-# TCP Host: pw-server (ou IP)
+# Protocol: 3 (PeSIT)
+# TCP Host: pw-server (or IP)
 # TCP Port: 05001
 # DPCSID: PWSRV01
 ```
 
-**Paramètres importants**:
-| Paramètre | Valeur | Description |
-|-----------|--------|-------------|
-| Nature | `T` | TCP/IP (ou `S` pour SSL) |
-| Protocole | `3` | PeSIT |
-| Tab Session | `1` | Table de session par défaut |
-| Nb Liaisons | `10` | Max sessions simultanées |
-| Type Liaison | `M` | Mixed (initiateur + répondeur) |
+**Important parameters**:
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Nature | `T` | TCP/IP (or `S` for SSL) |
+| Protocol | `3` | PeSIT |
+| Session Table | `1` | Default session table |
+| Max Links | `10` | Max simultaneous sessions |
+| Link Type | `M` | Mixed (initiator + responder) |
 
-### 2. Créer le fichier virtuel dans CX
+### 2. Create the virtual file in CX
 
 ```bash
-# Via l'outil cx-setup-file
+# Using the cx-setup-file tool
 ./cx-setup-file PWSEND T /tmp/cx-send PWSERVER BV 04096
 
-# Ou via $sterm:
+# Or via $sterm:
 # C F (Create File)
-# Nom symbolique: PWSEND
+# Symbolic name: PWSEND
 # Direction: T (Transmit)
 # DSN: /tmp/cx-send/&REQNUMB
-# Partenaire: PWSERVER
-# Format: BV (Binary Variable) ou **
-# Long article: 04096
+# Partner: PWSERVER
+# Format: BV (Binary Variable) or **
+# Record length: 04096
 ```
 
-### 3. Configurer PW Server
+### 3. Configure PW Server
 
 ```yaml
 # application.yml (PW Server)
@@ -79,7 +79,7 @@ pesitwizard:
     server-id: PWSRV01
 ```
 
-Créer le partenaire CX:
+Create the CX partner:
 ```bash
 curl -X POST http://localhost:8080/api/v1/config/partners \
   -u admin:admin \
@@ -92,7 +92,7 @@ curl -X POST http://localhost:8080/api/v1/config/partners \
   }'
 ```
 
-Créer le fichier virtuel:
+Create the virtual file:
 ```bash
 curl -X POST http://localhost:8080/api/v1/config/files \
   -u admin:admin \
@@ -106,13 +106,13 @@ curl -X POST http://localhost:8080/api/v1/config/files \
   }'
 ```
 
-### 4. Tester le transfert
+### 4. Test the transfer
 
 ```bash
-# Depuis CX, envoyer un fichier
+# From CX, send a file
 $p1b8preq /SFN=PWSEND/SPN=PWSERVER/DIR=T/DSN=/path/to/file.dat
 
-# Vérifier sur PW Server
+# Verify on PW Server
 ls -la /data/received/
 ```
 
@@ -120,35 +120,35 @@ ls -la /data/received/
 
 ## Configuration PW Client → CX
 
-Cette configuration permet à PeSIT Wizard Client d'envoyer des fichiers vers Connect:Express.
+This configuration allows PeSIT Wizard Client to send files to Connect:Express.
 
-### 1. Configurer CX comme serveur
+### 1. Configure CX as server
 
-Vérifier que CX écoute sur le port PeSIT:
+Verify that CX is listening on the PeSIT port:
 ```bash
 netstat -tlnp | grep 5000
-# Ou
+# Or
 $sterm
-# Puis: D S (Display System)
+# Then: D S (Display System)
 ```
 
-Créer le partenaire pour PW Client:
+Create the partner for PW Client:
 ```bash
-./cx-setup-partner PWCLIENT pw-client 09081 PWSRV01
+./cx-setup-partner PWCLIENT pw-client 08080 PWSRV01
 ```
 
-Créer le fichier virtuel de réception:
+Create the virtual file for reception:
 ```bash
 ./cx-setup-file PWRECV R /tmp/cx-received PWCLIENT ** 04096
 ```
 
-**Note**: Utiliser `FORMAT=**` pour accepter tout format envoyé par PW Client.
+**Note**: Use `FORMAT=**` to accept any format sent by PW Client.
 
-### 2. Configurer PW Client
+### 2. Configure PW Client
 
-Ajouter le serveur CX:
+Add the CX server:
 ```bash
-curl -X POST http://localhost:9081/api/v1/servers \
+curl -X POST http://localhost:8080/api/v1/servers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "cx-server",
@@ -161,10 +161,10 @@ curl -X POST http://localhost:9081/api/v1/servers \
   }'
 ```
 
-### 3. Envoyer un fichier
+### 3. Send a file
 
 ```bash
-curl -X POST http://localhost:9081/api/v1/transfers/send \
+curl -X POST http://localhost:8080/api/v1/transfers/send \
   -H "Content-Type: application/json" \
   -d '{
     "server": "cx-server",
@@ -177,114 +177,114 @@ curl -X POST http://localhost:9081/api/v1/transfers/send \
 
 ---
 
-## Paramètres de compatibilité
+## Compatibility Parameters
 
-### Taille des entités (PI_25)
+### Entity Size (PI_25)
 
-PW et CX négocient la taille maximale des FPDU:
+PW and CX negotiate the maximum FPDU size:
 
-| Système | Valeur par défaut | Recommandation |
-|---------|-------------------|----------------|
+| System | Default Value | Recommendation |
+|--------|---------------|----------------|
 | PW Server | 32768 | OK |
 | PW Client | 32768 | OK |
-| CX | 4096 | Augmenter si possible |
+| CX | 4096 | Increase if possible |
 
-La valeur négociée sera le minimum des deux. Pour de meilleures performances, configurer CX avec une valeur plus élevée dans la table de session.
+The negotiated value will be the minimum of the two. For better performance, configure CX with a higher value in the session table.
 
-### Format d'enregistrement
+### Record Format
 
-| Format CX | Description | Compatibilité PW |
+| CX Format | Description | PW Compatibility |
 |-----------|-------------|------------------|
-| `BV` | Binary Variable | ✅ Recommandé |
+| `BV` | Binary Variable | ✅ Recommended |
 | `BF` | Binary Fixed | ✅ OK |
 | `TV` | Text Variable | ✅ OK |
 | `TF` | Text Fixed | ✅ OK |
-| `**` | Tout format | ✅ Flexible |
+| `**` | Any format | ✅ Flexible |
 
 ### Sync Points
 
-Les sync points sont supportés pour la reprise après interruption:
+Sync points are supported for restart after interruption:
 
 ```yaml
-# PW Client - activer les sync points
+# PW Client - enable sync points
 syncPointsEnabled: true
 
-# CX - configurer l'intervalle dans la table de session
-# Typiquement 100KB ou 256KB
+# CX - configure the interval in the session table
+# Typically 100KB or 256KB
 ```
 
 ---
 
-## Dépannage CX
+## CX Troubleshooting
 
-### Vérifier l'état de CX
+### Check CX Status
 
 ```bash
-# Status du moniteur
+# Monitor status
 $sterm
 # D S (Display System)
 
-# Lister les partenaires
+# List partners
 # L P (List Partners)
 
-# Lister les fichiers virtuels
+# List virtual files
 # L F (List Files)
 
-# Voir les transferts en cours
+# View transfers in progress
 # L R (List Requests)
 ```
 
-### Logs CX
+### CX Logs
 
 ```bash
-# Log principal
+# Main log
 tail -f $TOM_DIR/log/tom.log
 
-# Log des requêtes
+# Request log
 $p1b8pret /RQN=<request_number>
 ```
 
-### Erreurs courantes
+### Common Errors
 
-| Erreur CX | Cause | Solution |
-|-----------|-------|----------|
-| `RTCF 0017` | Entrée dupliquée | Partenaire/fichier existe déjà |
-| `RTCF 0004` | Non trouvé | Vérifier le nom exact |
-| `RTCF 0008` | Paramètre invalide | Vérifier la syntaxe |
-| `CONNECT refused` | Auth échouée | Vérifier DPCSID/password |
-| `File not found` | Fichier virtuel inconnu | Créer le fichier dans CX |
+| CX Error | Cause | Solution |
+|----------|-------|----------|
+| `RTCF 0017` | Duplicate entry | Partner/file already exists |
+| `RTCF 0004` | Not found | Check the exact name |
+| `RTCF 0008` | Invalid parameter | Check the syntax |
+| `CONNECT refused` | Auth failed | Check DPCSID/password |
+| `File not found` | Unknown virtual file | Create the file in CX |
 
-### Test de connectivité
+### Connectivity Test
 
 ```bash
-# Depuis la machine CX vers PW Server
+# From the CX machine to PW Server
 nc -zv pw-server 5001
 
-# Depuis PW vers CX
+# From PW to CX
 nc -zv cx-server 5000
 ```
 
 ---
 
-## Configuration TLS (Avancé)
+## TLS Configuration (Advanced)
 
-### CX avec SSL
+### CX with SSL
 
-Pour activer TLS entre PW et CX:
+To enable TLS between PW and CX:
 
-1. **Modifier la nature du partenaire** de `T` (TCP) à `S` (SSL):
+1. **Change the partner nature** from `T` (TCP) to `S` (SSL):
    ```c
    memcpy(param->uni.zreq_tom_part.nature, "S", 1);
    ```
 
-2. **Configurer les paramètres SSL** (SSLPARM1, SSLPARM2) dans CX
+2. **Configure the SSL parameters** (SSLPARM1, SSLPARM2) in CX
 
-3. **Importer les certificats** via les scripts CX:
-   - `CXAPISCA` - Certificat API
-   - `CXROOTCA` - Certificat CA root
-   - `SSLPARM1` - Paramètres SSL
+3. **Import certificates** via CX scripts:
+   - `CXAPISCA` - API certificate
+   - `CXROOTCA` - Root CA certificate
+   - `SSLPARM1` - SSL parameters
 
-4. **Configurer PW** avec les certificats correspondants:
+4. **Configure PW** with the corresponding certificates:
    ```yaml
    pesit:
      ssl:
@@ -293,50 +293,50 @@ Pour activer TLS entre PW et CX:
        truststore-name: cx-ca-truststore
    ```
 
-**Note**: La configuration TLS avec CX nécessite des tests approfondis pour la compatibilité des cipher suites et versions TLS.
+**Note**: TLS configuration with CX requires thorough testing for cipher suite and TLS version compatibility.
 
 ---
 
-## Tests d'intégration Docker
+## Docker Integration Tests
 
-Un environnement Docker complet est disponible pour tester l'interopérabilité:
+A complete Docker environment is available for testing interoperability:
 
 ```bash
 cd integration-tests/cx-integration/docker
 
-# Démarrer l'environnement
+# Start the environment
 docker compose up -d
 
-# Lancer les tests (16 tests)
+# Run the tests (16 tests)
 docker compose up test-runner
 
-# Voir les résultats
+# View the results
 docker compose logs test-runner
 ```
 
-### Tests inclus
+### Included Tests
 
 | Phase | Tests | Description |
 |-------|-------|-------------|
 | 1 | 5 | CX → PW Server (small, 5MB, config) |
 | 2 | 3 | PW Client → CX (small, 5MB, health) |
-| 3 | 1 | Sync points (10MB avec MD5) |
-| 4 | 1 | Transferts concurrents (3x simultanés) |
-| 5 | 3 | Gestion d'erreurs |
-| 6 | 3 | Cas limites (empty, spaces, 1 byte) |
+| 3 | 1 | Sync points (10MB with MD5) |
+| 4 | 1 | Concurrent transfers (3x simultaneous) |
+| 5 | 3 | Error handling |
+| 6 | 3 | Edge cases (empty, spaces, 1 byte) |
 
 ---
 
-## Matrice de compatibilité
+## Compatibility Matrix
 
-| Fonctionnalité | PW ↔ PW | PW ↔ CX | Notes |
-|----------------|---------|---------|-------|
-| Transfert SEND | ✅ | ✅ | |
-| Transfert RECEIVE | ✅ | ✅ | |
+| Feature | PW ↔ PW | PW ↔ CX | Notes |
+|---------|---------|---------|-------|
+| SEND Transfer | ✅ | ✅ | |
+| RECEIVE Transfer | ✅ | ✅ | |
 | Sync Points | ✅ | ✅ | |
-| Restart/Resume | ✅ | ✅ | Après fix sync points |
-| TLS simple | ✅ | ⚠️ | À valider |
-| mTLS | ✅ | ⚠️ | À valider |
-| Compression | ✅ | ❓ | Non testé |
+| Restart/Resume | ✅ | ✅ | After sync points fix |
+| Simple TLS | ✅ | ⚠️ | To be validated |
+| mTLS | ✅ | ⚠️ | To be validated |
+| Compression | ✅ | ❓ | Not tested |
 | Multi-article DTF | ✅ | ✅ | |
-| Fichiers > 1GB | ✅ | ✅ | Testé jusqu'à 10MB |
+| Files > 1GB | ✅ | ✅ | Tested up to 10MB |

@@ -3,11 +3,11 @@ layout: home
 
 hero:
   name: PeSIT Wizard
-  text: Transferts bancaires PeSIT
-  tagline: Solution open source pour automatiser vos échanges de fichiers avec les banques.
+  text: PeSIT Bank Transfers
+  tagline: Open source solution to automate your file exchanges with banks.
   actions:
     - theme: brand
-      text: Démarrer
+      text: Get Started
       link: /guide/quickstart
     - theme: alt
       text: GitHub
@@ -15,53 +15,53 @@ hero:
 
 features:
   - icon: 📡
-    title: Protocole PeSIT
-    details: Implémentation complète du protocole PeSIT D et E pour les échanges bancaires.
+    title: PeSIT Protocol
+    details: Complete implementation of PeSIT D and E protocol for bank exchanges.
   - icon: ⚡
-    title: Simple à déployer
-    details: Configuration simple, documentation complète. Pas besoin d'expert PeSIT.
+    title: Easy to Deploy
+    details: Simple configuration, complete documentation. No PeSIT expert needed.
   - icon: 🔌
-    title: API REST
-    details: Intégrez facilement vos ERP et logiciels comptables via notre API REST.
+    title: REST API
+    details: Easily integrate your ERP and accounting software via our REST API.
   - icon: 🐳
     title: Docker Ready
-    details: Images Docker disponibles pour un déploiement rapide.
+    details: Docker images available for rapid deployment.
   - icon: 🔒
-    title: Sécurisé
-    details: TLS 1.3, authentification par certificat, chiffrement de bout en bout.
+    title: Secure
+    details: TLS 1.3, certificate authentication, end-to-end encryption.
   - icon: 📖
     title: Open Source
-    details: Licence Apache 2.0. Code source disponible sur GitHub.
+    details: Apache 2.0 License. Source code available on GitHub.
 ---
 
-## Pourquoi PeSIT Wizard ?
+## Why PeSIT Wizard?
 
-Le protocole **PeSIT** (Protocole d'Échange pour un Système Interbancaire de Télécompensation) est le standard utilisé par les banques françaises pour les échanges de fichiers sécurisés.
+The **PeSIT** protocol (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation) is the standard used by French banks for secure file exchanges.
 
-**PeSIT Wizard** est une implémentation open source moderne du protocole PeSIT :
-- **Gratuit** : licence Apache 2.0
-- **Simple** : documentation complète, API REST
-- **Moderne** : Java 21, Spring Boot, Docker
+**PeSIT Wizard** is a modern open source implementation of the PeSIT protocol:
+- **Free**: Apache 2.0 License
+- **Simple**: Complete documentation, REST API
+- **Modern**: Java 21, Spring Boot, Docker
 
-## Cas d'usage
+## Use Cases
 
-### Automatisation des virements
-Envoyez automatiquement vos fichiers de virements SEPA à votre banque depuis votre ERP.
+### Automated Transfers
+Automatically send your SEPA transfer files to your bank from your ERP.
 
-### Récupération des relevés
-Récupérez automatiquement vos relevés de compte chaque matin pour les intégrer dans votre comptabilité.
+### Statement Retrieval
+Automatically retrieve your account statements each morning to integrate them into your accounting system.
 
-### Centralisation multi-banques
-Gérez tous vos échanges avec plusieurs banques depuis une seule interface.
+### Multi-Bank Centralization
+Manage all your exchanges with multiple banks from a single interface.
 
-## Composants
+## Components
 
 | Module | Description |
 |--------|-------------|
-| **pesitwizard-server** | Serveur PeSIT complet |
-| **pesitwizard-client** | Client Java pour envoyer/recevoir des fichiers |
-| **pesitwizard-client-ui** | Interface graphique pour le client |
-| **pesitwizard-pesit** | Bibliothèque d'implémentation du protocole |
+| **pesitwizard-server** | Complete PeSIT server |
+| **pesitwizard-client** | Java client for sending/receiving files |
+| **pesitwizard-client-ui** | Graphical interface for the client |
+| **pesitwizard-pesit** | Protocol implementation library |
 
 ---
 

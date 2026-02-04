@@ -103,8 +103,7 @@ Complete all items before proceeding with deployment:
 
 | Port | Protocol | Direction | Purpose |
 |------|----------|-----------|---------|
-| 5000 | TCP | Inbound | PeSIT protocol (plain) |
-| 5001 | TCP | Inbound | PeSIT protocol (TLS) |
+| 6502 | TCP | Inbound | PeSIT protocol |
 | 8080 | TCP | Inbound | REST API / Management |
 | 8443 | TCP | Inbound | REST API (HTTPS) |
 | 5432 | TCP | Internal | PostgreSQL |
@@ -116,16 +115,16 @@ Complete all items before proceeding with deployment:
 
 ```bash
 # Inbound - Public-facing
-iptables -A INPUT -p tcp --dport 5001 -j ACCEPT  # PeSIT TLS
+iptables -A INPUT -p tcp --dport 6502 -j ACCEPT  # PeSIT
 iptables -A INPUT -p tcp --dport 8443 -j ACCEPT  # HTTPS API
 
 # Inbound - Internal network only
-iptables -A INPUT -s 10.0.0.0/8 -p tcp --dport 5000 -j ACCEPT  # PeSIT plain
+iptables -A INPUT -s 10.0.0.0/8 -p tcp --dport 6502 -j ACCEPT  # PeSIT
 iptables -A INPUT -s 10.0.0.0/8 -p tcp --dport 8080 -j ACCEPT  # HTTP API
 iptables -A INPUT -s 10.0.0.0/8 -p tcp --dport 9090 -j ACCEPT  # Prometheus
 
 # Drop non-TLS from public
-iptables -A INPUT -p tcp --dport 5000 -j DROP
+iptables -A INPUT -p tcp --dport 6502 -j DROP
 iptables -A INPUT -p tcp --dport 8080 -j DROP
 ```
 
@@ -150,7 +149,7 @@ spec:
             cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
-          port: 5001
+          port: 6502
     # Allow API from load balancer
     - from:
         - namespaceSelector:
@@ -442,9 +441,9 @@ spec:
   selector:
     app: pesitwizard-server
   ports:
-    - name: pesit-tls
-      port: 5001
-      targetPort: 5001
+    - name: pesit
+      port: 6502
+      targetPort: 6502
       protocol: TCP
 ```
 

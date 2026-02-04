@@ -1,20 +1,20 @@
 # PeSIT Wizard Client UI
 
-Interface web pour effectuer des transferts de fichiers via le protocole PeSIT.
+Web interface for performing file transfers via the PeSIT protocol.
 
-## Fonctionnalités
+## Features
 
-- **Envoi de fichiers** : Envoyer des fichiers vers un serveur PeSIT
-- **Réception de fichiers** : Récupérer des fichiers depuis un serveur PeSIT
-- **Gestion des serveurs** : Configurer plusieurs serveurs PeSIT cibles
-- **Historique** : Consulter l'historique des transferts
-- **Test de connexion** : Vérifier la connectivité avec un serveur
+- **File Sending**: Send files to a PeSIT server
+- **File Receiving**: Retrieve files from a PeSIT server
+- **Server Management**: Configure multiple target PeSIT servers
+- **History**: View transfer history
+- **Connection Test**: Verify connectivity with a server
 
-## Prérequis
+## Prerequisites
 
 - Node.js 18+
-- npm, yarn ou pnpm
-- Backend `pesitwizard-client` en cours d'exécution (port 9081)
+- npm, yarn, or pnpm
+- Backend `pesitwizard-client` running (port 8080)
 
 ## Installation
 
@@ -22,15 +22,15 @@ Interface web pour effectuer des transferts de fichiers via le protocole PeSIT.
 npm install
 ```
 
-## Développement
+## Development
 
 ```bash
 npm run dev
 ```
 
-L'application sera accessible sur http://localhost:3001
+The application will be accessible at http://localhost:3001
 
-## Build production
+## Production Build
 
 ```bash
 npm run build
@@ -38,9 +38,9 @@ npm run build
 
 ## Configuration
 
-L'URL du backend est configurée via `VITE_API_URL`. Par défaut : `http://localhost:9081`.
+The backend URL is configured via `VITE_API_URL`. Default: `http://localhost:8080`.
 
-## Stack technique
+## Tech Stack
 
 - Vue 3 + TypeScript
 - Vuetify 3

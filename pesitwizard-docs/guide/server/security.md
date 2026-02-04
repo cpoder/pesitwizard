@@ -1,183 +1,183 @@
-# Sécurité
+# Security
 
-## Vue d'ensemble
+## Overview
 
-La sécurité du serveur PeSIT Wizard repose sur plusieurs niveaux :
+PeSIT Wizard server security relies on multiple layers:
 
-1. **Authentification PeSIT** : Identifiants partenaire/mot de passe
-2. **Chiffrement TLS** : PeSIT-E sur TLS 1.2/1.3
-3. **Authentification API** : Basic Auth ou JWT
-4. **Réseau** : Firewall, VPN, IP whitelisting
+1. **PeSIT Authentication**: Partner ID/password credentials
+2. **TLS Encryption**: PeSIT-E over TLS 1.2/1.3
+3. **API Authentication**: Basic Auth or JWT
+4. **Network**: Firewall, VPN, IP whitelisting
 
-## Authentification PeSIT
+## PeSIT Authentication
 
-### Configuration des partenaires
+### Partner Configuration
 
-Chaque partenaire doit être enregistré avec un identifiant et mot de passe :
+Each partner must be registered with an ID and password:
 
 ```bash
-curl -X POST http://localhost:8080/api/partners \
+curl -X POST http://localhost:8080/api/v1/config/partners \
   -u admin:admin \
   -H "Content-Type: application/json" \
   -d '{
-    "partnerId": "BANQUE_XYZ",
-    "password": "MotDePasseComplexe123!",
+    "partnerId": "BANK_XYZ",
+    "password": "ComplexPassword123!",
     "enabled": true
   }'
 ```
 
-### Politique de mots de passe
+### Password Policy
 
-Recommandations :
-- Minimum 12 caractères
-- Mélange majuscules/minuscules/chiffres/symboles
-- Rotation tous les 90 jours
-- Pas de réutilisation des 5 derniers mots de passe
+Recommendations:
+- Minimum 12 characters
+- Mix of uppercase/lowercase/numbers/symbols
+- Rotate every 90 days
+- No reuse of the last 5 passwords
 
-## Chiffrement TLS et mTLS
+## TLS and mTLS Encryption
 
-PeSIT Wizard supporte deux modes de sécurisation TLS :
+PeSIT Wizard supports two TLS security modes:
 
-| Mode | Description | Cas d'usage |
-|------|-------------|-------------|
-| **TLS simple** | Seul le serveur présente un certificat | Partenaires de confiance sur réseau sécurisé |
-| **mTLS** | Client ET serveur présentent un certificat | Production, haute sécurité |
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **Simple TLS** | Only the server presents a certificate | Trusted partners on a secure network |
+| **mTLS** | Both client AND server present a certificate | Production, high security |
 
-### Architecture avec CA privée
+### Architecture with Private CA
 
-PeSIT Wizard intègre une **Autorité de Certification (CA) privée** pour simplifier la gestion des certificats :
+PeSIT Wizard integrates a **private Certificate Authority (CA)** to simplify certificate management:
 
 ```
                     ┌─────────────────────┐
-                    │   CA Privée PeSIT   │
-                    │   (pesit-ca)        │
+                    │   Private PeSIT CA   │
+                    │   (pesit-ca)         │
                     └──────────┬──────────┘
-                               │ signe
+                               │ signs
               ┌────────────────┼────────────────┐
               ▼                ▼                ▼
      ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-     │ Cert Serveur│   │ Cert Client │   │ Cert Client │
+     │ Server Cert │   │ Client Cert │   │ Client Cert │
      │  PeSIT      │   │  Partner A  │   │  Partner B  │
      └─────────────┘   └─────────────┘   └─────────────┘
 ```
 
-## Gestion de la CA privée (Administration)
+## Private CA Management (Administration)
 
-::: warning Sécurité
-La CA privée est un composant critique de sécurité. Son accès doit être **strictement limité aux administrateurs de sécurité**. En production, envisagez d'utiliser un HSM (Hardware Security Module) pour protéger les clés CA.
+::: warning Security
+The private CA is a critical security component. Its access must be **strictly limited to security administrators**. In production, consider using an HSM (Hardware Security Module) to protect CA keys.
 :::
 
-### Principe de séparation des responsabilités
+### Separation of Responsibilities Principle
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│              CA Privée (Administration sécurité)                │
-│  - Accès restreint aux administrateurs sécurité                 │
-│  - Initialisation unique de la CA                               │
-│  - Signature des certificats serveur et client                  │
-│  - Stockage sécurisé des clés (HSM recommandé en prod)          │
+│              Private CA (Security Administration)                │
+│  - Access restricted to security administrators                 │
+│  - One-time CA initialization                                   │
+│  - Signing server and client certificates                       │
+│  - Secure key storage (HSM recommended in production)           │
 └─────────────────────────────────────────────────────────────────┘
-                              │ distribue certificats
+                              │ distributes certificates
            ┌──────────────────┼──────────────────┐
            ▼                                     ▼
 ┌─────────────────────┐              ┌─────────────────────┐
-│  Serveur PeSIT      │              │  Client PeSIT       │
-│  - Reçoit keystore  │              │  - Reçoit keystore  │
-│    signé par CA     │              │    signé par CA     │
-│  - Truststore CA    │              │  - Truststore CA    │
+│  PeSIT Server       │              │  PeSIT Client       │
+│  - Receives keystore│              │  - Receives keystore│
+│    signed by CA     │              │    signed by CA     │
+│  - CA truststore    │              │  - CA truststore    │
 └─────────────────────┘              └─────────────────────┘
 ```
 
-### Initialisation de la CA (une seule fois)
+### CA Initialization (one time only)
 
-L'administrateur de sécurité initialise la CA via l'API serveur :
+The security administrator initializes the CA via the server API:
 
 ```bash
-# Initialiser la CA (accès admin requis)
+# Initialize the CA (admin access required)
 curl -X POST http://localhost:8080/api/v1/certificates/ca/initialize \
   -u admin:admin
 ```
 
-### Génération des certificats
+### Certificate Generation
 
-L'administrateur génère les certificats pour chaque serveur et client :
+The administrator generates certificates for each server and client:
 
 ```bash
-# Certificat pour un serveur
+# Certificate for a server
 curl -X POST "http://localhost:8080/api/v1/certificates/ca/partner/SERVER_PROD/generate" \
   -u admin:admin \
   -d "commonName=pesit.example.com&purpose=SERVER&validityDays=365"
 
-# Certificat pour un client/partenaire
-curl -X POST "http://localhost:8080/api/v1/certificates/ca/partner/BANQUE_XYZ/generate" \
+# Certificate for a client/partner
+curl -X POST "http://localhost:8080/api/v1/certificates/ca/partner/BANK_XYZ/generate" \
   -u admin:admin \
-  -d "commonName=banque-xyz.example.com&purpose=CLIENT&validityDays=365"
+  -d "commonName=bank-xyz.example.com&purpose=CLIENT&validityDays=365"
 ```
 
-### Distribution sécurisée
+### Secure Distribution
 
-L'administrateur distribue ensuite :
-1. **Au serveur** : Son keystore + le truststore CA
-2. **Aux clients** : Leur keystore + le certificat CA (pour leur truststore)
+The administrator then distributes:
+1. **To the server**: Its keystore + the CA truststore
+2. **To clients**: Their keystore + the CA certificate (for their truststore)
 
 ---
 
-## Configuration TLS côté Client
+## Client-Side TLS Configuration
 
-### Interface utilisateur Client
+### Client User Interface
 
-La configuration TLS est accessible **par serveur** dans le client PeSIT Wizard. Chaque serveur configuré avec TLS activé dispose d'un bouton **TLS** permettant d'importer les certificats.
+TLS configuration is accessible **per server** in the PeSIT Wizard client. Each server configured with TLS enabled has a **TLS** button for importing certificates.
 
-Dans la liste des serveurs, cliquez sur le bouton **TLS** du serveur concerné :
+In the server list, click the **TLS** button for the relevant server:
 
-![Navigation vers TLS Config](/screenshots/tls-config-nav.png)
+![Navigate to TLS Config](/screenshots/tls-config-nav.png)
 
-### 1. Importer le CA Certificate (Truststore)
+### 1. Import the CA Certificate (Truststore)
 
-Pour faire confiance au serveur PeSIT, importez le certificat CA :
+To trust the PeSIT server, import the CA certificate:
 
 ![Import CA Certificate](/screenshots/tls-import-truststore.png)
 
-1. Cliquez sur **Import CA Certificate**
-2. Sélectionnez le fichier CA reçu de l'administrateur (.pem, .crt, .p12 ou .jks)
-3. Entrez le mot de passe si nécessaire
+1. Click **Import CA Certificate**
+2. Select the CA file received from the administrator (.pem, .crt, .p12, or .jks)
+3. Enter the password if necessary
 
-### 2. Importer le Client Certificate (Keystore)
+### 2. Import the Client Certificate (Keystore)
 
-Pour l'authentification mTLS, importez votre certificat client :
+For mTLS authentication, import your client certificate:
 
 ![Import Client Certificate](/screenshots/tls-import-keystore.png)
 
-1. Cliquez sur **Import Client Certificate**
-2. Sélectionnez le fichier keystore reçu de l'administrateur (.p12 ou .jks)
-3. Entrez le mot de passe du keystore
+1. Click **Import Client Certificate**
+2. Select the keystore file received from the administrator (.p12 or .jks)
+3. Enter the keystore password
 
 ::: tip Note
-Le bouton d'import du certificat client n'est actif qu'après avoir importé le CA Certificate.
+The client certificate import button is only active after importing the CA Certificate.
 :::
 
-### 3. État TLS
+### 3. TLS Status
 
-Une fois les certificats importés, l'état TLS est visible dans la configuration :
+Once the certificates are imported, the TLS status is visible in the configuration:
 
 ![TLS Configuration](/screenshots/tls-enabled.png)
 
 ---
 
-## Configuration mTLS côté Serveur
+## Server-Side mTLS Configuration
 
-### Fichier de configuration
+### Configuration File
 
 ```yaml
 pesitwizard:
   ssl:
     enabled: true
-    keystore-name: default-keystore       # Certificat serveur
-    truststore-name: pesit-ca-truststore  # CA pour valider les clients
+    keystore-name: default-keystore       # Server certificate
+    truststore-name: pesit-ca-truststore  # CA for validating clients
     client-auth: NEED                     # NONE, WANT, NEED
     protocol: TLSv1.3
     verify-certificate-chain: true
-  
+
   ca:
     enabled: true
     ca-keystore-name: pesit-ca-keystore
@@ -185,58 +185,58 @@ pesitwizard:
     ca-keystore-password: ${PESIT_CA_PASSWORD:changeit}
 ```
 
-### Modes d'authentification client
+### Client Authentication Modes
 
-| Mode | Comportement |
-|------|--------------|
-| `NONE` | TLS simple, pas de certificat client requis |
-| `WANT` | Le serveur demande un certificat mais accepte les connexions sans |
-| `NEED` | **mTLS obligatoire** - le client DOIT présenter un certificat valide |
+| Mode | Behavior |
+|------|----------|
+| `NONE` | Simple TLS, no client certificate required |
+| `WANT` | Server requests a certificate but accepts connections without one |
+| `NEED` | **Mandatory mTLS** - the client MUST present a valid certificate |
 
 ---
 
-## Guide Client : Obtenir un certificat signé
+## Client Guide: Obtaining a Signed Certificate
 
-Les clients PeSIT doivent obtenir un certificat signé par la CA du serveur pour se connecter en mTLS.
+PeSIT clients must obtain a certificate signed by the server's CA to connect via mTLS.
 
-### Option 1 : Certificat généré par l'administrateur (recommandé)
+### Option 1: Certificate Generated by the Administrator (recommended)
 
-L'administrateur du serveur PeSIT Wizard génère un certificat pour le partenaire via l'interface :
+The PeSIT Wizard server administrator generates a certificate for the partner via the interface:
 
-1. **Administrateur** : Génère le certificat via l'UI (voir section "Générer un certificat pour un partenaire")
-2. **Administrateur** : Exporte et transmet le keystore au client de manière sécurisée
-3. **Client** : Importe le keystore reçu dans sa configuration
+1. **Administrator**: Generates the certificate via the UI (see "Generate a certificate for a partner" section)
+2. **Administrator**: Exports and transmits the keystore to the client securely
+3. **Client**: Imports the received keystore into their configuration
 
-### Option 2 : CSR fourni par le client (plus sécurisé)
+### Option 2: CSR Provided by the Client (more secure)
 
-Si le client préfère générer sa propre clé privée (plus sécurisé) :
+If the client prefers to generate their own private key (more secure):
 
-#### Côté client : Générer une clé et un CSR
+#### Client Side: Generate a Key and a CSR
 
 ```bash
-# 1. Générer la clé privée (le client la garde secrète)
+# 1. Generate the private key (the client keeps it secret)
 openssl genrsa -out client-key.pem 2048
 
-# 2. Générer la demande de signature (CSR)
+# 2. Generate the Certificate Signing Request (CSR)
 openssl req -new \
   -key client-key.pem \
   -out client.csr \
-  -subj "/CN=banque-xyz.example.com/O=Banque XYZ/C=FR"
+  -subj "/CN=bank-xyz.example.com/O=Bank XYZ/C=FR"
 
-# 3. Afficher le CSR en base64 pour l'envoyer au serveur
+# 3. Display the CSR in base64 to send to the server
 cat client.csr
 ```
 
-#### Côté serveur : Signer le CSR via l'UI
+#### Server Side: Sign the CSR via the UI
 
-L'administrateur signe le CSR via l'API :
+The administrator signs the CSR via the API:
 
-1. Collez le CSR reçu du client
-2. Sélectionnez **Client (mTLS)** comme purpose
-3. Cliquez sur **Sign CSR**
-4. Téléchargez le certificat signé et envoyez-le au client
+1. Paste the CSR received from the client
+2. Select **Client (mTLS)** as purpose
+3. Click **Sign CSR**
+4. Download the signed certificate and send it to the client
 
-Alternativement, via API :
+Alternatively, via API:
 
 ```bash
 curl -X POST "http://localhost:8080/api/v1/certificates/ca/sign" \
@@ -244,22 +244,22 @@ curl -X POST "http://localhost:8080/api/v1/certificates/ca/sign" \
   -d "csrPem=$(cat client.csr)" \
   -d "purpose=CLIENT" \
   -d "validityDays=365" \
-  -d "partnerId=BANQUE_XYZ"
+  -d "partnerId=BANK_XYZ"
 ```
 
-#### Côté client : Créer le keystore
+#### Client Side: Create the Keystore
 
 ```bash
-# 1. Sauvegarder le certificat signé
+# 1. Save the signed certificate
 echo "-----BEGIN CERTIFICATE-----
 MIID....
 -----END CERTIFICATE-----" > client-cert.pem
 
-# 2. Télécharger le certificat CA (pour le truststore)
+# 2. Download the CA certificate (for the truststore)
 curl -o ca-cert.pem http://localhost:8080/api/v1/certificates/ca/certificate \
   -u admin:admin
 
-# 3. Créer le keystore PKCS12 avec la clé et le certificat
+# 3. Create the PKCS12 keystore with the key and certificate
 openssl pkcs12 -export \
   -in client-cert.pem \
   -inkey client-key.pem \
@@ -267,7 +267,7 @@ openssl pkcs12 -export \
   -name client \
   -password pass:changeit
 
-# 4. Créer le truststore avec le certificat CA
+# 4. Create the truststore with the CA certificate
 keytool -importcert \
   -alias pesit-ca \
   -file ca-cert.pem \
@@ -279,13 +279,13 @@ keytool -importcert \
 
 ---
 
-## Guide Client : Importer le certificat serveur
+## Client Guide: Import the Server Certificate
 
-Pour que le client fasse confiance au serveur PeSIT Wizard, il doit importer le certificat CA dans son truststore.
+For the client to trust the PeSIT Wizard server, it must import the CA certificate into its truststore.
 
-### Télécharger le certificat CA via l'UI
+### Download the CA Certificate via the UI
 
-Le certificat CA peut être téléchargé via l'API :
+The CA certificate can be downloaded via the API:
 
 ```bash
 curl -o pesit-ca.pem \
@@ -293,10 +293,10 @@ curl -o pesit-ca.pem \
   -u admin:admin
 ```
 
-### Importer dans un truststore Java (PKCS12)
+### Import into a Java Truststore (PKCS12)
 
 ```bash
-# Créer ou mettre à jour le truststore
+# Create or update the truststore
 keytool -importcert \
   -alias pesit-wizard-ca \
   -file pesit-ca.pem \
@@ -305,11 +305,11 @@ keytool -importcert \
   -storepass changeit \
   -noprompt
 
-# Vérifier l'import
+# Verify the import
 keytool -list -keystore truststore.p12 -storepass changeit
 ```
 
-### Importer dans un truststore JKS (legacy)
+### Import into a JKS Truststore (legacy)
 
 ```bash
 keytool -importcert \
@@ -321,18 +321,18 @@ keytool -importcert \
   -noprompt
 ```
 
-### Configuration client Java
+### Java Client Configuration
 
 ```java
-// Charger le keystore (certificat client)
+// Load the keystore (client certificate)
 KeyStore keyStore = KeyStore.getInstance("PKCS12");
 keyStore.load(new FileInputStream("client-keystore.p12"), "changeit".toCharArray());
 
-// Charger le truststore (certificat CA serveur)
+// Load the truststore (server CA certificate)
 KeyStore trustStore = KeyStore.getInstance("PKCS12");
 trustStore.load(new FileInputStream("client-truststore.p12"), "changeit".toCharArray());
 
-// Créer le SSLContext
+// Create the SSLContext
 KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 kmf.init(keyStore, "changeit".toCharArray());
 
@@ -345,9 +345,9 @@ sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom()
 
 ---
 
-## Vérifier un certificat
+## Verify a Certificate
 
-### Vérifier qu'un certificat est signé par la CA
+### Verify that a Certificate is Signed by the CA
 
 ```bash
 curl -X POST "http://localhost:8080/api/v1/certificates/ca/verify" \
@@ -355,63 +355,63 @@ curl -X POST "http://localhost:8080/api/v1/certificates/ca/verify" \
   -d "certificatePem=$(cat client-cert.pem)"
 ```
 
-Réponse si valide :
+Response if valid:
 ```json
 {
   "message": "Certificate is valid and signed by our CA"
 }
 ```
 
-### Vérifier un certificat avec OpenSSL
+### Verify a Certificate with OpenSSL
 
 ```bash
-# Vérifier la chaîne de confiance
+# Verify the chain of trust
 openssl verify -CAfile pesit-ca.pem client-cert.pem
 
-# Afficher les détails du certificat
+# Display certificate details
 openssl x509 -in client-cert.pem -text -noout
 ```
 
 ---
 
-## Résumé des endpoints CA
+## CA Endpoint Summary
 
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/api/v1/certificates/ca/initialize` | POST | Initialiser la CA privée |
-| `/api/v1/certificates/ca/certificate` | GET | Télécharger le certificat CA (PEM) |
-| `/api/v1/certificates/ca/csr` | POST | Générer un CSR |
-| `/api/v1/certificates/ca/sign` | POST | Signer un CSR |
-| `/api/v1/certificates/ca/partner/{id}/generate` | POST | Générer un certificat complet pour un partenaire |
-| `/api/v1/certificates/ca/verify` | POST | Vérifier un certificat |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/certificates/ca/initialize` | POST | Initialize the private CA |
+| `/api/v1/certificates/ca/certificate` | GET | Download the CA certificate (PEM) |
+| `/api/v1/certificates/ca/csr` | POST | Generate a CSR |
+| `/api/v1/certificates/ca/sign` | POST | Sign a CSR |
+| `/api/v1/certificates/ca/partner/{id}/generate` | POST | Generate a complete certificate for a partner |
+| `/api/v1/certificates/ca/verify` | POST | Verify a certificate |
 
 ---
 
-## Workflow complet mTLS
+## Complete mTLS Workflow
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                      SERVEUR PESIT WIZARD                        │
+│                      PESIT WIZARD SERVER                         │
 ├──────────────────────────────────────────────────────────────────┤
-│  1. POST /ca/initialize         → Créer la CA                    │
-│  2. Configurer ssl.client-auth: NEED                            │
-│  3. POST /ca/partner/XXX/generate  → Générer cert partenaire    │
-│  4. GET /ca/certificate         → Distribuer cert CA            │
+│  1. POST /ca/initialize         → Create the CA                 │
+│  2. Configure ssl.client-auth: NEED                             │
+│  3. POST /ca/partner/XXX/generate  → Generate partner cert      │
+│  4. GET /ca/certificate         → Distribute CA cert            │
 └──────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                         CLIENT PESIT                             │
+│                         PESIT CLIENT                             │
 ├──────────────────────────────────────────────────────────────────┤
-│  1. Récupérer le keystore partenaire (clé + cert signé)         │
-│     OU générer CSR et faire signer                               │
-│  2. Importer cert CA dans truststore                            │
-│  3. Configurer le client avec keystore + truststore             │
-│  4. Connexion mTLS au serveur port 5000                         │
+│  1. Retrieve the partner keystore (key + signed cert)           │
+│     OR generate CSR and have it signed                          │
+│  2. Import CA cert into truststore                              │
+│  3. Configure the client with keystore + truststore             │
+│  4. mTLS connection to server port 6502 (or TLS port 5001)     │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## Sécurité de l'API REST
+## REST API Security
 
 ### Basic Authentication
 
@@ -419,28 +419,28 @@ openssl x509 -in client-cert.pem -text -noout
 pesitwizard:
   admin:
     username: admin
-    password: ${ADMIN_PASSWORD}  # Via variable d'environnement
+    password: ${ADMIN_PASSWORD}  # Via environment variable
 ```
 
-### Changer le mot de passe admin
+### Change the Admin Password
 
 ```bash
-# Via variable d'environnement
-docker run -e VECTIS_ADMIN_PASSWORD=NouveauMotDePasse ...
+# Via environment variable
+docker run -e PESIT_ADMIN_PASSWORD=NewPassword ...
 ```
 
-### HTTPS pour l'API
+### HTTPS for the API
 
-En production, placez un reverse proxy (nginx, traefik) devant l'API :
+In production, place a reverse proxy (nginx, traefik) in front of the API:
 
 ```nginx
 server {
     listen 443 ssl;
-    server_name pesitwizard-admin.monentreprise.com;
-    
+    server_name pesitwizard-admin.mycompany.com;
+
     ssl_certificate /etc/ssl/certs/server.crt;
     ssl_certificate_key /etc/ssl/private/server.key;
-    
+
     location / {
         proxy_pass http://pesitwizard-server:8080;
         proxy_set_header Host $host;
@@ -449,23 +449,24 @@ server {
 }
 ```
 
-## Sécurité réseau
+## Network Security
 
 ### Firewall
 
-Ports à ouvrir :
+Ports to open:
 
-| Port | Service | Accès |
-|------|---------|-------|
-| 5000 | PeSIT | Partenaires uniquement |
-| 8080 | API REST | Interne uniquement |
+| Port | Service | Access |
+|------|---------|--------|
+| 6502 | PeSIT | Partners only |
+| 5001 | PeSIT TLS | Partners only |
+| 8080 | REST API | Internal only |
 
 ### IP Whitelisting
 
-Restreindre l'accès PeSIT aux IPs connues :
+Restrict PeSIT access to known IPs:
 
 ```yaml
-# NetworkPolicy Kubernetes
+# Kubernetes NetworkPolicy
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -479,49 +480,50 @@ spec:
   ingress:
   - from:
     - ipBlock:
-        cidr: 10.0.0.0/8  # Réseau interne
+        cidr: 10.0.0.0/8  # Internal network
     - ipBlock:
-        cidr: 203.0.113.0/24  # IPs de la banque
+        cidr: 203.0.113.0/24  # Bank IPs
     ports:
-    - port: 5000
+    - port: 6502
+    - port: 5001
 ```
 
 ### VPN
 
-Pour les échanges sensibles, utilisez un VPN site-à-site :
+For sensitive exchanges, use a site-to-site VPN:
 
 ```
-[Votre réseau] ──VPN IPSec── [Réseau banque]
+[Your network] ──VPN IPSec── [Bank network]
       │                            │
       ▼                            ▼
  PeSIT Wizard Client              PeSIT Wizard Server
 ```
 
-## Audit et traçabilité
+## Audit and Traceability
 
-### Logs d'accès
+### Access Logs
 
-Tous les accès sont journalisés :
+All access is logged:
 
 ```
-2025-01-10 10:30:00 INFO  [CONNECT] Partner=BANQUE_XYZ IP=203.0.113.50 Status=SUCCESS
-2025-01-10 10:30:01 INFO  [CREATE] Partner=BANQUE_XYZ File=VIREMENT.XML Status=SUCCESS
-2025-01-10 10:30:05 INFO  [RELEASE] Partner=BANQUE_XYZ Duration=5s Bytes=15234
+2025-01-10 10:30:00 INFO  [CONNECT] Partner=BANK_XYZ IP=203.0.113.50 Status=SUCCESS
+2025-01-10 10:30:01 INFO  [CREATE] Partner=BANK_XYZ File=PAYMENT.XML Status=SUCCESS
+2025-01-10 10:30:05 INFO  [RELEASE] Partner=BANK_XYZ Duration=5s Bytes=15234
 ```
 
-### Rétention des logs
+### Log Retention
 
 ```yaml
 logging:
   file:
     name: /var/log/pesitwizard/pesitwizard-server.log
     max-size: 100MB
-    max-history: 90  # 90 jours
+    max-history: 90  # 90 days
 ```
 
-### Export vers SIEM
+### Export to SIEM
 
-Configurez Filebeat ou Fluentd pour envoyer les logs vers votre SIEM :
+Configure Filebeat or Fluentd to send logs to your SIEM:
 
 ```yaml
 # filebeat.yml
@@ -529,21 +531,21 @@ filebeat.inputs:
 - type: log
   paths:
     - /var/log/pesitwizard/*.log
-  
+
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
   index: "pesitwizard-logs-%{+yyyy.MM.dd}"
 ```
 
-## Checklist sécurité
+## Security Checklist
 
-- [ ] Mots de passe partenaires complexes
-- [ ] TLS activé (PeSIT-E)
-- [ ] Certificats valides et non expirés
-- [ ] API protégée par HTTPS
-- [ ] Mot de passe admin changé
-- [ ] Firewall configuré
-- [ ] IP whitelisting activé
-- [ ] Logs centralisés
-- [ ] Alertes configurées
-- [ ] Sauvegardes testées
+- [ ] Complex partner passwords
+- [ ] TLS enabled (PeSIT-E)
+- [ ] Valid and non-expired certificates
+- [ ] API protected by HTTPS
+- [ ] Admin password changed
+- [ ] Firewall configured
+- [ ] IP whitelisting enabled
+- [ ] Centralized logs
+- [ ] Alerts configured
+- [ ] Backups tested

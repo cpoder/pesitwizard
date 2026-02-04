@@ -1,17 +1,17 @@
-# Configuration du Serveur
+# Server Configuration
 
-## Variables d'environnement
+## Environment Variables
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `SPRING_DATASOURCE_URL` | URL JDBC PostgreSQL | - |
-| `SPRING_DATASOURCE_USERNAME` | Utilisateur DB | pesitwizard |
-| `SPRING_DATASOURCE_PASSWORD` | Mot de passe DB | pesitwizard |
-| `VECTIS_CLUSTER_ENABLED` | Activer le clustering | false |
-| `POD_NAME` | Nom du pod (K8s) | - |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SPRING_DATASOURCE_URL` | JDBC PostgreSQL URL | - |
+| `SPRING_DATASOURCE_USERNAME` | DB user | pesitwizard |
+| `SPRING_DATASOURCE_PASSWORD` | DB password | pesitwizard |
+| `PESIT_CLUSTER_ENABLED` | Enable clustering | false |
+| `POD_NAME` | Pod name (K8s) | - |
 | `POD_NAMESPACE` | Namespace (K8s) | default |
 
-## Fichier application.yml
+## application.yml File
 
 ```yaml
 server:
@@ -24,20 +24,20 @@ spring:
     password: pesitwizard
 
 pesitwizard:
-  # Configuration du clustering
+  # Clustering configuration
   cluster:
     enabled: true
     name: pesitwizard-cluster
-  
-  # Sécurité API
+
+  # API security
   admin:
     username: admin
     password: admin
 ```
 
-## Configuration des serveurs PeSIT
+## PeSIT Server Configuration
 
-Un serveur PeSIT Wizard peut héberger plusieurs "serveurs PeSIT logiques" sur différents ports.
+A PeSIT Wizard server can host multiple "logical PeSIT servers" on different ports.
 
 ### Via API
 
@@ -47,95 +47,97 @@ curl -X POST http://localhost:8080/api/servers \
   -H "Content-Type: application/json" \
   -d '{
     "serverId": "PESIT_SERVER",
-    "port": 5000,
+    "port": 6502,
+    "tlsPort": 5001,
     "autoStart": true,
     "maxConnections": 100,
     "readTimeout": 60000
   }'
 ```
 
-### Paramètres
+### Parameters
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `serverId` | Identifiant du serveur (PI_04) | - |
-| `port` | Port TCP d'écoute | 5000 |
-| `autoStart` | Démarrer automatiquement | true |
-| `maxConnections` | Connexions simultanées max | 100 |
-| `readTimeout` | Timeout lecture (ms) | 60000 |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `serverId` | Server identifier (PI_04) | - |
+| `port` | TCP listening port | 6502 |
+| `tlsPort` | TLS listening port | 5001 |
+| `autoStart` | Start automatically | true |
+| `maxConnections` | Max simultaneous connections | 100 |
+| `readTimeout` | Read timeout (ms) | 60000 |
 
-## Configuration des partenaires
+## Partner Configuration
 
-Les partenaires sont les clients autorisés à se connecter.
+Partners are the clients authorized to connect.
 
 ### Via API
 
 ```bash
-curl -X POST http://localhost:8080/api/partners \
+curl -X POST http://localhost:8080/api/v1/config/partners \
   -u admin:admin \
   -H "Content-Type: application/json" \
   -d '{
-    "partnerId": "CLIENT_ENTREPRISE",
-    "name": "Mon Client",
+    "partnerId": "CLIENT_COMPANY",
+    "name": "My Client",
     "password": "secret123",
     "enabled": true,
     "allowedOperations": ["READ", "WRITE"]
   }'
 ```
 
-### Paramètres
+### Parameters
 
-| Paramètre | Description |
+| Parameter | Description |
 |-----------|-------------|
-| `partnerId` | Identifiant du partenaire (PI_03) |
-| `name` | Nom affiché |
-| `password` | Mot de passe (PI_05) |
-| `enabled` | Partenaire actif |
-| `allowedOperations` | Opérations autorisées (READ, WRITE) |
+| `partnerId` | Partner identifier (PI_03) |
+| `name` | Display name |
+| `password` | Password (PI_05) |
+| `enabled` | Partner active |
+| `allowedOperations` | Allowed operations (READ, WRITE) |
 
-## Configuration des fichiers virtuels
+## Virtual File Configuration
 
-Les fichiers virtuels définissent les chemins de stockage.
+Virtual files define the storage paths.
 
 ### Via API
 
 ```bash
-curl -X POST http://localhost:8080/api/virtual-files \
+curl -X POST http://localhost:8080/api/v1/config/files \
   -u admin:admin \
   -H "Content-Type: application/json" \
   -d '{
-    "fileId": "VIREMENTS",
-    "name": "Fichiers de virements",
-    "sendDirectory": "/data/send/virements",
-    "receiveDirectory": "/data/received/virements",
+    "fileId": "PAYMENTS",
+    "name": "Payment files",
+    "sendDirectory": "/data/send/payments",
+    "receiveDirectory": "/data/received/payments",
     "filenamePattern": "*.xml"
   }'
 ```
 
-### Paramètres
+### Parameters
 
-| Paramètre | Description |
+| Parameter | Description |
 |-----------|-------------|
-| `fileId` | Identifiant du fichier virtuel (PI_12) |
-| `name` | Nom affiché |
-| `sendDirectory` | Répertoire des fichiers à envoyer |
-| `receiveDirectory` | Répertoire des fichiers reçus |
-| `filenamePattern` | Pattern de noms de fichiers |
+| `fileId` | Virtual file identifier (PI_12) |
+| `name` | Display name |
+| `sendDirectory` | Directory for files to send |
+| `receiveDirectory` | Directory for received files |
+| `filenamePattern` | Filename pattern |
 
-## Répertoires de stockage
+## Storage Directories
 
 ```
 /data
-├── send/           # Fichiers à envoyer
-│   ├── virements/
-│   └── releves/
-├── received/       # Fichiers reçus
-│   ├── virements/
-│   └── releves/
-└── temp/           # Fichiers temporaires
+├── send/           # Files to send
+│   ├── payments/
+│   └── statements/
+├── received/       # Received files
+│   ├── payments/
+│   └── statements/
+└── temp/           # Temporary files
 ```
 
-### Configuration du volume (Kubernetes)
+### Volume Configuration (Kubernetes)
 
 ```yaml
 apiVersion: v1
@@ -149,36 +151,36 @@ spec:
       storage: 50Gi
 ```
 
-## Logs et monitoring
+## Logs and Monitoring
 
-### Niveaux de log
+### Log Levels
 
 ```yaml
 logging:
   level:
     com.pesitwizard: INFO
-    com.pesitwizard.server.handler: DEBUG  # Détails des sessions
-    com.pesitwizard.protocol: DEBUG        # Messages PeSIT
+    com.pesitwizard.server.handler: DEBUG  # Session details
+    com.pesitwizard.protocol: DEBUG        # PeSIT messages
 ```
 
-### Métriques Prometheus
+### Prometheus Metrics
 
-Le serveur expose des métriques sur `/actuator/prometheus` :
+The server exposes metrics on `/actuator/prometheus`:
 
-- `pesitwizard_connections_active` : Connexions actives
-- `pesitwizard_transfers_total` : Nombre total de transferts
-- `pesitwizard_transfers_bytes_total` : Volume transféré
-- `pesitwizard_errors_total` : Nombre d'erreurs
+- `pesitwizard.connections.active`: Active connections
+- `pesitwizard.transfers.total`: Total number of transfers
+- `pesitwizard.transfers.bytes.total`: Total volume transferred
+- `pesitwizard.errors.total`: Number of errors
 
-### Health checks
+### Health Checks
 
 ```bash
-# Readiness (prêt à recevoir du trafic)
+# Readiness (ready to receive traffic)
 curl http://localhost:8080/actuator/health/readiness
 
-# Liveness (application en vie)
+# Liveness (application alive)
 curl http://localhost:8080/actuator/health/liveness
 
-# Health complet
+# Full health
 curl http://localhost:8080/actuator/health
 ```

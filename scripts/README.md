@@ -62,15 +62,15 @@ chmod +x scripts/*.sh
 ```
 
 ### Server won't start
-Check if port 8080 or 5000 is already in use:
+Check if port 8080 or 6502 is already in use:
 ```bash
-netstat -an | grep -E '8080|5000'
+netstat -an | grep -E '8080|6502'
 ```
 
 ### Authentication failures
 Check server partner configuration:
 ```bash
-curl http://localhost:8080/api/partners | jq
+curl http://localhost:8080/api/v1/config/partners | jq
 ```
 
 ## Documentation

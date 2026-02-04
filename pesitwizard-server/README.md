@@ -1,16 +1,16 @@
 # PeSIT Wizard Server
 
-Serveur PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécompensation) implémenté en Spring Boot.
+PeSIT server (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation) implemented in Spring Boot.
 
-## Fonctionnalités
+## Features
 
-- **Protocole PeSIT Hors-SIT** : Envoi et réception de fichiers
-- **API REST** : Configuration et monitoring via HTTP
-- **Gestion des partenaires** : Configuration des connexions entrantes/sortantes
-- **Fichiers virtuels** : Mapping des fichiers logiques
-- **TLS** : Support du chiffrement SSL/TLS
+- **PeSIT Off-SIT Protocol**: File send and receive
+- **REST API**: Configuration and monitoring via HTTP
+- **Partner Management**: Configuration of incoming/outgoing connections
+- **Virtual Files**: Logical file mapping
+- **TLS**: SSL/TLS encryption support
 
-## Prérequis
+## Prerequisites
 
 - Java 21+
 - Maven 3.9+
@@ -18,74 +18,77 @@ Serveur PeSIT (Protocole d'Échange pour un Système Interbancaire de Télécomp
 ## Build
 
 ```bash
-# Installer d'abord la bibliothèque protocole
+# First install the protocol library
 cd ../pesitwizard-pesit
 mvn install -DskipTests
 
-# Builder le serveur
+# Build the server
 cd ../pesitwizard-server
 mvn package -DskipTests
 ```
 
-## Exécution
+## Running
 
 ```bash
 java -jar target/pesitwizard-server-1.0.0-SNAPSHOT.jar
 ```
 
-- **Port PeSIT** : 5000
-- **Port API REST** : 8080
+- **PeSIT Port**: 6502
+- **PeSIT TLS Port**: 5001
+- **REST API Port**: 8080
 
 ## Configuration
 
-Fichier `application.yml` :
+`application.yml` file:
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:h2:file:./data/pesitwizard-db  # H2 par défaut, PostgreSQL recommandé
-    
+    url: jdbc:h2:file:./data/pesitwizard-db  # H2 by default, PostgreSQL recommended
+
 pesitwizard:
   server:
-    port: 5000
+    port: 6502
+    tls-port: 5001
     ssl:
       enabled: false
 ```
 
-### Variables d'environnement
+### Environment Variables
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `VECTIS_SERVER_PORT` | Port PeSIT | `5000` |
-| `SERVER_PORT` | Port API REST | `8080` |
-| `SPRING_DATASOURCE_URL` | URL JDBC | H2 file |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PESIT_SERVER_PORT` | PeSIT port | `6502` |
+| `PESIT_SERVER_TLS_PORT` | PeSIT TLS port | `5001` |
+| `SERVER_PORT` | REST API port | `8080` |
+| `SPRING_DATASOURCE_URL` | JDBC URL | H2 file |
 
-## API REST
+## REST API
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/v1/servers` | Liste des serveurs configurés |
-| POST | `/api/v1/servers/{id}/start` | Démarrer un serveur |
-| POST | `/api/v1/servers/{id}/stop` | Arrêter un serveur |
-| GET | `/api/v1/partners` | Liste des partenaires |
-| GET | `/api/v1/virtual-files` | Liste des fichiers virtuels |
-| GET | `/api/v1/transfers` | Historique des transferts |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/servers` | List configured servers |
+| POST | `/api/v1/servers/{id}/start` | Start a server |
+| POST | `/api/v1/servers/{id}/stop` | Stop a server |
+| GET | `/api/v1/config/partners` | List partners |
+| GET | `/api/v1/config/files` | List virtual files |
+| GET | `/api/v1/transfers` | Transfer history |
 
 ## Monitoring
 
-Endpoints Actuator :
+Actuator endpoints:
 
-- Health : `GET /actuator/health`
-- Metrics : `GET /actuator/metrics`
+- Health: `GET /actuator/health`
+- Metrics: `GET /actuator/metrics`
 
 ## Docker
 
 ```bash
 docker build -t pesitwizard-server .
-docker run -p 5000:5000 -p 8080:8080 pesitwizard-server
+docker run -p 6502:6502 -p 5001:5001 -p 8080:8080 pesitwizard-server
 ```
 
-## Stack technique
+## Tech Stack
 
 - Spring Boot 3.x
 - Java 21
@@ -93,4 +96,4 @@ docker run -p 5000:5000 -p 8080:8080 pesitwizard-server
 
 ## Enterprise
 
-Pour le clustering haute disponibilité et la console d'administration, voir [PeSIT Wizard Enterprise](https://pesitwizard.com).
+For high availability clustering and the administration console, see [PeSIT Wizard Enterprise](https://pesitwizard.com).

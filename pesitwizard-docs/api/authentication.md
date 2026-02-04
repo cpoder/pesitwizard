@@ -1,77 +1,77 @@
-# Authentification
+# Authentication
 
-## Méthodes supportées
+## Supported Methods
 
-| API | Méthode | Usage |
-|-----|---------|-------|
+| API | Method | Usage |
+|-----|--------|-------|
 | Client API | Bearer Token / API Key | Production |
 | Admin API | Basic Auth | Administration |
 | Server API | Basic Auth | Configuration |
 
 ## Basic Authentication
 
-Pour les APIs Admin et Server :
+For Admin and Server APIs:
 
 ```bash
-curl -u admin:password http://localhost:9080/api/v1/clusters
+curl -u admin:password http://localhost:8080/api/v1/clusters
 ```
 
-Ou avec header :
+Or with a header:
 ```bash
-curl -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" http://localhost:9080/api/v1/clusters
+curl -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" http://localhost:8080/api/v1/clusters
 ```
 
 ## API Key (Client API)
 
-### Générer une clé API
+### Generate an API Key
 
 ```bash
-curl -X POST http://localhost:9081/api/auth/api-keys \
+curl -X POST http://localhost:8080/api/v1/apikeys \
   -u admin:admin \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Integration ERP",
+    "name": "ERP Integration",
     "expiresAt": "2026-01-01T00:00:00Z"
   }'
 ```
 
-Réponse :
+Response:
 ```json
 {
   "id": "ak_123456789",
   "key": "pk_live_abc123def456...",
-  "name": "Integration ERP",
+  "name": "ERP Integration",
   "createdAt": "2025-01-10T10:00:00Z",
   "expiresAt": "2026-01-01T00:00:00Z"
 }
 ```
 
 ::: warning
-La clé complète n'est affichée qu'une seule fois. Conservez-la en lieu sûr.
+The full key is only displayed once. Store it in a safe place.
 :::
 
-### Utiliser la clé API
+### Use the API Key
 
 ```bash
 curl -H "X-API-Key: pk_live_abc123def456..." \
-  http://localhost:9081/api/transfers
+  http://localhost:8080/api/transfers
 ```
 
-Ou via query parameter :
+Or via query parameter:
 ```bash
-curl "http://localhost:9081/api/transfers?api_key=pk_live_abc123def456..."
+curl "http://localhost:8080/api/transfers?api_key=pk_live_abc123def456..."
 ```
 
-### Révoquer une clé
+### Revoke a Key
 
 ```bash
-curl -X DELETE http://localhost:9081/api/auth/api-keys/ak_123456789 \
+curl -X DELETE http://localhost:8080/api/v1/apikeys/ak_123456789 \
   -u admin:admin
 ```
 
-## JWT (optionnel)
+## JWT (Optional)
 
-Pour les intégrations OAuth2/OIDC :
+For OAuth2/OIDC integrations:
 
 ### Configuration
 
@@ -81,51 +81,51 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://auth.monentreprise.com/realms/pesitwizard
+          issuer-uri: https://auth.mycompany.com/realms/pesitwizard
 ```
 
-### Utilisation
+### Usage
 
 ```bash
-# Obtenir un token (exemple Keycloak)
-TOKEN=$(curl -X POST https://auth.monentreprise.com/realms/pesitwizard/protocol/openid-connect/token \
+# Obtain a token (Keycloak example)
+TOKEN=$(curl -X POST https://auth.mycompany.com/realms/pesitwizard/protocol/openid-connect/token \
   -d "grant_type=client_credentials" \
   -d "client_id=pesitwizard-client" \
   -d "client_secret=secret" | jq -r '.access_token')
 
-# Utiliser le token
+# Use the token
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:9081/api/transfers
+  http://localhost:8080/api/transfers
 ```
 
-## Bonnes pratiques
+## Best Practices
 
-### Stockage des credentials
+### Credential Storage
 
-❌ **Ne pas faire** :
+**Do not do this**:
 ```bash
-# Credentials en dur dans le code
+# Hardcoded credentials in code
 curl -u admin:password123 ...
 ```
 
-✅ **À faire** :
+**Do this instead**:
 ```bash
-# Via variables d'environnement
+# Via environment variables
 curl -u "$PESIT_USER:$PESIT_PASSWORD" ...
 
-# Via fichier .netrc
-curl --netrc http://localhost:9081/api/transfers
+# Via .netrc file
+curl --netrc http://localhost:8080/api/transfers
 ```
 
-### Rotation des clés
+### Key Rotation
 
-- Générez de nouvelles clés régulièrement (tous les 90 jours)
-- Gardez l'ancienne clé active pendant la transition
-- Supprimez l'ancienne clé une fois la migration terminée
+- Generate new keys regularly (every 90 days)
+- Keep the old key active during the transition
+- Delete the old key once the migration is complete
 
 ### Audit
 
-Toutes les authentifications sont journalisées :
+All authentications are logged:
 
 ```
 2025-01-10 10:30:00 INFO  [AUTH] Method=API_KEY KeyId=ak_123456789 IP=192.168.1.100 Status=SUCCESS

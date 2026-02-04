@@ -1,23 +1,16 @@
-# P rotocole
+# PeSIT Protocol Specification (Version E)
 
-# d’ E changes pour un
+> **Note:** This is the original PeSIT Version E specification (September 1989), written in French.
+> It is preserved here as a reference document for the protocol implementation.
+> Title: "Protocol for Exchanges in an Interbank Clearing System" (Protocole d'Echanges pour un Systeme Interbancaire de Telecompensation)
+> ISBN 2-906820-11-3. All rights reserved; commercial reproduction is prohibited.
 
-# S ystème
+---
 
-# I nterbancaire de
-
-# T élécompensation
-
-Septembre 1989
-Toute reproduction à des fins commerciales est interdite ISBN 2-906820-11-
+### This version supersedes Version D of November 15, 1987
 
 
-### Cette version annule et remplace
-
-### la version D du 15 novembre 1987
-
-
-## SOMMAIRE
+## TABLE OF CONTENTS (original French)
 
 
 

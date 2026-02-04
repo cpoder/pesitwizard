@@ -1,17 +1,17 @@
-# Gestion des secrets
+# Secrets Management
 
-Le module `pesitwizard-security` fournit une gestion sécurisée des secrets (mots de passe partenaires, clés API, etc.).
+The `pesitwizard-security` module provides secure secrets management (partner passwords, API keys, etc.).
 
-## Providers disponibles
+## Available Providers
 
-| Provider | Description | Cas d'usage |
-|----------|-------------|-------------|
-| `aes` | Chiffrement AES local | Développement, petites installations |
-| `vault` | HashiCorp Vault | Production, multi-environnements |
+| Provider | Description | Use Case |
+|----------|-------------|----------|
+| `aes` | Local AES encryption | Development, small installations |
+| `vault` | HashiCorp Vault | Production, multi-environment |
 
-## Configuration AES (par défaut)
+## AES Configuration (default)
 
-Le provider AES utilise une clé maître pour chiffrer/déchiffrer les secrets stockés en base de données.
+The AES provider uses a master key to encrypt/decrypt secrets stored in the database.
 
 ```yaml
 pesitwizard:
@@ -21,13 +21,13 @@ pesitwizard:
       key-file: /app/secrets/master.key
 ```
 
-### Génération de la clé maître
+### Master Key Generation
 
 ```bash
-# Générer une clé AES-256
+# Generate an AES-256 key
 openssl rand -base64 32 > master.key
 
-# Sécuriser les permissions
+# Secure the permissions
 chmod 600 master.key
 ```
 
@@ -44,7 +44,7 @@ data:
 ```
 
 ```yaml
-# Dans le Deployment
+# In the Deployment
 volumes:
   - name: secrets
     secret:
@@ -55,9 +55,9 @@ volumeMounts:
     readOnly: true
 ```
 
-## Configuration HashiCorp Vault
+## HashiCorp Vault Configuration
 
-Pour les environnements de production, Vault offre une gestion centralisée des secrets.
+For production environments, Vault offers centralized secrets management.
 
 ```yaml
 pesitwizard:
@@ -69,9 +69,9 @@ pesitwizard:
       path: secret/data/pesitwizard
 ```
 
-### Authentification Vault
+### Vault Authentication
 
-**Token (développement)** :
+**Token (development)**:
 ```yaml
 pesitwizard:
   secrets:
@@ -79,7 +79,7 @@ pesitwizard:
       token: ${VAULT_TOKEN}
 ```
 
-**Kubernetes Auth (production)** :
+**Kubernetes Auth (production)**:
 ```yaml
 pesitwizard:
   secrets:
@@ -90,7 +90,7 @@ pesitwizard:
         jwt-path: /var/run/secrets/kubernetes.io/serviceaccount/token
 ```
 
-### Structure des secrets dans Vault
+### Secrets Structure in Vault
 
 ```
 secret/data/pesitwizard/
@@ -103,10 +103,10 @@ secret/data/pesitwizard/
     └── master-key
 ```
 
-### Configuration Vault (HCL)
+### Vault Configuration (HCL)
 
 ```hcl
-# Policy pour pesitwizard
+# Policy for PeSIT Wizard
 path "secret/data/pesitwizard/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
@@ -119,56 +119,56 @@ vault write auth/kubernetes/role/pesitwizard \
     ttl=1h
 ```
 
-## API SecretsService
+## SecretsService API
 
-Le service `SecretsService` expose une API simple pour gérer les secrets :
+The `SecretsService` service exposes a simple API for managing secrets:
 
 ```java
 @Autowired
 private SecretsService secretsService;
 
-// Stocker un secret
+// Store a secret
 secretsService.storeSecret("partners/BANK01/password", "s3cr3t");
 
-// Récupérer un secret
+// Retrieve a secret
 String password = secretsService.getSecret("partners/BANK01/password");
 
-// Supprimer un secret
+// Delete a secret
 secretsService.deleteSecret("partners/BANK01/password");
 ```
 
-## Rotation des secrets
+## Secrets Rotation
 
-### Rotation de la clé AES
+### AES Key Rotation
 
-1. Générer une nouvelle clé
-2. Déchiffrer tous les secrets avec l'ancienne clé
-3. Rechiffrer avec la nouvelle clé
-4. Remplacer le fichier de clé
+1. Generate a new key
+2. Decrypt all secrets with the old key
+3. Re-encrypt with the new key
+4. Replace the key file
 
 ```bash
-# Script de rotation (à implémenter selon vos besoins)
+# Rotation script (implement according to your needs)
 ./scripts/rotate-master-key.sh old.key new.key
 ```
 
-### Rotation avec Vault
+### Rotation with Vault
 
-Vault gère automatiquement la rotation via les politiques de TTL.
+Vault automatically manages rotation via TTL policies.
 
-## Sécurité
+## Security
 
-::: warning Bonnes pratiques
-- Ne jamais commiter les clés dans Git
-- Utiliser des permissions restrictives (600)
-- Préférer Vault en production
-- Activer l'audit logging
+::: warning Best Practices
+- Never commit keys to Git
+- Use restrictive permissions (600)
+- Prefer Vault in production
+- Enable audit logging
 :::
 
-## Variables d'environnement
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `PESITWIZARD_SECRETS_PROVIDER` | `aes` ou `vault` |
-| `PESITWIZARD_SECRETS_AES_KEY_FILE` | Chemin vers la clé AES |
-| `VAULT_ADDR` | URL de Vault |
-| `VAULT_TOKEN` | Token d'authentification Vault |
+| `PESITWIZARD_SECRETS_PROVIDER` | `aes` or `vault` |
+| `PESITWIZARD_SECRETS_AES_KEY_FILE` | Path to the AES key |
+| `VAULT_ADDR` | Vault URL |
+| `VAULT_TOKEN` | Vault authentication token |

@@ -1,33 +1,34 @@
-# Installation du Serveur PeSIT Wizard
+# PeSIT Wizard Server Installation
 
-Le serveur PeSIT Wizard permet de recevoir des fichiers de partenaires externes. Il est conçu pour être déployé sur Kubernetes avec haute disponibilité.
+The PeSIT Wizard server allows receiving files from external partners. It is designed to be deployed on Kubernetes with high availability.
 
-## Déploiement Docker
+## Docker Deployment
 
-Pour un déploiement simple sans Kubernetes :
+For a simple deployment without Kubernetes:
 
 ```bash
 docker run -d \
   --name pesitwizard-server \
-  -p 5000:5000 \
+  -p 6502:6502 \
+  -p 5001:5001 \
   -p 8080:8080 \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
   -e SPRING_DATASOURCE_USERNAME=pesitwizard \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
-  -e VECTIS_CLUSTER_ENABLED=false \
+  -e PESIT_CLUSTER_ENABLED=false \
   -v pesitwizard-data:/data \
   ghcr.io/pesitwizard/pesitwizard-server:latest
 ```
 
-## Déploiement Kubernetes
+## Kubernetes Deployment
 
-### Créer le namespace
+### Create the Namespace
 
 ```bash
 kubectl create namespace pesitwizard
 ```
 
-### Déployer PostgreSQL
+### Deploy PostgreSQL
 
 ```yaml
 # postgres.yaml
@@ -87,7 +88,7 @@ spec:
     app: postgres
 ```
 
-### Déployer le serveur PeSIT Wizard
+### Deploy the PeSIT Wizard Server
 
 ```yaml
 # pesitwizard-server.yaml
@@ -111,8 +112,10 @@ spec:
       - name: pesitwizard-server
         image: ghcr.io/pesitwizard/pesitwizard-server:latest
         ports:
-        - containerPort: 5000
-          name: pesitwizard
+        - containerPort: 6502
+          name: pesit
+        - containerPort: 5001
+          name: pesit-tls
         - containerPort: 8080
           name: http
         env:
@@ -126,7 +129,7 @@ spec:
               fieldPath: metadata.namespace
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://postgres:5432/pesitwizard
-        - name: VECTIS_CLUSTER_ENABLED
+        - name: PESIT_CLUSTER_ENABLED
           value: "true"
         readinessProbe:
           httpGet:
@@ -147,14 +150,16 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - port: 5000
-    name: pesitwizard
+  - port: 6502
+    name: pesit
+  - port: 5001
+    name: pesit-tls
   selector:
     app: pesitwizard-server
-    pesitwizard-leader: "true"  # Route uniquement vers le leader
+    pesitwizard-leader: "true"  # Route only to the leader
 ```
 
-### RBAC pour le labeling
+### RBAC for Labeling
 
 ```yaml
 # rbac.yaml
@@ -188,7 +193,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-### Appliquer
+### Apply
 
 ```bash
 kubectl apply -f postgres.yaml
@@ -196,24 +201,24 @@ kubectl apply -f rbac.yaml
 kubectl apply -f pesitwizard-server.yaml
 ```
 
-## Vérification
+## Verification
 
 ```bash
-# Vérifier les pods
+# Check the pods
 kubectl get pods -n pesitwizard
 
-# Vérifier le leader
+# Check the leader
 kubectl get pods -n pesitwizard -l pesitwizard-leader=true
 
-# Vérifier le service
+# Check the service
 kubectl get svc -n pesitwizard
 
-# Logs du leader
+# Leader logs
 kubectl logs -n pesitwizard -l pesitwizard-leader=true
 ```
 
-## Prochaines étapes
+## Next Steps
 
 - [Configuration](/guide/server/configuration)
 - [Clustering](/guide/server/clustering)
-- [Sécurité](/guide/server/security)
+- [Security](/guide/server/security)

@@ -1,24 +1,25 @@
 # Server API
 
-Base URL : `http://localhost:8080`
+Base URL: `http://localhost:8080`
 
-Authentification : Basic Auth (`admin:admin` par défaut)
+Authentication: Basic Auth (`admin:admin` by default)
 
-## Serveurs PeSIT
+## PeSIT Servers
 
-### Liste des serveurs
+### List Servers
 
 ```http
 GET /api/servers
 Authorization: Basic YWRtaW46YWRtaW4=
 ```
 
-**Réponse** :
+**Response**:
 ```json
 [
   {
     "serverId": "PESIT_SERVER",
-    "port": 5000,
+    "port": 6502,
+    "tlsPort": 5001,
     "status": "RUNNING",
     "autoStart": true,
     "activeConnections": 2
@@ -26,7 +27,7 @@ Authorization: Basic YWRtaW46YWRtaW4=
 ]
 ```
 
-### Créer un serveur
+### Create a Server
 
 ```http
 POST /api/servers
@@ -34,20 +35,21 @@ Content-Type: application/json
 
 {
   "serverId": "PESIT_SERVER",
-  "port": 5000,
+  "port": 6502,
+  "tlsPort": 5001,
   "autoStart": true,
   "maxConnections": 100,
   "readTimeout": 60000
 }
 ```
 
-### Démarrer un serveur
+### Start a Server
 
 ```http
 POST /api/servers/{serverId}/start
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "serverId": "PESIT_SERVER",
@@ -56,39 +58,40 @@ POST /api/servers/{serverId}/start
 }
 ```
 
-### Arrêter un serveur
+### Stop a Server
 
 ```http
 POST /api/servers/{serverId}/stop
 ```
 
-### Statut d'un serveur
+### Server Status
 
 ```http
 GET /api/servers/{serverId}/status
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "serverId": "PESIT_SERVER",
   "status": "RUNNING",
-  "port": 5000,
+  "port": 6502,
+  "tlsPort": 5001,
   "activeConnections": 2,
   "totalTransfers": 1523,
   "uptime": 86400
 }
 ```
 
-## Partenaires
+## Partners
 
-### Liste des partenaires
+### List Partners
 
 ```http
-GET /api/partners
+GET /api/v1/config/partners
 ```
 
-**Réponse** :
+**Response**:
 ```json
 [
   {
@@ -101,10 +104,10 @@ GET /api/partners
 ]
 ```
 
-### Créer un partenaire
+### Create a Partner
 
 ```http
-POST /api/partners
+POST /api/v1/config/partners
 Content-Type: application/json
 
 {
@@ -116,10 +119,16 @@ Content-Type: application/json
 }
 ```
 
-### Modifier un partenaire
+### Get a Partner
 
 ```http
-PUT /api/partners/{partnerId}
+GET /api/v1/config/partners/{id}
+```
+
+### Update a Partner
+
+```http
+PUT /api/v1/config/partners/{id}
 Content-Type: application/json
 
 {
@@ -128,80 +137,75 @@ Content-Type: application/json
 }
 ```
 
-### Supprimer un partenaire
+### Delete a Partner
 
 ```http
-DELETE /api/partners/{partnerId}
+DELETE /api/v1/config/partners/{id}
 ```
 
-### Changer le mot de passe
+## Virtual Files
+
+### List Virtual Files
 
 ```http
-POST /api/partners/{partnerId}/password
-Content-Type: application/json
-
-{
-  "password": "newpassword123"
-}
+GET /api/v1/config/files
 ```
 
-## Fichiers virtuels
-
-### Liste des fichiers virtuels
-
-```http
-GET /api/virtual-files
-```
-
-**Réponse** :
+**Response**:
 ```json
 [
   {
-    "fileId": "VIREMENTS",
-    "name": "Fichiers de virements",
-    "sendDirectory": "/data/send/virements",
-    "receiveDirectory": "/data/received/virements",
+    "fileId": "TRANSFERS",
+    "name": "Transfer files",
+    "sendDirectory": "/data/send/transfers",
+    "receiveDirectory": "/data/received/transfers",
     "filenamePattern": "*.xml"
   }
 ]
 ```
 
-### Créer un fichier virtuel
+### Create a Virtual File
 
 ```http
-POST /api/virtual-files
+POST /api/v1/config/files
 Content-Type: application/json
 
 {
-  "fileId": "VIREMENTS",
-  "name": "Fichiers de virements",
-  "sendDirectory": "/data/send/virements",
-  "receiveDirectory": "/data/received/virements",
+  "fileId": "TRANSFERS",
+  "name": "Transfer files",
+  "sendDirectory": "/data/send/transfers",
+  "receiveDirectory": "/data/received/transfers",
   "filenamePattern": "*.xml"
 }
 ```
 
-### Modifier un fichier virtuel
+### Get a Virtual File
 
 ```http
-PUT /api/virtual-files/{fileId}
+GET /api/v1/config/files/{id}
 ```
 
-### Supprimer un fichier virtuel
+### Update a Virtual File
 
 ```http
-DELETE /api/virtual-files/{fileId}
+PUT /api/v1/config/files/{id}
+```
+
+### Delete a Virtual File
+
+```http
+DELETE /api/v1/config/files/{id}
 ```
 
 ## Cluster
 
-### Statut du cluster
+### Cluster Status
 
 ```http
 GET /api/cluster/status
 ```
 
-**Réponse** :
+**Response**:
 ```json
 {
   "clusterName": "pesitwizard-cluster",
@@ -223,25 +227,25 @@ GET /api/cluster/status
 }
 ```
 
-## Historique des transferts
+## Transfer History
 
-### Liste des transferts
+### List Transfers
 
 ```http
-GET /api/transfers?page=0&size=20
+GET /api/v1/transfers?page=0&size=20
 ```
 
-**Query parameters** :
+**Query parameters**:
 
-| Paramètre | Description |
+| Parameter | Description |
 |-----------|-------------|
-| `partnerId` | Filtrer par partenaire |
-| `direction` | SEND ou RECEIVE |
+| `partnerId` | Filter by partner |
+| `direction` | SEND or RECEIVE |
 | `status` | COMPLETED, FAILED |
-| `from` | Date de début |
-| `to` | Date de fin |
+| `from` | Start date |
+| `to` | End date |
 
-**Réponse** :
+**Response**:
 ```json
 {
   "content": [
@@ -249,8 +253,8 @@ GET /api/transfers?page=0&size=20
       "id": 1,
       "partnerId": "CLIENT_XYZ",
       "direction": "RECEIVE",
-      "filename": "VIREMENT.XML",
-      "virtualFileId": "VIREMENTS",
+      "filename": "TRANSFER.XML",
+      "virtualFileId": "TRANSFERS",
       "size": 15234,
       "status": "COMPLETED",
       "startTime": "2025-01-10T10:30:00Z",
@@ -263,13 +267,13 @@ GET /api/transfers?page=0&size=20
 
 ## Health & Monitoring
 
-### Health check
+### Health Check
 
 ```http
 GET /actuator/health
 ```
 
-### Métriques Prometheus
+### Prometheus Metrics
 
 ```http
 GET /actuator/prometheus

@@ -62,9 +62,9 @@ pesit:
   
   # Multi-tenant cluster configuration
   cluster:
-    # Cluster ID for multi-tenant mode (set via VECTIS_CLUSTER_ID env var)
+    # Cluster ID for multi-tenant mode (set via PESIT_CLUSTER_ID env var)
     # When set, server uses cluster-specific schema in PostgreSQL
-    id: ${VECTIS_CLUSTER_ID:}
+    id: ${PESIT_CLUSTER_ID:}
     
     # Enable JGroups cluster mode for HA
     enabled: false
@@ -123,9 +123,9 @@ pesit:
     country: FR
   
   server:
-    # TCP port for Vectis protocol
+    # TCP port for PeSIT protocol
     port: 6502
-    # TLS port for Vectis protocol (when SSL enabled)
+    # TLS port for PeSIT protocol (when SSL enabled)
     tls-port: 5001
     
     # Server identifier (PI 4) - max 8 characters
@@ -410,8 +410,8 @@ pesit.security:
 pesit.secrets:
   # Encryption key for secrets (Base64 encoded, 32 bytes for AES-256)
   # Generate with: openssl rand -base64 32
-  # For production, set via environment variable: VECTIS_SECRETS_ENCRYPTION_KEY
-  # encryption-key: ${VECTIS_SECRETS_ENCRYPTION_KEY:}
+  # For production, set via environment variable: PESIT_SECRETS_ENCRYPTION_KEY
+  # encryption-key: ${PESIT_SECRETS_ENCRYPTION_KEY:}
 
 # Backup & Recovery
 pesit.backup:

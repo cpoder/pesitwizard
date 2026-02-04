@@ -1,4 +1,4 @@
-# Vectis Client Configuration
+# PeSIT Wizard Client Configuration
 
 spring:
   application:
@@ -85,7 +85,7 @@ otel:
   service:
     name: ${spring.application.name}
 
-# Vectis client defaults
+# PeSIT Wizard client defaults
 pesitwizard:
   client:
     id: ${PESIT_CLIENT_ID:PESIT_CLIENT}

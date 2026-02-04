@@ -1,31 +1,31 @@
 # API Reference
 
-## Vue d'ensemble
+## Overview
 
-PeSIT Wizard expose deux APIs REST :
+PeSIT Wizard exposes two REST APIs:
 
 | API | Port | Base URL | Description |
 |-----|------|----------|-------------|
-| **Client API** | 9081 | `/api/v1` | Envoi/réception de fichiers |
-| **Server API** | 8080 | `/api` | Configuration du serveur |
+| **Client API** | 8080 | `/api/v1` | File send/receive |
+| **Server API** | 8080 | `/api` | Server configuration |
 
-## Documentation interactive
+## Interactive Documentation
 
-Chaque API expose une documentation Swagger/OpenAPI :
+Each API exposes Swagger/OpenAPI documentation:
 
-- Client : http://localhost:9081/swagger-ui.html
-- Server : http://localhost:8080/swagger-ui.html
+- Client: http://localhost:8080/swagger-ui.html
+- Server: http://localhost:8080/swagger-ui.html
 
-## Spécifications OpenAPI
+## OpenAPI Specifications
 
-Les fichiers OAS (OpenAPI Specification) sont disponibles :
+OAS (OpenAPI Specification) files are available:
 
 - [Client API (OAS 3.0)](/api/openapi-client.yaml)
 - [Server API (OAS 3.0)](/api/openapi-server.yaml)
 
-## Format des réponses
+## Response Format
 
-Toutes les APIs retournent du JSON :
+All APIs return JSON:
 
 ```json
 {
@@ -35,19 +35,19 @@ Toutes les APIs retournent du JSON :
 }
 ```
 
-### Codes HTTP
+### HTTP Codes
 
 | Code | Description |
 |------|-------------|
-| 200 | Succès |
-| 201 | Créé |
-| 400 | Requête invalide |
-| 401 | Non authentifié |
-| 403 | Non autorisé |
-| 404 | Non trouvé |
-| 500 | Erreur serveur |
+| 200 | Success |
+| 201 | Created |
+| 400 | Invalid request |
+| 401 | Not authenticated |
+| 403 | Not authorized |
+| 404 | Not found |
+| 500 | Server error |
 
-### Erreurs
+### Errors
 
 ```json
 {
@@ -62,13 +62,13 @@ Toutes les APIs retournent du JSON :
 
 ## Pagination
 
-Les endpoints de liste supportent la pagination :
+List endpoints support pagination:
 
 ```bash
 GET /api/transfers?page=0&size=20&sort=startTime,desc
 ```
 
-Réponse :
+Response:
 ```json
 {
   "content": [...],
@@ -79,21 +79,23 @@ Réponse :
 }
 ```
 
-## Filtrage
+## Filtering
 
-Utilisez les query parameters pour filtrer :
+Use query parameters to filter:
 
 ```bash
 GET /api/transfers?status=COMPLETED&direction=SEND&from=2025-01-01
 ```
 
-## Rate limiting
+## Rate Limiting
 
-Les APIs sont limitées à :
-- 100 requêtes/minute par IP (API publique)
-- 1000 requêtes/minute par token (API authentifiée)
+Rate limiting is **disabled** by default. It can be enabled by setting `PESIT_RATE_LIMITING_ENABLED=true`.
 
-Headers de réponse :
+When enabled, the APIs are limited to:
+- 100 requests/minute per IP (public API)
+- 1000 requests/minute per token (authenticated API)
+
+Response headers:
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95

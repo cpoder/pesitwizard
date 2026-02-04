@@ -18,7 +18,7 @@ The `maxEntitySize` parameter controls the maximum FPDU data chunk size.
 **Configuration:**
 ```yaml
 pesit:
-  max-entity-size: 32768  # Server default
+  max-entity-size: 4096  # Server default
 ```
 
 Per-server override:

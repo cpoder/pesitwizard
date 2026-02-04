@@ -1,210 +1,210 @@
-# Dépannage
+# Troubleshooting
 
-Ce guide couvre les problèmes courants et leur résolution.
+This guide covers common issues and their resolution.
 
-## Erreurs de connexion
+## Connection Errors
 
 ### CONNECTION_REFUSED
 
-**Symptôme**: Le transfert échoue immédiatement avec "Connection refused"
+**Symptom**: The transfer fails immediately with "Connection refused"
 
-**Causes possibles**:
-| Cause | Diagnostic | Solution |
-|-------|------------|----------|
-| Serveur arrêté | `netstat -tlnp \| grep 5000` | Démarrer le serveur PeSIT |
-| Mauvais port | Vérifier config serveur | Corriger le port dans la config |
-| Firewall | `telnet host 5000` | Ouvrir le port dans le firewall |
-| DNS | `nslookup hostname` | Vérifier résolution DNS |
+**Possible causes**:
+| Cause | Diagnosis | Solution |
+|-------|-----------|----------|
+| Server stopped | `netstat -tlnp \| grep 6502` | Start the PeSIT server |
+| Wrong port | Check server config | Fix the port in the config |
+| Firewall | `telnet host 6502` | Open the port in the firewall |
+| DNS | `nslookup hostname` | Check DNS resolution |
 
-**Commandes de diagnostic**:
+**Diagnostic commands**:
 ```bash
-# Tester la connectivité TCP
-nc -zv pesit-server.example.com 5000
+# Test TCP connectivity
+nc -zv pesit-server.example.com 6502
 
-# Vérifier que le serveur écoute
-ss -tlnp | grep 5000
+# Verify that the server is listening
+ss -tlnp | grep 6502
 
-# Tester depuis le conteneur Docker
-docker exec pw-client nc -zv cx-server 5000
+# Test from the Docker container
+docker exec pw-client nc -zv cx-server 6502
 ```
 
 ### CONNECTION_TIMEOUT
 
-**Symptôme**: Le transfert reste bloqué puis échoue après le timeout
+**Symptom**: The transfer hangs then fails after the timeout
 
-**Causes possibles**:
-| Cause | Diagnostic | Solution |
-|-------|------------|----------|
-| Réseau lent | `ping host` | Augmenter connectionTimeout |
-| Firewall silencieux | `traceroute host` | Vérifier règles firewall |
-| Serveur surchargé | Logs serveur | Augmenter ressources serveur |
+**Possible causes**:
+| Cause | Diagnosis | Solution |
+|-------|-----------|----------|
+| Slow network | `ping host` | Increase connectionTimeout |
+| Silent firewall | `traceroute host` | Check firewall rules |
+| Overloaded server | Server logs | Increase server resources |
 
-**Configuration timeout**:
+**Timeout configuration**:
 ```yaml
 # application.yml (client)
 pesitwizard:
   transfer:
-    connection-timeout: 30000  # 30 secondes
+    connection-timeout: 30000  # 30 seconds
     read-timeout: 120000       # 2 minutes
 ```
 
 ---
 
-## Erreurs d'authentification
+## Authentication Errors
 
 ### AUTH_FAILED / Diagnostic 0x010101
 
-**Symptôme**: Connexion établie mais rejetée avec code diagnostic
+**Symptom**: Connection established but rejected with diagnostic code
 
-**Codes diagnostic courants**:
-| Code | Signification | Solution |
-|------|---------------|----------|
-| `0x010101` | Partner ID inconnu | Vérifier partnerId côté serveur |
-| `0x010102` | Mot de passe incorrect | Vérifier password |
-| `0x010103` | Partenaire désactivé | Activer le partenaire |
-| `0x010104` | Sessions max atteintes | Attendre ou augmenter limite |
+**Common diagnostic codes**:
+| Code | Meaning | Solution |
+|------|---------|----------|
+| `0x010101` | Unknown Partner ID | Check partnerId on the server side |
+| `0x010102` | Incorrect password | Check password |
+| `0x010103` | Partner disabled | Enable the partner |
+| `0x010104` | Max sessions reached | Wait or increase the limit |
 
-**Vérification côté serveur**:
+**Server-side verification**:
 ```bash
-# Lister les partenaires configurés
+# List configured partners
 curl -s -u admin:admin http://localhost:8080/api/v1/config/partners | jq '.[].id'
 
-# Vérifier un partenaire spécifique
+# Check a specific partner
 curl -s -u admin:admin http://localhost:8080/api/v1/config/partners/PARTNER_ID | jq
 ```
 
-**Vérification côté CX**:
+**CX-side verification**:
 ```bash
-# Lister les partenaires CX
+# List CX partners
 $sterm
-# Puis: L P (List Partners)
+# Then: L P (List Partners)
 ```
 
 ### PARTNER_UNKNOWN
 
-**Symptôme**: "Partner not found" ou "Unknown partner"
+**Symptom**: "Partner not found" or "Unknown partner"
 
 **Checklist**:
-- [ ] Le partnerId est exactement identique (casse, espaces)
-- [ ] Le partenaire existe côté serveur
-- [ ] Le partenaire est activé (enabled: true)
-- [ ] Le mot de passe correspond (si requis)
+- [ ] The partnerId is exactly identical (case, spaces)
+- [ ] The partner exists on the server side
+- [ ] The partner is enabled (enabled: true)
+- [ ] The password matches (if required)
 
 ---
 
-## Erreurs de fichier virtuel
+## Virtual File Errors
 
 ### FILE_NOT_FOUND / Diagnostic 0x020201
 
-**Symptôme**: Le fichier virtuel n'est pas trouvé sur le serveur
+**Symptom**: The virtual file is not found on the server
 
-**Codes diagnostic**:
-| Code | Signification | Solution |
-|------|---------------|----------|
-| `0x020201` | Fichier virtuel inconnu | Créer le fichier virtuel |
-| `0x020202` | Direction incompatible | Vérifier SEND vs RECEIVE |
-| `0x020203` | Fichier désactivé | Activer le fichier virtuel |
+**Diagnostic codes**:
+| Code | Meaning | Solution |
+|------|---------|----------|
+| `0x020201` | Unknown virtual file | Create the virtual file |
+| `0x020202` | Incompatible direction | Check SEND vs RECEIVE |
+| `0x020203` | File disabled | Enable the virtual file |
 
-**Vérification PW Server**:
+**PW Server verification**:
 ```bash
-# Lister les fichiers virtuels
+# List virtual files
 curl -s -u admin:admin http://localhost:8080/api/v1/config/files | jq '.[].id'
 
-# Détails d'un fichier
+# File details
 curl -s -u admin:admin http://localhost:8080/api/v1/config/files/FILENAME | jq
 ```
 
-**Vérification CX**:
+**CX verification**:
 ```bash
 $sterm
-# Puis: L F (List Files)
+# Then: L F (List Files)
 ```
 
 ### FORMAT_MISMATCH
 
-**Symptôme**: Erreur de format lors du transfert
+**Symptom**: Format error during transfer
 
 **Causes**:
-- Format (BV/BF/TV/TF) incompatible
-- Record length différent
-- Compression non supportée
+- Incompatible format (BV/BF/TV/TF)
+- Different record length
+- Unsupported compression
 
 **Solution**:
 ```bash
-# CX: Utiliser FORMAT=** pour accepter tout format
+# CX: Use FORMAT=** to accept any format
 # setup-partners.sh
 memcpy(param->uni.zreq_tom_file.format, "**", 2);
 ```
 
 ---
 
-## Erreurs TLS/SSL
+## TLS/SSL Errors
 
 ### SSL_HANDSHAKE_FAILURE
 
-**Symptôme**: "SSL handshake failed" ou "Certificate error"
+**Symptom**: "SSL handshake failed" or "Certificate error"
 
-**Causes possibles**:
-| Cause | Diagnostic | Solution |
-|-------|------------|----------|
-| Certificat expiré | `openssl x509 -enddate` | Renouveler le certificat |
-| CA non trustée | Vérifier truststore | Importer le certificat CA |
-| CN mismatch | Vérifier hostname | Corriger le CN ou SAN |
-| Protocol mismatch | Logs TLS | Aligner versions TLS |
+**Possible causes**:
+| Cause | Diagnosis | Solution |
+|-------|-----------|----------|
+| Expired certificate | `openssl x509 -enddate` | Renew the certificate |
+| Untrusted CA | Check truststore | Import the CA certificate |
+| CN mismatch | Check hostname | Fix the CN or SAN |
+| Protocol mismatch | TLS logs | Align TLS versions |
 
-**Diagnostic OpenSSL**:
+**OpenSSL diagnostics**:
 ```bash
-# Tester la connexion TLS
-openssl s_client -connect pesit-server:5000 -tls1_3
+# Test the TLS connection
+openssl s_client -connect pesit-server:5001 -tls1_3
 
-# Vérifier le certificat serveur
-openssl s_client -connect pesit-server:5000 < /dev/null 2>/dev/null | \
+# Check the server certificate
+openssl s_client -connect pesit-server:5001 < /dev/null 2>/dev/null | \
   openssl x509 -text -noout
 
-# Vérifier la date d'expiration
-openssl s_client -connect pesit-server:5000 < /dev/null 2>/dev/null | \
+# Check the expiration date
+openssl s_client -connect pesit-server:5001 < /dev/null 2>/dev/null | \
   openssl x509 -enddate -noout
 ```
 
-**Vérifier les certificats**:
+**Check certificates**:
 ```bash
-# Lister les certificats dans un keystore PKCS12
+# List certificates in a PKCS12 keystore
 keytool -list -keystore keystore.p12 -storepass changeit
 
-# Vérifier la chaîne de confiance
+# Verify the trust chain
 openssl verify -CAfile ca-cert.pem server-cert.pem
 ```
 
 ### CERTIFICATE_EXPIRED
 
-**Symptôme**: "Certificate has expired"
+**Symptom**: "Certificate has expired"
 
 **Solution**:
 ```bash
-# 1. Générer un nouveau certificat
+# 1. Generate a new certificate
 curl -X POST "http://localhost:8080/api/v1/certificates/ca/partner/PARTNER/generate" \
   -u admin:admin \
   -d "validityDays=365"
 
-# 2. Distribuer le nouveau certificat au partenaire
-# 3. Redémarrer les connexions
+# 2. Distribute the new certificate to the partner
+# 3. Restart the connections
 ```
 
 ---
 
-## Erreurs de transfert
+## Transfer Errors
 
 ### TRANSFER_INTERRUPTED
 
-**Symptôme**: Transfert interrompu en cours de route
+**Symptom**: Transfer interrupted mid-way
 
-**Diagnostic**:
+**Diagnostics**:
 ```bash
-# Vérifier l'historique du transfert
-curl -s http://localhost:9081/api/v1/transfers/TRANSFER_ID | jq
+# Check the transfer history
+curl -s http://localhost:8080/api/v1/transfers/TRANSFER_ID | jq
 
-# Vérifier les sync points
-curl -s http://localhost:9081/api/v1/transfers/TRANSFER_ID | jq '{
+# Check the sync points
+curl -s http://localhost:8080/api/v1/transfers/TRANSFER_ID | jq '{
   status,
   bytesTransferred,
   lastSyncPoint,
@@ -213,178 +213,178 @@ curl -s http://localhost:9081/api/v1/transfers/TRANSFER_ID | jq '{
 }'
 ```
 
-**Reprise du transfert**:
+**Transfer resumption**:
 ```bash
-# Si sync points > 0, le transfert peut être repris
-curl -X POST http://localhost:9081/api/v1/transfers/TRANSFER_ID/resume
+# If sync points > 0, the transfer can be resumed
+curl -X POST http://localhost:8080/api/v1/transfers/TRANSFER_ID/resume
 ```
 
 ### DISK_FULL
 
-**Symptôme**: "No space left on device"
+**Symptom**: "No space left on device"
 
-**Diagnostic**:
+**Diagnostics**:
 ```bash
-# Vérifier l'espace disque
+# Check disk space
 df -h /data/received
 
-# Trouver les gros fichiers
+# Find large files
 du -sh /data/received/* | sort -rh | head -10
 ```
 
 **Solution**:
-- Nettoyer les anciens fichiers
-- Augmenter l'espace disque
-- Configurer la purge automatique
+- Clean up old files
+- Increase disk space
+- Configure automatic purging
 
 ### CHECKSUM_MISMATCH
 
-**Symptôme**: MD5/SHA mismatch après transfert
+**Symptom**: MD5/SHA mismatch after transfer
 
-**Causes possibles**:
-- Corruption réseau
-- Problème de conversion de format
-- Bug dans le multi-article DTF
+**Possible causes**:
+- Network corruption
+- Format conversion issue
+- Bug in multi-article DTF
 
-**Diagnostic**:
+**Diagnostics**:
 ```bash
-# Comparer les checksums
-md5sum fichier_source
-md5sum fichier_recu
+# Compare checksums
+md5sum source_file
+md5sum received_file
 
-# Comparer les tailles
-ls -la fichier_source fichier_recu
+# Compare sizes
+ls -la source_file received_file
 ```
 
 ---
 
-## Problèmes de performance
+## Performance Issues
 
 ### TRANSFER_SLOW
 
-**Symptôme**: Transferts anormalement lents
+**Symptom**: Abnormally slow transfers
 
-**Diagnostic**:
+**Diagnostics**:
 ```bash
-# Mesurer le débit réseau
+# Measure network throughput
 iperf3 -c pesit-server -p 5201
 
-# Vérifier la latence
+# Check latency
 ping -c 10 pesit-server
 
-# Vérifier l'utilisation CPU/mémoire
+# Check CPU/memory usage
 docker stats pw-client pw-server
 ```
 
-**Optimisations**:
+**Optimizations**:
 ```yaml
-# Augmenter la taille des chunks
+# Increase chunk size
 pesitwizard:
   transfer:
-    chunk-size: 32768      # 32KB au lieu de 4KB
-    max-entity-size: 65535 # Maximum PeSIT
+    chunk-size: 32768      # 32KB instead of 4KB
+    max-entity-size: 65535 # PeSIT maximum
 ```
 
 ### MEMORY_LEAK
 
-**Symptôme**: Mémoire qui augmente continuellement
+**Symptom**: Memory continuously increasing
 
-**Diagnostic**:
+**Diagnostics**:
 ```bash
-# Surveiller la mémoire Java
+# Monitor Java memory
 jcmd $(pgrep -f pesitwizard) VM.native_memory summary
 
-# Heap dump pour analyse
+# Heap dump for analysis
 jmap -dump:format=b,file=heap.hprof $(pgrep -f pesitwizard)
 ```
 
 ---
 
-## Logs et diagnostics
+## Logs and Diagnostics
 
-### Activer les logs DEBUG
+### Enable DEBUG Logs
 
 ```yaml
 # application.yml
 logging:
   level:
     com.pesitwizard: DEBUG
-    com.pesitwizard.fpdu: TRACE  # Détail des FPDU
+    com.pesitwizard.fpdu: TRACE  # FPDU details
     com.pesitwizard.session: DEBUG
 ```
 
-### Analyser les logs
+### Analyze Logs
 
 ```bash
-# Filtrer les erreurs
+# Filter errors
 grep -E "ERROR|WARN" /var/log/pesitwizard/*.log
 
-# Suivre un transfert spécifique
+# Follow a specific transfer
 grep "transfer-id-xxx" /var/log/pesitwizard/*.log
 
-# Analyser les FPDU
+# Analyze FPDUs
 grep "FPDU" /var/log/pesitwizard/*.log | tail -50
 ```
 
-### Logs Docker
+### Docker Logs
 
 ```bash
-# Logs en temps réel
+# Real-time logs
 docker logs -f pw-client
 
-# Logs avec timestamps
+# Logs with timestamps
 docker logs --timestamps pw-client 2>&1 | tail -100
 
-# Filtrer par pattern
+# Filter by pattern
 docker logs pw-client 2>&1 | grep -i error
 ```
 
 ---
 
-## Codes diagnostic PeSIT
+## PeSIT Diagnostic Codes
 
 ### Session (0x01xxxx)
 
 | Code | Description |
 |------|-------------|
-| `0x010101` | Partenaire inconnu |
-| `0x010102` | Mot de passe incorrect |
-| `0x010103` | Partenaire désactivé |
-| `0x010104` | Nombre max de sessions atteint |
-| `0x010105` | Type d'accès non autorisé |
+| `0x010101` | Unknown partner |
+| `0x010102` | Incorrect password |
+| `0x010103` | Partner disabled |
+| `0x010104` | Max session count reached |
+| `0x010105` | Unauthorized access type |
 
-### Fichier (0x02xxxx)
-
-| Code | Description |
-|------|-------------|
-| `0x020201` | Fichier virtuel inconnu |
-| `0x020202` | Direction non autorisée |
-| `0x020203` | Fichier désactivé |
-| `0x020204` | Fichier déjà ouvert |
-
-### Transfert (0x03xxxx)
+### File (0x02xxxx)
 
 | Code | Description |
 |------|-------------|
-| `0x030301` | Erreur de format |
-| `0x030302` | Taille dépassée |
-| `0x030303` | Sync point refusé |
-| `0x030304` | Transfert annulé |
+| `0x020201` | Unknown virtual file |
+| `0x020202` | Unauthorized direction |
+| `0x020203` | File disabled |
+| `0x020204` | File already open |
+
+### Transfer (0x03xxxx)
+
+| Code | Description |
+|------|-------------|
+| `0x030301` | Format error |
+| `0x030302` | Size exceeded |
+| `0x030303` | Sync point refused |
+| `0x030304` | Transfer cancelled |
 
 ---
 
-## Outils de diagnostic
+## Diagnostic Tools
 
-### Test de connectivité complet
+### Full Connectivity Test
 
 ```bash
 #!/bin/bash
 # test-pesit-connectivity.sh
 
 HOST=$1
-PORT=${2:-5000}
+PORT=${2:-6502}
 
-echo "=== Test de connectivité PeSIT ==="
+echo "=== PeSIT Connectivity Test ==="
 echo "Host: $HOST"
 echo "Port: $PORT"
 echo ""
@@ -407,12 +407,12 @@ echo | openssl s_client -connect $HOST:$PORT 2>/dev/null | \
   openssl x509 -noout -dates 2>/dev/null || echo "INFO: No certificate"
 ```
 
-### Capture réseau
+### Network Capture
 
 ```bash
-# Capturer le trafic PeSIT (non-TLS)
-tcpdump -i any port 5000 -w pesit-capture.pcap
+# Capture PeSIT traffic (non-TLS)
+tcpdump -i any port 6502 -w pesit-capture.pcap
 
-# Analyser avec Wireshark
+# Analyze with Wireshark
 wireshark pesit-capture.pcap
 ```
