@@ -52,13 +52,13 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker build -t ghcr.io/pesitwizard/pesitwizard-server:latest pesitwizard-server/
-          docker build -t ghcr.io/pesitwizard/pesitwizard-client:latest pesitwizard-client/
+          docker build -t ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest pesitwizard-server/
+          docker build -t ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest pesitwizard-client/
 
       - name: Import images to k3d
         run: |
-          k3d image import ghcr.io/pesitwizard/pesitwizard-server:latest -c pesitwizard
-          k3d image import ghcr.io/pesitwizard/pesitwizard-client:latest -c pesitwizard
+          k3d image import ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest -c pesitwizard
+          k3d image import ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest -c pesitwizard
 
       - name: Create namespace
         run: kubectl create namespace pesitwizard
@@ -82,12 +82,23 @@ jobs:
             pesitwizard-helm-charts/pesitwizard-client \
             -n pesitwizard \
             -f integration-tests/helm-values/client-values.yaml \
-            --wait --timeout 5m
+            --wait --timeout 5m || {
+              echo "=== Helm deployment failed, showing debug info ==="
+              echo "--- Pods ---"
+              kubectl get pods -n pesitwizard -o wide
+              echo "--- Events ---"
+              kubectl get events -n pesitwizard --sort-by='.lastTimestamp' | tail -20
+              echo "--- Client Deployment ---"
+              kubectl describe deployment/pesitwizard-client-api -n pesitwizard 2>/dev/null || true
+              echo "--- Client Pod Logs ---"
+              kubectl logs -n pesitwizard -l app.kubernetes.io/name=pesitwizard-client,app.kubernetes.io/component=api --tail=100 2>/dev/null || true
+              exit 1
+            }
 
       - name: Port forward services
         run: |
           kubectl port-forward svc/pesitwizard-server 30080:8080 -n pesitwizard &
-          kubectl port-forward svc/pesitwizard-client 30081:8080 -n pesitwizard &
+          kubectl port-forward svc/pesitwizard-client-api 30081:8080 -n pesitwizard &
           sleep 10
 
       - name: Run integration tests
@@ -107,10 +118,17 @@ jobs:
       - name: Show pod logs on failure
         if: failure()
         run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -n pesitwizard -o wide
+          echo ""
+          echo "=== Events ==="
+          kubectl get events -n pesitwizard --sort-by='.lastTimestamp' | tail -30
+          echo ""
           echo "=== Server Logs ==="
           kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=100 || true
-          echo "=== Client Logs ==="
-          kubectl logs -n pesitwizard deployment/pesitwizard-client --tail=100 || true
+          echo ""
+          echo "=== Client API Logs ==="
+          kubectl logs -n pesitwizard deployment/pesitwizard-client-api --tail=100 || true
 
       - name: Cleanup k3d cluster
         if: always()
