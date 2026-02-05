@@ -143,8 +143,8 @@ jobs:
           context: ./pesitwizard-server
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/pesitwizard-server:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/pesitwizard-server:latest
+            ghcr.io/${{ github.repository }}/pesitwizard-server:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}/pesitwizard-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -154,8 +154,8 @@ jobs:
           context: ./pesitwizard-client
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/pesitwizard-client:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/pesitwizard-client:latest
+            ghcr.io/${{ github.repository }}/pesitwizard-client:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}/pesitwizard-client:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
