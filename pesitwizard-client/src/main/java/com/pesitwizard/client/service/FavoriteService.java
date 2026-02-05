@@ -14,6 +14,7 @@ import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
 import com.pesitwizard.client.repository.FavoriteTransferRepository;
 import com.pesitwizard.client.repository.ScheduledTransferRepository;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
+import com.pesitwizard.security.SecretsService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class FavoriteService {
     private final TransferHistoryRepository historyRepository;
     private final ScheduledTransferRepository scheduleRepository;
     private final TransferService transferService;
+    private final SecretsService secretsService;
 
     /**
      * Get all favorites sorted by usage count or last used
@@ -54,6 +56,7 @@ public class FavoriteService {
     @Transactional
     public FavoriteTransfer createFavorite(FavoriteTransfer favorite) {
         log.info("Creating favorite: {}", favorite.getName());
+        encryptPassword(favorite);
         return favoriteRepository.save(favorite);
     }
 
@@ -99,6 +102,10 @@ public class FavoriteService {
                     existing.setRemoteFilename(updated.getRemoteFilename());
                     existing.setVirtualFile(updated.getVirtualFile());
                     existing.setTransferConfigId(updated.getTransferConfigId());
+                    if (updated.getPassword() != null) {
+                        existing.setPassword(updated.getPassword());
+                        encryptPassword(existing);
+                    }
 
                     FavoriteTransfer saved = favoriteRepository.save(existing);
 
@@ -144,6 +151,17 @@ public class FavoriteService {
     }
 
     /**
+     * Encrypt the password field if present and not already encrypted.
+     */
+    private void encryptPassword(FavoriteTransfer favorite) {
+        String password = favorite.getPassword();
+        if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
+            String encrypted = secretsService.encryptForStorage(password, "favorite", favorite.getName(), "password");
+            favorite.setPassword(encrypted);
+        }
+    }
+
+    /**
      * Execute a favorite transfer
      */
     @Transactional
@@ -156,11 +174,18 @@ public class FavoriteService {
                     favorite.markUsed();
                     favoriteRepository.save(favorite);
 
+                    // Decrypt password if present
+                    String decryptedPassword = null;
+                    if (favorite.getPassword() != null && !favorite.getPassword().isBlank()) {
+                        decryptedPassword = secretsService.decryptFromStorage(favorite.getPassword());
+                    }
+
                     // Build transfer request with connector support
                     String filename = favorite.getFilename();
                     TransferRequest request = TransferRequest.builder()
                             .server(favorite.getServerId())
                             .partnerId(favorite.getPartnerId())
+                            .password(decryptedPassword)
                             .filename(filename)
                             .sourceConnectionId(favorite.getSourceConnectionId())
                             .destinationConnectionId(favorite.getDestinationConnectionId())

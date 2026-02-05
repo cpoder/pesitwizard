@@ -77,6 +77,9 @@ public class FavoriteTransfer {
     /** Virtual file name */
     private String virtualFile;
 
+    /** Encrypted PeSIT partner password (encrypted via SecretsService) */
+    private String password;
+
     /** Transfer config ID */
     private String transferConfigId;
 

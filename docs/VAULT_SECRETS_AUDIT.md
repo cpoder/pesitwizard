@@ -22,7 +22,9 @@ This document lists all sensitive fields that should be stored in HashiCorp Vaul
 No sensitive fields.
 
 ### FavoriteTransfer Entity
-No sensitive fields.
+| Field | Type | Vault Path | Status |
+|-------|------|------------|--------|
+| `password` | String | `secret/data/pesitwizard-client/favorite/{name}/password` | ✅ Migrated |
 
 ### ScheduledTransfer Entity
 No sensitive fields (references PesitServer and StorageConnection).

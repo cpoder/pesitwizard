@@ -38,7 +38,9 @@ public class FavoriteController {
     @GetMapping
     public List<FavoriteTransfer> getAllFavorites(
             @RequestParam(defaultValue = "usage") String sortBy) {
-        return favoriteService.getAllFavorites(sortBy);
+        List<FavoriteTransfer> favorites = favoriteService.getAllFavorites(sortBy);
+        favorites.forEach(this::maskPassword);
+        return favorites;
     }
 
     /**
@@ -47,6 +49,7 @@ public class FavoriteController {
     @GetMapping("/{id}")
     public ResponseEntity<FavoriteTransfer> getFavorite(@PathVariable String id) {
         return favoriteService.getFavorite(id)
+                .map(f -> { maskPassword(f); return f; })
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -57,7 +60,9 @@ public class FavoriteController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FavoriteTransfer createFavorite(@Valid @RequestBody FavoriteTransfer favorite) {
-        return favoriteService.createFavorite(favorite);
+        FavoriteTransfer created = favoriteService.createFavorite(favorite);
+        maskPassword(created);
+        return created;
     }
 
     /**
@@ -81,6 +86,7 @@ public class FavoriteController {
             @PathVariable String id,
             @Valid @RequestBody FavoriteTransfer favorite) {
         return favoriteService.updateFavorite(id, favorite)
+                .map(f -> { maskPassword(f); return f; })
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -102,5 +108,11 @@ public class FavoriteController {
         return favoriteService.executeFavorite(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    private void maskPassword(FavoriteTransfer favorite) {
+        if (favorite.getPassword() != null && !favorite.getPassword().isBlank()) {
+            favorite.setPassword("****");
+        }
     }
 }
