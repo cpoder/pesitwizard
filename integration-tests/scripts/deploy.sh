@@ -20,7 +20,7 @@ if ! docker images | grep -q pesitwizard-server; then
     echo "Building server image..."
     cd pesitwizard-server
     mvn package -DskipTests -q
-    docker build -t ghcr.io/pesitwizard/pesitwizard-server:latest .
+    docker build -t ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest .
     cd ..
 fi
 
@@ -28,14 +28,14 @@ if ! docker images | grep -q pesitwizard-client; then
     echo "Building client image..."
     cd pesitwizard-client
     mvn package -DskipTests -q
-    docker build -t ghcr.io/pesitwizard/pesitwizard-client:latest .
+    docker build -t ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest .
     cd ..
 fi
 
 # Import images to k3d
 echo "[2/6] Importing images to k3d..."
-k3d image import ghcr.io/pesitwizard/pesitwizard-server:latest -c pesitwizard || true
-k3d image import ghcr.io/pesitwizard/pesitwizard-client:latest -c pesitwizard || true
+k3d image import ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest -c pesitwizard || true
+k3d image import ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest -c pesitwizard || true
 
 # Deploy PostgreSQL
 echo "[3/6] Deploying PostgreSQL..."

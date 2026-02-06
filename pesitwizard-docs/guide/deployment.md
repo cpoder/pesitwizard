@@ -164,7 +164,7 @@ spec:
     spec:
       containers:
       - name: pesitwizard-server
-        image: ghcr.io/pesitwizard/pesitwizard-server:latest
+        image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
         env:
         - name: PESIT_SERVER_ID
           value: "MY_PESIT_SERVER"
@@ -383,7 +383,7 @@ helm upgrade pesitwizard-server pesitwizard/pesitwizard-server -n pesitwizard
 
 # Or update the image manually
 kubectl set image deployment/pesitwizard-server \
-  pesitwizard-server=ghcr.io/pesitwizard/pesitwizard-server:v1.2.0 \
+  pesitwizard-server=ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:v1.2.0 \
   -n pesitwizard
 ```
 
@@ -399,7 +399,7 @@ kubectl logs -f deployment/pesitwizard-server -n pesitwizard
 
 ```bash
 # Test the PeSIT connection
-kubectl run test-client --rm -it --image=ghcr.io/pesitwizard/pesitwizard-client:latest \
+kubectl run test-client --rm -it --image=ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest \
   -- java -jar pesitwizard-client.jar --host pesitwizard-server --port 6502 --test
 ```
 

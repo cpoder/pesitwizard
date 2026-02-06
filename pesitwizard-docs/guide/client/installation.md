@@ -18,7 +18,7 @@ docker run -d \
   --name pesitwizard-client \
   -p 8080:8080 \
   -v pesitwizard-data:/data \
-  ghcr.io/pesitwizard/pesitwizard-client:latest
+  ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
 ```
 
 ### With PostgreSQL
@@ -30,7 +30,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
   -e SPRING_DATASOURCE_USERNAME=pesitwizard \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
-  ghcr.io/pesitwizard/pesitwizard-client:latest
+  ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
 ```
 
 ## Docker Compose
@@ -87,7 +87,7 @@ volumes:
   postgres-data:
 ```
 
-Lancez avec :
+Start with:
 
 ```bash
 docker compose up -d
