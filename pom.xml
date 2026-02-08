@@ -62,7 +62,7 @@
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <awssdk.version>2.21.0</awssdk.version>
         <jsch.version>0.2.21</jsch.version>
-        <jgroups.version>5.3.10.Final</jgroups.version>
+        <jgroups.version>5.5.2.Final</jgroups.version>
         <jgroups-kubernetes.version>2.0.2.Final</jgroups-kubernetes.version>
         <kubernetes-client.version>7.0.1</kubernetes-client.version>
         <bucket4j.version>8.7.0</bucket4j.version>
