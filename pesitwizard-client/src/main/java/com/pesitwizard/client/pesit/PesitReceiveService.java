@@ -269,6 +269,22 @@ public class PesitReceiveService {
                     session.sendFpdu(new Fpdu(FpduType.ACK_SYN).withIdDst(serverConnId)
                             .withParameter(new ParameterValue(PI_20_NUM_SYNC, lastSync)));
                     log.debug("ACK_SYN {} at {} bytes", lastSync, totalBytes);
+                } else if (type == FpduType.RESYN) {
+                    // Server requests resynchronization during READ
+                    int resyncPoint = ParameterParser.parsePI18RestartPoint(fpdu);
+                    log.info("RESYN from server: rollback to sync point {} (byte pos {})",
+                            resyncPoint, lastSyncPos);
+                    // ACK the resync - we'll need to truncate and continue from that point
+                    session.sendFpdu(new Fpdu(FpduType.ACK_RESYN).withIdDst(serverConnId)
+                            .withParameter(new ParameterValue(PI_18_POINT_RELANCE, resyncPoint)));
+                    // Truncate local file to last sync position and update counters
+                    if (raf != null) {
+                        raf.seek(lastSyncPos);
+                        raf.setLength(lastSyncPos);
+                    }
+                    totalBytes = lastSyncPos;
+                    ctx.addBytes(-(ctx.getBytesTransferred() - lastSyncPos));
+                    log.info("RESYN: truncated to {} bytes, continuing", lastSyncPos);
                 } else if (type == FpduType.DTF_END || type == FpduType.TRANS_END || type == FpduType.CLOSE) {
                     receiving = false;
                 } else if (type == FpduType.IDT) {

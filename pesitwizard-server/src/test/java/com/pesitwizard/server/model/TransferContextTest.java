@@ -153,4 +153,70 @@ class TransferContextTest {
 
         assertEquals(endTime, context.getEndTime());
     }
+
+    // ===== RESYN Tests =====
+
+    @Test
+    @DisplayName("should record and retrieve sync point byte positions")
+    void shouldRecordAndRetrieveSyncPointPositions() {
+        context.recordSyncPointPosition(1, 1024);
+        context.recordSyncPointPosition(2, 2048);
+        context.recordSyncPointPosition(3, 4096);
+
+        assertEquals(1024, context.getSyncPointBytePosition(1));
+        assertEquals(2048, context.getSyncPointBytePosition(2));
+        assertEquals(4096, context.getSyncPointBytePosition(3));
+    }
+
+    @Test
+    @DisplayName("should return -1 for unknown sync point")
+    void shouldReturnNegativeForUnknownSyncPoint() {
+        assertEquals(-1, context.getSyncPointBytePosition(99));
+    }
+
+    @Test
+    @DisplayName("should clear sync point positions on reset")
+    void shouldClearSyncPointPositionsOnReset() throws IOException {
+        context.recordSyncPointPosition(1, 1024);
+        context.setLocalPath(tempDir.resolve("reset-sync.dat"));
+        context.openOutputStream();
+        context.reset();
+
+        assertEquals(-1, context.getSyncPointBytePosition(1));
+    }
+
+    @Test
+    @DisplayName("should truncate and reopen file for RESYN rollback")
+    void shouldTruncateAndReopenForResyn() throws IOException {
+        Path testFile = tempDir.resolve("resyn-truncate.dat");
+        context.setLocalPath(testFile);
+        context.openOutputStream();
+
+        // Write 1000 bytes
+        context.appendData(new byte[500]);
+        context.appendData(new byte[500]);
+        assertEquals(1000, context.getBytesTransferred());
+
+        // Truncate to 500 bytes (RESYN rollback)
+        context.truncateAndReopen(500);
+
+        assertEquals(500, context.getBytesTransferred());
+        assertEquals(0, context.getBytesSinceLastSync());
+
+        // Verify we can still write
+        context.appendData(new byte[200]);
+        assertEquals(700, context.getBytesTransferred());
+
+        context.closeOutputStream();
+
+        // Verify file size
+        assertEquals(700, java.nio.file.Files.size(testFile));
+    }
+
+    @Test
+    @DisplayName("should throw if truncating without file")
+    void shouldThrowIfTruncatingWithoutFile() {
+        context.setLocalPath(tempDir.resolve("nonexistent.dat"));
+        assertThrows(IllegalStateException.class, () -> context.truncateAndReopen(0));
+    }
 }

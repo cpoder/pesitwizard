@@ -79,16 +79,22 @@ public class S3Connector implements StorageConnector {
     @Override public List<FileMetadata> list(String path) throws ConnectorException {
         checkInit();
         String p = resolve(path); if (!p.isEmpty() && !p.endsWith("/")) p += "/";
-        ListObjectsV2Response r = s3.listObjectsV2(ListObjectsV2Request.builder().bucket(bucket).prefix(p).delimiter("/").build());
+        ListObjectsV2Request.Builder reqBuilder = ListObjectsV2Request.builder()
+                .bucket(bucket).prefix(p).delimiter("/");
         List<FileMetadata> result = new ArrayList<>();
-        for (S3Object o : r.contents()) {
-            String name = o.key().substring(p.length());
-            if (!name.isEmpty()) result.add(FileMetadata.builder().name(name).path(o.key()).size(o.size()).lastModified(o.lastModified()).directory(false).build());
-        }
-        for (CommonPrefix cp : r.commonPrefixes()) {
-            String name = cp.prefix().substring(p.length()).replace("/", "");
-            result.add(FileMetadata.builder().name(name).path(cp.prefix()).directory(true).build());
-        }
+        ListObjectsV2Response r;
+        do {
+            r = s3.listObjectsV2(reqBuilder.build());
+            for (S3Object o : r.contents()) {
+                String name = o.key().substring(p.length());
+                if (!name.isEmpty()) result.add(FileMetadata.builder().name(name).path(o.key()).size(o.size()).lastModified(o.lastModified()).directory(false).build());
+            }
+            for (CommonPrefix cp : r.commonPrefixes()) {
+                String name = cp.prefix().substring(p.length()).replace("/", "");
+                result.add(FileMetadata.builder().name(name).path(cp.prefix()).directory(true).build());
+            }
+            reqBuilder.continuationToken(r.nextContinuationToken());
+        } while (Boolean.TRUE.equals(r.isTruncated()));
         return result;
     }
     @Override public InputStream read(String path) throws ConnectorException {

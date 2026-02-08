@@ -7,6 +7,8 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +79,9 @@ public class TransferContext {
     /** Output stream for streaming writes directly to disk */
     private OutputStream fileOutputStream;
 
+    /** Map of sync point number → byte position for RESYN rollback */
+    private final Map<Integer, Long> syncPointPositions = new ConcurrentHashMap<>();
+
     /** Transfer start time */
     private Instant startTime;
 
@@ -113,6 +118,7 @@ public class TransferContext {
         this.bytesTransferred = 0;
         this.recordsTransferred = 0;
         this.fileOutputStream = null;
+        this.syncPointPositions.clear();
         this.startTime = null;
         this.endTime = null;
         this.clientId = null;
@@ -160,6 +166,42 @@ public class TransferContext {
             }
             fileOutputStream = null;
         }
+    }
+
+    /**
+     * Record a sync point with its byte position for later RESYN rollback.
+     */
+    public void recordSyncPointPosition(int syncPoint, long bytePosition) {
+        syncPointPositions.put(syncPoint, bytePosition);
+    }
+
+    /**
+     * Look up the byte position for a given sync point number.
+     * Returns -1 if the sync point is unknown.
+     */
+    public long getSyncPointBytePosition(int syncPoint) {
+        return syncPointPositions.getOrDefault(syncPoint, -1L);
+    }
+
+    /**
+     * Truncate the file to the given byte position and reopen the output stream for appending.
+     * Used during RESYN rollback to discard data after the sync point.
+     */
+    public void truncateAndReopen(long bytePosition) throws IOException {
+        closeOutputStream();
+        if (localPath == null || !Files.exists(localPath)) {
+            throw new IllegalStateException("Cannot truncate: file does not exist");
+        }
+        // Truncate the file
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(localPath.toFile(), "rw")) {
+            raf.setLength(bytePosition);
+        }
+        // Reset bytes transferred to the truncated position
+        this.bytesTransferred = bytePosition;
+        this.bytesSinceLastSync = 0;
+        // Reopen for appending
+        this.fileOutputStream = new BufferedOutputStream(new FileOutputStream(localPath.toFile(), true), 64 * 1024);
+        log.debug("Truncated {} to {} bytes and reopened for appending", localPath, bytePosition);
     }
 
     /**

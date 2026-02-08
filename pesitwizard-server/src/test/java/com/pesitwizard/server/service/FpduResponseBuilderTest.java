@@ -444,4 +444,30 @@ class FpduResponseBuilderTest {
             assertEquals(FpduType.DTF_END, response.getFpduType());
         }
     }
+
+    @Nested
+    @DisplayName("RESYN Responses")
+    class ResynResponseTests {
+
+        @Test
+        @DisplayName("should build RESYN request")
+        void shouldBuildResyn() {
+            Fpdu response = FpduResponseBuilder.buildResyn(sessionContext, DiagnosticCode.D2_218, 5);
+
+            assertEquals(FpduType.RESYN, response.getFpduType());
+            assertEquals(1, response.getIdDst());
+            assertNotNull(response.getParameter(ParameterIdentifier.PI_02_DIAG));
+            assertNotNull(response.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE));
+        }
+
+        @Test
+        @DisplayName("should build ACK_RESYN response")
+        void shouldBuildAckResyn() {
+            Fpdu response = FpduResponseBuilder.buildAckResyn(sessionContext, 3);
+
+            assertEquals(FpduType.ACK_RESYN, response.getFpduType());
+            assertEquals(1, response.getIdDst());
+            assertNotNull(response.getParameter(ParameterIdentifier.PI_18_POINT_RELANCE));
+        }
+    }
 }

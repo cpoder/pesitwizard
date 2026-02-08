@@ -78,35 +78,49 @@ public class ParameterBuilder {
     }
 
     /**
-     * Set value as long (for 8-byte PIs like file size)
+     * Set value as long (for 8-byte PIs like file size).
+     * Supports values up to 2^63-1 (files >= 4GB use 5-8 bytes).
      */
     public ParameterBuilder value(long value) {
         if (!(pi instanceof ParameterIdentifier pi)) {
             throw new IllegalArgumentException("PI " + this.pi.getName() + " does not support integer values");
         }
 
-        int length = pi.getLength();
-        if (length == -1) {
+        int maxLength = pi.getLength();
+        if (maxLength == -1) {
             throw new IllegalArgumentException("Cannot use long value for variable-length PI: " + pi.getName());
         }
-        if (value < 256) {
-            length = 1; // Use 1 byte for small integers
-        } else if (value < 65536) {
-            length = 2; // Use 2 bytes for larger integers
-        } else if (value < 16777216) {
-            length = 3; // Use 3 bytes for even larger integers
+
+        int needed;
+        if (value < 0) {
+            needed = 8; // Negative longs (unsigned interpretation) need all 8 bytes
+        } else if (value < 256L) {
+            needed = 1;
+        } else if (value < 65536L) {
+            needed = 2;
+        } else if (value < 16777216L) {
+            needed = 3;
         } else if (value < 4294967296L) {
-            length = 4; // Use 4 bytes for very large integers
+            needed = 4;
+        } else if (value < 1099511627776L) {
+            needed = 5;
+        } else if (value < 281474976710656L) {
+            needed = 6;
+        } else if (value < 72057594037927936L) {
+            needed = 7;
         } else {
-            throw new IllegalArgumentException("Integer value too large for PI: " + pi.getName());
-        }
-        if (length > pi.getLength()) {
-            throw new IllegalArgumentException("Integer value exceeds PI length: " + pi.getName());
+            needed = 8;
         }
 
-        byte[] bytes = new byte[length];
-        for (int i = 0; i < length; i++) {
-            bytes[length - 1 - i] = (byte) (value >> (i * 8));
+        if (needed > maxLength) {
+            throw new IllegalArgumentException(
+                    "Long value requires " + needed + " bytes but PI " + pi.getName()
+                    + " allows max " + maxLength);
+        }
+
+        byte[] bytes = new byte[needed];
+        for (int i = 0; i < needed; i++) {
+            bytes[needed - 1 - i] = (byte) (value >> (i * 8));
         }
         this.value = bytes;
         return this;

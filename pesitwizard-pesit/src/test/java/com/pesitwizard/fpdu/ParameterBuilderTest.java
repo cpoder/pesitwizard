@@ -88,6 +88,47 @@ class ParameterBuilderTest {
                     .value(50000L);
             assertThat(builder.getValue()).isNotNull();
         }
+
+        @Test
+        @DisplayName("should encode 5-byte value for files > 4GB")
+        void shouldEncode5ByteValueForLargeFiles() {
+            // 5 GB = 5,368,709,120 bytes (> 4GB = 4,294,967,296)
+            long fiveGb = 5L * 1024 * 1024 * 1024;
+            ParameterBuilder builder = ParameterBuilder.forParameter(ParameterIdentifier.PI_27_NB_OCTETS)
+                    .value(fiveGb);
+            assertThat(builder.getValue()).hasSize(5);
+            // Verify round-trip
+            long decoded = 0;
+            for (byte b : builder.getValue()) {
+                decoded = (decoded << 8) | (b & 0xFF);
+            }
+            assertThat(decoded).isEqualTo(fiveGb);
+        }
+
+        @Test
+        @DisplayName("should encode 8-byte value for very large files")
+        void shouldEncode8ByteValueForVeryLargeFiles() {
+            // 1 PB = 1,125,899,906,842,624 bytes
+            long onePb = 1L * 1024 * 1024 * 1024 * 1024 * 1024;
+            ParameterBuilder builder = ParameterBuilder.forParameter(ParameterIdentifier.PI_27_NB_OCTETS)
+                    .value(onePb);
+            assertThat(builder.getValue()).hasSize(7);
+            long decoded = 0;
+            for (byte b : builder.getValue()) {
+                decoded = (decoded << 8) | (b & 0xFF);
+            }
+            assertThat(decoded).isEqualTo(onePb);
+        }
+
+        @Test
+        @DisplayName("should reject long value exceeding PI max length")
+        void shouldRejectLongValueExceedingPiMaxLength() {
+            // PI_25 has max length 2 (max 65535), try a value that needs 3 bytes
+            assertThatThrownBy(() -> ParameterBuilder.forParameter(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE)
+                    .value(100_000L))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("requires 3 bytes");
+        }
     }
 
     @Nested

@@ -167,8 +167,28 @@ public class PesitSendService {
             if (syncEnabled && syncInterval > 0 && bytesSinceSync > 0 && bytesSinceSync + bytesRead > syncInterval) {
                 syncNum++;
                 ctx.syncSent();
-                session.sendFpduWithAck(new Fpdu(FpduType.SYN).withIdDst(serverConnId)
+                // Send SYN and handle ACK_SYN or RESYN response
+                session.sendFpdu(new Fpdu(FpduType.SYN).withIdDst(serverConnId)
                         .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
+                Fpdu synResponse = session.receiveFpdu();
+
+                if (synResponse.getFpduType() == FpduType.RESYN) {
+                    // Server requests resynchronization - rewind to requested sync point
+                    int resyncPoint = ParameterParser.parsePI18RestartPoint(synResponse);
+                    long resyncBytePos = ctx.getBytesAtSyncPoint(resyncPoint);
+                    log.info("RESYN from server: rollback to sync point {} (byte {})", resyncPoint, resyncBytePos);
+
+                    // Send ACK_RESYN
+                    session.sendFpdu(new Fpdu(FpduType.ACK_RESYN).withIdDst(serverConnId)
+                            .withParameter(new ParameterValue(PI_18_POINT_RELANCE, resyncPoint)));
+
+                    // Stream-based send can't seek back; transfer must be retried
+                    throw new IOException("RESYN requested by server to sync point " + resyncPoint
+                            + " - transfer must be restarted from byte " + resyncBytePos);
+                } else if (synResponse.getFpduType() == FpduType.ABORT) {
+                    throw new IOException("Server sent ABORT after SYN");
+                }
+                // Normal ACK_SYN flow
                 ctx.syncAckSend();
                 ctx.syncPoint(syncNum, ctx.getBytesTransferred());
                 bytesSinceSync = 0;

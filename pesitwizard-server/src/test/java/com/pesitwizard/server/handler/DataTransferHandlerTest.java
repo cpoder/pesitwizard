@@ -510,4 +510,117 @@ class DataTransferHandlerTest {
         assertEquals(FpduType.ABORT, response.getFpduType());
     }
 
+    // ===== RESYN Tests =====
+
+    @Test
+    @DisplayName("handleTDE02B should dispatch RESYN correctly")
+    void handleTDE02BShouldDispatchResyn() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setResyncEnabled(true);
+        TransferContext transfer = ctx.startTransfer();
+
+        // Write some data to a temp file
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("resyn-test", ".dat");
+        transfer.setLocalPath(tempFile);
+        transfer.openOutputStream();
+        transfer.appendData(new byte[500]); // 500 bytes
+
+        // Record a sync point at 500 bytes (sync point 1)
+        transfer.recordSyncPointPosition(1, 500);
+        transfer.setCurrentSyncPoint(1);
+
+        // Write more data
+        transfer.appendData(new byte[300]); // total 800 bytes
+
+        try {
+            // Client sends RESYN requesting rollback to sync point 1
+            Fpdu fpdu = new Fpdu(FpduType.RESYN);
+            fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
+
+            Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+            assertNotNull(response);
+            assertEquals(FpduType.ACK_RESYN, response.getFpduType());
+            // Verify file was truncated to 500 bytes
+            assertEquals(500, transfer.getBytesTransferred());
+            assertEquals(1, transfer.getCurrentSyncPoint());
+        } finally {
+            transfer.closeOutputStream();
+            java.nio.file.Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should reject RESYN when not negotiated")
+    void handleTDE02BShouldRejectResynWhenNotNegotiated() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setResyncEnabled(false); // RESYN not negotiated
+
+        Fpdu fpdu = new Fpdu(FpduType.RESYN);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should reject RESYN for unknown sync point")
+    void handleTDE02BShouldRejectResynForUnknownSyncPoint() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setResyncEnabled(true);
+        TransferContext transfer = ctx.startTransfer();
+
+        // No sync points recorded
+
+        Fpdu fpdu = new Fpdu(FpduType.RESYN);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 5)); // Unknown sync point
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
+    @Test
+    @DisplayName("SYN should record sync point position for RESYN rollback")
+    void synShouldRecordSyncPointPosition() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        TransferContext transfer = ctx.startTransfer();
+        transfer.setBytesTransferred(2048);
+
+        Fpdu fpdu = new Fpdu(FpduType.SYN);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC, 3));
+
+        handler.handleTDE02B(ctx, fpdu);
+
+        // Verify the sync point byte position was recorded
+        assertEquals(2048, transfer.getSyncPointBytePosition(3));
+    }
+
+    @Test
+    @DisplayName("handleTDE02B should reject RESYN with no transfer context")
+    void handleTDE02BShouldRejectResynWithNoTransfer() throws Exception {
+        SessionContext ctx = new SessionContext("test-session");
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setResyncEnabled(true);
+        // No transfer started
+
+        Fpdu fpdu = new Fpdu(FpduType.RESYN);
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
+
+        Fpdu response = handler.handleTDE02B(ctx, fpdu);
+
+        assertNotNull(response);
+        assertEquals(FpduType.ABORT, response.getFpduType());
+    }
+
 }

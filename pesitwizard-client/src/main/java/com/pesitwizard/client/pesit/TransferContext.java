@@ -1,5 +1,8 @@
 package com.pesitwizard.client.pesit;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.pesitwizard.client.event.TransferEventBus;
 
 import lombok.Getter;
@@ -23,6 +26,9 @@ public class TransferContext {
     private int lastSyncPoint = 0;
     @Getter
     private long bytesAtLastSyncPoint = 0;
+
+    /** Map of sync point number → byte position for RESYN rollback */
+    private final Map<Integer, Long> syncPointPositions = new ConcurrentHashMap<>();
 
     private final TransferEventBus eventBus;
     private long lastProgressUpdate = 0;
@@ -64,9 +70,18 @@ public class TransferContext {
     public void syncPoint(int syncNum, long bytePos) {
         lastSyncPoint = syncNum;
         bytesAtLastSyncPoint = bytePos;
+        syncPointPositions.put(syncNum, bytePos);
         if (eventBus != null) {
             eventBus.syncPoint(transferId, syncNum, bytePos);
         }
+    }
+
+    /**
+     * Look up the byte position for a given sync point number.
+     * Returns -1 if the sync point is unknown.
+     */
+    public long getBytesAtSyncPoint(int syncPoint) {
+        return syncPointPositions.getOrDefault(syncPoint, -1L);
     }
 
     public void error(String message, String diagCode) {

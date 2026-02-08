@@ -289,6 +289,29 @@ public class FpduResponseBuilder {
     }
 
     /**
+     * Build RESYN (resynchronization) request
+     * Sent to ask the other party to rewind to a previously confirmed sync point.
+     */
+    public static Fpdu buildResyn(SessionContext ctx, DiagnosticCode diagCode, int restartPoint) {
+        return new Fpdu(FpduType.RESYN)
+                .withIdDst(ctx.getClientConnectionId())
+                .withIdSrc(0)
+                .withParameter(new ParameterValue(PI_02_DIAG, diagCode.toBytes()))
+                .withParameter(new ParameterValue(PI_18_POINT_RELANCE, restartPoint));
+    }
+
+    /**
+     * Build ACK(RESYN) response
+     * Confirms resynchronization to the specified restart point.
+     */
+    public static Fpdu buildAckResyn(SessionContext ctx, int restartPoint) {
+        return new Fpdu(FpduType.ACK_RESYN)
+                .withIdDst(ctx.getClientConnectionId())
+                .withIdSrc(0)
+                .withParameter(new ParameterValue(PI_18_POINT_RELANCE, restartPoint));
+    }
+
+    /**
      * Build ABORT response
      */
     public static Fpdu buildAbort(SessionContext ctx, DiagnosticCode diagCode) {

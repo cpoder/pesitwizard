@@ -81,8 +81,30 @@ public class DataTransferHandler {
         FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D0_000));
         log.info("[{}] Sent ACK(READ)", ctx.getSessionId());
 
-        // 2. Stream file data as DTF chunks
-        long totalBytes = streamFileData(ctx, filePath, restartPoint, in, out);
+        // 2. Stream file data as DTF chunks (with RESYN retry loop)
+        long totalBytes;
+        long currentStartPosition = restartPoint;
+        int resyncAttempts = 0;
+        int maxResyncAttempts = 10; // Prevent infinite resync loops (D3_320)
+
+        while (true) {
+            try {
+                totalBytes = streamFileData(ctx, filePath, currentStartPosition, in, out);
+                break; // Normal completion
+            } catch (ResyncRequestedException e) {
+                resyncAttempts++;
+                if (resyncAttempts > maxResyncAttempts) {
+                    log.error("[{}] Too many resync attempts ({}), aborting",
+                            ctx.getSessionId(), resyncAttempts);
+                    FpduIO.writeFpdu(out, FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_320));
+                    return null;
+                }
+                currentStartPosition = e.getBytePosition();
+                log.info("[{}] Restarting stream from byte {} after RESYN (attempt {})",
+                        ctx.getSessionId(), currentStartPosition, resyncAttempts);
+                // Loop continues with new start position
+            }
+        }
 
         // 3. Send DTF.END
         FpduIO.writeFpdu(out, FpduResponseBuilder.buildDtfEnd(ctx));
@@ -149,11 +171,38 @@ public class DataTransferHandler {
                     log.info("[{}] Sending SYN point {} at {} bytes (before next entity would exceed {} limit)",
                             ctx.getSessionId(), syncPointNumber, totalBytes, syncIntervalBytes);
 
+                    // Record sync point position before sending SYN
+                    if (transfer != null) {
+                        transfer.recordSyncPointPosition(syncPointNumber, totalBytes + startPosition);
+                    }
+
                     FpduIO.writeFpdu(out, FpduResponseBuilder.buildSyn(ctx, syncPointNumber));
 
-                    Fpdu ackSyn = readAndParseAckSyn(ctx, in, syncPointNumber);
-                    if (ackSyn == null) {
+                    Fpdu ackOrResyn = readAndParseAckSyn(ctx, in, syncPointNumber);
+                    if (ackOrResyn == null) {
                         throw new IOException("Timeout waiting for ACK_SYN");
+                    }
+
+                    // Handle RESYN: client wants to rewind to a previous sync point
+                    if (ackOrResyn.getFpduType() == FpduType.RESYN) {
+                        if (!ctx.isResyncEnabled()) {
+                            throw new IOException("RESYN received but resync not negotiated");
+                        }
+                        int resyncPoint = ParameterParser.parsePI18RestartPoint(ackOrResyn);
+                        long resyncBytePos = transfer != null ? transfer.getSyncPointBytePosition(resyncPoint) : -1;
+                        if (resyncBytePos < 0) {
+                            throw new IOException("RESYN: unknown sync point " + resyncPoint);
+                        }
+                        log.info("[{}] RESYN: client requests rollback to sync point {} (byte {})",
+                                ctx.getSessionId(), resyncPoint, resyncBytePos);
+
+                        // Send ACK_RESYN
+                        FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckResyn(ctx, resyncPoint));
+
+                        // Close current input, reopen and seek to resync position
+                        // We break out, the caller re-reads from the new position
+                        // For simplicity, throw a special exception that restarts the stream
+                        throw new ResyncRequestedException(resyncPoint, resyncBytePos);
                     }
 
                     if (transfer != null) {
@@ -246,7 +295,10 @@ public class DataTransferHandler {
     }
 
     /**
-     * Read and parse ACK_SYN response from client
+     * Read and parse ACK_SYN or RESYN response from client.
+     * During a server READ, after sending SYN the client may respond with:
+     * - ACK_SYN (normal flow)
+     * - RESYN (client requests rollback to a previous sync point)
      */
     private Fpdu readAndParseAckSyn(SessionContext ctx, DataInputStream in, int expectedSyncPoint) throws IOException {
         // Read FPDU length
@@ -262,19 +314,25 @@ public class DataTransferHandler {
         FpduParser parser = new FpduParser(data, ctx.isEbcdicEncoding());
         Fpdu fpdu = parser.parse();
 
-        if (fpdu.getFpduType() != FpduType.ACK_SYN) {
-            log.warn("[{}] Expected ACK_SYN but got {}", ctx.getSessionId(), fpdu.getFpduType());
-            return null;
+        if (fpdu.getFpduType() == FpduType.ACK_SYN) {
+            // Normal flow - verify sync point number
+            int receivedSyncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
+            if (receivedSyncPoint != expectedSyncPoint) {
+                log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
+                        ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
+            }
+            return fpdu;
         }
 
-        // Verify sync point number
-        int receivedSyncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
-        if (receivedSyncPoint != expectedSyncPoint) {
-            log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
-                    ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
+        if (fpdu.getFpduType() == FpduType.RESYN) {
+            // Client requests resynchronization - return the RESYN FPDU
+            // Caller must handle this differently from ACK_SYN
+            log.info("[{}] Received RESYN instead of ACK_SYN", ctx.getSessionId());
+            return fpdu;
         }
 
-        return fpdu;
+        log.warn("[{}] Expected ACK_SYN or RESYN but got {}", ctx.getSessionId(), fpdu.getFpduType());
+        return null;
     }
 
     /**
@@ -285,6 +343,7 @@ public class DataTransferHandler {
             case DTF, DTFDA, DTFMA, DTFFA -> handleDtf(ctx, fpdu);
             case DTF_END -> handleDtfEnd(ctx, fpdu);
             case SYN -> handleSyn(ctx, fpdu);
+            case RESYN -> handleResyn(ctx, fpdu);
             case IDT -> handleIdt(ctx, fpdu);
             default -> {
                 log.warn("[{}] Unexpected FPDU {} in TDE02B", ctx.getSessionId(), fpdu.getFpduType());
@@ -442,6 +501,8 @@ public class DataTransferHandler {
             // Reset bytes since last sync for D2-222 tracking
             transfer.setBytesSinceLastSync(0);
             long bytesAtCheckpoint = transfer.getBytesTransferred();
+            // Record sync point byte position for RESYN rollback
+            transfer.recordSyncPointPosition(syncPoint, bytesAtCheckpoint);
             transferTracker.trackSyncPoint(ctx, bytesAtCheckpoint);
             log.info("[{}] SYN: checkpoint {} at {} bytes",
                     ctx.getSessionId(), syncPoint, bytesAtCheckpoint);
@@ -450,6 +511,49 @@ public class DataTransferHandler {
         }
 
         return FpduResponseBuilder.buildAckSyn(ctx, syncPoint);
+    }
+
+    /**
+     * Handle RESYN (Resynchronization) FPDU from client.
+     * The client requests rolling back to a previously confirmed sync point.
+     * Server truncates received data to that point and confirms with ACK_RESYN.
+     */
+    private Fpdu handleResyn(SessionContext ctx, Fpdu fpdu) {
+        if (!ctx.isResyncEnabled()) {
+            log.warn("[{}] RESYN received but resync not negotiated", ctx.getSessionId());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_306);
+        }
+
+        int requestedSyncPoint = ParameterParser.parsePI18RestartPoint(fpdu);
+        log.info("[{}] RESYN: client requests rollback to sync point {}", ctx.getSessionId(), requestedSyncPoint);
+
+        TransferContext transfer = ctx.getCurrentTransfer();
+        if (transfer == null) {
+            log.error("[{}] RESYN: no active transfer context", ctx.getSessionId());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_218);
+        }
+
+        // Look up the byte position for the requested sync point
+        long bytePosition = transfer.getSyncPointBytePosition(requestedSyncPoint);
+        if (bytePosition < 0) {
+            log.warn("[{}] RESYN: unknown sync point {} (known: {})",
+                    ctx.getSessionId(), requestedSyncPoint, transfer.getSyncPointPositions().keySet());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_228);
+        }
+
+        // Truncate file to the sync point position and reopen for appending
+        try {
+            transfer.truncateAndReopen(bytePosition);
+            transfer.setCurrentSyncPoint(requestedSyncPoint);
+            log.info("[{}] RESYN: truncated to {} bytes (sync point {}), ready to receive",
+                    ctx.getSessionId(), bytePosition, requestedSyncPoint);
+        } catch (java.io.IOException e) {
+            log.error("[{}] RESYN: failed to truncate file: {}", ctx.getSessionId(), e.getMessage());
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_218, "Resync failed: " + e.getMessage());
+        }
+
+        // Stay in TDE02B (receiving data) - no state transition needed
+        return FpduResponseBuilder.buildAckResyn(ctx, requestedSyncPoint);
     }
 
     /**
@@ -518,6 +622,29 @@ public class DataTransferHandler {
 
         public DiagnosticCode getDiagnosticCode() {
             return diagnosticCode;
+        }
+    }
+
+    /**
+     * Exception thrown when a RESYN is received during server READ (streamFileData).
+     * The caller catches this and restarts streaming from the indicated byte position.
+     */
+    static class ResyncRequestedException extends IOException {
+        private final int syncPoint;
+        private final long bytePosition;
+
+        ResyncRequestedException(int syncPoint, long bytePosition) {
+            super("RESYN to sync point " + syncPoint + " at byte " + bytePosition);
+            this.syncPoint = syncPoint;
+            this.bytePosition = bytePosition;
+        }
+
+        public int getSyncPoint() {
+            return syncPoint;
+        }
+
+        public long getBytePosition() {
+            return bytePosition;
         }
     }
 }
