@@ -1,0 +1,31 @@
+# PostgreSQL Database Configuration for PeSIT Client
+# Activate with: --spring.profiles.active=postgres
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pesitwizard}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:pesitwizard}
+    password: ${SPRING_DATASOURCE_PASSWORD:pesitwizard}
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      # Flyway manages schema; no Hibernate DDL
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  # Flyway database migration for PostgreSQL
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
+  # Disable H2 console in production
+  h2:
+    console:
+      enabled: false

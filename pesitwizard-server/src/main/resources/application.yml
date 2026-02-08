@@ -22,15 +22,15 @@ spring:
   # JPA configuration
   jpa:
     hibernate:
-      ddl-auto: validate
+      # Default: update for H2 development. Production (postgres profile) uses Flyway + none.
+      ddl-auto: update
     show-sql: false
     open-in-view: false
 
-  # Flyway database migration
+  # Flyway database migration - disabled by default (H2 dev mode)
+  # Enabled in postgres profile with PostgreSQL-specific migrations
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
+    enabled: false
 
   # SQL initialization - disabled, use API instead
   # sql:

@@ -43,7 +43,7 @@ spec:
           env:
             {{- if not .Values.extraEnv }}
             - name: SPRING_PROFILES_ACTIVE
-              value: "kubernetes"
+              value: "postgres"
             {{- end }}
             {{- if .Values.database }}
             - name: SPRING_DATASOURCE_URL
@@ -52,10 +52,6 @@ spec:
               value: {{ .Values.database.username | quote }}
             - name: SPRING_DATASOURCE_PASSWORD
               value: {{ .Values.database.password | quote }}
-            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-              value: "org.postgresql.Driver"
-            - name: SPRING_JPA_DATABASE_PLATFORM
-              value: "org.hibernate.dialect.PostgreSQLDialect"
             {{- end }}
             {{- if .Values.pesit }}
             - name: PESIT_SERVER_ID

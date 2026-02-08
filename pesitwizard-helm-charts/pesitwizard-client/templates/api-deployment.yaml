@@ -39,7 +39,7 @@ spec:
               protocol: TCP
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "kubernetes,nosecurity"
+              value: "postgres,nosecurity"
             - name: SERVER_PORT
               value: "8080"
             {{- if .Values.database }}
@@ -49,10 +49,6 @@ spec:
               value: {{ .Values.database.username | quote }}
             - name: SPRING_DATASOURCE_PASSWORD
               value: {{ .Values.database.password | quote }}
-            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-              value: "org.postgresql.Driver"
-            - name: SPRING_JPA_DATABASE_PLATFORM
-              value: "org.hibernate.dialect.PostgreSQLDialect"
             {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}

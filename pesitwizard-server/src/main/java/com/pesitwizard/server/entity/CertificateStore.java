@@ -10,7 +10,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -77,8 +76,7 @@ public class CertificateStore {
      * The binary content of the keystore/truststore
      * For PEM format, this contains the concatenated certificates/keys
      */
-    @Lob
-    @Column(nullable = false, columnDefinition = "BLOB")
+    @Column(nullable = false, columnDefinition = "BYTEA")
     @JsonIgnore
     @ToString.Exclude
     private byte[] storeData;
