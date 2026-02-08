@@ -41,6 +41,7 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     placeholder-replacement: false
+    table: flyway_schema_history_server
 
   # Disable H2 console in production
   h2:
