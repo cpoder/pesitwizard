@@ -1,11 +1,22 @@
 package com.pesitwizard.backup;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.nio.file.attribute.PosixFilePermission;
+import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Stream;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -13,7 +24,21 @@ public class BackupService {
     private final BackupConfig config;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-    public BackupService(BackupConfig config) { this.config = config; }
+    // AES-256-GCM encryption for backup files
+    private static final String CIPHER_ALGORITHM = "AES/GCM/NoPadding";
+    private static final int GCM_IV_LENGTH = 12;
+    private static final int GCM_TAG_LENGTH = 128;
+    private static final int KEY_LENGTH = 256;
+    private static final int PBKDF2_ITERATIONS = 100_000;
+    private static final byte[] BACKUP_SALT = "PeSITWizardBackup".getBytes(StandardCharsets.UTF_8);
+    private static final String ENCRYPTED_SUFFIX = ".enc";
+
+    private final SecretKey encryptionKey;
+
+    public BackupService(BackupConfig config) {
+        this.config = config;
+        this.encryptionKey = deriveEncryptionKey(config.getEncryptionKey());
+    }
 
     public BackupResult createBackup(String description) {
         BackupResult r = new BackupResult();
@@ -41,6 +66,19 @@ public class BackupService {
                 r.setBackupType("METADATA");
             }
             
+            // Encrypt backup file if encryption key is configured
+            if (encryptionKey != null) {
+                Path encryptedFile = Path.of(file + ENCRYPTED_SUFFIX);
+                encryptFile(file, encryptedFile);
+                Files.delete(file); // Remove unencrypted backup
+                file = encryptedFile;
+                r.setEncrypted(true);
+                log.info("Backup encrypted: {}", encryptedFile.getFileName());
+            }
+
+            // Set restrictive file permissions (owner-only)
+            setRestrictivePermissions(file);
+
             Files.writeString(Path.of(file + ".meta"), r.getDescription());
             r.setBackupPath(file.toString());
             r.setSizeBytes(Files.size(file));
@@ -60,15 +98,19 @@ public class BackupService {
         Path dir = Path.of(config.getBackupDirectory());
         if (!Files.exists(dir)) return list;
         try (Stream<Path> s = Files.list(dir)) {
-            s.filter(p -> p.toString().endsWith(".zip") || p.toString().endsWith(".dump"))
+            s.filter(p -> isBackupFile(p.toString()))
              .sorted(Comparator.comparing(Path::getFileName).reversed())
              .forEach(p -> {
                  try {
+                     String fname = p.toString();
                      BackupInfo i = new BackupInfo();
                      i.setFilename(p.getFileName().toString());
                      i.setSizeBytes(Files.size(p));
                      i.setCreatedAt(Files.getLastModifiedTime(p).toInstant());
-                     i.setType(p.toString().endsWith(".zip") ? "H2" : "POSTGRESQL");
+                     boolean encrypted = fname.endsWith(ENCRYPTED_SUFFIX);
+                     String baseName = encrypted ? fname.substring(0, fname.length() - ENCRYPTED_SUFFIX.length()) : fname;
+                     i.setType(baseName.endsWith(".zip") ? "H2" : "POSTGRESQL");
+                     i.setEncrypted(encrypted);
                      Path m = Path.of(p + ".meta");
                      if (Files.exists(m)) i.setDescription(Files.readString(m).trim());
                      list.add(i);
@@ -86,17 +128,39 @@ public class BackupService {
         Path file = Path.of(config.getBackupDirectory(), filename);
         if (!Files.exists(file)) { r.setSuccess(false); r.setMessage("Not found"); return r; }
         try {
-            if (filename.endsWith(".zip")) {
-                restoreH2Backup(file);
-                r.setSuccess(true);
-                r.setMessage("H2 restored - restart required");
-            } else if (filename.endsWith(".dump")) {
-                int c = runPgRestore(file);
-                r.setSuccess(c == 0);
-                r.setMessage(c == 0 ? "PostgreSQL restored" : "pg_restore failed: " + c);
-            } else {
-                r.setSuccess(false);
-                r.setMessage("Unsupported format");
+            // Decrypt if encrypted
+            Path restoreFile = file;
+            boolean needsCleanup = false;
+            if (filename.endsWith(ENCRYPTED_SUFFIX)) {
+                if (encryptionKey == null) {
+                    r.setSuccess(false);
+                    r.setMessage("Backup is encrypted but no encryption key configured");
+                    return r;
+                }
+                restoreFile = Path.of(file + ".decrypted");
+                decryptFile(file, restoreFile);
+                needsCleanup = true;
+                // Determine actual backup type from the name without .enc
+                filename = filename.substring(0, filename.length() - ENCRYPTED_SUFFIX.length());
+            }
+
+            try {
+                if (filename.endsWith(".zip")) {
+                    restoreH2Backup(restoreFile);
+                    r.setSuccess(true);
+                    r.setMessage("H2 restored - restart required");
+                } else if (filename.endsWith(".dump")) {
+                    int c = runPgRestore(restoreFile);
+                    r.setSuccess(c == 0);
+                    r.setMessage(c == 0 ? "PostgreSQL restored" : "pg_restore failed: " + c);
+                } else {
+                    r.setSuccess(false);
+                    r.setMessage("Unsupported format");
+                }
+            } finally {
+                if (needsCleanup) {
+                    Files.deleteIfExists(restoreFile);
+                }
             }
             if (r.isSuccess()) log.info("Restored: {}", filename);
         } catch (Exception e) {
@@ -122,7 +186,7 @@ public class BackupService {
         Path dir = Path.of(config.getBackupDirectory());
         if (!Files.exists(dir)) return 0;
         try (Stream<Path> s = Files.list(dir)) {
-            List<Path> all = s.filter(p -> p.toString().endsWith(".zip") || p.toString().endsWith(".dump"))
+            List<Path> all = s.filter(p -> isBackupFile(p.toString()))
                 .sorted(Comparator.comparing((Path p) -> {
                     try { return Files.getLastModifiedTime(p).toInstant(); }
                     catch (IOException e) { return Instant.MIN; }
@@ -159,6 +223,7 @@ public class BackupService {
     private Path ensureBackupDirectory() throws IOException {
         Path d = Path.of(config.getBackupDirectory());
         Files.createDirectories(d);
+        setRestrictivePermissions(d);
         return d;
     }
 
@@ -221,4 +286,81 @@ public class BackupService {
     }
 
     record DbInfo(String host, String port, String name) {}
+
+    // ===== Encryption helpers =====
+
+    private static SecretKey deriveEncryptionKey(String masterKey) {
+        if (masterKey == null || masterKey.isBlank()) {
+            return null;
+        }
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            PBEKeySpec spec = new PBEKeySpec(masterKey.toCharArray(), BACKUP_SALT, PBKDF2_ITERATIONS, KEY_LENGTH);
+            try {
+                byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+                return new SecretKeySpec(keyBytes, "AES");
+            } finally {
+                spec.clearPassword();
+            }
+        } catch (Exception e) {
+            log.error("Failed to derive backup encryption key", e);
+            return null;
+        }
+    }
+
+    private void encryptFile(Path input, Path output) throws Exception {
+        byte[] plaintext = Files.readAllBytes(input);
+        byte[] iv = new byte[GCM_IV_LENGTH];
+        new SecureRandom().nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, encryptionKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+        byte[] ciphertext = cipher.doFinal(plaintext);
+
+        // Write IV + ciphertext
+        byte[] combined = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
+        Files.write(output, combined);
+    }
+
+    private void decryptFile(Path input, Path output) throws Exception {
+        byte[] combined = Files.readAllBytes(input);
+        if (combined.length < GCM_IV_LENGTH) {
+            throw new IOException("Encrypted backup file too small");
+        }
+
+        byte[] iv = new byte[GCM_IV_LENGTH];
+        byte[] ciphertext = new byte[combined.length - GCM_IV_LENGTH];
+        System.arraycopy(combined, 0, iv, 0, iv.length);
+        System.arraycopy(combined, iv.length, ciphertext, 0, ciphertext.length);
+
+        Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, encryptionKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+        byte[] plaintext = cipher.doFinal(ciphertext);
+        Files.write(output, plaintext);
+    }
+
+    boolean isEncryptionEnabled() {
+        return encryptionKey != null;
+    }
+
+    private static boolean isBackupFile(String path) {
+        return path.endsWith(".zip") || path.endsWith(".dump")
+                || path.endsWith(".zip" + ENCRYPTED_SUFFIX) || path.endsWith(".dump" + ENCRYPTED_SUFFIX);
+    }
+
+    private static void setRestrictivePermissions(Path path) {
+        try {
+            Set<PosixFilePermission> perms = Files.isDirectory(path)
+                    ? Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE)
+                    : Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+            Files.setPosixFilePermissions(path, perms);
+        } catch (UnsupportedOperationException e) {
+            // Windows doesn't support POSIX permissions
+            log.debug("POSIX permissions not supported: {}", path);
+        } catch (IOException e) {
+            log.warn("Could not set restrictive permissions on {}: {}", path, e.getMessage());
+        }
+    }
 }

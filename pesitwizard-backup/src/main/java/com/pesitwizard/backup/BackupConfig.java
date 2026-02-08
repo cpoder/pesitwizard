@@ -20,4 +20,7 @@ public class BackupConfig {
     private String dbUser;
     private String dbPassword;
     private String schema;
+
+    // Encryption (optional - if set, backups are encrypted with AES-256-GCM)
+    private String encryptionKey;
 }

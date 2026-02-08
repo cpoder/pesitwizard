@@ -75,6 +75,7 @@ public class PesitChannelFactory {
         }
 
         tlsChannel.setHostnameVerification(server.isHostnameVerification());
+        tlsChannel.setStandardFraming(!server.isConnectExpressMode());
         tlsChannel.setReceiveTimeout(timeout);
         return tlsChannel;
     }

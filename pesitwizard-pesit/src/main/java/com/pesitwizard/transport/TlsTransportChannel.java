@@ -28,6 +28,14 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     private String[] enabledProtocols = new String[] { "TLSv1.3", "TLSv1.2" };
 
     /**
+     * When true (default), uses standard PeSIT framing with 2-byte length prefix
+     * (compatible with PeSIT Wizard server).
+     * When false, uses Connect:Express TLS framing where the FPDU's internal
+     * length field serves as the framing delimiter (no external prefix).
+     */
+    private boolean standardFraming = true;
+
+    /**
      * Create TLS channel with default trust (system truststore)
      */
     public TlsTransportChannel(String host, int port) {
@@ -133,42 +141,52 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     }
 
     /**
-     * Send data over TLS without the 2-byte length prefix.
+     * Send data over TLS.
      * <p>
-     * Connect:Express TLS protocol differs from plain TCP:
-     * - TCP: expects [2-byte length prefix] + [FPDU data]
-     * - TLS: expects just [FPDU data] (FPDU contains its own length field)
+     * In standard framing mode (default), sends with 2-byte length prefix
+     * like TCP, compatible with PeSIT Wizard server.
+     * In Connect:Express framing mode, sends FPDU directly without prefix
+     * (FPDU contains its own length field in the first 2 bytes).
      * </p>
      */
     @Override
     public void send(byte[] data) throws IOException {
+        if (standardFraming) {
+            super.send(data);
+            return;
+        }
+
         if (!isConnected()) {
             throw new IOException("Not connected");
         }
 
-        // For TLS, send FPDU directly without additional length prefix
-        // The FPDU already contains its own length field in the first 2 bytes
+        // Connect:Express TLS: send FPDU directly without additional length prefix
         outputStream.write(data);
         outputStream.flush();
 
-        log.debug("Sent {} bytes to {}:{}", data.length, host, port);
+        log.debug("Sent {} bytes to {}:{} (CX framing)", data.length, host, port);
     }
 
     /**
-     * Receive data over TLS without expecting a 2-byte length prefix.
+     * Receive data over TLS.
      * <p>
-     * Connect:Express TLS protocol differs from plain TCP:
-     * - TCP: returns [2-byte length prefix] + [FPDU data]
-     * - TLS: returns just [FPDU data] (length is in FPDU's first 2 bytes)
+     * In standard framing mode (default), reads with 2-byte length prefix
+     * like TCP, compatible with PeSIT Wizard server.
+     * In Connect:Express framing mode, reads the FPDU length from the FPDU's
+     * internal header (first 2 bytes).
      * </p>
      */
     @Override
     public byte[] receive() throws IOException {
+        if (standardFraming) {
+            return super.receive();
+        }
+
         if (!isConnected()) {
             throw new IOException("Not connected");
         }
 
-        // For TLS, read the FPDU length from the FPDU header itself (first 2 bytes)
+        // Connect:Express TLS: read FPDU length from FPDU header itself (first 2 bytes)
         int length = inputStream.readUnsignedShort();
         if (length <= 0) {
             throw new IOException("Invalid FPDU length: " + length);
@@ -182,7 +200,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
         // Read the rest
         inputStream.readFully(data, 2, length - 2);
 
-        log.debug("Received {} bytes from {}:{}", length, host, port);
+        log.debug("Received {} bytes from {}:{} (CX framing)", length, host, port);
         return data;
     }
 
@@ -228,6 +246,29 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
      */
     public boolean isHostnameVerification() {
         return hostnameVerification;
+    }
+
+    /**
+     * Set whether to use standard PeSIT framing (2-byte length prefix) or
+     * Connect:Express TLS framing (no external prefix).
+     * <p>
+     * Standard framing (default) is compatible with PeSIT Wizard server.
+     * Connect:Express framing is needed for interoperability with CX servers.
+     * </p>
+     *
+     * @param standardFraming true for standard PeSIT framing (default), false for CX framing
+     */
+    public void setStandardFraming(boolean standardFraming) {
+        this.standardFraming = standardFraming;
+    }
+
+    /**
+     * Check if standard PeSIT framing is enabled.
+     *
+     * @return true if using standard framing, false if using CX framing
+     */
+    public boolean isStandardFraming() {
+        return standardFraming;
     }
 
     /**

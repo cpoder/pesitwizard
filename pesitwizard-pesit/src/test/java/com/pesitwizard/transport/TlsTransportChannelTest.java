@@ -109,6 +109,50 @@ class TlsTransportChannelTest {
     }
 
     @Nested
+    @DisplayName("Framing Mode")
+    class FramingModeTests {
+
+        @Test
+        @DisplayName("standard framing should be enabled by default")
+        void standardFramingEnabledByDefault() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            assertThat(channel.isStandardFraming()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should switch to CX framing mode")
+        void shouldSwitchToCxFraming() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setStandardFraming(false);
+            assertThat(channel.isStandardFraming()).isFalse();
+        }
+
+        @Test
+        @DisplayName("should switch back to standard framing")
+        void shouldSwitchBackToStandardFraming() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setStandardFraming(false);
+            channel.setStandardFraming(true);
+            assertThat(channel.isStandardFraming()).isTrue();
+        }
+
+        @Test
+        @DisplayName("CX framing should throw on closed channel")
+        void cxFramingShouldThrowOnClosedChannel() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setStandardFraming(false);
+
+            assertThatThrownBy(() -> channel.send(new byte[] { 1, 2, 3 }))
+                    .isInstanceOf(java.io.IOException.class)
+                    .hasMessageContaining("Not connected");
+
+            assertThatThrownBy(() -> channel.receive())
+                    .isInstanceOf(java.io.IOException.class)
+                    .hasMessageContaining("Not connected");
+        }
+    }
+
+    @Nested
     @DisplayName("Operations on Closed Channel")
     class ClosedChannelOperationsTests {
 

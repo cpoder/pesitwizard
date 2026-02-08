@@ -13,4 +13,5 @@ public class BackupResult {
     private Instant timestamp;
     private String description;
     private String message;
+    private boolean encrypted;
 }

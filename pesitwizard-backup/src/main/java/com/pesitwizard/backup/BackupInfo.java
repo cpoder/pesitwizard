@@ -10,4 +10,5 @@ public class BackupInfo {
     private Long sizeBytes;
     private Instant createdAt;
     private String description;
+    private boolean encrypted;
 }

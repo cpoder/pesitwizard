@@ -81,6 +81,7 @@ public class PesitTransferExecutor {
         }
 
         long execute() throws IOException, InterruptedException {
+            PesitStateMachine sm = new PesitStateMachine();
             int connectionId = 1;
             String virtualFile = request.getVirtualFile() != null ? request.getVirtualFile()
                     : request.getRemoteFilename();
@@ -98,7 +99,9 @@ public class PesitTransferExecutor {
             if (request.getPassword() != null)
                 cb.password(secretsService.decrypt(request.getPassword()));
 
+            sm.transition(ClientState.CN02A_CONNECT_PENDING);
             Fpdu aconnect = session.sendFpduWithAck(cb.build(connectionId));
+            sm.transition(ClientState.CN03_CONNECTED);
             int serverId = aconnect.getIdSrc();
             int negSyncKb = parsePI7(aconnect);
             if (negSyncKb == 0)
@@ -107,25 +110,35 @@ public class PesitTransferExecutor {
 
             // CREATE
             int txId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
+            sm.transition(ClientState.SF01A_CREATE_PENDING);
             int pi25 = negotiateCreate(session, serverId, virtualFile, txId, (fileSize + 1023) / 1024, recordLength);
+            sm.transition(ClientState.SF03_FILE_SELECTED);
 
             // OPEN, WRITE
+            sm.transition(ClientState.OF01A_OPEN_PENDING);
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverId));
+            sm.transition(ClientState.OF02_TRANSFER_READY);
+            sm.transition(ClientState.TDE01A_WRITE_PENDING);
             session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverId));
+            sm.transition(ClientState.TDE02A_SENDING_DATA);
 
             // Send data
-            long totalSent = sendData(session, serverId, pi25, recordLength, negSyncBytes, syncEnabled);
+            long totalSent = sendData(session, serverId, pi25, recordLength, negSyncBytes, syncEnabled, sm);
 
             // Cleanup
+            sm.transition(ClientState.TDE07_DATA_END);
             session.sendFpdu(new Fpdu(FpduType.DTF_END).withIdDst(serverId)
                     .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+            sm.transition(ClientState.TDE08A_TRANS_END_PENDING);
             session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverId));
-            cleanup(session, serverId, connectionId);
+            sm.transition(ClientState.OF02_TRANSFER_READY);
+            cleanup(session, serverId, connectionId, sm);
             return totalSent;
         }
 
         private long sendData(PesitSession session, int serverId, int entitySize, int recordLength,
-                long syncInterval, boolean syncEnabled) throws IOException, InterruptedException {
+                long syncInterval, boolean syncEnabled, PesitStateMachine sm)
+                throws IOException, InterruptedException {
             FpduWriter writer = new FpduWriter(session, serverId, entitySize, recordLength, false);
             byte[] buffer = new byte[Math.min(recordLength > 0 ? recordLength : 4096, writer.getMaxDataPerDtf())];
             long totalSent = 0, bytesSinceSync = 0;
@@ -141,8 +154,10 @@ public class PesitTransferExecutor {
 
                 if (syncEnabled && syncInterval > 0 && bytesSinceSync >= syncInterval) {
                     syncNum++;
+                    sm.transition(ClientState.TDE03_SYNC_PENDING);
                     session.sendFpduWithAck(new Fpdu(FpduType.SYN).withIdDst(serverId)
                             .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
+                    sm.transition(ClientState.TDE02A_SENDING_DATA);
                     bytesSinceSync = 0;
                 }
                 if (callback != null)
@@ -179,6 +194,7 @@ public class PesitTransferExecutor {
         }
 
         long execute() throws IOException, InterruptedException, ConnectorException, RestartRequiredException {
+            PesitStateMachine sm = new PesitStateMachine();
             int connectionId = 1;
             String virtualFile = request.getVirtualFile() != null ? request.getVirtualFile()
                     : request.getRemoteFilename();
@@ -192,7 +208,9 @@ public class PesitTransferExecutor {
             if (request.getPassword() != null)
                 cb.password(secretsService.decrypt(request.getPassword()));
 
+            sm.transition(ClientState.CN02A_CONNECT_PENDING);
             Fpdu aconnect = session.sendFpduWithAck(cb.build(connectionId));
+            sm.transition(ClientState.CN03_CONNECTED);
             int serverId = aconnect.getIdSrc();
 
             // SELECT
@@ -203,19 +221,26 @@ public class PesitTransferExecutor {
                     .withParameter(new ParameterValue(PI_13_ID_TRANSFERT, txId))
                     .withParameter(new ParameterValue(PI_14_ATTRIBUTS_DEMANDES, 0))
                     .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, config.getChunkSize()));
+            sm.transition(ClientState.SF02A_SELECT_PENDING);
             Fpdu ackSelect = session.sendFpduWithAck(select);
+            sm.transition(ClientState.SF03_FILE_SELECTED);
             long expectedSize = parseFileSize(ackSelect);
 
             // OPEN, READ
+            sm.transition(ClientState.OF01A_OPEN_PENDING);
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverId));
+            sm.transition(ClientState.OF02_TRANSFER_READY);
+            sm.transition(ClientState.TDL01A_READ_PENDING);
             session.sendFpduWithAck(new Fpdu(FpduType.READ).withIdDst(serverId)
                     .withParameter(new ParameterValue(PI_18_POINT_RELANCE, restartPoint)));
+            sm.transition(ClientState.TDL02A_RECEIVING_DATA);
 
             // Receive data
-            return receiveData(session, serverId, connectionId, expectedSize);
+            return receiveData(session, serverId, connectionId, expectedSize, sm);
         }
 
-        private long receiveData(PesitSession session, int serverId, int connId, long expectedSize)
+        private long receiveData(PesitSession session, int serverId, int connId, long expectedSize,
+                PesitStateMachine sm)
                 throws IOException, InterruptedException, ConnectorException, RestartRequiredException {
             long totalBytes = restartBytePos;
             int lastSync = restartPoint;
@@ -258,9 +283,12 @@ public class PesitTransferExecutor {
                         ParameterValue pv = fpdu.getParameter(PI_20_NUM_SYNC);
                         lastSync = pv != null && pv.getValue() != null ? parseNum(pv.getValue()) : lastSync + 1;
                         lastSyncPos = totalBytes;
+                        sm.transition(ClientState.TDL03_SYNC_ACK);
                         session.sendFpdu(new Fpdu(FpduType.ACK_SYN).withIdDst(serverId)
                                 .withParameter(new ParameterValue(PI_20_NUM_SYNC, lastSync)));
+                        sm.transition(ClientState.TDL02A_RECEIVING_DATA);
                     } else if (type == FpduType.DTF_END || type == FpduType.TRANS_END || type == FpduType.CLOSE) {
+                        sm.transition(ClientState.TDL07_DATA_END);
                         receiving = false;
                     } else if (type == FpduType.IDT) {
                         ParameterValue pi19 = fpdu.getParameter(PI_19_CODE_FIN_TRANSFERT);
@@ -278,22 +306,33 @@ public class PesitTransferExecutor {
                     os.close();
             }
 
-            if (!interrupted)
-                cleanup(session, serverId, connId);
-            else if (restartCode == 4)
+            if (!interrupted) {
+                sm.transition(ClientState.TDL08A_TRANS_END_PENDING);
+                // TRANS_END not sent here for receive (it's in cleanup)
+                sm.transition(ClientState.OF02_TRANSFER_READY);
+                cleanup(session, serverId, connId, sm);
+            } else if (restartCode == 4) {
                 throw new RestartRequiredException(lastSync, lastSyncPos, totalBytes);
+            }
             return totalBytes;
         }
     }
 
     // Shared helpers
-    private void cleanup(PesitSession s, int srv, int conn) throws IOException, InterruptedException {
+    private void cleanup(PesitSession s, int srv, int conn, PesitStateMachine sm)
+            throws IOException, InterruptedException {
+        sm.transition(ClientState.OF03A_CLOSE_PENDING);
         s.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(srv)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        sm.transition(ClientState.SF03_FILE_SELECTED);
+        sm.transition(ClientState.SF04A_DESELECT_PENDING);
         s.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(srv)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        sm.transition(ClientState.CN03_CONNECTED);
+        sm.transition(ClientState.CN04A_RELEASE_PENDING);
         s.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(srv).withIdSrc(conn)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        sm.transition(ClientState.CN01_REPOS);
     }
 
     private int negotiateCreate(PesitSession s, int srv, String vf, int txId, long sizeKB, int pi32)

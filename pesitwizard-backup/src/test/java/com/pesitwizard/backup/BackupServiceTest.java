@@ -295,4 +295,123 @@ class BackupServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("path traversal");
     }
+
+    // --- Encryption (BL-23) ---
+
+    @Test
+    void createBackup_withEncryption_encryptsFile() throws IOException {
+        Path dbFile = tempDir.resolve("testdb.mv.db");
+        Files.writeString(dbFile, "fake-h2-data");
+
+        config = BackupConfig.builder()
+                .backupDirectory(tempDir.toString())
+                .backupPrefix("enc")
+                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                .maxBackups(5)
+                .retentionDays(30)
+                .encryptionKey("my-secret-key-12345")
+                .build();
+        BackupService encService = new BackupService(config);
+
+        BackupResult result = encService.createBackup("Encrypted backup");
+
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.isEncrypted()).isTrue();
+        assertThat(result.getBackupPath()).endsWith(".enc");
+        assertThat(Files.exists(Path.of(result.getBackupPath()))).isTrue();
+        // Original unencrypted file should be deleted
+        String unencryptedPath = result.getBackupPath().replace(".enc", "");
+        assertThat(Files.exists(Path.of(unencryptedPath))).isFalse();
+    }
+
+    @Test
+    void restoreBackup_withEncryption_decryptsAndRestores() throws IOException {
+        Path dbFile = tempDir.resolve("testdb.mv.db");
+        Files.writeString(dbFile, "original-data");
+
+        config = BackupConfig.builder()
+                .backupDirectory(tempDir.toString())
+                .backupPrefix("enc")
+                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                .maxBackups(5)
+                .retentionDays(30)
+                .encryptionKey("my-secret-key-12345")
+                .build();
+        BackupService encService = new BackupService(config);
+
+        // Create encrypted backup
+        BackupResult backup = encService.createBackup("Test");
+        assertThat(backup.isSuccess()).isTrue();
+
+        // Modify db
+        Files.writeString(dbFile, "modified-data");
+
+        // Restore from encrypted backup
+        String encFilename = Path.of(backup.getBackupPath()).getFileName().toString();
+        RestoreResult result = encService.restoreBackup(encFilename);
+
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(Files.readString(dbFile)).isEqualTo("original-data");
+    }
+
+    @Test
+    void restoreBackup_encryptedWithoutKey_fails() throws IOException {
+        // Create encrypted backup with key
+        Path dbFile = tempDir.resolve("testdb.mv.db");
+        Files.writeString(dbFile, "data");
+
+        config = BackupConfig.builder()
+                .backupDirectory(tempDir.toString())
+                .backupPrefix("enc")
+                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                .maxBackups(5)
+                .retentionDays(30)
+                .encryptionKey("my-secret-key-12345")
+                .build();
+        BackupService encService = new BackupService(config);
+        BackupResult backup = encService.createBackup("Test");
+
+        // Try restoring without key
+        BackupService noKeyService = new BackupService(BackupConfig.builder()
+                .backupDirectory(tempDir.toString())
+                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                .maxBackups(5)
+                .retentionDays(30)
+                .build());
+        String encFilename = Path.of(backup.getBackupPath()).getFileName().toString();
+        RestoreResult result = noKeyService.restoreBackup(encFilename);
+
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getMessage()).contains("no encryption key");
+    }
+
+    @Test
+    void isEncryptionEnabled_withKey() {
+        config = BackupConfig.builder()
+                .backupDirectory(tempDir.toString())
+                .encryptionKey("test-key")
+                .build();
+        BackupService encService = new BackupService(config);
+        assertThat(encService.isEncryptionEnabled()).isTrue();
+    }
+
+    @Test
+    void isEncryptionEnabled_withoutKey() {
+        assertThat(service.isEncryptionEnabled()).isFalse();
+    }
+
+    @Test
+    void listBackups_includesEncryptedFiles() throws IOException {
+        Files.writeString(tempDir.resolve("backup_1.zip"), "plain");
+        Files.writeString(tempDir.resolve("backup_2.zip.enc"), "encrypted");
+
+        List<BackupInfo> list = service.listBackups();
+
+        assertThat(list).hasSize(2);
+        BackupInfo plain = list.stream().filter(i -> !i.isEncrypted()).findFirst().orElseThrow();
+        BackupInfo encrypted = list.stream().filter(BackupInfo::isEncrypted).findFirst().orElseThrow();
+        assertThat(plain.getFilename()).isEqualTo("backup_1.zip");
+        assertThat(encrypted.getFilename()).isEqualTo("backup_2.zip.enc");
+        assertThat(encrypted.getType()).isEqualTo("H2");
+    }
 }

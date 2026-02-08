@@ -166,11 +166,28 @@ public class TransferContext {
     }
 
     public void transEndSent() {
-        transition(ClientState.TDE08A_TRANS_END_PENDING);
+        if (state == ClientState.TDL07_DATA_END) {
+            transition(ClientState.TDL08A_TRANS_END_PENDING);
+        } else {
+            transition(ClientState.TDE08A_TRANS_END_PENDING);
+        }
     }
 
     public void transEndAck() {
         transition(ClientState.OF02_TRANSFER_READY);
+    }
+
+    // Receive-side (TDL) transition helpers
+    public void syncReceived() {
+        transition(ClientState.TDL03_SYNC_ACK);
+    }
+
+    public void syncAckSentReceive() {
+        transition(ClientState.TDL02A_RECEIVING_DATA);
+    }
+
+    public void dataEndReceived() {
+        transition(ClientState.TDL07_DATA_END);
     }
 
     public void closeSent() {

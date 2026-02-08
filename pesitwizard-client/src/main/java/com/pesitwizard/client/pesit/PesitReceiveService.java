@@ -175,18 +175,24 @@ public class PesitReceiveService {
                 .withParameter(new ParameterValue(PI_17_PRIORITE, 0))
                 .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, chunkSize));
 
+        ctx.selectSent();
         Fpdu ackSelect = session.sendFpduWithAck(selectFpdu);
+        ctx.selectAck();
         long expectedSize = ParameterParser.parseFileSizeFromAckSelect(ackSelect);
 
         // OPEN
+        ctx.openSent();
         session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
+        ctx.openAck();
 
         // READ avec point de reprise
         if (restartPoint > 0) {
             log.info("Sending READ with restart point {} (byte {})", restartPoint, restartBytePos);
         }
+        ctx.readSent();
         session.sendFpduWithAck(new Fpdu(FpduType.READ).withIdDst(serverConnId)
                 .withParameter(new ParameterValue(PI_18_POINT_RELANCE, restartPoint)));
+        ctx.readAck();
 
         // Recevoir les données
         return receiveData(session, serverConnId, connectionId, connector, destPath, expectedSize,
@@ -265,9 +271,11 @@ public class PesitReceiveService {
                     int syncNum = ParameterParser.parsePI20SyncNumber(fpdu);
                     lastSync = syncNum > 0 ? syncNum : lastSync + 1;
                     lastSyncPos = totalBytes;
+                    ctx.syncReceived();
                     ctx.syncPoint(lastSync, lastSyncPos);
                     session.sendFpdu(new Fpdu(FpduType.ACK_SYN).withIdDst(serverConnId)
                             .withParameter(new ParameterValue(PI_20_NUM_SYNC, lastSync)));
+                    ctx.syncAckSentReceive();
                     log.debug("ACK_SYN {} at {} bytes", lastSync, totalBytes);
                 } else if (type == FpduType.RESYN) {
                     // Server requests resynchronization during READ
@@ -286,6 +294,7 @@ public class PesitReceiveService {
                     ctx.addBytes(-(ctx.getBytesTransferred() - lastSyncPos));
                     log.info("RESYN: truncated to {} bytes, continuing", lastSyncPos);
                 } else if (type == FpduType.DTF_END || type == FpduType.TRANS_END || type == FpduType.CLOSE) {
+                    ctx.dataEndReceived();
                     receiving = false;
                 } else if (type == FpduType.IDT) {
                     ParameterValue pi19 = fpdu.getParameter(PI_19_CODE_FIN_TRANSFERT);
@@ -304,7 +313,7 @@ public class PesitReceiveService {
         }
 
         if (!interrupted) {
-            sendCleanupFpdus(session, serverConnId, connectionId);
+            sendCleanupFpdus(session, serverConnId, connectionId, ctx);
         } else if (restartCode == 4) {
             throw new RestartRequiredException(lastSync, lastSyncPos, totalBytes);
         }
@@ -313,20 +322,27 @@ public class PesitReceiveService {
         return totalBytes;
     }
 
-    private void sendCleanupFpdus(PesitSession session, int serverConnId, int connectionId)
-            throws IOException, InterruptedException {
+    private void sendCleanupFpdus(PesitSession session, int serverConnId, int connectionId,
+            TransferContext ctx) throws IOException, InterruptedException {
         // Send TRANS.END to signal successful data reception (required before CLOSE)
-        // This tells the server that we've received all the data
+        ctx.transEndSent();
         session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnId)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        ctx.transEndAck();
         log.debug("Sent TRANS.END");
 
+        ctx.closeSent();
         session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnId)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        ctx.closeAck();
+        ctx.deselectSent();
         session.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(serverConnId)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        ctx.deselectAck();
+        ctx.releaseSent();
         session.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(serverConnId).withIdSrc(connectionId)
                 .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        ctx.releaseAck();
     }
 
     // === Helpers ===
