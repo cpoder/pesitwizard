@@ -42,3 +42,13 @@ serviceAccount:
 env:
   - name: LOGGING_LEVEL_ROOT
     value: "INFO"
+  - name: PESIT_ADMIN_PASSWORD
+    value: "integration-test-admin-pw"
+  - name: PESIT_OPERATOR_PASSWORD
+    value: "integration-test-operator-pw"
+  - name: PESIT_USER_PASSWORD
+    value: "integration-test-user-pw"
+  - name: PESIT_CA_PASSWORD
+    value: "integration-test-ca-pw"
+  - name: PESIT_CA_TRUSTSTORE_PASSWORD
+    value: "integration-test-ts-pw"

@@ -131,12 +131,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name != 'pull_request'
+    env:
+      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
     steps:
       - name: Install cosign
+        if: env.COSIGN_PRIVATE_KEY != ''
         uses: sigstore/cosign-installer@v3
 
       - name: Log in to Container Registry
+        if: env.COSIGN_PRIVATE_KEY != ''
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -144,31 +149,26 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sign pesitwizard-client image
-        if: needs.build.outputs.client-digest != ''
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        if: env.COSIGN_PRIVATE_KEY != '' && needs.build.outputs.client-digest != ''
         run: |
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
             ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-client@${{ needs.build.outputs.client-digest }}
 
       - name: Sign pesitwizard-client-ui image
-        if: needs.build.outputs.client-ui-digest != ''
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        if: env.COSIGN_PRIVATE_KEY != '' && needs.build.outputs.client-ui-digest != ''
         run: |
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
             ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-client-ui@${{ needs.build.outputs.client-ui-digest }}
 
       - name: Sign pesitwizard-server image
-        if: needs.build.outputs.server-digest != ''
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        if: env.COSIGN_PRIVATE_KEY != '' && needs.build.outputs.server-digest != ''
         run: |
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
             ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-server@${{ needs.build.outputs.server-digest }}
+
+      - name: Skip signing (no key configured)
+        if: env.COSIGN_PRIVATE_KEY == ''
+        run: echo "COSIGN_PRIVATE_KEY not configured, skipping image signing"
 
   # Scan Docker images for vulnerabilities
   scan:
