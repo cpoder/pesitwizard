@@ -68,7 +68,7 @@
         <bucket4j.version>8.7.0</bucket4j.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
-        <awaitility.version>4.2.0</awaitility.version>
+        <awaitility.version>4.3.0</awaitility.version>
         <lombok.version>1.18.34</lombok.version>
     </properties>
 
