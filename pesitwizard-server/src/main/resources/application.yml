@@ -22,10 +22,15 @@ spring:
   # JPA configuration
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
-    defer-datasource-initialization: true
+
+  # Flyway database migration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
 
   # SQL initialization - disabled, use API instead
   # sql:
@@ -34,10 +39,10 @@ spring:
   #     data-locations: classpath:data.sql
   #     continue-on-error: true
   
-  # H2 Console (for debugging, only in default profile)
+  # H2 Console (S3-14: disabled by default, enable via dev profile only)
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
 
 # Server configuration
@@ -85,6 +90,10 @@ pesit:
     client-auth: ${PESIT_SSL_CLIENT_AUTH:NONE}
     # TLS protocol version (TLSv1.2, TLSv1.3)
     protocol: ${PESIT_SSL_PROTOCOL:TLSv1.3}
+    # Allowed TLS protocol versions (S3-01: only TLSv1.2+ are secure)
+    protocols:
+      - TLSv1.3
+      - TLSv1.2
     # Verify client certificate chain against CA
     verify-certificate-chain: true
     # Enabled cipher suites (empty = use defaults)
@@ -193,6 +202,7 @@ pesit:
         id: CXCLIENT
         description: IBM Sterling Connect:Express client
         enabled: true
+        # WARNING: Development-only default password. Change in production!
         password: test123
         access-type: BOTH
         max-connections: 10
@@ -203,6 +213,7 @@ pesit:
         id: SECUREP
         description: Partner requiring authentication
         enabled: true
+        # WARNING: Development-only default password. Change in production!
         password: secret123
         access-type: WRITE
         max-connections: 5
@@ -350,6 +361,9 @@ pesit.security:
     - /actuator/health/**
     - /actuator/info
     - /api/servers/**
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /swagger-ui.html
     # WARNING: h2-console must be disabled in production
     # - /h2-console/**
     # REMOVED: /api/v1/deployment/** - requires authentication
@@ -370,6 +384,7 @@ pesit.security:
       - Content-Type
       - X-API-Key
       - X-Requested-With
+      - X-XSRF-TOKEN
     exposed-headers:
       - X-Total-Count
     allow-credentials: true
@@ -473,6 +488,14 @@ management:
     enabled: ${pesit.observability.tracing.enabled:false}
     sampling:
       probability: 1.0
+
+# OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
 
 # Logging configuration
 logging:

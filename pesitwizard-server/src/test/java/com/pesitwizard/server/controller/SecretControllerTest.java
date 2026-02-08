@@ -208,7 +208,7 @@ class SecretControllerTest {
     @DisplayName("rotateSecret should rotate secret")
     void rotateSecretShouldRotateSecret() throws Exception {
         SecretEntry secret = createTestSecret(1L, "rotated");
-        secret.setVersion(2);
+        secret.setVersion(2L);
         when(secretService.rotateSecret(eq("rotated"), anyString(), any())).thenReturn(secret);
 
         mockMvc.perform(post("/api/v1/secrets/name/rotated/rotate")
@@ -277,7 +277,7 @@ class SecretControllerTest {
         secret.setDescription("Test description");
         secret.setSecretType(SecretType.GENERIC);
         secret.setScope(SecretScope.GLOBAL);
-        secret.setVersion(1);
+        secret.setVersion(1L);
         secret.setActive(true);
         secret.setCreatedAt(Instant.now());
         secret.setCreatedBy("test");

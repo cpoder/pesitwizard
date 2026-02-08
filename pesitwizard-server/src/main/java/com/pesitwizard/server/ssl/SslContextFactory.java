@@ -19,6 +19,7 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.springframework.stereotype.Component;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.config.SslProperties;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.StoreType;
@@ -40,6 +41,7 @@ public class SslContextFactory {
 
     private final CertificateStoreRepository certificateRepository;
     private final SslProperties sslProperties;
+    private final SecretsService secretsService;
 
     private static final String TLS_PROTOCOL = "TLSv1.3";
     private static final String FALLBACK_PROTOCOL = "TLSv1.2";
@@ -194,14 +196,14 @@ public class SslContextFactory {
     public SSLContext createSslContext(CertificateStore keystore, CertificateStore truststore)
             throws SslConfigurationException {
         try {
-            // Load keystore
+            // Load keystore (loadKeyStore handles password decryption)
             KeyStore ks = loadKeyStore(keystore);
 
             // Initialize key manager
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             String keyPassword = keystore.getKeyPassword() != null
-                    ? keystore.getKeyPassword()
-                    : keystore.getStorePassword();
+                    ? decryptPassword(keystore.getKeyPassword())
+                    : decryptPassword(keystore.getStorePassword());
             kmf.init(ks, keyPassword != null ? keyPassword.toCharArray() : null);
 
             // Initialize trust manager
@@ -287,8 +289,9 @@ public class SslContextFactory {
                     throw new SslConfigurationException("Unsupported store format: " + store.getFormat());
             }
 
-            char[] password = store.getStorePassword() != null
-                    ? store.getStorePassword().toCharArray()
+            String decryptedPassword = decryptPassword(store.getStorePassword());
+            char[] password = decryptedPassword != null
+                    ? decryptedPassword.toCharArray()
                     : null;
 
             try (ByteArrayInputStream bis = new ByteArrayInputStream(store.getStoreData())) {
@@ -507,7 +510,8 @@ public class SslContextFactory {
 
             // Export updated store
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            char[] password = store.getStorePassword() != null ? store.getStorePassword().toCharArray() : null;
+            String decryptedStorePwd = decryptPassword(store.getStorePassword());
+            char[] password = decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null;
             keyStore.store(bos, password);
             return bos.toByteArray();
 
@@ -537,14 +541,16 @@ public class SslContextFactory {
             // Parse private key (PEM format)
             java.security.PrivateKey privateKey = parsePrivateKey(privateKeyData);
 
-            // Add to store
+            // Add to store (keyPassword param is already plaintext from caller;
+            // store.getStorePassword() may be encrypted in DB)
+            String decryptedStorePwd = decryptPassword(store.getStorePassword());
             char[] keyPwd = keyPassword != null ? keyPassword.toCharArray()
-                    : (store.getStorePassword() != null ? store.getStorePassword().toCharArray() : null);
+                    : (decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null);
             keyStore.setKeyEntry(alias, privateKey, keyPwd, new Certificate[] { cert });
 
             // Export updated store
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            char[] storePwd = store.getStorePassword() != null ? store.getStorePassword().toCharArray() : null;
+            char[] storePwd = decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null;
             keyStore.store(bos, storePwd);
             return bos.toByteArray();
 
@@ -632,7 +638,8 @@ public class SslContextFactory {
 
             // Export updated store
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            char[] password = store.getStorePassword() != null ? store.getStorePassword().toCharArray() : null;
+            String decryptedStorePwd = decryptPassword(store.getStorePassword());
+            char[] password = decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null;
             keyStore.store(bos, password);
             return bos.toByteArray();
 
@@ -641,6 +648,20 @@ public class SslContextFactory {
         } catch (Exception e) {
             throw new SslConfigurationException("Failed to remove entry: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Decrypt a password that may be stored encrypted (AES:, vault:, ENC: prefix).
+     * Returns null for null input, returns plaintext unchanged if not encrypted.
+     */
+    private String decryptPassword(String password) {
+        if (password == null) {
+            return null;
+        }
+        if (secretsService.isEncrypted(password)) {
+            return secretsService.decryptFromStorage(password);
+        }
+        return password;
     }
 
     /**

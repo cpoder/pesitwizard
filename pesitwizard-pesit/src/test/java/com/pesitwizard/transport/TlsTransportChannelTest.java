@@ -47,6 +47,35 @@ class TlsTransportChannelTest {
     }
 
     @Nested
+    @DisplayName("Hostname Verification")
+    class HostnameVerificationTests {
+
+        @Test
+        @DisplayName("hostname verification should be enabled by default")
+        void hostnameVerificationEnabledByDefault() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            assertThat(channel.isHostnameVerification()).isTrue();
+        }
+
+        @Test
+        @DisplayName("hostname verification can be disabled")
+        void hostnameVerificationCanBeDisabled() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setHostnameVerification(false);
+            assertThat(channel.isHostnameVerification()).isFalse();
+        }
+
+        @Test
+        @DisplayName("hostname verification can be re-enabled after disabling")
+        void hostnameVerificationCanBeReEnabled() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setHostnameVerification(false);
+            channel.setHostnameVerification(true);
+            assertThat(channel.isHostnameVerification()).isTrue();
+        }
+    }
+
+    @Nested
     @DisplayName("Connection State")
     class ConnectionStateTests {
 

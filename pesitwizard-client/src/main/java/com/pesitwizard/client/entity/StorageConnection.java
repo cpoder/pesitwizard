@@ -12,10 +12,12 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Entity representing a configured storage connection instance.
@@ -43,9 +45,11 @@ public class StorageConnection {
     @NotBlank
     private String connectorType;
 
-    /** JSON configuration for the connector */
+    /** JSON configuration for the connector (may contain credentials) */
     @Lob
     @Column(columnDefinition = "TEXT")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String configJson;
 
     /** Whether this connection is enabled */

@@ -25,6 +25,10 @@ public class Fpdu {
         return parameters.stream().anyMatch(pv -> pv.getParameter().equals(parameter));
     }
 
+    public boolean hasParameter(Parameter parameter) {
+        return parameters.stream().anyMatch(pv -> pv.getParameter().equals(parameter));
+    }
+
     public ParameterValue getParameter(Parameter parameter) {
         return parameters.stream()
                 .filter(pv -> pv.getParameter().equals(parameter))

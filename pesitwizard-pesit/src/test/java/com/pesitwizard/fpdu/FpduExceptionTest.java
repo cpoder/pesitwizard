@@ -96,6 +96,15 @@ class FpduExceptionTest {
             assertThat(ex.getMessage()).contains("Invalid FPDU length");
             assertThat(ex.getMessage()).contains("3");
         }
+
+        @Test
+        @DisplayName("should create for unknown FPDU type")
+        void shouldCreateForUnknownFpduType() {
+            FpduParseException ex = FpduParseException.unknownFpduType(0xFF, 0xAB);
+            assertThat(ex.getMessage()).contains("Unknown FPDU type");
+            assertThat(ex.getMessage()).contains("0xFF");
+            assertThat(ex.getMessage()).contains("0xAB");
+        }
     }
 
     @Nested

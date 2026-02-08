@@ -17,16 +17,33 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class FpduIO {
 
+    /** Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length prefix. */
+    public static final int DEFAULT_MAX_FPDU_LENGTH = 32768;
+
+    /**
+     * Read a single FPDU from the input stream with EBCDIC-aware length handling.
+     * Uses {@link #DEFAULT_MAX_FPDU_LENGTH} as the maximum allowed length.
+     *
+     * @param in DataInputStream to read from
+     * @return Raw FPDU bytes (without the length prefix, still in original encoding)
+     * @throws IOException if read fails or connection closed
+     * @see #readRawFpduWithEbcdicDetection(DataInputStream, int)
+     */
+    public static byte[] readRawFpduWithEbcdicDetection(DataInputStream in) throws IOException {
+        return readRawFpduWithEbcdicDetection(in, DEFAULT_MAX_FPDU_LENGTH);
+    }
+
     /**
      * Read a single FPDU from the input stream with EBCDIC-aware length handling.
      * IBM CX sends PURE EBCDIC where even the length prefix is EBCDIC-encoded.
      * This method detects EBCDIC length prefix and handles it correctly.
      *
      * @param in DataInputStream to read from
+     * @param maxFpduLength maximum allowed FPDU length in bytes
      * @return Raw FPDU bytes (without the length prefix, still in original encoding)
-     * @throws IOException if read fails or connection closed
+     * @throws IOException if read fails, connection closed, or FPDU exceeds maxFpduLength
      */
-    public static byte[] readRawFpduWithEbcdicDetection(DataInputStream in) throws IOException {
+    public static byte[] readRawFpduWithEbcdicDetection(DataInputStream in, int maxFpduLength) throws IOException {
         // Read first 2 bytes (length prefix)
         byte[] lengthBytes = new byte[2];
         in.readFully(lengthBytes);
@@ -50,6 +67,9 @@ public class FpduIO {
         if (length <= 0 || length > 65535) {
             throw new IOException("Invalid FPDU length: " + length);
         }
+        if (length > maxFpduLength) {
+            throw new IOException("FPDU length " + length + " exceeds maximum allowed length " + maxFpduLength + " bytes");
+        }
 
         byte[] data = new byte[length];
         in.readFully(data);
@@ -58,16 +78,33 @@ public class FpduIO {
 
     /**
      * Read a single FPDU from the input stream.
-     * Reads the 2-byte length prefix, then the FPDU data.
+     * Uses {@link #DEFAULT_MAX_FPDU_LENGTH} as the maximum allowed length.
      *
      * @param in DataInputStream to read from
      * @return Raw FPDU bytes (without the length prefix)
      * @throws IOException if read fails or connection closed
+     * @see #readRawFpdu(DataInputStream, int)
      */
     public static byte[] readRawFpdu(DataInputStream in) throws IOException {
+        return readRawFpdu(in, DEFAULT_MAX_FPDU_LENGTH);
+    }
+
+    /**
+     * Read a single FPDU from the input stream.
+     * Reads the 2-byte length prefix, then the FPDU data.
+     *
+     * @param in DataInputStream to read from
+     * @param maxFpduLength maximum allowed FPDU length in bytes
+     * @return Raw FPDU bytes (without the length prefix)
+     * @throws IOException if read fails, connection closed, or FPDU exceeds maxFpduLength
+     */
+    public static byte[] readRawFpdu(DataInputStream in, int maxFpduLength) throws IOException {
         int length = in.readUnsignedShort();
         if (length <= 0) {
             throw new IOException("Invalid FPDU length: " + length);
+        }
+        if (length > maxFpduLength) {
+            throw new IOException("FPDU length " + length + " exceeds maximum allowed length " + maxFpduLength + " bytes");
         }
         byte[] data = new byte[length];
         in.readFully(data);
@@ -151,8 +188,8 @@ public class FpduIO {
 
     /**
      * Check if raw FPDU bytes represent a DTF.END FPDU.
-     * DTF.END has phase=0xC0 and type=0x22.
-     * 
+     * DTF.END has phase=0xC0 and type=0x04.
+     *
      * @param rawData Raw FPDU bytes
      * @return true if this is a DTF.END FPDU
      */
@@ -162,7 +199,7 @@ public class FpduIO {
         }
         int phase = rawData[2] & 0xFF;
         int type = rawData[3] & 0xFF;
-        return phase == 0xC0 && type == 0x22;
+        return phase == 0xC0 && type == 0x04;
     }
 
     /**

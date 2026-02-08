@@ -1,13 +1,14 @@
 package com.pesitwizard.client.event;
 
+import java.util.concurrent.Executor;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import com.pesitwizard.client.pesit.ClientState;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -61,11 +62,19 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TransferEventBus {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final Executor websocketExecutor;
+
+    public TransferEventBus(SimpMessagingTemplate messagingTemplate,
+                            ApplicationEventPublisher eventPublisher,
+                            @Qualifier("websocketExecutor") Executor websocketExecutor) {
+        this.messagingTemplate = messagingTemplate;
+        this.eventPublisher = eventPublisher;
+        this.websocketExecutor = websocketExecutor;
+    }
 
     private static final String TOPIC_TRANSFER = "/topic/transfer/";
     private static final String TOPIC_PROGRESS_SUFFIX = "/progress";
@@ -85,18 +94,20 @@ public class TransferEventBus {
         // Plugins can use @Async("pluginExecutor") to process asynchronously
         eventPublisher.publishEvent(event);
 
-        // Publish to WebSocket asynchronously to avoid blocking transfer threads
-        publishToWebSocketAsync(event);
+        // Publish to WebSocket asynchronously via the websocketExecutor to avoid
+        // blocking transfer threads. Using the executor directly rather than @Async
+        // because self-invocation within the same bean bypasses the Spring AOP proxy.
+        websocketExecutor.execute(() -> publishToWebSocket(event));
     }
 
     /**
-     * Publishes event to WebSocket topics asynchronously.
-     * Separate method with @Async to prevent WebSocket issues from blocking transfer threads.
+     * Publishes event to WebSocket topics.
+     * Called asynchronously via the websocketExecutor to prevent WebSocket issues
+     * from blocking transfer threads.
      *
      * @param event the event to publish
      */
-    @Async("websocketExecutor")
-    public void publishToWebSocketAsync(TransferEvent event) {
+    private void publishToWebSocket(TransferEvent event) {
         try {
             // Publish to transfer-specific topic with /progress suffix
             if (event.getTransferId() != null) {

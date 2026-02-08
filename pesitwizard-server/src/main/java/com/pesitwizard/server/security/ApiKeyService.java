@@ -1,5 +1,6 @@
 package com.pesitwizard.server.security;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -240,7 +241,9 @@ public class ApiKeyService {
     private Optional<ApiKey> validateStaticKey(String plainKey) {
         // Check admin key from env var
         String adminKey = securityProperties.getApiKey().getAdminKey();
-        if (adminKey != null && !adminKey.isBlank() && adminKey.equals(plainKey)) {
+        if (adminKey != null && !adminKey.isBlank() && MessageDigest.isEqual(
+                adminKey.getBytes(StandardCharsets.UTF_8),
+                plainKey.getBytes(StandardCharsets.UTF_8))) {
             ApiKey virtualKey = ApiKey.builder()
                     .name("admin")
                     .description("Admin API key (from env)")
@@ -254,7 +257,9 @@ public class ApiKeyService {
         var staticKeys = securityProperties.getApiKey().getKeys();
         for (var entry : staticKeys.entrySet()) {
             var keyConfig = entry.getValue();
-            if (keyConfig.isEnabled() && plainKey.equals(entry.getKey())) {
+            if (keyConfig.isEnabled() && MessageDigest.isEqual(
+                    plainKey.getBytes(StandardCharsets.UTF_8),
+                    entry.getKey().getBytes(StandardCharsets.UTF_8))) {
                 ApiKey virtualKey = ApiKey.builder()
                         .name(keyConfig.getName() != null ? keyConfig.getName() : entry.getKey())
                         .description(keyConfig.getDescription())

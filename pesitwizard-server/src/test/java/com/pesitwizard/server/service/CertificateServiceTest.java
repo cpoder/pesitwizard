@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
 import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
@@ -37,6 +38,9 @@ class CertificateServiceTest {
     @Mock
     private SslContextFactory sslContextFactory;
 
+    @Mock
+    private SecretsService secretsService;
+
     @InjectMocks
     private CertificateService certificateService;
 
@@ -47,6 +51,14 @@ class CertificateServiceTest {
     @BeforeEach
     void setUp() {
         testStoreData = "test-store-data".getBytes();
+
+        // SecretsService: encrypt returns an encrypted marker, isEncrypted detects it
+        lenient().when(secretsService.isEncrypted(any())).thenAnswer(inv -> {
+            String val = inv.getArgument(0);
+            return val != null && (val.startsWith("AES:") || val.startsWith("vault:") || val.startsWith("ENC:"));
+        });
+        lenient().when(secretsService.encryptForStorage(anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(inv -> "ENC:" + inv.getArgument(0));
 
         testKeystore = CertificateStore.builder()
                 .id(1L)

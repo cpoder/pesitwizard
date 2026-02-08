@@ -22,7 +22,7 @@ class PesitSessionHandlerStateMachineTest {
     @DisplayName("SF03 should only accept OPEN or DESELECT")
     void sf03ShouldOnlyAcceptOpenOrDeselect() {
         SessionContext ctx = new SessionContext("test");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         assertEquals(ServerState.SF03_FILE_SELECTED, ctx.getState());
     }
 
@@ -30,7 +30,7 @@ class PesitSessionHandlerStateMachineTest {
     @DisplayName("OF02 should accept WRITE, READ, or CLOSE")
     void of02ShouldAcceptWriteReadOrClose() {
         SessionContext ctx = new SessionContext("test");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         assertEquals(ServerState.OF02_TRANSFER_READY, ctx.getState());
     }
 }

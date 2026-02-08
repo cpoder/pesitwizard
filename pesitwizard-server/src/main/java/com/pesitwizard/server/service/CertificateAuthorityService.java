@@ -1,29 +1,17 @@
 package com.pesitwizard.server.service;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.Optional;
 
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.KeyPurposeId;
-import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -36,6 +24,7 @@ import com.pesitwizard.common.crypto.CryptoException;
 import com.pesitwizard.common.crypto.CsrUtils;
 import com.pesitwizard.common.crypto.KeystoreUtils;
 import com.pesitwizard.common.crypto.PemUtils;
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.config.CaProperties;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
@@ -60,6 +49,7 @@ public class CertificateAuthorityService {
     private final CertificateStoreRepository certificateRepository;
     private final SslContextFactory sslContextFactory;
     private final CaProperties caProperties;
+    private final SecretsService secretsService;
 
     private static final String SIGNATURE_ALGORITHM = "SHA256withRSA";
     private static final int DEFAULT_KEY_SIZE = 2048;
@@ -109,15 +99,17 @@ public class CertificateAuthorityService {
                     caProperties.getCaKeyAlias(),
                     caProperties.getCaKeystorePassword());
 
-            // Store in database
+            // Store in database (encrypt passwords before persisting)
             CertificateStore caStore = CertificateStore.builder()
                     .name(caProperties.getCaKeystoreName())
                     .description("PeSIT Private Certificate Authority")
                     .storeType(StoreType.KEYSTORE)
                     .format(StoreFormat.PKCS12)
                     .storeData(keystoreData)
-                    .storePassword(caProperties.getCaKeystorePassword())
-                    .keyPassword(caProperties.getCaKeystorePassword())
+                    .storePassword(encryptPassword(caProperties.getCaKeystorePassword(),
+                            caProperties.getCaKeystoreName(), "storePassword"))
+                    .keyPassword(encryptPassword(caProperties.getCaKeystorePassword(),
+                            caProperties.getCaKeystoreName(), "keyPassword"))
                     .keyAlias(caProperties.getCaKeyAlias())
                     .purpose(CertificatePurpose.CA)
                     .isDefault(false)
@@ -163,7 +155,8 @@ public class CertificateAuthorityService {
                 .storeType(StoreType.TRUSTSTORE)
                 .format(StoreFormat.PKCS12)
                 .storeData(bos.toByteArray())
-                .storePassword(caProperties.getCaTruststorePassword())
+                .storePassword(encryptPassword(caProperties.getCaTruststorePassword(),
+                        caProperties.getCaTruststoreName(), "storePassword"))
                 .purpose(CertificatePurpose.CA)
                 .isDefault(true)
                 .active(true)
@@ -249,52 +242,23 @@ public class CertificateAuthorityService {
             java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
             PublicKey publicKey = kf.generatePublic(keySpec);
 
-            // Generate signed certificate
-            BigInteger serialNumber = new BigInteger(128, new SecureRandom());
-            Instant now = Instant.now();
-            Date notBefore = Date.from(now);
-            Date notAfter = Date.from(now.plus(Duration.ofDays(validityDays)));
-
-            X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                    caCert,
-                    serialNumber,
-                    notBefore,
-                    notAfter,
-                    csr.getSubject(),
-                    publicKey);
-
-            // Add extensions based on purpose
-            certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
-
-            KeyUsage keyUsage = new KeyUsage(
-                    KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment);
-            certBuilder.addExtension(Extension.keyUsage, true, keyUsage);
-
-            ExtendedKeyUsage extKeyUsage;
-            if (purpose == CertificatePurpose.SERVER) {
-                extKeyUsage = new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth);
-            } else {
-                extKeyUsage = new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth);
-            }
-            certBuilder.addExtension(Extension.extendedKeyUsage, false, extKeyUsage);
-
-            // Sign the certificate
-            ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).build(caPrivateKey);
-            X509CertificateHolder certHolder = certBuilder.build(signer);
-            X509Certificate signedCert = new JcaX509CertificateConverter().getCertificate(certHolder);
+            // Generate signed certificate using shared builder
+            String purposeStr = purpose == CertificatePurpose.SERVER ? "SERVER" : "CLIENT";
+            X509Certificate signedCert = CertificateUtils.buildSignedCertificate(
+                    csr.getSubject(), publicKey, caCert, caPrivateKey, validityDays, purposeStr);
 
             // Convert to PEM
             String certPem = toPem(signedCert);
             String caCertPem = toPem(caCert);
 
             log.info("Certificate signed for {}: serial={}, expires={}",
-                    csr.getSubject(), serialNumber.toString(16), notAfter);
+                    csr.getSubject(), signedCert.getSerialNumber().toString(16), signedCert.getNotAfter());
 
             return new SignedCertificate(
                     certPem,
                     caCertPem,
                     signedCert.getSubjectX500Principal().getName(),
-                    serialNumber.toString(16),
+                    signedCert.getSerialNumber().toString(16),
                     signedCert.getNotAfter().toInstant(),
                     partnerId);
 
@@ -358,8 +322,8 @@ public class CertificateAuthorityService {
                     .storeType(StoreType.KEYSTORE)
                     .format(StoreFormat.PKCS12)
                     .storeData(keystoreData)
-                    .storePassword(keystorePassword)
-                    .keyPassword(keystorePassword)
+                    .storePassword(encryptPassword(keystorePassword, storeName, "storePassword"))
+                    .keyPassword(encryptPassword(keystorePassword, storeName, "keyPassword"))
                     .keyAlias(commonName)
                     .purpose(purpose)
                     .partnerId(partnerId)
@@ -438,6 +402,22 @@ public class CertificateAuthorityService {
             log.warn("Certificate verification failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    // ========== Password Encryption ==========
+
+    /**
+     * Encrypt a password for storage if not already encrypted.
+     * Returns null for null/blank input.
+     */
+    private String encryptPassword(String password, String storeName, String fieldName) {
+        if (password == null || password.isBlank()) {
+            return password;
+        }
+        if (secretsService.isEncrypted(password)) {
+            return password;
+        }
+        return secretsService.encryptForStorage(password, "certstore", storeName, fieldName);
     }
 
     // ========== Helper Methods (delegating to pesitwizard-common) ==========

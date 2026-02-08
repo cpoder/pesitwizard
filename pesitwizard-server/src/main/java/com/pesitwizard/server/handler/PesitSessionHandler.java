@@ -18,6 +18,7 @@ import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.config.PesitServerProperties;
+import com.pesitwizard.server.model.InvalidStateTransitionException;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.ValidationResult;
 import com.pesitwizard.server.service.AuditService;
@@ -104,7 +105,9 @@ public class PesitSessionHandler {
     }
 
     /**
-     * Main state machine processing
+     * Main state machine processing.
+     * Catches {@link InvalidStateTransitionException} from handlers and returns
+     * an ABORT FPDU with diagnostic code D3_311 (remote PeSIT protocol error).
      */
     private Fpdu processStateMachine(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
             throws IOException {
@@ -116,20 +119,26 @@ public class PesitSessionHandler {
             return handleAbort(ctx, fpdu);
         }
 
-        return switch (ctx.getState()) {
-            case CN01_REPOS -> handleCN01(ctx, fpdu);
-            case CN03_CONNECTED -> handleCN03(ctx, fpdu);
-            case MSG_RECEIVING -> messageHandler.handleMsgReceiving(ctx, fpdu);
-            case SF03_FILE_SELECTED -> handleSF03(ctx, fpdu);
-            case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu, in, out);
-            case TDE02B_RECEIVING_DATA -> dataTransferHandler.handleTDE02B(ctx, fpdu);
-            case TDE07_WRITE_END -> dataTransferHandler.handleTDE07(ctx, fpdu);
-            case TDL02B_SENDING_DATA -> dataTransferHandler.handleTDL02B(ctx, fpdu);
-            default -> {
-                log.warn("[{}] Unexpected FPDU {} in state {}", ctx.getSessionId(), type, ctx.getState());
-                yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
-            }
-        };
+        try {
+            return switch (ctx.getState()) {
+                case CN01_REPOS -> handleCN01(ctx, fpdu);
+                case CN03_CONNECTED -> handleCN03(ctx, fpdu);
+                case MSG_RECEIVING -> messageHandler.handleMsgReceiving(ctx, fpdu);
+                case SF03_FILE_SELECTED -> handleSF03(ctx, fpdu);
+                case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu, in, out);
+                case TDE02B_RECEIVING_DATA -> dataTransferHandler.handleTDE02B(ctx, fpdu);
+                case TDE07_WRITE_END -> dataTransferHandler.handleTDE07(ctx, fpdu);
+                case TDL02B_SENDING_DATA -> dataTransferHandler.handleTDL02B(ctx, fpdu);
+                default -> {
+                    log.warn("[{}] Unexpected FPDU {} in state {}", ctx.getSessionId(), type, ctx.getState());
+                    yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
+                }
+            };
+        } catch (InvalidStateTransitionException e) {
+            log.error("[{}] Protocol violation: {}", ctx.getSessionId(), e.getMessage());
+            ctx.setAborted(true);
+            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
+        }
     }
 
     /**
@@ -335,7 +344,8 @@ public class PesitSessionHandler {
         }
 
         ctx.setAborted(true);
-        ctx.transitionTo(ServerState.CN01_REPOS);
+        // ABORT is a protocol-level forced reset — bypass state machine validation
+        ctx.setState(ServerState.CN01_REPOS);
         return null; // No response for ABORT
     }
 

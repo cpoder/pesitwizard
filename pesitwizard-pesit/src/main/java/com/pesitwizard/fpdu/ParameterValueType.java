@@ -17,7 +17,7 @@ public enum ParameterValueType {
     N {
         @Override
         public String renderValue(ParameterValue value) {
-            int n = 0;
+            long n = 0;
             for (byte b : value.getValue()) {
                 n = (n << 8) | (b & 0xFF);
             }
@@ -28,7 +28,7 @@ public enum ParameterValueType {
     S {
         @Override
         public String renderValue(ParameterValue value) {
-            int n = 0;
+            long n = 0;
             for (byte b : value.getValue()) {
                 n = (n << 8) | (b & 0xFF);
             }
@@ -39,11 +39,11 @@ public enum ParameterValueType {
     M {
         @Override
         public String renderValue(ParameterValue value) {
-            int n = 0;
+            long n = 0;
             for (byte b : value.getValue()) {
                 n = (n << 8) | (b & 0xFF);
             }
-            return Integer.toBinaryString(n);
+            return Long.toBinaryString(n);
         }
     },
     // Date/Heure / DateTime

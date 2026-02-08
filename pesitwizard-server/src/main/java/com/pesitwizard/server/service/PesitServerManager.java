@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,10 @@ public class PesitServerManager implements ClusterEventListener {
 
     // Map of running server instances: serverId -> PesitServerInstance
     private final Map<String, PesitServerInstance> runningServers = new ConcurrentHashMap<>();
+
+    // Per-server locks to serialize start/stop/update/delete operations on the same server ID,
+    // preventing TOCTOU races between concurrent REST API calls.
+    private final ConcurrentHashMap<String, ReentrantLock> serverLocks = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -100,7 +105,15 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     private void stopAllServers() {
-        for (String serverId : runningServers.keySet()) {
+        // Drain active transfers before stopping
+        for (var entry : runningServers.entrySet()) {
+            try {
+                entry.getValue().drain();
+            } catch (Exception e) {
+                log.warn("Error draining server {}: {}", entry.getKey(), e.getMessage());
+            }
+        }
+        for (String serverId : List.copyOf(runningServers.keySet())) {
             try {
                 stopServer(serverId);
                 log.info("Stopped server due to leadership loss: {}", serverId);
@@ -112,8 +125,16 @@ public class PesitServerManager implements ClusterEventListener {
 
     @PreDestroy
     public void shutdown() {
-        log.info("Shutting down all PeSIT servers...");
-        for (String serverId : runningServers.keySet()) {
+        log.info("Shutting down all PeSIT servers (draining active transfers)...");
+        // Drain all servers first, then stop
+        for (var entry : runningServers.entrySet()) {
+            try {
+                entry.getValue().drain();
+            } catch (Exception e) {
+                log.warn("Error draining server {}: {}", entry.getKey(), e.getMessage());
+            }
+        }
+        for (String serverId : List.copyOf(runningServers.keySet())) {
             try {
                 stopServer(serverId);
             } catch (Exception e) {
@@ -143,140 +164,181 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     /**
-     * Update an existing server configuration
+     * Update an existing server configuration.
+     * Uses a per-server lock to prevent races with concurrent start/stop operations.
      */
     @Transactional
     public PesitServerConfig updateServer(String serverId, PesitServerConfig updates) {
         PesitServerConfig existing = configRepository.findByServerId(serverId)
                 .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
 
-        // Don't allow updates while server is running
-        if (runningServers.containsKey(serverId)) {
-            throw new IllegalStateException("Cannot update running server. Stop it first.");
-        }
-
-        // Update fields (preserve id and serverId)
-        if (updates.getPort() != existing.getPort()) {
-            if (configRepository.existsByPort(updates.getPort())) {
-                throw new IllegalArgumentException("Port already in use: " + updates.getPort());
+        ReentrantLock lock = lockForServer(serverId);
+        lock.lock();
+        try {
+            // Don't allow updates while server is running
+            if (runningServers.containsKey(serverId)) {
+                throw new IllegalStateException("Cannot update running server. Stop it first.");
             }
-            existing.setPort(updates.getPort());
+
+            // Update fields (preserve id and serverId)
+            if (updates.getPort() != existing.getPort()) {
+                if (configRepository.existsByPort(updates.getPort())) {
+                    throw new IllegalArgumentException("Port already in use: " + updates.getPort());
+                }
+                existing.setPort(updates.getPort());
+            }
+
+            existing.setBindAddress(updates.getBindAddress());
+            existing.setProtocolVersion(updates.getProtocolVersion());
+            existing.setMaxConnections(updates.getMaxConnections());
+            existing.setConnectionTimeout(updates.getConnectionTimeout());
+            existing.setReadTimeout(updates.getReadTimeout());
+            existing.setReceiveDirectory(updates.getReceiveDirectory());
+            existing.setSendDirectory(updates.getSendDirectory());
+            existing.setMaxEntitySize(updates.getMaxEntitySize());
+            existing.setSyncPointsEnabled(updates.isSyncPointsEnabled());
+            existing.setResyncEnabled(updates.isResyncEnabled());
+            existing.setAutoStart(updates.isAutoStart());
+
+            return configRepository.save(existing);
+        } finally {
+            lock.unlock();
         }
-
-        existing.setBindAddress(updates.getBindAddress());
-        existing.setProtocolVersion(updates.getProtocolVersion());
-        existing.setMaxConnections(updates.getMaxConnections());
-        existing.setConnectionTimeout(updates.getConnectionTimeout());
-        existing.setReadTimeout(updates.getReadTimeout());
-        existing.setReceiveDirectory(updates.getReceiveDirectory());
-        existing.setSendDirectory(updates.getSendDirectory());
-        existing.setMaxEntitySize(updates.getMaxEntitySize());
-        existing.setSyncPointsEnabled(updates.isSyncPointsEnabled());
-        existing.setResyncEnabled(updates.isResyncEnabled());
-        existing.setAutoStart(updates.isAutoStart());
-
-        return configRepository.save(existing);
     }
 
     /**
-     * Delete a server configuration
+     * Delete a server configuration.
+     * Uses a per-server lock to prevent races with concurrent start/stop operations.
      */
     @Transactional
     public void deleteServer(String serverId) {
         PesitServerConfig config = configRepository.findByServerId(serverId)
                 .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
 
-        // Stop if running
-        if (runningServers.containsKey(serverId)) {
-            stopServer(serverId);
-        }
+        ReentrantLock lock = lockForServer(serverId);
+        lock.lock();
+        try {
+            // Stop if running (inline the stop logic to avoid re-entrant lock acquisition)
+            PesitServerInstance instance = runningServers.get(serverId);
+            if (instance != null) {
+                try {
+                    config.setStatus(ServerStatus.STOPPING);
+                    configRepository.save(config);
+                    instance.stop();
+                    runningServers.remove(serverId);
+                    clusterProvider.releaseServerOwnership(serverId);
+                } catch (Exception e) {
+                    log.error("Error stopping server {} during delete: {}", serverId, e.getMessage(), e);
+                }
+            }
 
-        configRepository.delete(config);
-        log.info("Deleted server configuration: {}", serverId);
+            configRepository.delete(config);
+            serverLocks.remove(serverId);
+            log.info("Deleted server configuration: {}", serverId);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
-     * Start a server instance
+     * Start a server instance.
+     * Uses a per-server lock to prevent TOCTOU races where concurrent REST API calls
+     * could both pass the "is running" check and compete for the same port.
      */
     @Transactional
     public void startServer(String serverId) {
         PesitServerConfig config = configRepository.findByServerId(serverId)
                 .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
 
-        if (runningServers.containsKey(serverId)) {
-            throw new IllegalStateException("Server already running on this node: " + serverId);
-        }
-
-        // In cluster mode, try to acquire ownership
-        if (!clusterProvider.acquireServerOwnership(serverId)) {
-            String owner = clusterProvider.getServerOwner(serverId);
-            throw new IllegalStateException("Server '" + serverId + "' is already running on node '" + owner + "'");
-        }
-
+        ReentrantLock lock = lockForServer(serverId);
+        lock.lock();
         try {
-            config.setStatus(ServerStatus.STARTING);
-            configRepository.save(config);
+            if (runningServers.containsKey(serverId)) {
+                throw new IllegalStateException("Server already running on this node: " + serverId);
+            }
 
-            // Create properties from config
-            PesitServerProperties properties = createPropertiesFromConfig(config);
+            // In cluster mode, try to acquire ownership
+            if (!clusterProvider.acquireServerOwnership(serverId)) {
+                String owner = clusterProvider.getServerOwner(serverId);
+                throw new IllegalStateException(
+                        "Server '" + serverId + "' is already running on node '" + owner + "'");
+            }
 
-            // Validate directories before starting
-            validateServerDirectories(config);
+            try {
+                config.setStatus(ServerStatus.STARTING);
+                configRepository.save(config);
 
-            // Use injected session handler (Spring-managed with all dependencies)
-            // Create and start server instance with SSL/mTLS support
-            PesitServerInstance instance = new PesitServerInstance(
-                    config, properties, sessionHandler, sslProperties, sslContextFactory);
-            instance.start();
+                // Create properties from config
+                PesitServerProperties properties = createPropertiesFromConfig(config);
 
-            runningServers.put(serverId, instance);
+                // Validate directories before starting
+                validateServerDirectories(config);
 
-            config.setStatus(ServerStatus.RUNNING);
-            config.setLastStartedAt(Instant.now());
-            configRepository.save(config);
+                // Use injected session handler (Spring-managed with all dependencies)
+                // Create and start server instance with SSL/mTLS support
+                PesitServerInstance instance = new PesitServerInstance(
+                        config, properties, sessionHandler, sslProperties, sslContextFactory);
+                instance.start();
 
-            log.info("Started server {} on port {}", serverId, config.getPort());
+                runningServers.put(serverId, instance);
 
-        } catch (Exception e) {
-            config.setStatus(ServerStatus.ERROR);
-            configRepository.save(config);
-            throw new RuntimeException("Failed to start server: " + e.getMessage(), e);
+                config.setStatus(ServerStatus.RUNNING);
+                config.setLastStartedAt(Instant.now());
+                configRepository.save(config);
+
+                log.info("Started server {} on port {}", serverId, config.getPort());
+
+            } catch (Exception e) {
+                config.setStatus(ServerStatus.ERROR);
+                configRepository.save(config);
+                throw new RuntimeException("Failed to start server: " + e.getMessage(), e);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     /**
-     * Stop a server instance
+     * Stop a server instance.
+     * Uses a per-server lock to prevent TOCTOU races where concurrent REST API calls
+     * could both retrieve the instance and attempt to stop it simultaneously.
      */
     @Transactional
     public void stopServer(String serverId) {
         PesitServerConfig config = configRepository.findByServerId(serverId)
                 .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
 
-        PesitServerInstance instance = runningServers.get(serverId);
-        if (instance == null) {
-            throw new IllegalStateException("Server not running: " + serverId);
-        }
-
+        ReentrantLock lock = lockForServer(serverId);
+        lock.lock();
         try {
-            config.setStatus(ServerStatus.STOPPING);
-            configRepository.save(config);
+            PesitServerInstance instance = runningServers.get(serverId);
+            if (instance == null) {
+                throw new IllegalStateException("Server not running: " + serverId);
+            }
 
-            instance.stop();
-            runningServers.remove(serverId);
+            try {
+                config.setStatus(ServerStatus.STOPPING);
+                configRepository.save(config);
 
-            // Release cluster ownership
-            clusterProvider.releaseServerOwnership(serverId);
+                instance.stop();
+                runningServers.remove(serverId);
 
-            config.setStatus(ServerStatus.STOPPED);
-            config.setLastStoppedAt(Instant.now());
-            configRepository.save(config);
+                // Release cluster ownership
+                clusterProvider.releaseServerOwnership(serverId);
 
-            log.info("Stopped server {}", serverId);
+                config.setStatus(ServerStatus.STOPPED);
+                config.setLastStoppedAt(Instant.now());
+                configRepository.save(config);
 
-        } catch (Exception e) {
-            config.setStatus(ServerStatus.ERROR);
-            configRepository.save(config);
-            throw new RuntimeException("Failed to stop server: " + e.getMessage(), e);
+                log.info("Stopped server {}", serverId);
+
+            } catch (Exception e) {
+                config.setStatus(ServerStatus.ERROR);
+                configRepository.save(config);
+                throw new RuntimeException("Failed to stop server: " + e.getMessage(), e);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -340,6 +402,13 @@ public class PesitServerManager implements ClusterEventListener {
                 .filter(PesitServerInstance::isRunning)
                 .mapToInt(PesitServerInstance::getActiveConnections)
                 .sum();
+    }
+
+    /**
+     * Get or create a per-server lock to serialize start/stop/update/delete operations.
+     */
+    private ReentrantLock lockForServer(String serverId) {
+        return serverLocks.computeIfAbsent(serverId, k -> new ReentrantLock());
     }
 
     /**

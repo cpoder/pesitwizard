@@ -21,7 +21,7 @@ class SecretEntryTest {
 
         assertEquals(SecretType.GENERIC, secret.getSecretType());
         assertEquals(SecretScope.GLOBAL, secret.getScope());
-        assertEquals(1, secret.getVersion());
+        assertNull(secret.getVersion()); // @Version field starts null before first persist
         assertTrue(secret.getActive());
     }
 
@@ -117,7 +117,7 @@ class SecretEntryTest {
                 .scope(SecretScope.SERVER)
                 .partnerId("PARTNER1")
                 .serverId("SERVER1")
-                .version(2)
+                .version(2L)
                 .active(true)
                 .expiresAt(now.plus(90, ChronoUnit.DAYS))
                 .lastRotatedAt(now)
@@ -136,7 +136,7 @@ class SecretEntryTest {
         assertEquals(SecretScope.SERVER, secret.getScope());
         assertEquals("PARTNER1", secret.getPartnerId());
         assertEquals("SERVER1", secret.getServerId());
-        assertEquals(2, secret.getVersion());
+        assertEquals(2L, secret.getVersion());
         assertTrue(secret.getActive());
         assertEquals(now.plus(90, ChronoUnit.DAYS), secret.getExpiresAt());
         assertEquals(now, secret.getLastRotatedAt());

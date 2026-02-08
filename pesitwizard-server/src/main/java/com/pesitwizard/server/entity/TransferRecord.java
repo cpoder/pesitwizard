@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -217,6 +218,12 @@ public class TransferRecord {
     @Lob
     @Column(columnDefinition = "TEXT")
     private String metadata;
+
+    /**
+     * Optimistic locking version
+     */
+    @Version
+    private Long version;
 
     /**
      * Transfer direction enum

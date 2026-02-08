@@ -1,8 +1,11 @@
 package com.pesitwizard.client.event;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
+import java.util.concurrent.Executor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,7 +34,12 @@ class TransferEventBusTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
+    /**
+     * Synchronous executor that runs tasks immediately on the calling thread.
+     * This makes tests deterministic without needing Thread.sleep().
+     */
+    private final Executor directExecutor = Runnable::run;
+
     private TransferEventBus eventBus;
 
     @Captor
@@ -47,10 +54,13 @@ class TransferEventBusTest {
     void setUp() {
         // Reset mocks before each test
         reset(messagingTemplate, eventPublisher);
+        // Construct with direct (synchronous) executor so WebSocket publishing
+        // executes immediately in tests without requiring Thread.sleep()
+        eventBus = new TransferEventBus(messagingTemplate, eventPublisher, directExecutor);
     }
 
     @Test
-    @DisplayName("publish() should call both Spring event publisher and WebSocket async")
+    @DisplayName("publish() should call both Spring event publisher and WebSocket")
     void publish_shouldCallBothChannels() {
         // Arrange
         TransferEvent event = TransferEvent.progress(TEST_TRANSFER_ID, 5000L, 10000L);
@@ -61,23 +71,19 @@ class TransferEventBusTest {
         // Assert - Spring event should be published synchronously
         verify(eventPublisher, times(1)).publishEvent(event);
 
-        // Note: WebSocket publishing is async, so we verify it's called
-        // but the actual execution happens in a separate thread
-        verify(messagingTemplate, timeout(1000).atLeastOnce())
+        // WebSocket publishing runs via the executor (direct/synchronous in tests)
+        verify(messagingTemplate, atLeastOnce())
             .convertAndSend(any(String.class), any(TransferEvent.class));
     }
 
     @Test
-    @DisplayName("publishToWebSocketAsync() should publish to correct topic with /progress suffix")
-    void publishToWebSocketAsync_shouldUseCorrectTopic() throws InterruptedException {
+    @DisplayName("publish() should publish to correct WebSocket topic with /progress suffix")
+    void publish_shouldUseCorrectWebSocketTopic() {
         // Arrange
         TransferEvent event = TransferEvent.progress(TEST_TRANSFER_ID, 5000L, 10000L);
 
         // Act
-        eventBus.publishToWebSocketAsync(event);
-
-        // Wait for async execution
-        Thread.sleep(200);
+        eventBus.publish(event);
 
         // Assert - Should publish to /topic/transfer/{id}/progress
         verify(messagingTemplate, times(1))
@@ -89,16 +95,13 @@ class TransferEventBusTest {
     }
 
     @Test
-    @DisplayName("publishToWebSocketAsync() should publish to broadcast topic")
-    void publishToWebSocketAsync_shouldPublishToBroadcast() throws InterruptedException {
+    @DisplayName("publish() should publish to broadcast WebSocket topic")
+    void publish_shouldPublishToBroadcast() {
         // Arrange
         TransferEvent event = TransferEvent.completed(TEST_TRANSFER_ID, 10000L);
 
         // Act
-        eventBus.publishToWebSocketAsync(event);
-
-        // Wait for async execution
-        Thread.sleep(200);
+        eventBus.publish(event);
 
         // Assert
         verify(messagingTemplate, times(1))
@@ -106,8 +109,8 @@ class TransferEventBusTest {
     }
 
     @Test
-    @DisplayName("publishToWebSocketAsync() should handle null transferId gracefully")
-    void publishToWebSocketAsync_withNullTransferId_shouldOnlyPublishToBroadcast() throws InterruptedException {
+    @DisplayName("publish() should handle null transferId gracefully for WebSocket")
+    void publish_withNullTransferId_shouldOnlyPublishToBroadcast() {
         // Arrange
         TransferEvent event = TransferEvent.builder()
             .type(TransferEvent.EventType.ERROR)
@@ -116,10 +119,7 @@ class TransferEventBusTest {
             .build();
 
         // Act
-        eventBus.publishToWebSocketAsync(event);
-
-        // Wait for async execution
-        Thread.sleep(200);
+        eventBus.publish(event);
 
         // Assert - Should only publish to broadcast topic
         verify(messagingTemplate, times(1))
@@ -131,18 +131,15 @@ class TransferEventBusTest {
     }
 
     @Test
-    @DisplayName("publishToWebSocketAsync() should not throw exception if WebSocket fails")
-    void publishToWebSocketAsync_shouldHandleWebSocketFailure() throws InterruptedException {
+    @DisplayName("publish() should not throw exception if WebSocket fails")
+    void publish_shouldHandleWebSocketFailure() {
         // Arrange
         TransferEvent event = TransferEvent.error(TEST_TRANSFER_ID, "Test error", "1234");
         doThrow(new RuntimeException("WebSocket connection failed"))
             .when(messagingTemplate).convertAndSend(any(String.class), any(TransferEvent.class));
 
         // Act - should not throw exception
-        eventBus.publishToWebSocketAsync(event);
-
-        // Wait for async execution
-        Thread.sleep(200);
+        eventBus.publish(event);
 
         // Assert - verify attempt was made
         verify(messagingTemplate, atLeastOnce())
@@ -163,10 +160,10 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.STATE_CHANGE;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
-        assert capturedEvent.getPreviousState() == from;
-        assert capturedEvent.getCurrentState() == to;
+        assertEquals(TransferEvent.EventType.STATE_CHANGE, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
+        assertEquals(from, capturedEvent.getPreviousState());
+        assertEquals(to, capturedEvent.getCurrentState());
     }
 
     @Test
@@ -183,11 +180,11 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.PROGRESS;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
-        assert capturedEvent.getBytesTransferred() == bytes;
-        assert capturedEvent.getTotalBytes() == total;
-        assert capturedEvent.getPercentComplete() == 50;
+        assertEquals(TransferEvent.EventType.PROGRESS, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
+        assertEquals(bytes, capturedEvent.getBytesTransferred());
+        assertEquals(total, capturedEvent.getTotalBytes());
+        assertEquals(50, capturedEvent.getPercentComplete());
     }
 
     @Test
@@ -204,10 +201,10 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.SYNC_POINT;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
-        assert capturedEvent.getSyncPointNumber() == syncNum;
-        assert capturedEvent.getSyncPointBytePosition() == bytePos;
+        assertEquals(TransferEvent.EventType.SYNC_POINT, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
+        assertEquals(syncNum, capturedEvent.getSyncPointNumber());
+        assertEquals(bytePos, capturedEvent.getSyncPointBytePosition());
     }
 
     @Test
@@ -224,10 +221,10 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.ERROR;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
-        assert capturedEvent.getErrorMessage().equals(errorMessage);
-        assert capturedEvent.getDiagnosticCode().equals(diagCode);
+        assertEquals(TransferEvent.EventType.ERROR, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
+        assertEquals(errorMessage, capturedEvent.getErrorMessage());
+        assertEquals(diagCode, capturedEvent.getDiagnosticCode());
     }
 
     @Test
@@ -243,9 +240,9 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.COMPLETED;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
-        assert capturedEvent.getBytesTransferred() == totalBytes;
+        assertEquals(TransferEvent.EventType.COMPLETED, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
+        assertEquals(totalBytes, capturedEvent.getBytesTransferred());
     }
 
     @Test
@@ -258,8 +255,8 @@ class TransferEventBusTest {
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         TransferEvent capturedEvent = eventCaptor.getValue();
 
-        assert capturedEvent.getType() == TransferEvent.EventType.CANCELLED;
-        assert capturedEvent.getTransferId().equals(TEST_TRANSFER_ID);
+        assertEquals(TransferEvent.EventType.CANCELLED, capturedEvent.getType());
+        assertEquals(TEST_TRANSFER_ID, capturedEvent.getTransferId());
     }
 
     @Test
@@ -279,8 +276,8 @@ class TransferEventBusTest {
         verify(eventPublisher, times(3)).publishEvent(eventCaptor.capture());
         var capturedEvents = eventCaptor.getAllValues();
 
-        assert capturedEvents.get(0).getType() == TransferEvent.EventType.STATE_CHANGE;
-        assert capturedEvents.get(1).getType() == TransferEvent.EventType.PROGRESS;
-        assert capturedEvents.get(2).getType() == TransferEvent.EventType.COMPLETED;
+        assertEquals(TransferEvent.EventType.STATE_CHANGE, capturedEvents.get(0).getType());
+        assertEquals(TransferEvent.EventType.PROGRESS, capturedEvents.get(1).getType());
+        assertEquals(TransferEvent.EventType.COMPLETED, capturedEvents.get(2).getType());
     }
 }

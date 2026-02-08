@@ -107,33 +107,50 @@ public enum ServerState {
     private final String description;
     private Set<ServerState> validTransitions;
 
-    // Define valid state transitions based on PeSIT E specification
+    // Define valid state transitions based on PeSIT E specification.
+    // Includes direct transitions for synchronous server-side processing where the
+    // pending (B-suffix) states are entered and exited within a single handler call.
     static {
         // Connection phase transitions
-        CN01_REPOS.validTransitions = Set.of(CN02B_CONNECT_PENDING);
+        // CN01 -> CN03: server handles CONNECT synchronously (skips CN02B pending)
+        CN01_REPOS.validTransitions = Set.of(CN02B_CONNECT_PENDING, CN03_CONNECTED);
         CN02B_CONNECT_PENDING.validTransitions = Set.of(CN03_CONNECTED, CN01_REPOS, ERROR);
-        CN03_CONNECTED.validTransitions = Set.of(SF01B_CREATE_PENDING, SF02B_SELECT_PENDING, CN04B_RELEASE_PENDING, ERROR);
+        // CN03 -> SF03: server handles CREATE/SELECT synchronously (skips SF01B/SF02B pending)
+        // CN03 -> CN01: server handles RELEASE synchronously (skips CN04B pending)
+        // CN03 -> MSG_RECEIVING: server handles segmented messages (MSGDM)
+        CN03_CONNECTED.validTransitions = Set.of(SF01B_CREATE_PENDING, SF02B_SELECT_PENDING,
+                CN04B_RELEASE_PENDING, SF03_FILE_SELECTED, CN01_REPOS, MSG_RECEIVING, ERROR);
         CN04B_RELEASE_PENDING.validTransitions = Set.of(CN01_REPOS, ERROR);
 
         // File selection phase transitions
         SF01B_CREATE_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
         SF02B_SELECT_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
-        SF03_FILE_SELECTED.validTransitions = Set.of(OF01B_OPEN_PENDING, SF04B_DESELECT_PENDING, ERROR);
+        // SF03 -> OF02: server handles OPEN synchronously (skips OF01B pending)
+        // SF03 -> CN03: server handles DESELECT synchronously (skips SF04B pending)
+        SF03_FILE_SELECTED.validTransitions = Set.of(OF01B_OPEN_PENDING, SF04B_DESELECT_PENDING,
+                OF02_TRANSFER_READY, CN03_CONNECTED, ERROR);
         SF04B_DESELECT_PENDING.validTransitions = Set.of(CN03_CONNECTED, ERROR);
 
         // File open phase transitions
         OF01B_OPEN_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, SF03_FILE_SELECTED, ERROR);
-        OF02_TRANSFER_READY.validTransitions = Set.of(TDE01B_WRITE_PENDING, TDL01B_READ_PENDING, OF03B_CLOSE_PENDING, ERROR);
+        // OF02 -> TDE02B: server handles WRITE synchronously (skips TDE01B pending)
+        // OF02 -> TDL02B: server handles READ synchronously (skips TDL01B pending)
+        // OF02 -> SF03: server handles CLOSE synchronously (skips OF03B pending)
+        OF02_TRANSFER_READY.validTransitions = Set.of(TDE01B_WRITE_PENDING, TDL01B_READ_PENDING,
+                OF03B_CLOSE_PENDING, TDE02B_RECEIVING_DATA, TDL02B_SENDING_DATA, SF03_FILE_SELECTED, ERROR);
         OF03B_CLOSE_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, ERROR);
 
         // Data transfer (receive/write) phase transitions
         TDE01B_WRITE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, OF02_TRANSFER_READY, ERROR);
-        TDE02B_RECEIVING_DATA.validTransitions = Set.of(TDE02B_RECEIVING_DATA, TDE03_RESYNC_PENDING, TDE05_IDT_PENDING, TDE07_WRITE_END, ERROR);
+        // TDE02B -> OF02: server handles IDT synchronously (skips TDE05/TDE06 pending)
+        TDE02B_RECEIVING_DATA.validTransitions = Set.of(TDE02B_RECEIVING_DATA, TDE03_RESYNC_PENDING,
+                TDE05_IDT_PENDING, TDE07_WRITE_END, OF02_TRANSFER_READY, ERROR);
         TDE03_RESYNC_PENDING.validTransitions = Set.of(TDE04_RESYNC_RESPONSE_PENDING, TDE02B_RECEIVING_DATA, ERROR);
         TDE04_RESYNC_RESPONSE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, ERROR);
         TDE05_IDT_PENDING.validTransitions = Set.of(TDE06_CANCEL_PENDING, OF02_TRANSFER_READY, ERROR);
         TDE06_CANCEL_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
-        TDE07_WRITE_END.validTransitions = Set.of(TDE08B_TRANS_END_PENDING, ERROR);
+        // TDE07 -> OF02: server handles TRANS_END synchronously (skips TDE08B pending)
+        TDE07_WRITE_END.validTransitions = Set.of(TDE08B_TRANS_END_PENDING, OF02_TRANSFER_READY, ERROR);
         TDE08B_TRANS_END_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
 
         // Data transfer (send/read) phase transitions

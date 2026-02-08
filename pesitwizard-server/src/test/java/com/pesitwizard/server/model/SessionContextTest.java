@@ -1,7 +1,9 @@
 package com.pesitwizard.server.model;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +43,9 @@ class SessionContextTest {
 
     @Test
     @DisplayName("should update last activity time on touch")
-    void shouldUpdateLastActivityOnTouch() throws InterruptedException {
+    void shouldUpdateLastActivityOnTouch() {
         Instant before = context.getLastActivityTime();
-        Thread.sleep(10);
+        await().atMost(Duration.ofMillis(200)).pollDelay(Duration.ofMillis(10)).until(() -> true);
         context.touch();
         assertTrue(context.getLastActivityTime().isAfter(before));
     }
@@ -51,8 +53,16 @@ class SessionContextTest {
     @Test
     @DisplayName("should transition to new state")
     void shouldTransitionToNewState() {
-        context.transitionTo(ServerState.CN03_CONNECTED);
-        assertEquals(ServerState.CN03_CONNECTED, context.getState());
+        context.transitionTo(ServerState.CN02B_CONNECT_PENDING);
+        assertEquals(ServerState.CN02B_CONNECT_PENDING, context.getState());
+    }
+
+    @Test
+    @DisplayName("should reject invalid state transition")
+    void shouldRejectInvalidStateTransition() {
+        // CN01 cannot transition directly to SF03 (must go through connect + create/select)
+        assertThrows(InvalidStateTransitionException.class,
+                () -> context.transitionTo(ServerState.SF03_FILE_SELECTED));
     }
 
     @Test

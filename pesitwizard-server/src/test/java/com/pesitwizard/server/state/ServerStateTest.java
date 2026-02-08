@@ -194,10 +194,11 @@ class ServerStateTest {
     class TransitionValidationTests {
 
         @Test
-        @DisplayName("CN01_REPOS should only allow transition to CN02B_CONNECT_PENDING")
+        @DisplayName("CN01_REPOS should allow transition to CN02B or CN03 (synchronous)")
         void cn01ShouldOnlyAllowTransitionToConnect() {
             assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.CN02B_CONNECT_PENDING)).isTrue();
-            assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.CN03_CONNECTED)).isFalse();
+            assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.CN03_CONNECTED)).isTrue();
+            assertThat(ServerState.CN01_REPOS.canTransitionTo(ServerState.SF03_FILE_SELECTED)).isFalse();
         }
 
         @Test

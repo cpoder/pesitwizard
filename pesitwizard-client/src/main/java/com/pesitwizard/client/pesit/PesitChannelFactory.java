@@ -74,6 +74,7 @@ public class PesitChannelFactory {
             tlsChannel = new TlsTransportChannel(server.getHost(), server.getPort());
         }
 
+        tlsChannel.setHostnameVerification(server.isHostnameVerification());
         tlsChannel.setReceiveTimeout(timeout);
         return tlsChannel;
     }

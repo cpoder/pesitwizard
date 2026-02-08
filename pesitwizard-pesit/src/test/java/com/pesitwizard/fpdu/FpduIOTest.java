@@ -94,14 +94,14 @@ class FpduIOTest {
         @Test
         @DisplayName("should return true for DTF.END")
         void shouldReturnTrueForDtfEnd() {
-            byte[] data = new byte[] { 0, 0, (byte) 0xC0, 0x22, 1, 1 };
+            byte[] data = new byte[] { 0, 0, (byte) 0xC0, 0x04, 1, 1 };
             assertThat(FpduIO.isDtfEnd(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return false for non-DTF.END phase")
         void shouldReturnFalseForNonDtfEndPhase() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x22, 1, 1 };
+            byte[] data = new byte[] { 0, 0, 0x00, 0x04, 1, 1 };
             assertThat(FpduIO.isDtfEnd(data)).isFalse();
         }
 

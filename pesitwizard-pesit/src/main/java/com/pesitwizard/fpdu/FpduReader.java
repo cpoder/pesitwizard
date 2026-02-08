@@ -21,9 +21,43 @@ import lombok.extern.slf4j.Slf4j;
 public class FpduReader {
     private final DataInputStream input;
     private final Deque<Fpdu> pendingFpdus = new ArrayDeque<>();
+    private int maxFpduLength = FpduIO.DEFAULT_MAX_FPDU_LENGTH;
 
     public FpduReader(DataInputStream input) {
         this.input = input;
+    }
+
+    /**
+     * Construct a reader with a custom maximum FPDU length.
+     *
+     * @param input the input stream to read from
+     * @param maxFpduLength maximum allowed FPDU length in bytes
+     */
+    public FpduReader(DataInputStream input, int maxFpduLength) {
+        this.input = input;
+        this.maxFpduLength = maxFpduLength;
+    }
+
+    /**
+     * Set the maximum allowed FPDU length in bytes.
+     *
+     * @param maxFpduLength maximum FPDU length in bytes (must be positive)
+     * @throws IllegalArgumentException if maxFpduLength is not positive
+     */
+    public void setMaxFpduLength(int maxFpduLength) {
+        if (maxFpduLength <= 0) {
+            throw new IllegalArgumentException("maxFpduLength must be positive, got: " + maxFpduLength);
+        }
+        this.maxFpduLength = maxFpduLength;
+    }
+
+    /**
+     * Get the maximum allowed FPDU length in bytes.
+     *
+     * @return the maximum FPDU length
+     */
+    public int getMaxFpduLength() {
+        return maxFpduLength;
     }
 
     /**
@@ -37,7 +71,7 @@ public class FpduReader {
         }
 
         // Read next data entity from stream
-        byte[] data = FpduIO.readRawFpdu(input);
+        byte[] data = FpduIO.readRawFpdu(input, maxFpduLength);
         parseBuffer(data);
 
         // Return first parsed FPDU
@@ -51,7 +85,7 @@ public class FpduReader {
         if (!pendingFpdus.isEmpty()) {
             throw new IllegalStateException("Cannot read raw data when FPDUs are buffered");
         }
-        return FpduIO.readRawFpdu(input);
+        return FpduIO.readRawFpdu(input, maxFpduLength);
     }
 
     /**

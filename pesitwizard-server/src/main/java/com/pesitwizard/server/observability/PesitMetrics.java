@@ -43,6 +43,15 @@ public class PesitMetrics {
     // Server metrics
     private final AtomicInteger runningServers = new AtomicInteger(0);
 
+    // S3-11: Consolidated from ProtocolMetrics — sync point & restart counters
+    private final Counter syncPointsSent;
+    private final Counter syncPointsReceived;
+    private final Counter restartRequests;
+    private final Counter restartSuccesses;
+
+    // S3-11: Active transfer tracking (consolidated from ProtocolMetrics)
+    private final AtomicInteger activeTransfers = new AtomicInteger(0);
+
     public PesitMetrics(MeterRegistry registry) {
         this.registry = registry;
 
@@ -53,6 +62,11 @@ public class PesitMetrics {
 
         Gauge.builder("pesit.servers.running", runningServers, AtomicInteger::get)
                 .description("Number of running PeSIT server instances")
+                .register(registry);
+
+        // S3-11: Active transfers gauge (consolidated from ProtocolMetrics)
+        Gauge.builder("pesit.transfers.active", activeTransfers, AtomicInteger::get)
+                .description("Number of active PeSIT transfers")
                 .register(registry);
 
         // Connection counters
@@ -101,6 +115,24 @@ public class PesitMetrics {
 
         protocolErrors = Counter.builder("pesit.protocol.errors")
                 .description("Total protocol errors")
+                .register(registry);
+
+        // S3-11: Sync point counters (consolidated from ProtocolMetrics)
+        syncPointsSent = Counter.builder("pesit.syncpoints.sent")
+                .description("Total sync points sent")
+                .register(registry);
+
+        syncPointsReceived = Counter.builder("pesit.syncpoints.received")
+                .description("Total sync points received")
+                .register(registry);
+
+        // S3-11: Restart counters (consolidated from ProtocolMetrics)
+        restartRequests = Counter.builder("pesit.restarts.requested")
+                .description("Total restart requests")
+                .register(registry);
+
+        restartSuccesses = Counter.builder("pesit.restarts.succeeded")
+                .description("Total successful restarts")
                 .register(registry);
 
         log.info("PeSIT metrics initialized");
@@ -207,6 +239,40 @@ public class PesitMetrics {
 
     public int getRunningServers() {
         return runningServers.get();
+    }
+
+    // ========== Sync Point Metrics (S3-11: consolidated from ProtocolMetrics) ==========
+
+    public void syncPointSent() {
+        syncPointsSent.increment();
+    }
+
+    public void syncPointReceived() {
+        syncPointsReceived.increment();
+    }
+
+    // ========== Restart Metrics (S3-11: consolidated from ProtocolMetrics) ==========
+
+    public void restartRequested() {
+        restartRequests.increment();
+    }
+
+    public void restartSucceeded() {
+        restartSuccesses.increment();
+    }
+
+    // ========== Active Transfer Tracking (S3-11: consolidated from ProtocolMetrics) ==========
+
+    public void transferActive() {
+        activeTransfers.incrementAndGet();
+    }
+
+    public void transferInactive() {
+        activeTransfers.decrementAndGet();
+    }
+
+    public int getActiveTransfers() {
+        return activeTransfers.get();
     }
 
     // ========== Custom Timer for Operations ==========

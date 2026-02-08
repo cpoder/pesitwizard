@@ -1,6 +1,9 @@
 package com.pesitwizard.server.observability;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -145,10 +148,7 @@ class PesitMetricsTest {
         Timer.Sample sample = metrics.startTimer();
 
         // Small delay to ensure measurable duration
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-        }
+        await().atMost(Duration.ofMillis(200)).pollDelay(Duration.ofMillis(10)).until(() -> true);
 
         assertDoesNotThrow(() -> metrics.recordTimer(sample, "pesit.test.timer", "tag1", "value1"));
     }

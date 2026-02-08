@@ -58,10 +58,14 @@ public class FpduParser {
         Fpdu fpdu = new Fpdu();
         int phase = buffer.get() & 0xFF;
         int type = buffer.get() & 0xFF;
-        fpdu.setFpduType(FpduType.from(phase, type));
-        log.debug("Parsing FPDU: phase={}, type={} -> {}", phase, type, fpdu.getFpduType());
-        int idDest = buffer.get();
-        int idSrc = buffer.get();
+        FpduType fpduType = FpduType.from(phase, type);
+        if (fpduType == null) {
+            throw FpduParseException.unknownFpduType(phase, type);
+        }
+        fpdu.setFpduType(fpduType);
+        log.debug("Parsing FPDU: phase={}, type={} -> {}", phase, type, fpduType);
+        int idDest = buffer.get() & 0xFF;
+        int idSrc = buffer.get() & 0xFF;
         fpdu.setIdDst(idDest);
         fpdu.setIdSrc(idSrc);
 
@@ -93,6 +97,12 @@ public class FpduParser {
                 }
                 paramLength = buffer.getShort() & 0xFFFF;
             }
+            // S3-08: Reject LI=0 for PI parameters (empty values are protocol violations).
+            // PGI groups (e.g., PGI_09) with LI=0 are allowed — they represent empty groups.
+            if (paramLength == 0 && ParameterGroupIdentifier.fromId(paramId) == null) {
+                throw new FpduParseException(String.format(
+                        "Invalid parameter PI_%d: LI=0 (zero-length value not allowed)", paramId));
+            }
             byte[] paramData = new byte[paramLength];
             if (paramLength > 0) {
                 if (paramLength > buffer.remaining()) {
@@ -116,7 +126,17 @@ public class FpduParser {
                 ByteBuffer groupBuffer = ByteBuffer.wrap(paramData);
                 while (groupBuffer.hasRemaining()) {
                     int groupParamId = groupBuffer.get() & 0xFF;
+                    if (!groupBuffer.hasRemaining()) {
+                        throw new FpduParseException(String.format(
+                                "Malformed PGI %s: sub-parameter PI_%d has no length byte",
+                                groupId.name(), groupParamId));
+                    }
                     int groupParamLength = groupBuffer.get() & 0xFF;
+                    if (groupParamLength > groupBuffer.remaining()) {
+                        throw new FpduParseException(String.format(
+                                "Malformed PGI %s: sub-parameter PI_%d length %d exceeds remaining PGI data (%d bytes)",
+                                groupId.name(), groupParamId, groupParamLength, groupBuffer.remaining()));
+                    }
                     byte[] groupParamData = new byte[groupParamLength];
                     groupBuffer.get(groupParamData);
                     ParameterIdentifier groupParamIdEnum = ParameterIdentifier.fromId(groupParamId);
@@ -133,6 +153,14 @@ public class FpduParser {
                 throw new UnknownParameterException(paramId, paramLength, "FPDU " + fpdu.getFpduType().name());
             }
         }
+
+        // S3-07: Validate that all mandatory parameters are present
+        for (ParameterRequirement req : fpduType.getParameterRequirements()) {
+            if (req.isMandatory() && !fpdu.hasParameter(req.getParameter())) {
+                throw FpduParseException.missingMandatoryParameter(fpduType, req.getParameter());
+            }
+        }
+
         return fpdu;
     }
 }

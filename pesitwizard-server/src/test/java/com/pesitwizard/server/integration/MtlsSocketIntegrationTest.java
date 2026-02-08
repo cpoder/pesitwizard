@@ -26,6 +26,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -195,8 +196,8 @@ public class MtlsSocketIntegrationTest {
                 clientSocket.startHandshake();
             }
 
-            Thread.sleep(500); // Wait for server to record protocol
-            assertThat(negotiatedProtocol.get()).isIn("TLSv1.3", "TLSv1.2");
+            Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> assertThat(negotiatedProtocol.get()).isIn("TLSv1.3", "TLSv1.2"));
             log.info("Negotiated protocol: {}", negotiatedProtocol.get());
         }
     }
@@ -255,9 +256,9 @@ public class MtlsSocketIntegrationTest {
                 log.info("Client connection correctly failed: {}", e.getMessage());
             }
 
-            Thread.sleep(500);
-            assertTrue(handshakeFailed.get(),
-                    "Server should reject untrusted client. Server exception: " + serverException.get());
+            Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> assertTrue(handshakeFailed.get(),
+                    "Server should reject untrusted client. Server exception: " + serverException.get()));
             log.info("Untrusted client correctly rejected");
         }
 
@@ -309,9 +310,9 @@ public class MtlsSocketIntegrationTest {
                 // Client correctly failed - expected behavior
             }
 
-            Thread.sleep(500);
-            assertTrue(handshakeFailed.get(),
-                    "Server should reject client without certificate. Server exception: " + serverException.get());
+            Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> assertTrue(handshakeFailed.get(),
+                    "Server should reject client without certificate. Server exception: " + serverException.get()));
             // Client without certificate correctly rejected
         }
     }

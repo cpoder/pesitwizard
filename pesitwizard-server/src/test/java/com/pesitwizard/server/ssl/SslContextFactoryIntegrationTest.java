@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.config.SslProperties;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
@@ -48,6 +49,9 @@ class SslContextFactoryIntegrationTest {
     @Mock
     private SslProperties sslProperties;
 
+    @Mock
+    private SecretsService secretsService;
+
     private SslContextFactory sslContextFactory;
 
     private byte[] testKeystoreData;
@@ -56,7 +60,7 @@ class SslContextFactoryIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        sslContextFactory = new SslContextFactory(certificateRepository, sslProperties);
+        sslContextFactory = new SslContextFactory(certificateRepository, sslProperties, secretsService);
 
         // Generate test keystore with self-signed certificate
         testKeystoreData = generateTestKeystore();

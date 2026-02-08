@@ -20,6 +20,7 @@ import com.pesitwizard.server.service.AuditService;
 import com.pesitwizard.server.service.ConfigService;
 import com.pesitwizard.server.util.PesitIdValidator;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -58,7 +59,7 @@ public class ConfigController {
      * Create a new partner
      */
     @PostMapping("/partners")
-    public ResponseEntity<?> createPartner(@RequestBody Partner partner) {
+    public ResponseEntity<?> createPartner(@Valid @RequestBody Partner partner) {
         // Validate partner ID (max 8 chars, uppercase alphanumeric only)
         String validationError = PesitIdValidator.validate(partner.getId(), "Partner");
         if (validationError != null) {
@@ -79,7 +80,7 @@ public class ConfigController {
      * Update or create a partner
      */
     @PutMapping("/partners/{id}")
-    public ResponseEntity<?> savePartner(@PathVariable String id, @RequestBody Partner partner) {
+    public ResponseEntity<?> savePartner(@PathVariable String id, @Valid @RequestBody Partner partner) {
         // Validate partner ID (max 8 chars, uppercase alphanumeric only)
         String validationError = PesitIdValidator.validate(id, "Partner");
         if (validationError != null) {
@@ -132,7 +133,7 @@ public class ConfigController {
      * Create a new virtual file
      */
     @PostMapping("/files")
-    public ResponseEntity<?> createVirtualFile(@RequestBody VirtualFile file) {
+    public ResponseEntity<?> createVirtualFile(@Valid @RequestBody VirtualFile file) {
         // Validate file ID (max 8 chars, uppercase alphanumeric only)
         String validationError = PesitIdValidator.validate(file.getId(), "Virtual file");
         if (validationError != null) {
@@ -153,7 +154,7 @@ public class ConfigController {
      * Update or create a virtual file
      */
     @PutMapping("/files/{id}")
-    public ResponseEntity<?> saveVirtualFile(@PathVariable String id, @RequestBody VirtualFile file) {
+    public ResponseEntity<?> saveVirtualFile(@PathVariable String id, @Valid @RequestBody VirtualFile file) {
         // Validate file ID (max 8 chars, uppercase alphanumeric only)
         String validationError = PesitIdValidator.validate(id, "Virtual file");
         if (validationError != null) {

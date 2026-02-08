@@ -1,6 +1,7 @@
 package com.pesitwizard.server.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -62,6 +63,12 @@ public class SslProperties {
      * TLS protocol version
      */
     private String protocol = "TLSv1.3";
+
+    /**
+     * Allowed TLS protocol versions (applied to SSLServerSocket).
+     * Only TLSv1.2 and TLSv1.3 are considered secure.
+     */
+    private List<String> protocols = List.of("TLSv1.3", "TLSv1.2");
 
     /**
      * Verify client certificate against CA

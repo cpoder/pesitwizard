@@ -8,6 +8,7 @@ import java.security.KeyStore;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -23,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 public class TlsTransportChannel extends AbstractSocketTransportChannel {
 
     private final SSLContext sslContext;
+    private boolean hostnameVerification = true;
+    private String[] enabledProtocols = new String[] { "TLSv1.3", "TLSv1.2" };
 
     /**
      * Create TLS channel with default trust (system truststore)
@@ -91,11 +94,33 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
         SSLSocketFactory factory = sslContext.getSocketFactory();
         SSLSocket sslSocket = (SSLSocket) factory.createSocket(host, port);
 
-        // Configure TLS protocols - use TLSv1.2 for compatibility with older servers
-        // CX (Connect:Express) may not support TLSv1.3
-        String tlsProtocol = System.getProperty("pesit.tls.protocol", "TLSv1.2");
-        sslSocket.setEnabledProtocols(new String[] { tlsProtocol });
+        // Restrict TLS protocol versions (S3-01)
+        sslSocket.setEnabledProtocols(enabledProtocols);
         log.debug("TLS protocols enabled: {}", (Object) sslSocket.getEnabledProtocols());
+
+        // Filter out insecure cipher suites (S3-02)
+        String[] ciphers = sslSocket.getEnabledCipherSuites();
+        String[] filtered = java.util.Arrays.stream(ciphers)
+                .filter(c -> {
+                    String u = c.toUpperCase();
+                    return !u.contains("_NULL") && !u.contains("_ANON")
+                            && !u.contains("EXPORT") && !u.contains("_DES_")
+                            && !u.contains("_DES40_") && !u.contains("_3DES_")
+                            && !u.contains("DES_CBC") && !u.contains("_RC4");
+                })
+                .toArray(String[]::new);
+        sslSocket.setEnabledCipherSuites(filtered);
+
+        // Configure hostname verification to prevent MITM attacks.
+        // When enabled, the server certificate's CN/SAN must match the target hostname.
+        if (hostnameVerification) {
+            SSLParameters sslParams = sslSocket.getSSLParameters();
+            sslParams.setEndpointIdentificationAlgorithm("HTTPS");
+            sslSocket.setSSLParameters(sslParams);
+            log.debug("TLS hostname verification enabled for host: {}", host);
+        } else {
+            log.warn("TLS hostname verification is DISABLED for {}:{} — vulnerable to MITM attacks", host, port);
+        }
 
         // Perform TLS handshake
         sslSocket.startHandshake();
@@ -169,6 +194,40 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     @Override
     public TransportType getTransportType() {
         return TransportType.SSL;
+    }
+
+    /**
+     * Set the TLS protocol versions to enable on the socket.
+     * Only TLSv1.2 and TLSv1.3 are considered secure.
+     *
+     * @param protocols array of protocol names (e.g., "TLSv1.3", "TLSv1.2")
+     */
+    public void setEnabledProtocols(String[] protocols) {
+        this.enabledProtocols = protocols;
+    }
+
+    /**
+     * Set whether TLS hostname verification is enabled.
+     * When enabled (default), the server certificate's CN/SAN must match the target hostname.
+     * <p>
+     * <b>WARNING:</b> Disabling hostname verification makes the connection vulnerable to
+     * man-in-the-middle attacks. Only disable for testing or when connecting to servers
+     * with self-signed certificates that lack proper CN/SAN entries.
+     * </p>
+     *
+     * @param enabled true to enable hostname verification (default), false to disable
+     */
+    public void setHostnameVerification(boolean enabled) {
+        this.hostnameVerification = enabled;
+    }
+
+    /**
+     * Check if TLS hostname verification is enabled.
+     *
+     * @return true if hostname verification is enabled
+     */
+    public boolean isHostnameVerification() {
+        return hostnameVerification;
     }
 
     /**

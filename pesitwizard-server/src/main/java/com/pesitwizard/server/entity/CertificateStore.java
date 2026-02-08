@@ -13,10 +13,13 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Entity for storing keystores and truststores centrally in the database.
@@ -76,6 +79,8 @@ public class CertificateStore {
      */
     @Lob
     @Column(nullable = false, columnDefinition = "BLOB")
+    @JsonIgnore
+    @ToString.Exclude
     private byte[] storeData;
 
     /**
@@ -83,12 +88,16 @@ public class CertificateStore {
      * For PEM format with encrypted private keys, this is the key password
      */
     @Column(length = 500)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String storePassword;
 
     /**
      * Key password (for keystores where key password differs from store password)
      */
     @Column(length = 500)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String keyPassword;
 
     /**

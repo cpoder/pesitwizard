@@ -5,23 +5,33 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.jgroups.Address;
 import org.jgroups.JChannel;
+import org.jgroups.MergeView;
 import org.jgroups.Message;
 import org.jgroups.ObjectMessage;
 import org.jgroups.Receiver;
 import org.jgroups.View;
-import org.jgroups.util.Util;
+import org.jgroups.util.NameCache;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pesitwizard.server.entity.ServerOwnershipRecord;
+import com.pesitwizard.server.repository.ServerOwnershipRepository;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -60,10 +70,18 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     @Getter
     private volatile boolean connected = false;
 
+    private final ServerOwnershipRepository ownershipRepository;
     private final List<ClusterEventListener> listeners = new CopyOnWriteArrayList<>();
 
-    // Shared cluster state: serverId -> node that owns it
+    // In-memory cache of ownership (populated from DB on startup and kept in sync via broadcasts)
     private final Map<String, String> serverOwnership = new ConcurrentHashMap<>();
+
+    private ScheduledExecutorService reconnectScheduler;
+    private ScheduledFuture<?> reconnectTask;
+
+    public ClusterService(ServerOwnershipRepository ownershipRepository) {
+        this.ownershipRepository = ownershipRepository;
+    }
 
     @PostConstruct
     public void init() {
@@ -94,15 +112,66 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
         } catch (Exception e) {
             log.error("Failed to initialize cluster: {}", e.getMessage(), e);
-            // Fall back to standalone mode
-            leader = true;
+            // Do NOT assume leadership when disconnected — risks split-brain
+            leader = false;
             connected = false;
+            scheduleReconnect();
+        }
+    }
+
+    private void scheduleReconnect() {
+        if (reconnectScheduler == null) {
+            reconnectScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "cluster-reconnect");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+        if (reconnectTask == null || reconnectTask.isDone()) {
+            reconnectTask = reconnectScheduler.scheduleWithFixedDelay(this::attemptReconnect, 30, 30, TimeUnit.SECONDS);
+            log.info("Scheduled cluster reconnection every 30 seconds");
+        }
+    }
+
+    private void attemptReconnect() {
+        if (connected) {
+            cancelReconnect();
+            return;
+        }
+        try {
+            log.info("Attempting cluster reconnection...");
+            if (channel != null) {
+                channel.close();
+            }
+            channel = new JChannel(jgroupsConfig);
+            channel.setName(nodeName);
+            channel.setReceiver(this);
+            channel.setDiscardOwnMessages(true);
+            channel.connect(CLUSTER_NAME);
+            connected = true;
+            channel.getState(null, 10000);
+            log.info("Successfully reconnected to cluster '{}'", CLUSTER_NAME);
+            cancelReconnect();
+            logClusterView();
+        } catch (Exception e) {
+            log.warn("Cluster reconnection failed: {}", e.getMessage());
+        }
+    }
+
+    private void cancelReconnect() {
+        if (reconnectTask != null) {
+            reconnectTask.cancel(false);
+            reconnectTask = null;
         }
     }
 
     @PreDestroy
     @Override
     public void close() {
+        cancelReconnect();
+        if (reconnectScheduler != null) {
+            reconnectScheduler.shutdownNow();
+        }
         if (channel != null && channel.isConnected()) {
             log.info("Leaving cluster...");
 
@@ -136,15 +205,32 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
             notifyListeners(ClusterEvent.lostLeadership(nodeName));
         }
 
-        // Clean up ownership for nodes that left
+        // Detect merge view (split-brain recovery)
+        if (newView instanceof MergeView mergeView && leader) {
+            log.warn("MERGE VIEW detected — resolving split-brain. Sub-groups: {}", mergeView.getSubgroups());
+            resolveMergeConflicts();
+        }
+
+        // Clean up ownership for nodes that left (in-memory cache and DB)
+        // Use logical names (set via channel.setName()) rather than Address.toString()
+        // because ownership DB stores the logical node name, not the address representation
         Set<String> currentMembers = newView.getMembers().stream()
-                .map(Address::toString)
+                .map(addr -> NameCache.get(addr))
                 .collect(Collectors.toSet());
 
         serverOwnership.entrySet().removeIf(entry -> {
             if (!currentMembers.contains(entry.getValue())) {
                 log.info("Releasing ownership of server '{}' (node '{}' left)",
                         entry.getKey(), entry.getValue());
+                // Leader cleans up DB records for departed nodes
+                if (leader) {
+                    try {
+                        ownershipRepository.deleteByOwnerNode(entry.getValue());
+                    } catch (Exception e) {
+                        log.warn("Failed to clean up DB ownership for departed node '{}': {}",
+                                entry.getValue(), e.getMessage());
+                    }
+                }
                 return true;
             }
             return false;
@@ -170,22 +256,41 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Called to get state for new joining node
+     * Called to get state for new joining node.
+     * Uses manual serialization (DataOutputStream) instead of Java object serialization
+     * to prevent deserialization attacks via crafted JGroups state transfer payloads.
      */
     @Override
     public void getState(OutputStream output) throws Exception {
         synchronized (serverOwnership) {
-            Util.objectToStream(new ConcurrentHashMap<>(serverOwnership), new DataOutputStream(output));
+            DataOutputStream dos = new DataOutputStream(output);
+            dos.writeInt(serverOwnership.size());
+            for (Map.Entry<String, String> entry : serverOwnership.entrySet()) {
+                dos.writeUTF(entry.getKey());
+                dos.writeUTF(entry.getValue());
+            }
+            dos.flush();
         }
     }
 
     /**
-     * Called when this node receives state from existing member
+     * Called when this node receives state from existing member.
+     * Uses manual deserialization (DataInputStream) instead of Util.objectFromStream()
+     * to prevent Remote Code Execution via deserialization gadget chains.
      */
     @Override
     public void setState(InputStream input) throws Exception {
-        @SuppressWarnings("unchecked")
-        Map<String, String> state = (Map<String, String>) Util.objectFromStream(new DataInputStream(input));
+        DataInputStream dis = new DataInputStream(input);
+        int size = dis.readInt();
+        if (size < 0 || size > 100_000) {
+            throw new IllegalStateException("Invalid cluster state map size: " + size);
+        }
+        Map<String, String> state = new ConcurrentHashMap<>(size);
+        for (int i = 0; i < size; i++) {
+            String key = dis.readUTF();
+            String value = dis.readUTF();
+            state.put(key, value);
+        }
         synchronized (serverOwnership) {
             serverOwnership.clear();
             serverOwnership.putAll(state);
@@ -194,42 +299,58 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Try to acquire ownership of a server (for starting it)
+     * Try to acquire ownership of a server (for starting it).
+     * Uses database INSERT to serialize concurrent acquisition across cluster nodes.
+     * The unique constraint on serverId ensures only one node can own a server.
      */
+    @Transactional
     public boolean acquireServerOwnership(String serverId) {
         if (!clusterEnabled) {
             return true; // Standalone mode always succeeds
         }
 
-        synchronized (serverOwnership) {
-            String currentOwner = serverOwnership.get(serverId);
-            if (currentOwner != null && !currentOwner.equals(nodeName)) {
-                log.warn("Server '{}' is owned by node '{}'", serverId, currentOwner);
-                return false;
+        // Check DB for existing ownership
+        var existing = ownershipRepository.findByServerId(serverId);
+        if (existing.isPresent()) {
+            String currentOwner = existing.get().getOwnerNode();
+            if (currentOwner.equals(nodeName)) {
+                // We already own it
+                return true;
             }
+            log.warn("Server '{}' is owned by node '{}' (DB)", serverId, currentOwner);
+            return false;
+        }
 
+        // Try to insert -- unique constraint on serverId prevents concurrent acquisition
+        try {
+            ownershipRepository.save(new ServerOwnershipRecord(serverId, nodeName, Instant.now()));
+            ownershipRepository.flush(); // Force constraint check
             serverOwnership.put(serverId, nodeName);
             broadcastOwnershipChange(serverId, nodeName, true);
-            log.info("Acquired ownership of server '{}'", serverId);
+            log.info("Acquired ownership of server '{}' (DB-backed)", serverId);
             return true;
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Another node beat us to it
+            log.warn("Server '{}' ownership race lost (concurrent insert)", serverId);
+            return false;
         }
     }
 
     /**
-     * Release ownership of a server (when stopping it)
+     * Release ownership of a server (when stopping it).
+     * Deletes the database record to allow another node to acquire.
      */
+    @Transactional
     public void releaseServerOwnership(String serverId) {
         if (!clusterEnabled) {
             return;
         }
 
-        synchronized (serverOwnership) {
-            String currentOwner = serverOwnership.get(serverId);
-            if (nodeName.equals(currentOwner)) {
-                serverOwnership.remove(serverId);
-                broadcastOwnershipChange(serverId, nodeName, false);
-                log.info("Released ownership of server '{}'", serverId);
-            }
+        int deleted = ownershipRepository.deleteByServerIdAndOwnerNode(serverId, nodeName);
+        if (deleted > 0) {
+            serverOwnership.remove(serverId);
+            broadcastOwnershipChange(serverId, nodeName, false);
+            log.info("Released ownership of server '{}' (DB-backed)", serverId);
         }
     }
 
@@ -265,7 +386,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
             return List.of(nodeName);
         }
         return channel.getView().getMembers().stream()
-                .map(Address::toString)
+                .map(addr -> NameCache.get(addr))
                 .collect(Collectors.toList());
     }
 
@@ -321,6 +442,51 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         }
     }
 
+    /**
+     * Resolve ownership conflicts after a merge view (split-brain recovery).
+     * For each server, if multiple nodes claim ownership, the one with the oldest
+     * acquiredAt timestamp wins. Losers are force-released.
+     */
+    @Transactional
+    private void resolveMergeConflicts() {
+        try {
+            // Query all ownership records from DB and group by serverId
+            java.util.List<ServerOwnershipRecord> allRecords = ownershipRepository.findAll();
+            Map<String, java.util.List<ServerOwnershipRecord>> byServer = allRecords.stream()
+                    .collect(Collectors.groupingBy(ServerOwnershipRecord::getServerId));
+
+            for (var entry : byServer.entrySet()) {
+                java.util.List<ServerOwnershipRecord> records = entry.getValue();
+                if (records.size() > 1) {
+                    log.warn("MERGE CONFLICT: Server '{}' owned by {} nodes — resolving by oldest acquiredAt",
+                            entry.getKey(), records.size());
+
+                    // Keep the one with the oldest acquiredAt
+                    records.sort(java.util.Comparator.comparing(ServerOwnershipRecord::getAcquiredAt));
+                    ServerOwnershipRecord winner = records.get(0);
+
+                    for (int i = 1; i < records.size(); i++) {
+                        ServerOwnershipRecord loser = records.get(i);
+                        log.warn("MERGE CONFLICT: Releasing server '{}' from node '{}' (winner: '{}')",
+                                entry.getKey(), loser.getOwnerNode(), winner.getOwnerNode());
+                        ownershipRepository.deleteByServerIdAndOwnerNode(entry.getKey(), loser.getOwnerNode());
+
+                        // Notify the losing node
+                        broadcast(new ClusterMessage(
+                                ClusterMessage.Type.SERVER_RELEASED,
+                                entry.getKey(),
+                                loser.getOwnerNode()));
+                    }
+
+                    // Ensure in-memory cache reflects the winner
+                    serverOwnership.put(entry.getKey(), winner.getOwnerNode());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve merge conflicts: {}", e.getMessage(), e);
+        }
+    }
+
     private void broadcastOwnershipChange(String serverId, String nodeId, boolean acquired) {
         broadcast(new ClusterMessage(
                 acquired ? ClusterMessage.Type.SERVER_ACQUIRED : ClusterMessage.Type.SERVER_RELEASED,
@@ -328,13 +494,12 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
                 nodeId));
     }
 
+    @Transactional
     private void releaseAllServerOwnership() {
-        synchronized (serverOwnership) {
-            serverOwnership.entrySet().stream()
-                    .filter(e -> nodeName.equals(e.getValue()))
-                    .map(Map.Entry::getKey)
-                    .toList()
-                    .forEach(this::releaseServerOwnership);
+        int deleted = ownershipRepository.deleteByOwnerNode(nodeName);
+        serverOwnership.entrySet().removeIf(e -> nodeName.equals(e.getValue()));
+        if (deleted > 0) {
+            log.info("Released {} server ownership records for node '{}'", deleted, nodeName);
         }
     }
 

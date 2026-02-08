@@ -2,6 +2,7 @@ package com.pesitwizard.server.security;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,9 +47,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final RateLimitingProperties rateLimitingProperties;
     private final ApiKeyService apiKeyService;
 
-    // In-memory fallback buckets (used when Redis is unavailable)
-    private final Map<String, Bucket> ipBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> apiKeyBuckets = new ConcurrentHashMap<>();
+    // S3-13: In-memory buckets with TTL-based eviction
+    private static final int MAX_BUCKET_MAP_SIZE = 10_000;
+    private static final Duration BUCKET_TTL = Duration.ofMinutes(10);
+
+    private final Map<String, BucketEntry> ipBuckets = new ConcurrentHashMap<>();
+    private final Map<String, BucketEntry> apiKeyBuckets = new ConcurrentHashMap<>();
+
+    private record BucketEntry(Bucket bucket, Instant lastAccess) {}
+    private volatile Instant lastEviction = Instant.now();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -114,15 +121,51 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private boolean checkIpRateLimit(String clientIp, HttpServletResponse response) throws IOException {
-        Bucket bucket = ipBuckets.computeIfAbsent(clientIp, this::createIpBucket);
-        return tryConsume(bucket, clientIp, "IP", response);
+        evictStaleEntries();
+        BucketEntry entry = ipBuckets.compute(clientIp, (k, existing) -> {
+            if (existing != null) {
+                return new BucketEntry(existing.bucket(), Instant.now());
+            }
+            return new BucketEntry(createIpBucket(k), Instant.now());
+        });
+        return tryConsume(entry.bucket(), clientIp, "IP", response);
     }
 
     private boolean checkApiKeyRateLimit(ApiKey apiKey, HttpServletResponse response) throws IOException {
-        // Use API key ID as bucket key since the raw key is transient
+        evictStaleEntries();
         String bucketKey = "apikey:" + apiKey.getId();
-        Bucket bucket = apiKeyBuckets.computeIfAbsent(bucketKey, k -> createApiKeyBucket(apiKey));
-        return tryConsume(bucket, apiKey.getName(), "API Key", response);
+        BucketEntry entry = apiKeyBuckets.compute(bucketKey, (k, existing) -> {
+            if (existing != null) {
+                return new BucketEntry(existing.bucket(), Instant.now());
+            }
+            return new BucketEntry(createApiKeyBucket(apiKey), Instant.now());
+        });
+        return tryConsume(entry.bucket(), apiKey.getName(), "API Key", response);
+    }
+
+    /**
+     * Evict stale entries from bucket maps (S3-13).
+     * Runs at most once per minute to avoid overhead.
+     */
+    private void evictStaleEntries() {
+        Instant now = Instant.now();
+        if (Duration.between(lastEviction, now).toMinutes() < 1) {
+            return;
+        }
+        lastEviction = now;
+        Instant cutoff = now.minus(BUCKET_TTL);
+        ipBuckets.entrySet().removeIf(e -> e.getValue().lastAccess().isBefore(cutoff));
+        apiKeyBuckets.entrySet().removeIf(e -> e.getValue().lastAccess().isBefore(cutoff));
+        // Hard cap: remove oldest entries if map is too large
+        if (ipBuckets.size() > MAX_BUCKET_MAP_SIZE) {
+            int toRemove = ipBuckets.size() - MAX_BUCKET_MAP_SIZE;
+            ipBuckets.entrySet().stream()
+                    .sorted(java.util.Comparator.comparing(e -> e.getValue().lastAccess()))
+                    .limit(toRemove)
+                    .map(Map.Entry::getKey)
+                    .toList()
+                    .forEach(ipBuckets::remove);
+        }
     }
 
     private boolean tryConsume(Bucket bucket, String identifier, String type, HttpServletResponse response) throws IOException {

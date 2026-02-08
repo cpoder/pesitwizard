@@ -62,7 +62,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should transition to transfer ready state")
     void handleOpenShouldTransitionToTransferReady() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -78,7 +78,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should extract compression from PI_21")
     void handleOpenShouldExtractCompression() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         TransferContext transfer = ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -94,7 +94,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleClose should transition to file selected state")
     void handleCloseShouldTransitionToFileSelected() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
 
         Fpdu fpdu = new Fpdu(FpduType.CLOSE);
 
@@ -109,7 +109,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleDeselect should end transfer and transition to connected state")
     void handleDeselectShouldEndTransferAndTransition() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.DESELECT);
@@ -126,7 +126,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should return ABORT when file validation fails")
     void handleCreateShouldReturnAbortWhenValidationFails() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
@@ -143,7 +143,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleSelect should return NACK_SELECT when file validation fails")
     void handleSelectShouldReturnAbortWhenValidationFails() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
 
@@ -160,7 +160,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should handle missing transfer context")
     void handleOpenShouldHandleMissingTransfer() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -175,7 +175,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should handle PI_21 with value 0 (no compression)")
     void handleOpenShouldHandleNoCompression() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         TransferContext transfer = ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -191,7 +191,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleClose should handle missing transfer context")
     void handleCloseShouldHandleMissingTransfer() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         // No transfer
 
         Fpdu fpdu = new Fpdu(FpduType.CLOSE);
@@ -206,7 +206,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleDeselect should handle null transfer gracefully")
     void handleDeselectShouldHandleNullTransfer() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.DESELECT);
@@ -222,7 +222,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should extract file attributes from FPDU")
     void handleCreateShouldExtractFileAttributes() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
         // Add PI_14 for priority
@@ -243,7 +243,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleSelect should extract transfer attributes")
     void handleSelectShouldExtractTransferAttributes() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_17_PRIORITE, 3));
@@ -260,7 +260,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should return ACK_OPEN with restart point parameter")
     void handleOpenShouldHandleRestartPoint() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -276,7 +276,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should handle null compression value gracefully")
     void handleOpenShouldHandleNullCompressionValue() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -292,7 +292,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleOpen should handle empty compression array")
     void handleOpenShouldHandleEmptyCompressionArray() throws java.io.IOException {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
@@ -308,7 +308,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleSelect should handle restart flag")
     void handleSelectShouldHandleRestartFlag() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] { 0x01 }));
@@ -325,7 +325,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should extract logical attributes from PGI_30")
     void handleCreateShouldExtractLogicalAttributes() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
@@ -348,7 +348,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should extract file identification from PGI_09")
     void handleCreateShouldExtractFileIdentification() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
@@ -368,7 +368,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleSelect should extract file identification from PGI_09")
     void handleSelectShouldExtractFileIdentification() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
 
@@ -387,7 +387,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should extract transfer ID from PI_13")
     void handleCreateShouldExtractTransferId() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_13_ID_TRANSFERT, 12345));
@@ -402,7 +402,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should extract max entity size from PI_25")
     void handleCreateShouldExtractMaxEntitySize() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, new byte[] { 0x00, 0x10 }));
@@ -417,7 +417,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should succeed with valid validation")
     void handleCreateShouldSucceedWithValidValidation() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
         ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
@@ -444,7 +444,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleCreate should return ABORT when directory creation fails")
     void handleCreateShouldReturnAbortWhenDirectoryCreationFails() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
@@ -471,7 +471,7 @@ class TransferOperationHandlerTest {
         java.nio.file.Files.writeString(testFile, "test content");
 
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
         ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
@@ -495,7 +495,7 @@ class TransferOperationHandlerTest {
     @DisplayName("handleSelect should return ABORT when file not found")
     void handleSelectShouldReturnAbortWhenFileNotFound() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
         ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
@@ -518,7 +518,7 @@ class TransferOperationHandlerTest {
         java.nio.file.Files.writeString(testFile, "restart content");
 
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
         ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,

@@ -101,12 +101,72 @@ public class S3Connector implements StorageConnector {
     @Override public OutputStream write(String path, boolean append) throws ConnectorException {
         checkInit();
         try {
-            PipedInputStream pis = new PipedInputStream();
+            PipedInputStream pis = new PipedInputStream(65536);
             PipedOutputStream pos = new PipedOutputStream(pis);
             String key = resolve(path);
-            Thread.startVirtualThread(() -> { try { s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).build(), RequestBody.fromInputStream(pis, -1)); } catch (Exception e) { log.error("S3 upload error", e); } });
-            return pos;
+            java.util.concurrent.CompletableFuture<Void> uploadFuture = new java.util.concurrent.CompletableFuture<>();
+            Thread.startVirtualThread(() -> {
+                try {
+                    s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).build(),
+                            RequestBody.fromInputStream(pis, -1));
+                    uploadFuture.complete(null);
+                } catch (Exception e) {
+                    log.error("S3 upload error for key '{}': {}", key, e.getMessage(), e);
+                    uploadFuture.completeExceptionally(e);
+                    try { pis.close(); } catch (Exception ignored) {}
+                }
+            });
+            return new S3ErrorPropagatingOutputStream(pos, uploadFuture, key);
         } catch (Exception e) { throw new ConnectorException("Write error", e); }
+    }
+
+    /**
+     * OutputStream wrapper that checks the S3 upload future on close(),
+     * propagating any upload errors back to the caller.
+     */
+    private static class S3ErrorPropagatingOutputStream extends OutputStream {
+        private final PipedOutputStream delegate;
+        private final java.util.concurrent.CompletableFuture<Void> uploadFuture;
+        private final String key;
+
+        S3ErrorPropagatingOutputStream(PipedOutputStream delegate,
+                java.util.concurrent.CompletableFuture<Void> uploadFuture, String key) {
+            this.delegate = delegate;
+            this.uploadFuture = uploadFuture;
+            this.key = key;
+        }
+
+        @Override public void write(int b) throws java.io.IOException {
+            checkUploadError();
+            delegate.write(b);
+        }
+        @Override public void write(byte[] b, int off, int len) throws java.io.IOException {
+            checkUploadError();
+            delegate.write(b, off, len);
+        }
+        @Override public void flush() throws java.io.IOException { delegate.flush(); }
+        @Override public void close() throws java.io.IOException {
+            delegate.close();
+            try {
+                uploadFuture.get(5, java.util.concurrent.TimeUnit.MINUTES);
+            } catch (java.util.concurrent.ExecutionException e) {
+                throw new java.io.IOException("S3 upload failed for key '" + key + "': "
+                        + e.getCause().getMessage(), e.getCause());
+            } catch (java.util.concurrent.TimeoutException e) {
+                throw new java.io.IOException("S3 upload timed out for key '" + key + "'", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new java.io.IOException("S3 upload interrupted for key '" + key + "'", e);
+            }
+        }
+        private void checkUploadError() throws java.io.IOException {
+            if (uploadFuture.isCompletedExceptionally()) {
+                try { uploadFuture.getNow(null); } catch (java.util.concurrent.CompletionException e) {
+                    throw new java.io.IOException("S3 upload failed for key '" + key + "': "
+                            + e.getCause().getMessage(), e.getCause());
+                }
+            }
+        }
     }
     @Override public void delete(String path) throws ConnectorException {
         checkInit(); s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(resolve(path)).build());
@@ -127,5 +187,21 @@ public class S3Connector implements StorageConnector {
     @Override public void close() { if (s3 != null) s3.close(); initialized = false; }
 
     private void checkInit() throws ConnectorException { if (!initialized) throw new ConnectorException(ConnectorException.ErrorCode.INVALID_CONFIG, "Not initialized"); }
-    private String resolve(String p) { return prefix.isEmpty() ? p : prefix + "/" + p; }
+
+    /**
+     * Resolve path and validate against path traversal (S3-17).
+     */
+    private String resolve(String p) throws ConnectorException {
+        if (p == null || p.contains("..") || p.contains("\0")) {
+            throw new ConnectorException(ConnectorException.ErrorCode.INVALID_PATH,
+                    "Invalid path: traversal or null bytes not allowed");
+        }
+        String resolved = prefix.isEmpty() ? p : prefix + "/" + p;
+        // Verify resolved key stays within prefix
+        if (!prefix.isEmpty() && !resolved.startsWith(prefix + "/") && !resolved.equals(prefix)) {
+            throw new ConnectorException(ConnectorException.ErrorCode.INVALID_PATH,
+                    "Path escapes prefix boundary");
+        }
+        return resolved;
+    }
 }

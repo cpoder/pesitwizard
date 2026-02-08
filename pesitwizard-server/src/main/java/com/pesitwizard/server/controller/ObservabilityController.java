@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pesitwizard.server.config.ObservabilityProperties;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +43,7 @@ public class ObservabilityController {
      * Note: Tracing changes require application restart to take effect.
      */
     @PostMapping("/config")
-    public ResponseEntity<ObservabilityConfigResponse> updateConfig(@RequestBody ObservabilityConfigRequest request) {
+    public ResponseEntity<ObservabilityConfigResponse> updateConfig(@Valid @RequestBody ObservabilityConfigRequest request) {
         log.info("Updating observability config: {}", request);
 
         if (request.tracingEnabled() != null) {

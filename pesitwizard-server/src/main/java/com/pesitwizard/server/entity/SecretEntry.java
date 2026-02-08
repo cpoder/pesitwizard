@@ -12,10 +12,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Entity for storing encrypted secrets in the database.
@@ -63,12 +66,16 @@ public class SecretEntry {
      */
     @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
+    @JsonIgnore
+    @ToString.Exclude
     private String encryptedValue;
 
     /**
      * Initialization vector for encryption
      */
     @Column(nullable = false, length = 32)
+    @JsonIgnore
+    @ToString.Exclude
     private String iv;
 
     /**
@@ -92,10 +99,10 @@ public class SecretEntry {
     private String serverId;
 
     /**
-     * Version number for secret rotation
+     * Optimistic locking version (also tracks secret rotation)
      */
-    @Builder.Default
-    private Integer version = 1;
+    @Version
+    private Long version;
 
     /**
      * Whether this secret is active

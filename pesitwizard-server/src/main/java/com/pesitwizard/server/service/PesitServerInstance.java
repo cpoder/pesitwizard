@@ -42,7 +42,11 @@ public class PesitServerInstance {
     private ExecutorService executorService;
     private Thread acceptThread;
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean draining = new AtomicBoolean(false);
     private final AtomicInteger activeConnections = new AtomicInteger(0);
+
+    /** Default drain timeout in seconds — time to wait for active transfers to complete */
+    private static final int DEFAULT_DRAIN_TIMEOUT_SECONDS = 120;
 
     public PesitServerInstance(PesitServerConfig config, PesitServerProperties properties,
             PesitSessionHandler sessionHandler, SslProperties sslProperties,
@@ -110,10 +114,32 @@ public class PesitServerInstance {
                     break;
             }
 
-            // Configure cipher suites if specified
+            // Restrict TLS protocol versions (S3-01)
+            if (sslProperties.getProtocols() != null && !sslProperties.getProtocols().isEmpty()) {
+                sslServerSocket.setEnabledProtocols(
+                        sslProperties.getProtocols().toArray(new String[0]));
+                log.info("[{}] TLS protocols restricted to: {}", config.getServerId(), sslProperties.getProtocols());
+            } else {
+                // Fallback: only allow TLSv1.2 and TLSv1.3
+                sslServerSocket.setEnabledProtocols(new String[] { "TLSv1.3", "TLSv1.2" });
+                log.info("[{}] TLS protocols restricted to: [TLSv1.3, TLSv1.2]", config.getServerId());
+            }
+
+            // Configure cipher suites: apply denylist then allowlist (S3-02)
+            String[] defaultCiphers = sslServerSocket.getEnabledCipherSuites();
             if (sslProperties.getCipherSuites() != null && !sslProperties.getCipherSuites().isEmpty()) {
+                // Use explicit allowlist
                 sslServerSocket.setEnabledCipherSuites(
                         sslProperties.getCipherSuites().toArray(new String[0]));
+            } else {
+                // Filter out insecure cipher suites from defaults
+                String[] filtered = java.util.Arrays.stream(defaultCiphers)
+                        .filter(c -> !isInsecureCipher(c))
+                        .toArray(String[]::new);
+                sslServerSocket.setEnabledCipherSuites(filtered);
+                log.info("[{}] Filtered {} insecure cipher suites ({} -> {} remaining)",
+                        config.getServerId(), defaultCiphers.length - filtered.length,
+                        defaultCiphers.length, filtered.length);
             }
 
             return sslServerSocket;
@@ -121,6 +147,59 @@ public class PesitServerInstance {
         } catch (Exception e) {
             throw new IOException("Failed to create SSL server socket: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Drain the server: stop accepting new connections but wait for in-flight
+     * transfers to complete (up to the specified timeout).
+     *
+     * @param timeoutSeconds max seconds to wait for active transfers to finish
+     * @return true if all transfers completed, false if timed out
+     */
+    public boolean drain(int timeoutSeconds) {
+        if (!running.get()) {
+            return true;
+        }
+
+        log.info("[{}] Draining: stopping new connections, waiting for {} active transfers (timeout: {}s)",
+                config.getServerId(), activeConnections.get(), timeoutSeconds);
+        draining.set(true);
+
+        // Close the server socket to stop accepting new connections
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+        } catch (IOException e) {
+            log.warn("[{}] Error closing server socket during drain: {}", config.getServerId(), e.getMessage());
+        }
+
+        // Wait for active transfers to complete
+        long deadline = System.currentTimeMillis() + timeoutSeconds * 1000L;
+        while (activeConnections.get() > 0 && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        boolean drained = activeConnections.get() == 0;
+        if (drained) {
+            log.info("[{}] Drain complete: all transfers finished", config.getServerId());
+        } else {
+            log.warn("[{}] Drain timed out: {} transfers still active after {}s",
+                    config.getServerId(), activeConnections.get(), timeoutSeconds);
+        }
+        return drained;
+    }
+
+    /**
+     * Drain with default timeout
+     */
+    public boolean drain() {
+        return drain(DEFAULT_DRAIN_TIMEOUT_SECONDS);
     }
 
     /**
@@ -180,6 +259,13 @@ public class PesitServerInstance {
             try {
                 Socket clientSocket = serverSocket.accept();
 
+                if (draining.get()) {
+                    log.info("[{}] Rejecting connection during drain from {}",
+                            config.getServerId(), clientSocket.getRemoteSocketAddress());
+                    clientSocket.close();
+                    continue;
+                }
+
                 if (activeConnections.get() >= properties.getMaxConnections()) {
                     log.warn("[{}] Max connections reached ({}), rejecting connection from {}",
                             config.getServerId(), properties.getMaxConnections(),
@@ -216,5 +302,19 @@ public class PesitServerInstance {
                 }
             }
         }
+    }
+
+    /**
+     * Check if a cipher suite is insecure and should be denied (S3-02).
+     * Denylists NULL, anon, EXPORT, DES, 3DES, RC4 cipher suites.
+     */
+    private static boolean isInsecureCipher(String cipher) {
+        String upper = cipher.toUpperCase();
+        return upper.contains("_NULL_") || upper.contains("_NULL")
+                || upper.contains("_ANON_") || upper.contains("_ANON")
+                || upper.contains("EXPORT")
+                || upper.contains("_DES_") || upper.contains("_DES40_")
+                || upper.contains("_3DES_") || upper.contains("DES_CBC")
+                || upper.contains("_RC4_") || upper.contains("_RC4");
     }
 }

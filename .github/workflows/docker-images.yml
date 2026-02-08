@@ -13,10 +13,15 @@ permissions:
   contents: read
   packages: write
   security-events: write
+  id-token: write  # S4-19: Required for cosign keyless signing
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      client-digest: ${{ steps.build-client.outputs.digest }}
+      client-ui-digest: ${{ steps.build-client-ui.outputs.digest }}
+      server-digest: ${{ steps.build-server.outputs.digest }}
 
     steps:
       - name: Checkout repository
@@ -62,6 +67,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push pesitwizard-client
+        id: build-client
         uses: docker/build-push-action@v5
         with:
           context: ./pesitwizard-client
@@ -85,6 +91,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push pesitwizard-client-ui
+        id: build-client-ui
         uses: docker/build-push-action@v5
         with:
           context: ./pesitwizard-client-ui
@@ -108,6 +115,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push pesitwizard-server
+        id: build-server
         uses: docker/build-push-action@v5
         with:
           context: ./pesitwizard-server
@@ -117,6 +125,50 @@ jobs:
           labels: ${{ steps.meta-server.outputs.labels }}
           cache-from: type=gha,scope=server
           cache-to: type=gha,mode=max,scope=server
+
+  # S4-19: Sign container images with cosign
+  sign:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign pesitwizard-client image
+        if: needs.build.outputs.client-digest != ''
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-client@${{ needs.build.outputs.client-digest }}
+
+      - name: Sign pesitwizard-client-ui image
+        if: needs.build.outputs.client-ui-digest != ''
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-client-ui@${{ needs.build.outputs.client-ui-digest }}
+
+      - name: Sign pesitwizard-server image
+        if: needs.build.outputs.server-digest != ''
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            ${{ env.REGISTRY }}/${{ github.repository }}/pesitwizard-server@${{ needs.build.outputs.server-digest }}
 
   # Scan Docker images for vulnerabilities
   scan:
@@ -140,7 +192,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results-${{ matrix.image.name }}.sarif'
           severity: 'CRITICAL,HIGH'
-        continue-on-error: true
+          exit-code: '1'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4

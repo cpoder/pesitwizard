@@ -269,30 +269,46 @@ public class LocalFileConnector implements StorageConnector {
         }
     }
 
-    private Path resolvePath(String path) {
+    private Path resolvePath(String path) throws ConnectorException {
         if (path == null || path.isEmpty() || path.equals(".")) {
             return basePath;
         }
 
         Path pathObj = Path.of(path);
-        Path resolved;
 
+        // Treat absolute paths as relative to basePath by stripping the root
+        // This prevents bypassing basePath containment via absolute paths
         if (pathObj.isAbsolute()) {
-            // Absolute path - use as-is but normalize
-            resolved = pathObj.normalize();
-            // For absolute paths, allow if within basePath OR if basePath is a temp dir
-            // This allows configured receive directories to work
-            if (!resolved.startsWith(basePath) && !basePath.toString().equals("/tmp")) {
-                log.debug("Absolute path {} outside basePath {}, allowing as configured destination",
-                        resolved, basePath);
-            }
-        } else {
-            // Relative path - resolve against basePath and check for traversal
-            resolved = basePath.resolve(path).normalize();
-            if (!resolved.startsWith(basePath)) {
-                throw new SecurityException("Path traversal not allowed: " + path);
+            pathObj = pathObj.getRoot().relativize(pathObj);
+        }
+
+        // Resolve against basePath and normalize to eliminate ".." components
+        Path resolved = basePath.resolve(pathObj).normalize();
+
+        // Verify the resolved path stays within basePath (prevents traversal via "..")
+        if (!resolved.startsWith(basePath)) {
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.INVALID_PATH,
+                    "Path traversal not allowed: " + path);
+        }
+
+        // If the resolved path exists, resolve symlinks and re-check containment
+        if (Files.exists(resolved)) {
+            try {
+                Path realResolved = resolved.toRealPath();
+                Path realBase = basePath.toRealPath();
+                if (!realResolved.startsWith(realBase)) {
+                    throw new ConnectorException(
+                            ConnectorException.ErrorCode.INVALID_PATH,
+                            "Path escapes base directory via symlink: " + path);
+                }
+            } catch (IOException e) {
+                throw new ConnectorException(
+                        ConnectorException.ErrorCode.INVALID_PATH,
+                        "Cannot resolve real path: " + path, e);
             }
         }
+
         return resolved;
     }
 

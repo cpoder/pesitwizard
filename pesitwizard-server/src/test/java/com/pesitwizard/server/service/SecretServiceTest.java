@@ -49,7 +49,7 @@ class SecretServiceTest {
                 .encryptedValue("encrypted")
                 .iv("iv123")
                 .scope(SecretScope.GLOBAL)
-                .version(1)
+                .version(1L)
                 .active(true)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
@@ -218,7 +218,7 @@ class SecretServiceTest {
             SecretEntry result = secretService.updateSecretValue("test-secret", "new-value", "admin");
 
             assertNotNull(result);
-            assertEquals(2, result.getVersion());
+            // version is managed by JPA @Version — not manually incremented
             assertNotNull(result.getLastRotatedAt());
             verify(secretRepository).save(any(SecretEntry.class));
         }
@@ -254,7 +254,7 @@ class SecretServiceTest {
 
             SecretEntry result = secretService.rotateSecret("test-secret", "rotated-value", "admin");
 
-            assertEquals(2, result.getVersion());
+            // version is managed by JPA @Version — not manually incremented
             assertNotNull(result.getLastRotatedAt());
         }
     }

@@ -1,10 +1,13 @@
 package com.pesitwizard.client.controller;
 
+import java.nio.file.Path;
+import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,12 +31,12 @@ import com.pesitwizard.connector.ConnectorFactory;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.security.SecretsService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/v1/connectors")
-@RequiredArgsConstructor
 @Slf4j
 public class ConnectorController {
 
@@ -41,6 +44,20 @@ public class ConnectorController {
     private final StorageConnectionRepository connectionRepository;
     private final ObjectMapper objectMapper;
     private final SecretsService secretsService;
+    private final String localBrowseBasePath;
+
+    public ConnectorController(
+            ConnectorRegistry connectorRegistry,
+            StorageConnectionRepository connectionRepository,
+            ObjectMapper objectMapper,
+            SecretsService secretsService,
+            @Value("${pesitwizard.storage.local-browse-path:#{null}}") String localBrowseBasePath) {
+        this.connectorRegistry = connectorRegistry;
+        this.connectionRepository = connectionRepository;
+        this.objectMapper = objectMapper;
+        this.secretsService = secretsService;
+        this.localBrowseBasePath = localBrowseBasePath;
+    }
 
     // Fields that should be encrypted in connector configs
     private static final List<String> SENSITIVE_FIELDS = List.of(
@@ -74,29 +91,78 @@ public class ConnectorController {
     }
 
     @PostMapping("/types/reload")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> reloadConnectors() {
         connectorRegistry.reloadConnectors();
         return ResponseEntity
                 .ok(Map.of("message", "Connectors reloaded", "types", connectorRegistry.getAvailableTypes()));
     }
 
+    /** Maximum allowed connector JAR size: 50 MB */
+    private static final long MAX_CONNECTOR_JAR_SIZE = 50 * 1024 * 1024L;
+
+    /** Pattern for allowed connector JAR filenames: alphanumeric, hyphens, underscores, dots */
+    private static final java.util.regex.Pattern SAFE_FILENAME_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9._-]*\\.jar$");
+
     @PostMapping("/types/import")
-    public ResponseEntity<Map<String, Object>> importConnector(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty())
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> importConnector(
+            @RequestParam("file") MultipartFile file, Principal principal) {
+        String username = principal != null ? principal.getName() : "unknown";
+
+        if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "No file provided"));
-        String filename = file.getOriginalFilename();
-        if (filename == null || !filename.endsWith(".jar")) {
+        }
+
+        // Validate file size
+        if (file.getSize() > MAX_CONNECTOR_JAR_SIZE) {
+            log.warn("SECURITY: Connector JAR upload rejected - file too large ({} bytes) by user '{}'",
+                    file.getSize(), username);
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "File exceeds maximum allowed size of 50 MB"));
+        }
+
+        // Sanitize filename: strip path components, validate characters and extension
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "File must be a JAR"));
         }
+
+        // Strip any directory components to prevent path traversal
+        String filename = Path.of(originalFilename).getFileName().toString();
+
+        // Validate filename against safe pattern (alphanumeric, hyphens, underscores, dots, ending in .jar)
+        if (!SAFE_FILENAME_PATTERN.matcher(filename).matches()) {
+            log.warn("SECURITY: Connector JAR upload rejected - invalid filename '{}' by user '{}'",
+                    originalFilename, username);
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Invalid filename. Only alphanumeric characters, hyphens, underscores, and dots are allowed. "
+                    + "File must have a .jar extension."));
+        }
+
         try {
             java.nio.file.Path connectorsDir = java.nio.file.Paths.get("connectors");
             java.nio.file.Files.createDirectories(connectorsDir);
-            file.transferTo(connectorsDir.resolve(filename).toFile());
+            java.nio.file.Path targetPath = connectorsDir.resolve(filename).normalize();
+
+            // Ensure the resolved path is still within the connectors directory
+            if (!targetPath.startsWith(connectorsDir.toAbsolutePath().normalize())
+                    && !targetPath.startsWith(connectorsDir.normalize())) {
+                log.warn("SECURITY: Connector JAR upload rejected - path traversal attempt '{}' by user '{}'",
+                        originalFilename, username);
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid filename"));
+            }
+
+            log.warn("SECURITY: Connector JAR uploaded: '{}' ({} bytes) by user '{}'",
+                    filename, file.getSize(), username);
+
+            file.transferTo(targetPath.toFile());
             connectorRegistry.reloadConnectors();
             return ResponseEntity.ok(Map.of("message", "Connector imported", "filename", filename, "types",
                     connectorRegistry.getAvailableTypes()));
         } catch (Exception e) {
-            log.error("Failed to import connector", e);
+            log.error("Failed to import connector JAR '{}' uploaded by user '{}'", filename, username, e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
@@ -212,12 +278,34 @@ public class ConnectorController {
 
     @GetMapping("/local/browse")
     public ResponseEntity<?> browseLocal(@RequestParam(defaultValue = ".") String path) {
+        if (localBrowseBasePath == null || localBrowseBasePath.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Local browse not configured. Set pesitwizard.storage.local-browse-path in application properties."));
+        }
+
+        // Reject paths with null bytes
+        if (path.contains("\0")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid path"));
+        }
+
         try {
-            // Use the local connector with default base path
-            StorageConnector connector = connectorRegistry.createConnector("local", Map.of("basePath", "/"));
+            // Use the configured base path instead of exposing the entire filesystem
+            StorageConnector connector = connectorRegistry.createConnector("local",
+                    Map.of("basePath", localBrowseBasePath));
             var files = connector.list(path);
             connector.close();
             return ResponseEntity.ok(files);
+        } catch (SecurityException e) {
+            log.warn("SECURITY: Local browse path traversal attempt: path='{}', basePath='{}'",
+                    path, localBrowseBasePath);
+            return ResponseEntity.badRequest().body(Map.of("error", "Path not allowed"));
+        } catch (ConnectorException e) {
+            if (e.getMessage() != null && e.getMessage().contains("traversal")) {
+                log.warn("SECURITY: Local browse path traversal attempt: path='{}', basePath='{}'",
+                        path, localBrowseBasePath);
+                return ResponseEntity.badRequest().body(Map.of("error", "Path not allowed"));
+            }
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }

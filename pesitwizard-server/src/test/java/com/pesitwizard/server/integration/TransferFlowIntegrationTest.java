@@ -11,7 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -127,7 +129,15 @@ public class TransferFlowIntegrationTest {
                     "Skipping integration test - server could not start: " + e.getMessage());
         }
 
-        Thread.sleep(500);
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> {
+                try (Socket s = new Socket(HOST, serverPort)) {
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            });
     }
 
     @AfterAll

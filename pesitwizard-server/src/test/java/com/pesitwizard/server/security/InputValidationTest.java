@@ -1,5 +1,6 @@
 package com.pesitwizard.server.security;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,7 +49,7 @@ class InputValidationTest {
             request.setName("");
             request.setDescription("Test key");
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -64,7 +65,7 @@ class InputValidationTest {
             request.setName("test@key#$%");
             request.setDescription("Test key");
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -80,7 +81,7 @@ class InputValidationTest {
             request.setName("a".repeat(101)); // Max is 100
             request.setDescription("Test key");
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -100,7 +101,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -119,7 +120,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -139,7 +140,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -160,7 +161,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
@@ -178,7 +179,7 @@ class InputValidationTest {
         void shouldRejectMalformedJson() throws Exception {
             String malformedJson = "{ this is not valid json }";
 
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(malformedJson))
                     .andExpect(status().isBadRequest())
@@ -189,7 +190,7 @@ class InputValidationTest {
         @DisplayName("Should reject empty request body")
         @WithMockUser(roles = "ADMIN")
         void shouldRejectEmptyRequestBody() throws Exception {
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(""))
                     .andExpect(status().isBadRequest());
@@ -199,7 +200,7 @@ class InputValidationTest {
         @DisplayName("Should reject unsupported media type")
         @WithMockUser(roles = "ADMIN")
         void shouldRejectUnsupportedMediaType() throws Exception {
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.TEXT_PLAIN)
                             .content("name=test"))
                     .andExpect(status().isUnsupportedMediaType())
@@ -210,7 +211,7 @@ class InputValidationTest {
         @DisplayName("Should reject wrong HTTP method")
         @WithMockUser(roles = "ADMIN")
         void shouldRejectWrongHttpMethod() throws Exception {
-            mockMvc.perform(put("/api/v1/apikeys")
+            mockMvc.perform(put("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isMethodNotAllowed())
@@ -226,7 +227,7 @@ class InputValidationTest {
         @DisplayName("Should handle invalid ID format gracefully")
         @WithMockUser(roles = "ADMIN")
         void shouldHandleInvalidIdFormat() throws Exception {
-            mockMvc.perform(post("/api/v1/apikeys/not-a-number/revoke"))
+            mockMvc.perform(post("/api/v1/apikeys/not-a-number/revoke").with(csrf()))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Type Mismatch"));
         }
@@ -248,7 +249,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/secrets")
+            mockMvc.perform(post("/api/v1/secrets").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -267,7 +268,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/secrets")
+            mockMvc.perform(post("/api/v1/secrets").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -286,7 +287,7 @@ class InputValidationTest {
                     }
                     """;
 
-            mockMvc.perform(post("/api/v1/secrets")
+            mockMvc.perform(post("/api/v1/secrets").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -310,7 +311,7 @@ class InputValidationTest {
                     """;
 
             // Should be rejected due to invalid characters in name pattern
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
@@ -334,7 +335,7 @@ class InputValidationTest {
 
             // Request should succeed, but XSS content should be stored safely
             // (not executed) due to proper output encoding
-            mockMvc.perform(post("/api/v1/apikeys")
+            mockMvc.perform(post("/api/v1/apikeys").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated());

@@ -1,11 +1,13 @@
 package com.pesitwizard.server.handler;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -127,13 +129,13 @@ class PesitSessionHandlerTest {
 
         assertEquals(ServerState.CN01_REPOS, ctx.getState());
 
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
         assertEquals(ServerState.CN03_CONNECTED, ctx.getState());
 
-        ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
+        ctx.setState(ServerState.SF03_FILE_SELECTED);
         assertEquals(ServerState.SF03_FILE_SELECTED, ctx.getState());
 
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         assertEquals(ServerState.OF02_TRANSFER_READY, ctx.getState());
     }
 
@@ -150,11 +152,11 @@ class PesitSessionHandlerTest {
 
     @Test
     @DisplayName("session should track touch time")
-    void sessionShouldTrackTouchTime() throws InterruptedException {
+    void sessionShouldTrackTouchTime() {
         SessionContext ctx = handler.createSession("192.168.1.100");
         java.time.Instant initialTime = ctx.getLastActivityTime();
 
-        Thread.sleep(10);
+        await().atMost(Duration.ofMillis(200)).pollDelay(Duration.ofMillis(10)).until(() -> true);
         ctx.touch();
 
         assertTrue(ctx.getLastActivityTime().isAfter(initialTime));
@@ -164,7 +166,7 @@ class PesitSessionHandlerTest {
     @DisplayName("session should support transfer context lifecycle")
     void sessionShouldSupportTransferContext() {
         SessionContext ctx = handler.createSession("192.168.1.100");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         // Initially no transfer
         assertNull(ctx.getCurrentTransfer());
@@ -381,7 +383,7 @@ class PesitSessionHandlerTest {
         @BeforeEach
         void setupConnectedState() {
             connectedCtx = handler.createSession("192.168.1.100");
-            connectedCtx.transitionTo(ServerState.CN03_CONNECTED);
+            connectedCtx.setState(ServerState.CN03_CONNECTED);
         }
 
         @Test
@@ -447,7 +449,7 @@ class PesitSessionHandlerTest {
         @BeforeEach
         void setupTransferReadyState() {
             transferReadyCtx = handler.createSession("192.168.1.100");
-            transferReadyCtx.transitionTo(ServerState.OF02_TRANSFER_READY);
+            transferReadyCtx.setState(ServerState.OF02_TRANSFER_READY);
             outputStream = new DataOutputStream(new ByteArrayOutputStream());
         }
 
@@ -494,7 +496,7 @@ class PesitSessionHandlerTest {
         @DisplayName("should handle ABORT from any state and mark session aborted")
         void shouldHandleAbortFromAnyState() throws Exception {
             SessionContext ctx = handler.createSession("192.168.1.100");
-            ctx.transitionTo(ServerState.CN03_CONNECTED);
+            ctx.setState(ServerState.CN03_CONNECTED);
 
             Fpdu abortFpdu = new Fpdu(FpduType.ABORT)
                     .withParameter(new com.pesitwizard.fpdu.ParameterValue(
@@ -512,7 +514,7 @@ class PesitSessionHandlerTest {
         @DisplayName("should track transfer failure on ABORT with active transfer")
         void shouldTrackTransferFailureOnAbort() throws Exception {
             SessionContext ctx = handler.createSession("192.168.1.100");
-            ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
+            ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
             ctx.setTransferRecordId("transfer-123");
 
             Fpdu abortFpdu = new Fpdu(FpduType.ABORT)

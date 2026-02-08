@@ -40,9 +40,8 @@ public class PesitMessageService {
      * Envoie un message via PeSIT selon la méthode spécifiée.
      */
     public void sendMessage(MessageRequest request, PesitServer server) throws IOException, InterruptedException {
-        TransportChannel channel = channelFactory.createChannel(server);
-
-        try (PesitSession session = new PesitSession(channel, false)) {
+        try (TransportChannel channel = channelFactory.createChannel(server);
+                PesitSession session = new PesitSession(channel, false)) {
             MessageRequest.MessageMode mode = request.getMode() != null
                     ? request.getMode()
                     : MessageRequest.MessageMode.FPDU;

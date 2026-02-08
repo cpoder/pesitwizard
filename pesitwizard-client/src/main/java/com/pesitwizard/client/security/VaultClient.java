@@ -42,6 +42,9 @@ public class VaultClient {
     private volatile String currentToken;
     private volatile java.time.Instant tokenExpiry;
 
+    // Lock for token refresh to prevent TOCTOU race (S2-18)
+    private final Object tokenRefreshLock = new Object();
+
     /**
      * Constructor for token authentication.
      */
@@ -137,14 +140,24 @@ public class VaultClient {
 
     /**
      * Get current valid token, refreshing if needed.
+     * Synchronized on tokenRefreshLock to prevent TOCTOU race where multiple
+     * threads see an expired token and all trigger concurrent refreshes.
      */
     private String getToken() {
         if (authMethod == AuthMethod.TOKEN) {
             return staticToken;
         }
-        // Check if token needs refresh
-        if (tokenExpiry == null || java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(tokenExpiry)) {
-            refreshAppRoleToken();
+        // Quick volatile check outside lock -- if token is clearly valid, skip locking
+        java.time.Instant expiry = tokenExpiry;
+        if (expiry != null && java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isBefore(expiry)) {
+            return currentToken;
+        }
+        // Token needs refresh -- synchronize so only one thread refreshes
+        synchronized (tokenRefreshLock) {
+            // Re-check after acquiring lock (another thread may have already refreshed)
+            if (tokenExpiry == null || java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(tokenExpiry)) {
+                refreshAppRoleToken();
+            }
         }
         return currentToken;
     }
@@ -210,7 +223,11 @@ public class VaultClient {
             } else if (response.statusCode() == 403 && retry && authMethod == AuthMethod.APPROLE) {
                 // Token may have expired, force refresh and retry once
                 log.debug("Got 403, refreshing token and retrying...");
-                if (refreshAppRoleToken()) {
+                boolean refreshed;
+                synchronized (tokenRefreshLock) {
+                    refreshed = refreshAppRoleToken();
+                }
+                if (refreshed) {
                     return storeSecretWithRetry(key, value, false);
                 }
                 log.error("Failed to store secret in Vault after token refresh: {} - {}", key, response.body());

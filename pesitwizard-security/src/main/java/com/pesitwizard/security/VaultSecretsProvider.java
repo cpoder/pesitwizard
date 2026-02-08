@@ -47,6 +47,9 @@ public class VaultSecretsProvider implements SecretsProvider {
     private final AtomicReference<String> currentToken = new AtomicReference<>();
     private final AtomicReference<Instant> tokenExpiry = new AtomicReference<>();
 
+    // Lock for token refresh to prevent TOCTOU race (S2-18)
+    private final Object tokenRefreshLock = new Object();
+
     // Cache
     private final ConcurrentHashMap<String, CachedSecret> secretCache = new ConcurrentHashMap<>();
 
@@ -161,12 +164,26 @@ public class VaultSecretsProvider implements SecretsProvider {
         }
     }
 
+    /**
+     * Get current valid token, refreshing if needed.
+     * Synchronized on tokenRefreshLock to prevent TOCTOU race where multiple
+     * threads see an expired token and all trigger concurrent refreshes.
+     */
     private String getToken() {
         if (authMethod == AuthMethod.TOKEN)
             return staticToken;
+        // Quick check outside lock -- if token is clearly valid, skip locking
         Instant expiry = tokenExpiry.get();
-        if (expiry == null || Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(expiry)) {
-            refreshAppRoleToken();
+        if (expiry != null && Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isBefore(expiry)) {
+            return currentToken.get();
+        }
+        // Token needs refresh -- synchronize so only one thread refreshes
+        synchronized (tokenRefreshLock) {
+            // Re-check after acquiring lock (another thread may have already refreshed)
+            expiry = tokenExpiry.get();
+            if (expiry == null || Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(expiry)) {
+                refreshAppRoleToken();
+            }
         }
         return currentToken.get();
     }
@@ -214,8 +231,7 @@ public class VaultSecretsProvider implements SecretsProvider {
             String key = ciphertext.substring(PREFIX.length());
             String value = getSecret(key);
             if (value == null) {
-                log.error("Failed to retrieve secret from Vault");
-                return ciphertext;
+                throw new DecryptionException("Failed to retrieve secret from Vault for key: " + key);
             }
             return value;
         }
@@ -224,8 +240,12 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public void storeSecret(String key, String value) {
-        if (!available || isCircuitOpen())
-            return;
+        if (!available) {
+            throw new EncryptionException("Vault is not available");
+        }
+        if (isCircuitOpen()) {
+            throw new EncryptionException("Vault circuit breaker is open, cannot store secret");
+        }
         secretCache.remove(key);
         try {
             ObjectNode dataNode = objectMapper.createObjectNode();
@@ -248,8 +268,11 @@ public class VaultSecretsProvider implements SecretsProvider {
                 log.debug("Secret stored in Vault: {}", key);
             } else {
                 recordFailure();
-                log.error("Failed to store secret: {} - {}", key, response.body());
+                throw new EncryptionException(
+                        "Vault store failed for key '" + key + "': HTTP " + response.statusCode());
             }
+        } catch (EncryptionException e) {
+            throw e;
         } catch (Exception e) {
             recordFailure();
             log.error("Failed to store secret: {}", e.getMessage());

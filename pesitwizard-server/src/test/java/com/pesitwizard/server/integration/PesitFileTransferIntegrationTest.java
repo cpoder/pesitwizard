@@ -7,7 +7,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -104,11 +106,15 @@ class PesitFileTransferIntegrationTest {
         serverInstance.start();
 
         // Wait for server to be ready
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> {
+                try (Socket s = new Socket("localhost", TEST_PORT)) {
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            });
     }
 
     @AfterAll

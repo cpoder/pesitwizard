@@ -26,6 +26,21 @@ cluster:
     stack: kubernetes
     namespace: staging
     labels: "app=pesitwizard-server"
+    # JGroups cluster security — encryption and authentication
+    # IMPORTANT: Both are required for production. See tcp.xml / kubernetes.xml comments.
+    security:
+      # Name of K8s Secret containing jgroups-keystore.p12 file
+      # Create with: kubectl create secret generic jgroups-keystore --from-file=jgroups-keystore.p12 -n staging
+      keystoreSecret: ""
+      # Keystore password — prefer existingSecret for production
+      keystorePassword: ""
+      keyAlias: "jgroups-sym-key"
+      # Shared token for cluster join authentication — MUST be set for production
+      authToken: ""
+      # Reference an existing K8s Secret for sensitive values
+      existingSecret: ""
+      keystorePasswordKey: "jgroups-keystore-password"
+      authTokenKey: "jgroups-auth-token"
 
 service:
   type: ClusterIP

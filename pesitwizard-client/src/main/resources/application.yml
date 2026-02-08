@@ -15,14 +15,15 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
-    properties:
-      jakarta:
-        persistence:
-          jdbc:
-            url: jdbc:h2:file:./data/pesitwizard-client;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+
+  # Flyway database migration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
 
   # H2 Console
   h2:
@@ -87,6 +88,11 @@ otel:
 
 # PeSIT Wizard client defaults
 pesitwizard:
+  # CORS allowed origins (comma-separated).
+  # Must be configured for production, e.g. https://myapp.example.com
+  # Env var: PESITWIZARD_CORS_ALLOWED_ORIGINS
+  cors:
+    allowed-origins: ${PESITWIZARD_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   client:
     id: ${PESIT_CLIENT_ID:PESIT_CLIENT}
     strict-mode: false
@@ -95,6 +101,14 @@ pesitwizard:
     retry-count: 3
     retry-delay: 5000
     receive-directory: ./received
+
+# OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
 
 # Logging
 logging:

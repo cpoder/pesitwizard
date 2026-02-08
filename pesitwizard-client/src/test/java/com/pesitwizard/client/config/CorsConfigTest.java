@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,6 +19,11 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 class CorsConfigTest {
 
     private final CorsConfig corsConfig = new CorsConfig();
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(corsConfig, "allowedOrigins", "http://localhost:5173,http://localhost:3000");
+    }
 
     @Nested
     @DisplayName("addCorsMappings")
@@ -46,8 +53,8 @@ class CorsConfigTest {
         }
 
         @Test
-        @DisplayName("should allow all origin patterns")
-        void shouldAllowAllOriginPatterns() {
+        @DisplayName("should allow only configured origins")
+        void shouldAllowOnlyConfiguredOrigins() {
             UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
                     .corsConfigurationSource();
 
@@ -55,7 +62,9 @@ class CorsConfigTest {
                     new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
 
             assertThat(config).isNotNull();
-            assertThat(config.getAllowedOriginPatterns()).contains("*");
+            assertThat(config.getAllowedOrigins())
+                    .containsExactly("http://localhost:5173", "http://localhost:3000");
+            assertThat(config.getAllowedOriginPatterns()).isNullOrEmpty();
         }
 
         @Test

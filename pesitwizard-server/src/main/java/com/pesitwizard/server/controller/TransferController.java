@@ -26,6 +26,8 @@ import com.pesitwizard.server.service.TransferService.TransferStatistics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Set;
+
 /**
  * REST API for transfer management.
  * Provides endpoints for viewing, searching, and managing file transfers.
@@ -38,6 +40,11 @@ public class TransferController {
 
     private final TransferService transferService;
 
+    // S3-04: Allowlist of valid sortBy column names
+    private static final Set<String> ALLOWED_SORT_COLUMNS = Set.of(
+            "startedAt", "completedAt", "filename", "partnerId", "status",
+            "direction", "fileSize", "transferId", "serverId", "bytesTransferred");
+
     // ========== List & Search ==========
 
     /**
@@ -49,6 +56,11 @@ public class TransferController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "startedAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
+
+        // S3-04: Validate sortBy against allowlist
+        if (!ALLOWED_SORT_COLUMNS.contains(sortBy)) {
+            return ResponseEntity.badRequest().build();
+        }
 
         Sort sort = sortDir.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()

@@ -54,6 +54,12 @@ serviceAccount:
   name: ""
   annotations: {}
 
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingressSelector:
+    app.kubernetes.io/name: ingress-nginx
+
 # Node selector
 nodeSelector: {}
 

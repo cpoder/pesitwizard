@@ -28,6 +28,8 @@ import com.pesitwizard.server.service.CertificateService.CertificateStatistics;
 import com.pesitwizard.server.ssl.SslConfigurationException;
 import com.pesitwizard.server.ssl.SslContextFactory.CertificateInfo;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1/certificates")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class CertificateController {
 
     private final CertificateService certificateService;

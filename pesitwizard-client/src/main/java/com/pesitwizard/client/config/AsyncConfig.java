@@ -24,7 +24,9 @@ public class AsyncConfig {
 
     /**
      * Thread pool for PeSIT transfer operations.
-     * Core: 4 threads, Max: 10 threads, Queue: 100 tasks
+     * Core: 4 threads, Max: 10 threads, Queue: 100 tasks.
+     * Graceful shutdown: waits up to 60s for in-flight transfers to complete
+     * protocol teardown (CLOSE, DESELECT, RELEASE) before forcing termination.
      */
     @Bean(name = "transferExecutor")
     public Executor transferExecutor() {
@@ -33,6 +35,8 @@ public class AsyncConfig {
         executor.setMaxPoolSize(10);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("transfer-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
         executor.initialize();
         return executor;
     }
@@ -40,7 +44,8 @@ public class AsyncConfig {
     /**
      * Thread pool for WebSocket message broadcasting.
      * Separate from transfer threads to prevent WebSocket issues from blocking transfers.
-     * Core: 2 threads, Max: 4 threads, Queue: 100 messages
+     * Core: 2 threads, Max: 4 threads, Queue: 100 messages.
+     * Graceful shutdown: waits up to 30s for pending messages to be delivered.
      */
     @Bean(name = "websocketExecutor")
     public Executor websocketExecutor() {
@@ -49,6 +54,9 @@ public class AsyncConfig {
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("websocket-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
     }
@@ -56,8 +64,9 @@ public class AsyncConfig {
     /**
      * Thread pool for third-party event listener plugins.
      * Plugins can use @Async("pluginExecutor") to process events asynchronously.
-     * Core: 2 threads, Max: 5 threads, Queue: 50 tasks
-     * Rejection policy: CallerRunsPolicy (fallback to caller thread if queue full)
+     * Core: 2 threads, Max: 5 threads, Queue: 50 tasks.
+     * Rejection policy: CallerRunsPolicy (fallback to caller thread if queue full).
+     * Graceful shutdown: waits up to 30s for pending plugin tasks to complete.
      */
     @Bean(name = "pluginExecutor")
     public Executor pluginExecutor() {
@@ -67,6 +76,8 @@ public class AsyncConfig {
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("plugin-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
     }

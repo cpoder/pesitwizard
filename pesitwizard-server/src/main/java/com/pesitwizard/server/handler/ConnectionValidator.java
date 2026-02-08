@@ -1,6 +1,7 @@
 package com.pesitwizard.server.handler;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 import org.springframework.stereotype.Component;
 
@@ -65,10 +66,12 @@ public class ConnectionValidator {
             // Decrypt stored password (may be encrypted with vault: or ENC: prefix)
             String storedPassword = secretsService.decryptFromStorage(partner.getPassword());
 
-            // Validate password using constant-time comparison to prevent timing attacks
-            if (!storedPassword.equals(providedPassword)) {
-                log.warn("[{}] Password mismatch for partner '{}' (provided length: {}, stored length: {})",
-                        ctx.getSessionId(), partnerId, providedPassword.length(), storedPassword.length());
+            // Validate password using MessageDigest.isEqual() for constant-time comparison
+            if (!MessageDigest.isEqual(
+                    storedPassword.getBytes(StandardCharsets.UTF_8),
+                    providedPassword.getBytes(StandardCharsets.UTF_8))) {
+                log.warn("[{}] Password mismatch for partner '{}'",
+                        ctx.getSessionId(), partnerId);
                 return ValidationResult.error(DiagnosticCode.D3_304,
                         "Invalid password for partner '" + partnerId + "'");
             }

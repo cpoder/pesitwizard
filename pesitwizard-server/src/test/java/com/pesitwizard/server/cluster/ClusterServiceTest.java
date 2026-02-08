@@ -18,7 +18,7 @@ class ClusterServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ClusterService();
+        service = new ClusterService(null);
         // Configure for standalone mode
         ReflectionTestUtils.setField(service, "clusterEnabled", false);
         ReflectionTestUtils.setField(service, "nodeName", "test-node");

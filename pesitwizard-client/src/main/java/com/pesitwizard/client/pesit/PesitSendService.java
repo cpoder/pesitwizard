@@ -75,8 +75,8 @@ public class PesitSendService {
                 inputStream = new BufferedInputStream(Files.newInputStream(Path.of(request.getFilename())), 64 * 1024);
             }
 
-            TransportChannel channel = channelFactory.createChannel(server, fileSize);
-            try (PesitSession session = new PesitSession(channel, false)) {
+            try (TransportChannel channel = channelFactory.createChannel(server, fileSize);
+                    PesitSession session = new PesitSession(channel, false)) {
                 executeTransfer(session, server, request, inputStream, config, ctx, cancelledTransfers);
             }
             updateHistorySuccess(historyId, ctx.getBytesTransferred());

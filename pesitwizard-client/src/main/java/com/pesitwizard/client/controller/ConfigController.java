@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pesitwizard.client.config.OtlpConfigService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -38,7 +39,7 @@ public class ConfigController {
      * Update OTLP configuration
      */
     @PutMapping("/otlp")
-    public ResponseEntity<Map<String, Object>> updateOtlpConfig(@RequestBody OtlpConfigRequest request) {
+    public ResponseEntity<Map<String, Object>> updateOtlpConfig(@Valid @RequestBody OtlpConfigRequest request) {
         otlpConfigService.updateConfig(
                 request.endpoint(),
                 request.metricsEnabled(),

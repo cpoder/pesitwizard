@@ -96,8 +96,8 @@ public class PesitReceiveService {
                         ? connectorFactory.createFromConnectionId(destConnId)
                         : connectorRegistry.createConnector("local", Map.of());
 
-                TransportChannel channel = channelFactory.createChannel(server);
-                try (PesitSession session = new PesitSession(channel, false)) {
+                try (TransportChannel channel = channelFactory.createChannel(server);
+                        PesitSession session = new PesitSession(channel, false)) {
                     long bytesReceived = executeTransfer(session, server, request, connector, destPath,
                             config, restartPoint, restartBytePos, ctx, cancelledTransfers);
 

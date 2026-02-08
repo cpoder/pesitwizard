@@ -14,10 +14,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Entity representing a configured PeSIT server
@@ -57,17 +60,30 @@ public class PesitServer {
 
     /** Truststore data (PKCS12 format) for TLS */
     @Column(columnDefinition = "bytea")
+    @JsonIgnore
+    @ToString.Exclude
     private byte[] truststoreData;
 
     /** Truststore password */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String truststorePassword;
 
     /** Keystore data (PKCS12 format) for mutual TLS */
     @Column(columnDefinition = "bytea")
+    @JsonIgnore
+    @ToString.Exclude
     private byte[] keystoreData;
 
     /** Keystore password */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String keystorePassword;
+
+    /** Whether to verify the server certificate's hostname (CN/SAN) matches the target host.
+     *  Defaults to true (secure). Disable only for testing or legacy servers with misconfigured certificates. */
+    @Builder.Default
+    private boolean hostnameVerification = true;
 
     /** Connection timeout in milliseconds */
     @Builder.Default

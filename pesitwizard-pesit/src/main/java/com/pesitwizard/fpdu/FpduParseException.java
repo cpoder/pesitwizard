@@ -30,4 +30,18 @@ public class FpduParseException extends FpduException {
         return new FpduParseException(
                 String.format("Invalid FPDU length: %d (minimum is 6)", length));
     }
+
+    public static FpduParseException unknownFpduType(int phase, int type) {
+        return new FpduParseException(
+                String.format("Unknown FPDU type: phase=0x%02X, type=0x%02X", phase, type));
+    }
+
+    public static FpduParseException missingMandatoryParameter(FpduType fpduType, Parameter parameter) {
+        String paramLabel = (parameter instanceof ParameterGroupIdentifier)
+                ? "PGI_" + parameter.getId()
+                : "PI_" + parameter.getId();
+        return new FpduParseException(
+                String.format("Missing mandatory parameter %s (%s) in %s",
+                        paramLabel, parameter.getName(), fpduType.getName()));
+    }
 }

@@ -2,6 +2,11 @@
 <!--
     JGroups TCP configuration for Docker/local testing.
     Uses TCPPING for static discovery (no multicast).
+
+    Security: SYM_ENCRYPT provides AES-256-GCM encryption of all cluster messages.
+              AUTH prevents unauthorized nodes from joining the cluster.
+              Both protocols are required — encryption alone still allows replay attacks,
+              and authentication alone allows eavesdropping.
 -->
 <config xmlns="urn:org:jgroups"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -30,6 +35,23 @@
     <FD_ALL timeout="30000" interval="5000"/>
     <VERIFY_SUSPECT timeout="1500"/>
 
+    <!--
+        Message encryption using AES-256-GCM.
+        All cluster messages are encrypted with a shared symmetric key stored in a PKCS12 keystore.
+        This prevents eavesdropping on cluster traffic (state transfer, ownership, heartbeats).
+        The keystore path, password, and key alias are configurable via system properties.
+        To generate the keystore:
+          keytool -genseckey -alias jgroups-sym-key -keyalg AES -keysize 256 \
+                  -storetype PKCS12 -keystore jgroups-keystore.p12 -storepass <password>
+    -->
+    <SYM_ENCRYPT provider="SunJCE"
+                 sym_algorithm="AES/GCM/NoPadding"
+                 sym_keylength="256"
+                 keystore_name="${jgroups.keystore.path:classpath:jgroups-keystore.p12}"
+                 keystore_type="PKCS12"
+                 store_password="${jgroups.keystore.password:changeit}"
+                 alias="${jgroups.key.alias:jgroups-sym-key}"/>
+
     <!-- Reliable message delivery -->
     <pbcast.NAKACK2 xmit_interval="500"
                     xmit_table_num_rows="100"
@@ -52,6 +74,16 @@
     <!-- Group membership protocol -->
     <pbcast.GMS print_local_addr="true"
                 join_timeout="2000"/>
+
+    <!--
+        Join authentication using a shared token.
+        Prevents unauthorized nodes from joining the cluster.
+        The token MUST be explicitly set for production deployments — there is no secure default.
+        All cluster members must share the same auth_value.
+        Set via: -Djgroups.auth.token=<your-secret-token>
+    -->
+    <AUTH auth_class="org.jgroups.auth.SimpleToken"
+          auth_value="${jgroups.auth.token:}"/>
 
     <!-- Flow control -->
     <UFC max_credits="2M"

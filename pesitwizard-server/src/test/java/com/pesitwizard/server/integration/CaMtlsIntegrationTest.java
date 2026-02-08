@@ -5,11 +5,14 @@ import static org.assertj.core.api.Assertions.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.security.KeyStore;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import org.awaitility.Awaitility;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -51,7 +54,7 @@ public class CaMtlsIntegrationTest {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CaMtlsIntegrationTest.class);
     private static final String PASSWORD = "changeit";
-    private static final int TEST_PORT = 15443;
+    private static final int SOCKET_TIMEOUT_MS = 10_000;
 
     @Autowired
     private CertificateAuthorityService caService;
@@ -229,10 +232,12 @@ public class CaMtlsIntegrationTest {
             // Create client SSL context
             SSLContext clientSslContext = sslContextFactory.createSslContext(clientCert, caTruststore);
 
-            // Start server
+            // Start server on dynamic port
             serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(TEST_PORT);
+                    .createServerSocket(0);
             serverSocket.setNeedClientAuth(true); // Require client certificate
+            serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
+            int port = serverSocket.getLocalPort();
 
             String testMessage = "Hello from mTLS client!";
             String expectedResponse = "Hello from mTLS server!";
@@ -240,8 +245,9 @@ public class CaMtlsIntegrationTest {
             // Server task
             CompletableFuture<String> serverFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    log.info("Server waiting for connection on port {}", TEST_PORT);
+                    log.info("Server waiting for connection on port {}", port);
                     SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
                     log.info("Server accepted connection from {}",
                             clientConnection.getSession().getPeerPrincipal());
 
@@ -267,9 +273,10 @@ public class CaMtlsIntegrationTest {
                 try {
                     Thread.sleep(500); // Give server time to start
 
-                    log.info("Client connecting to localhost:{}", TEST_PORT);
+                    log.info("Client connecting to localhost:{}", port);
                     SSLSocket socket = (SSLSocket) clientSslContext.getSocketFactory()
-                            .createSocket("localhost", TEST_PORT);
+                            .createSocket("localhost", port);
+                    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
                     socket.startHandshake();
                     log.info("Client connected, server cert: {}",
                             socket.getSession().getPeerPrincipal());
@@ -321,13 +328,16 @@ public class CaMtlsIntegrationTest {
             SSLContext serverSslContext = sslContextFactory.createSslContext(serverCert, caTruststore);
 
             serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(TEST_PORT + 1);
+                    .createServerSocket(0);
             serverSocket.setNeedClientAuth(true);
+            serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
+            int rejectPort = serverSocket.getLocalPort();
 
             // Start server
             CompletableFuture<Void> serverFuture = CompletableFuture.runAsync(() -> {
                 try {
                     SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
                     clientConnection.getInputStream().read(); // This should fail
                 } catch (Exception e) {
                     log.info("Server correctly rejected connection: {}", e.getMessage());
@@ -346,12 +356,21 @@ public class CaMtlsIntegrationTest {
 
             clientNoAuthContext.init(null, tmf.getTrustManagers(), null);
 
-            Thread.sleep(500);
+            Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(() -> {
+                    try (Socket s = new Socket("localhost", rejectPort)) {
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
 
             // Client should fail to connect
             assertThatThrownBy(() -> {
                 SSLSocket socket = (SSLSocket) clientNoAuthContext.getSocketFactory()
-                        .createSocket("localhost", TEST_PORT + 1);
+                        .createSocket("localhost", rejectPort);
+                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
                 socket.startHandshake();
                 socket.getInputStream().read();
             }).isInstanceOf(Exception.class);
@@ -379,13 +398,16 @@ public class CaMtlsIntegrationTest {
             SSLContext serverSslContext = sslContextFactory.createSslContext(serverCert, caTruststore);
 
             serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(TEST_PORT + 2);
+                    .createServerSocket(0);
             serverSocket.setNeedClientAuth(true);
+            serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
+            int untrustPort = serverSocket.getLocalPort();
 
             // Start server
             CompletableFuture<Void> serverFuture = CompletableFuture.runAsync(() -> {
                 try {
                     SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
                     clientConnection.getInputStream().read();
                 } catch (Exception e) {
                     log.info("Server correctly rejected untrusted client: {}", e.getMessage());
@@ -395,12 +417,21 @@ public class CaMtlsIntegrationTest {
             // Create self-signed (untrusted) client certificate
             SSLContext untrustedClientContext = createSelfSignedSslContext();
 
-            Thread.sleep(500);
+            Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(() -> {
+                    try (Socket s = new Socket("localhost", untrustPort)) {
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                });
 
             // Client with untrusted cert should fail
             assertThatThrownBy(() -> {
                 SSLSocket socket = (SSLSocket) untrustedClientContext.getSocketFactory()
-                        .createSocket("localhost", TEST_PORT + 2);
+                        .createSocket("localhost", untrustPort);
+                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
                 socket.startHandshake();
                 socket.getInputStream().read();
             }).isInstanceOf(Exception.class);

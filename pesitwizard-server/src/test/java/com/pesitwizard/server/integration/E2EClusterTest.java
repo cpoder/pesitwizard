@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -333,8 +334,11 @@ public class E2EClusterTest {
                 sslContextFactory);
         instance.start();
 
-        // Wait a bit for the server to be fully ready
-        Thread.sleep(100);
+        // Wait for the server to be fully ready
+        final int serverPort = config.getPort();
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> canConnect(serverPort));
 
         return instance;
     }

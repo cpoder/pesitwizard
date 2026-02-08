@@ -1,6 +1,8 @@
 package com.pesitwizard.client.controller;
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -166,6 +168,7 @@ public class SecurityController {
         }
 
         try {
+            validateUrlNotInternal(address);
             var httpClient = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(java.time.Duration.ofSeconds(5))
                     .build();
@@ -189,6 +192,11 @@ public class SecurityController {
                         "success", false,
                         "message", "Vault returned status " + response.statusCode()));
             }
+        } catch (IllegalArgumentException e) {
+            log.warn("Vault test blocked by SSRF validation: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()));
         } catch (Exception e) {
             log.error("Vault test failed: {}", e.getMessage());
             return ResponseEntity.ok(Map.of(
@@ -258,6 +266,8 @@ public class SecurityController {
         }
 
         try {
+            validateUrlNotInternal(address);
+
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(5))
                     .build();
@@ -282,6 +292,11 @@ public class SecurityController {
                         "success", false,
                         "message", "AppRole authentication failed: " + response.statusCode()));
             }
+        } catch (IllegalArgumentException e) {
+            log.warn("AppRole test blocked by SSRF validation: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()));
         } catch (Exception e) {
             log.error("AppRole test failed: {}", e.getMessage());
             return ResponseEntity.ok(Map.of(
@@ -305,6 +320,8 @@ public class SecurityController {
         }
 
         try {
+            validateUrlNotInternal(address);
+
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
@@ -378,11 +395,75 @@ public class SecurityController {
             }
 
             return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("Vault setup blocked by SSRF validation: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()));
         } catch (Exception e) {
             log.error("Vault setup failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Setup failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Validates that a URL does not target internal/private network ranges (SSRF protection).
+     * Resolves the hostname to an IP address and checks against restricted ranges.
+     *
+     * @param url the URL to validate
+     * @throws IllegalArgumentException if the URL targets a restricted network range
+     */
+    private void validateUrlNotInternal(String url) {
+        URI uri;
+        try {
+            uri = URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid URL: " + e.getMessage());
+        }
+
+        // Reject non-HTTP/HTTPS schemes
+        String scheme = uri.getScheme();
+        if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+            throw new IllegalArgumentException("Only HTTP and HTTPS schemes are allowed");
+        }
+
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("URL must contain a valid hostname");
+        }
+
+        // Reject localhost by hostname
+        if (host.equalsIgnoreCase("localhost")) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
+        }
+
+        // Resolve hostname to IP address and validate
+        InetAddress resolved;
+        try {
+            resolved = InetAddress.getByName(host);
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("Cannot resolve hostname: " + host);
+        }
+
+        if (resolved.isLoopbackAddress()) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
+        }
+        if (resolved.isSiteLocalAddress()) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
+        }
+        if (resolved.isLinkLocalAddress()) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
+        }
+        if (resolved.isAnyLocalAddress()) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
+        }
+
+        // Additional check for IPv6 unique local addresses (fd00::/8)
+        byte[] addressBytes = resolved.getAddress();
+        if (addressBytes.length == 16 && (addressBytes[0] & 0xFF) == 0xFD) {
+            throw new IllegalArgumentException("URL targets a restricted network range");
         }
     }
 

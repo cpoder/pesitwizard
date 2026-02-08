@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  S3-10: Production-ready logback configuration for PeSIT Wizard Server.
+
+  Profiles:
+    - default (dev): Console output with colors, DEBUG level for pesitwizard
+    - production: JSON-structured file logging with rotation, INFO level
+-->
+<configuration>
+    <!-- Common MDC pattern (S3-09) -->
+    <property name="MDC_PATTERN" value="%X{requestId:-} %X{remoteAddr:-}" />
+
+    <!-- ========== Development profile (default) ========== -->
+    <springProfile name="default,dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [${MDC_PATTERN}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="com.pesitwizard" level="DEBUG" />
+        <logger name="org.springframework" level="INFO" />
+        <logger name="org.hibernate" level="WARN" />
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+
+    <!-- ========== Production profile ========== -->
+    <springProfile name="production,prod,postgres">
+        <!-- Console: structured single-line for container log aggregators -->
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- Rolling file: daily rotation, max 500MB total, 30 days retention -->
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/pesitwizard-server.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/pesitwizard-server.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>500MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <!-- Audit log: separate file for security audit events -->
+        <appender name="AUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/pesitwizard-audit.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/pesitwizard-audit.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>90</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{ISO8601} %-5level [%thread] [${MDC_PATTERN}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="com.pesitwizard" level="INFO" />
+        <logger name="com.pesitwizard.server.service.AuditService" level="INFO" additivity="false">
+            <appender-ref ref="AUDIT" />
+            <appender-ref ref="FILE" />
+        </logger>
+        <logger name="org.springframework" level="WARN" />
+        <logger name="org.hibernate" level="WARN" />
+        <logger name="io.micrometer" level="WARN" />
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE" />
+        </root>
+    </springProfile>
+</configuration>

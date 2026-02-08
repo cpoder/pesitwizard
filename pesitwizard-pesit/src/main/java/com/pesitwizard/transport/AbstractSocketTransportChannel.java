@@ -18,6 +18,9 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
     /** Default socket timeout in milliseconds. */
     protected static final int DEFAULT_TIMEOUT = 60000;
 
+    /** Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length prefix. */
+    public static final int DEFAULT_MAX_FPDU_LENGTH = 32768;
+
     /** Remote host address. */
     protected final String host;
     /** Remote port number. */
@@ -30,6 +33,8 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
     protected DataOutputStream outputStream;
     /** Receive timeout in milliseconds. */
     protected int receiveTimeout = DEFAULT_TIMEOUT;
+    /** Maximum allowed FPDU length in bytes. Prevents memory exhaustion from oversized length prefixes. */
+    protected int maxFpduLength = DEFAULT_MAX_FPDU_LENGTH;
 
     /**
      * Construct a new transport channel.
@@ -96,6 +101,11 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
             if (length <= 0) {
                 throw new IOException("Invalid FPDU length: " + length);
             }
+            if (length > maxFpduLength) {
+                throw new IOException("FPDU length " + length
+                        + " exceeds maximum allowed length " + maxFpduLength
+                        + " bytes (from " + host + ":" + port + ")");
+            }
 
             // Read data
             byte[] data = new byte[length];
@@ -121,18 +131,30 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
 
         try {
             if (outputStream != null) {
-                outputStream.close();
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close output stream for {}:{}", host, port, e);
+                }
             }
             if (inputStream != null) {
-                inputStream.close();
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close input stream for {}:{}", host, port, e);
+                }
             }
             if (socket != null) {
-                socket.close();
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close socket for {}:{}", host, port, e);
+                }
             }
         } finally {
-            socket = null;
-            inputStream = null;
             outputStream = null;
+            inputStream = null;
+            socket = null;
         }
     }
 
@@ -159,8 +181,32 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
     }
 
     /**
+     * Set the maximum allowed FPDU length in bytes.
+     * FPDUs with a length prefix exceeding this value will be rejected with an IOException.
+     * This protects against memory exhaustion from malicious or corrupted length prefixes.
+     *
+     * @param maxFpduLength maximum FPDU length in bytes (must be positive)
+     * @throws IllegalArgumentException if maxFpduLength is not positive
+     */
+    public void setMaxFpduLength(int maxFpduLength) {
+        if (maxFpduLength <= 0) {
+            throw new IllegalArgumentException("maxFpduLength must be positive, got: " + maxFpduLength);
+        }
+        this.maxFpduLength = maxFpduLength;
+    }
+
+    /**
+     * Get the maximum allowed FPDU length in bytes.
+     *
+     * @return the maximum FPDU length
+     */
+    public int getMaxFpduLength() {
+        return maxFpduLength;
+    }
+
+    /**
      * Get the remote host.
-     * 
+     *
      * @return the host
      */
     public String getHost() {

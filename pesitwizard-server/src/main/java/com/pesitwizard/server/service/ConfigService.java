@@ -41,10 +41,17 @@ public class ConfigService {
         if (partnerRepository.count() == 0 && !serverProperties.getPartners().isEmpty()) {
             log.info("Importing {} partners from YAML configuration", serverProperties.getPartners().size());
             serverProperties.getPartners().forEach((key, config) -> {
+                // Encrypt password before storing in database
+                String password = config.getPassword();
+                if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
+                    password = secretsService.encryptForStorage(password);
+                    log.debug("Encrypted password for imported partner: {}", key);
+                }
+
                 Partner partner = Partner.builder()
                         .id(config.getId() != null ? config.getId() : key)
                         .description(config.getDescription())
-                        .password(config.getPassword())
+                        .password(password)
                         .enabled(config.isEnabled())
                         .accessType(Partner.AccessType.valueOf(config.getAccessType().name()))
                         .maxConnections(config.getMaxConnections())

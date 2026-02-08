@@ -2,3 +2,5 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+  flyway:
+    enabled: false

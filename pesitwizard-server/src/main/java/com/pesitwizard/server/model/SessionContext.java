@@ -111,16 +111,18 @@ public class SessionContext {
 
     /**
      * Transition to a new state.
-     * Validates the transition against PeSIT protocol rules and logs a warning
-     * if the transition is invalid.
+     * Validates the transition against PeSIT protocol rules and throws
+     * {@link InvalidStateTransitionException} if the transition is invalid.
+     *
+     * @param newState the target state
+     * @throws InvalidStateTransitionException if the transition violates protocol rules
      */
     public void transitionTo(ServerState newState) {
         ServerState oldState = this.state;
 
         // Validate transition
         if (oldState != null && !oldState.canTransitionTo(newState)) {
-            log.warn("[{}] Invalid state transition: {} -> {} (not in valid transitions: {})",
-                    sessionId, oldState, newState, oldState.getValidTransitions());
+            throw new InvalidStateTransitionException(sessionId, oldState, newState);
         }
 
         this.state = newState;

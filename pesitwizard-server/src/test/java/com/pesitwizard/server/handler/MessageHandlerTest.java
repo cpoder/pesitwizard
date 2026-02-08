@@ -71,7 +71,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgDm should initialize message buffer and transition state")
     void handleMsgDmShouldInitializeBufferAndTransitionState() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "First segment".getBytes()));
@@ -117,7 +117,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgFm should complete message and return ACK")
     void handleMsgFmShouldCompleteMessageAndReturnAck() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("First part "));
         ctx.setMessageFilename("testfile.dat");
 
@@ -166,7 +166,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgReceiving should dispatch MSGFM correctly")
     void handleMsgReceivingShouldDispatchMsgFm() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("Content"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGFM);
@@ -210,7 +210,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgDm should handle message without PI_91")
     void handleMsgDmShouldHandleMessageWithoutPi91() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
         // No PI_91 parameter
@@ -242,7 +242,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgFm should handle message without PI_91")
     void handleMsgFmShouldHandleMessageWithoutPi91() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("Content"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGFM);
@@ -258,7 +258,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgFm should handle long complete message")
     void handleMsgFmShouldHandleLongMessage() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("A".repeat(150)));
         ctx.setMessageFilename("testfile.dat");
 
@@ -291,7 +291,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgReceiving should return ABORT for unexpected FPDU type")
     void handleMsgReceivingShouldReturnAbortForUnexpectedFpdu() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder());
 
         Fpdu fpdu = new Fpdu(FpduType.DTF); // Wrong type
@@ -306,7 +306,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgMm should append segment to buffer")
     void handleMsgMmShouldAppendSegment() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("Initial"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGMM);
@@ -324,7 +324,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgDm should initialize message buffer")
     void handleMsgDmShouldInitializeBuffer() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Start of message".getBytes()));
@@ -342,7 +342,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgFm should return ABORT when buffer is null")
     void handleMsgFmShouldReturnAbortWhenBufferNull() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(null); // No buffer initialized
 
         Fpdu fpdu = new Fpdu(FpduType.MSGFM);
@@ -357,7 +357,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgFm should complete message and return ACK_MSG")
     void handleMsgFmShouldCompleteMessage() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(new StringBuilder("Initial message"));
         ctx.setMessageFilename("test.dat");
 
@@ -377,7 +377,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgMm should return ABORT when buffer is null")
     void handleMsgMmShouldReturnAbortWhenBufferNull() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.MSG_RECEIVING);
+        ctx.setState(ServerState.MSG_RECEIVING);
         ctx.setMessageBuffer(null); // No buffer initialized
 
         Fpdu fpdu = new Fpdu(FpduType.MSGMM);
@@ -392,7 +392,7 @@ class MessageHandlerTest {
     @DisplayName("handleMsgDm should extract filename from PGI_09")
     void handleMsgDmShouldExtractFilename() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN03_CONNECTED);
+        ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Message content".getBytes()));

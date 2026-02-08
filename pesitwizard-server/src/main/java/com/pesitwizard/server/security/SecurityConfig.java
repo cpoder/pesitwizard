@@ -1,6 +1,7 @@
 package com.pesitwizard.server.security;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -22,9 +23,18 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,8 +71,11 @@ public class SecurityConfig {
         String[] publicEndpoints = securityProperties.getPublicEndpoints().toArray(new String[0]);
 
         http
-                // Disable CSRF for REST API
-                .csrf(csrf -> csrf.disable())
+                // CSRF protection with cookie-based token for SPA compatibility
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                )
 
                 // Configure CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -206,5 +219,29 @@ public class SecurityConfig {
         }
 
         return new InMemoryUserDetailsManager(users);
+    }
+
+    /**
+     * SPA-compatible CSRF token request handler for Spring Security 6+.
+     * Uses XOR-based token masking for BREACH protection when the token
+     * comes via a header (set by the SPA from the XSRF-TOKEN cookie),
+     * and falls back to the plain attribute handler for form submissions.
+     */
+    static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
+        private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
+
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response,
+                Supplier<CsrfToken> csrfToken) {
+            this.delegate.handle(request, response, csrfToken);
+        }
+
+        @Override
+        public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
+            if (StringUtils.hasText(request.getHeader(csrfToken.getHeaderName()))) {
+                return super.resolveCsrfTokenValue(request, csrfToken);
+            }
+            return this.delegate.resolveCsrfTokenValue(request, csrfToken);
+        }
     }
 }

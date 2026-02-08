@@ -111,7 +111,7 @@ class TcpConnectionHandlerTest {
         when(properties.getReadTimeout()).thenReturn(30000);
 
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.CN01_REPOS);
+        ctx.setState(ServerState.CN01_REPOS);
         when(sessionHandler.createSession(anyString(), anyString())).thenReturn(ctx);
 
         when(socket.isClosed()).thenReturn(true);

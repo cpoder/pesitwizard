@@ -6,7 +6,7 @@ import java.io.IOException;
  * Transport layer abstraction for PESIT protocol
  * Supports TCP/IP, SSL/TLS, and potentially X.25
  */
-public interface TransportChannel {
+public interface TransportChannel extends AutoCloseable {
 
     /**
      * Connect to remote endpoint.

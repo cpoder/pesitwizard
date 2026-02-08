@@ -55,7 +55,7 @@ public class SecretService {
                 .scope(scope)
                 .partnerId(partnerId)
                 .serverId(serverId)
-                .version(1)
+                .version(0L)
                 .active(true)
                 .expiresAt(expiresAt)
                 .createdAt(Instant.now())
@@ -140,7 +140,7 @@ public class SecretService {
 
         secret.setEncryptedValue(encrypted.ciphertext);
         secret.setIv(encrypted.iv);
-        secret.setVersion(secret.getVersion() + 1);
+        // version is auto-incremented by JPA @Version on save
         secret.setLastRotatedAt(Instant.now());
         secret.setUpdatedAt(Instant.now());
         secret.setUpdatedBy(updatedBy);

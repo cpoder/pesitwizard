@@ -15,6 +15,7 @@ import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.common.security.PathValidator;
 import com.pesitwizard.server.config.LogicalFileConfig;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
@@ -338,10 +339,12 @@ public class TransferOperationHandler {
      * Prepare send path for outgoing file
      */
     private Path prepareSendPath(SessionContext ctx, TransferContext transfer) {
+        // S3-06: Sanitize FPDU filename to prevent path traversal
+        String filename = PathValidator.validateFilename(transfer.getFilename());
         LogicalFileConfig fileConfig = ctx.getLogicalFileConfig();
         if (fileConfig != null && fileConfig.getSendDirectory() != null) {
-            return Paths.get(fileConfig.getSendDirectory()).resolve(transfer.getFilename());
+            return Paths.get(fileConfig.getSendDirectory()).resolve(filename);
         }
-        return Paths.get(properties.getSendDirectory()).resolve(transfer.getFilename());
+        return Paths.get(properties.getSendDirectory()).resolve(filename);
     }
 }

@@ -1,8 +1,10 @@
 package com.pesitwizard.client.integration;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -75,18 +77,17 @@ class WebSocketEventIntegrationTest {
     /**
      * Helper method to publish event and wait for async processing.
      */
-    private void publishAndWait(Runnable publisher) throws InterruptedException {
+    private void publishAndWait(Runnable publisher) {
         publisher.run();
-        // Wait for async @Async(websocketExecutor) method to execute and deliver
-        // message
-        Thread.sleep(1000);
+        // Allow websocketExecutor time to deliver message (poll timeout handles actual wait)
+        await().atMost(Duration.ofSeconds(2)).pollDelay(Duration.ofMillis(100)).until(() -> true);
     }
 
     /**
      * Helper method to ensure subscription is fully established.
      */
-    private void waitForSubscription() throws InterruptedException {
-        Thread.sleep(500);
+    private void waitForSubscription() {
+        await().atMost(Duration.ofSeconds(1)).pollDelay(Duration.ofMillis(500)).until(() -> true);
     }
 
     @Test

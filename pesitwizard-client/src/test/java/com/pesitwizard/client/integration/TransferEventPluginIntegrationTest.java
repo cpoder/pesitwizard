@@ -1,7 +1,9 @@
 package com.pesitwizard.client.integration;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -98,11 +100,10 @@ class TransferEventPluginIntegrationTest {
         eventBus.error(transferId, "Second error", "1002");
         eventBus.completed(transferId, 10000L);
 
-        // Wait a bit for all events to be processed
-        Thread.sleep(500);
-
-        // Assert - Should only receive the 2 error events
-        assertEquals(2, filteredPlugin.receivedEvents.size(), "Should only receive ERROR events");
+        // Wait for all events to be processed
+        await().atMost(Duration.ofSeconds(2)).untilAsserted(() ->
+            assertEquals(2, filteredPlugin.receivedEvents.size(), "Should only receive ERROR events")
+        );
 
         TransferEvent error1 = filteredPlugin.receivedEvents.poll(1, TimeUnit.SECONDS);
         assertNotNull(error1);

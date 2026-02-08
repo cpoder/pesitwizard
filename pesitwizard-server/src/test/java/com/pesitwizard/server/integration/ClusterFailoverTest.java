@@ -8,7 +8,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -220,8 +222,16 @@ public class ClusterFailoverTest {
         assertFalse(primaryServer.isRunning());
         System.out.println("  ✓ Server stopped");
 
-        // Wait a moment
-        Thread.sleep(500);
+        // Wait for port to be released
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> {
+                try (Socket s = new Socket("localhost", PRIMARY_PORT)) {
+                    return false; // Still in use
+                } catch (Exception e) {
+                    return true; // Port freed
+                }
+            });
 
         // Restart server
         System.out.println("\nStep 4: Restart server");

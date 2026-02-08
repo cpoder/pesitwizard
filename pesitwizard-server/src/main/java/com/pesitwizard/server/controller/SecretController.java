@@ -310,7 +310,7 @@ public class SecretController {
         private SecretScope scope;
         private String partnerId;
         private String serverId;
-        private Integer version;
+        private Long version;
         private Boolean active;
         private Instant expiresAt;
         private Instant lastRotatedAt;

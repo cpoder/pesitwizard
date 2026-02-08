@@ -51,7 +51,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleWrite should transition to receiving state and return ACK")
     void handleWriteShouldTransitionToReceivingState() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         Fpdu fpdu = new Fpdu(FpduType.WRITE);
 
         Fpdu response = handler.handleWrite(ctx, fpdu);
@@ -90,7 +90,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDE02B should dispatch DTF_END correctly")
     void handleTDE02BShouldDispatchDtfEnd() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
 
         Fpdu fpdu = new Fpdu(FpduType.DTF_END);
 
@@ -122,7 +122,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDE02B should handle IDT and return ACK_IDT")
     void handleTDE02BShouldHandleIdt() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
+        ctx.setState(ServerState.TDE02B_RECEIVING_DATA);
 
         Fpdu fpdu = new Fpdu(FpduType.IDT);
 
@@ -150,7 +150,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDL02B should handle TRANS_END and return ACK")
     void handleTDL02BShouldHandleTransEnd() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDL02B_SENDING_DATA);
+        ctx.setState(ServerState.TDL02B_SENDING_DATA);
         TransferContext transfer = ctx.startTransfer();
         transfer.setBytesTransferred(2048);
         transfer.setRecordsTransferred(10);
@@ -182,7 +182,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDE07 should handle TRANS_END and complete transfer")
     void handleTDE07ShouldHandleTransEnd() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDE07_WRITE_END);
+        ctx.setState(ServerState.TDE07_WRITE_END);
         TransferContext transfer = ctx.startTransfer();
         transfer.setBytesTransferred(1024);
         transfer.setRecordsTransferred(5);
@@ -215,7 +215,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDE07 should handle null transfer gracefully")
     void handleTDE07ShouldHandleNullTransfer() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDE07_WRITE_END);
+        ctx.setState(ServerState.TDE07_WRITE_END);
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.TRANS_END);
@@ -321,7 +321,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDL02B should handle null transfer gracefully")
     void handleTDL02BShouldHandleNullTransfer() {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDL02B_SENDING_DATA);
+        ctx.setState(ServerState.TDL02B_SENDING_DATA);
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.TRANS_END);
@@ -361,7 +361,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleRead should return NACK_READ when no transfer context")
     void handleReadShouldReturnAbortWhenNoTransfer() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
@@ -376,7 +376,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleRead should return NACK_READ when local path is null")
     void handleReadShouldReturnAbortWhenLocalPathNull() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         TransferContext transfer = ctx.startTransfer();
         transfer.setLocalPath(null);
 
@@ -392,7 +392,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleRead should return NACK_READ when file does not exist")
     void handleReadShouldReturnAbortWhenFileNotExists() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+        ctx.setState(ServerState.OF02_TRANSFER_READY);
         TransferContext transfer = ctx.startTransfer();
         transfer.setLocalPath(java.nio.file.Path.of("/non/existent/file.txt"));
 
@@ -413,7 +413,7 @@ class DataTransferHandlerTest {
 
         try {
             SessionContext ctx = new SessionContext("test-session");
-            ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+            ctx.setState(ServerState.OF02_TRANSFER_READY);
             TransferContext transfer = ctx.startTransfer();
             transfer.setLocalPath(tempFile);
 
@@ -444,7 +444,7 @@ class DataTransferHandlerTest {
 
         try {
             SessionContext ctx = new SessionContext("test-session");
-            ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
+            ctx.setState(ServerState.OF02_TRANSFER_READY);
             TransferContext transfer = ctx.startTransfer();
             transfer.setLocalPath(tempFile);
 
@@ -474,7 +474,7 @@ class DataTransferHandlerTest {
 
         try {
             SessionContext ctx = new SessionContext("test-session");
-            ctx.transitionTo(ServerState.TDE07_WRITE_END);
+            ctx.setState(ServerState.TDE07_WRITE_END);
             TransferContext transfer = ctx.startTransfer();
             transfer.setLocalPath(tempFile);
             transfer.openOutputStream();
@@ -499,7 +499,7 @@ class DataTransferHandlerTest {
     @DisplayName("handleTDE07 should return ABORT for unexpected FPDU type")
     void handleTDE07ShouldReturnAbortForUnexpectedFpdu() throws Exception {
         SessionContext ctx = new SessionContext("test-session");
-        ctx.transitionTo(ServerState.TDE07_WRITE_END);
+        ctx.setState(ServerState.TDE07_WRITE_END);
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.DTF); // Wrong type

@@ -79,6 +79,7 @@ public class BackupService {
     }
 
     public RestoreResult restoreBackup(String filename) {
+        validateBackupFilename(filename);
         RestoreResult r = new RestoreResult();
         r.setBackupName(filename);
         r.setTimestamp(Instant.now());
@@ -107,6 +108,7 @@ public class BackupService {
     }
 
     public boolean deleteBackup(String filename) {
+        validateBackupFilename(filename);
         try {
             Path f = Path.of(config.getBackupDirectory(), filename);
             Files.deleteIfExists(Path.of(f + ".meta"));
@@ -140,6 +142,18 @@ public class BackupService {
             if (del > 0) log.info("Cleaned {} backups", del);
             return del;
         } catch (IOException e) { return 0; }
+    }
+
+    /**
+     * Validate backup filename to prevent path traversal (S3-03).
+     */
+    private void validateBackupFilename(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            throw new IllegalArgumentException("Backup filename must not be empty");
+        }
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new IllegalArgumentException("Invalid backup filename: path traversal not allowed");
+        }
     }
 
     private Path ensureBackupDirectory() throws IOException {

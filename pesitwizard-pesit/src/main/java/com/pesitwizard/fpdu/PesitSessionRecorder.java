@@ -1,6 +1,7 @@
 package com.pesitwizard.fpdu;
 
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -9,6 +10,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -135,10 +137,41 @@ public class PesitSessionRecorder {
         return recorder;
     }
 
+    /**
+     * Allowlist of classes permitted during deserialization of session recordings.
+     * Any class not in this set is rejected, preventing arbitrary code execution
+     * via deserialization gadget chains (CWE-502).
+     */
+    private static final Set<String> ALLOWED_CLASSES = Set.of(
+            java.lang.String.class.getName(),
+            java.lang.Enum.class.getName(),
+            java.lang.Number.class.getName(),
+            java.lang.Long.class.getName(),
+            java.lang.Integer.class.getName(),
+            java.util.ArrayList.class.getName(),
+            java.time.Instant.class.getName(),
+            "java.time.Ser",                      // Instant serialization proxy
+            byte[].class.getName(),               // [B
+            Object[].class.getName(),             // [Ljava.lang.Object; (ArrayList backing array)
+            RecordedFrame.class.getName(),
+            Direction.class.getName(),
+            FpduType.class.getName());
+
+    private static final ObjectInputFilter RECORDING_FILTER = filterInfo -> {
+        Class<?> clazz = filterInfo.serialClass();
+        if (clazz == null) {
+            return ObjectInputFilter.Status.UNDECIDED;
+        }
+        return ALLOWED_CLASSES.contains(clazz.getName())
+                ? ObjectInputFilter.Status.ALLOWED
+                : ObjectInputFilter.Status.REJECTED;
+    };
+
     @SuppressWarnings("unchecked")
     public static PesitSessionRecorder loadFromFile(Path path) throws IOException, ClassNotFoundException {
         try (ObjectInputStream in = new ObjectInputStream(
                 Files.newInputStream(path))) {
+            in.setObjectInputFilter(RECORDING_FILTER);
             String name = (String) in.readObject();
             List<RecordedFrame> frames = (List<RecordedFrame>) in.readObject();
             PesitSessionRecorder recorder = new PesitSessionRecorder(name);

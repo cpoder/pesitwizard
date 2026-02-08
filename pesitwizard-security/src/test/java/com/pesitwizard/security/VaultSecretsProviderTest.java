@@ -93,14 +93,14 @@ class VaultSecretsProviderTest {
         }
 
         @Test
-        @DisplayName("decrypt should return vault reference as-is when unavailable")
-        void decryptShouldReturnVaultRefAsIsWhenUnavailable() {
+        @DisplayName("decrypt should throw DecryptionException for vault reference when unavailable")
+        void decryptShouldThrowForVaultRefWhenUnavailable() {
             VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
 
-            String result = provider.decrypt("vault:some-key");
-
-            // When unavailable, vault reference is returned as-is
-            assertThat(result).isEqualTo("vault:some-key");
+            // When unavailable, vault reference decryption should throw
+            assertThatThrownBy(() -> provider.decrypt("vault:some-key"))
+                    .isInstanceOf(DecryptionException.class)
+                    .hasMessageContaining("some-key");
         }
     }
 
@@ -148,12 +148,13 @@ class VaultSecretsProviderTest {
     class UnavailableOperationsTests {
 
         @Test
-        @DisplayName("storeSecret should not throw when unavailable")
-        void storeSecretShouldNotThrowWhenUnavailable() {
+        @DisplayName("storeSecret should throw EncryptionException when unavailable")
+        void storeSecretShouldThrowWhenUnavailable() {
             VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
 
-            assertThatCode(() -> provider.storeSecret("key", "value"))
-                    .doesNotThrowAnyException();
+            assertThatThrownBy(() -> provider.storeSecret("key", "value"))
+                    .isInstanceOf(EncryptionException.class)
+                    .hasMessageContaining("not available");
         }
 
         @Test

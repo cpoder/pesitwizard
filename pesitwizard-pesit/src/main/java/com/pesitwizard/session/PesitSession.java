@@ -40,9 +40,8 @@ public class PesitSession implements AutoCloseable {
     }
 
     private Fpdu checkForAbort(Fpdu context) throws IOException, InterruptedException {
-        // Wait a bit for server to process
-        Thread.sleep(300);
-
+        // S3-12: channel.receive() uses blocking I/O (readUnsignedShort/readFully),
+        // no artificial sleep needed — the call blocks until data arrives or socket times out
         byte[] response = channel.receive();
         FpduParser parser = new FpduParser(response);
         Fpdu fpdu = parser.parse();

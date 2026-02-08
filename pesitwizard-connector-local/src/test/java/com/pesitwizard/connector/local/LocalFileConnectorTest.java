@@ -171,7 +171,15 @@ class LocalFileConnectorTest {
     @Test
     void testPathTraversalPrevention() {
         assertThatThrownBy(() -> connector.read("../../../etc/passwd"))
-                .isInstanceOf(SecurityException.class);
+                .isInstanceOf(ConnectorException.class)
+                .hasMessageContaining("traversal");
+    }
+
+    @Test
+    void testAbsolutePathContainment() {
+        // Absolute paths should be treated as relative to basePath, not bypass containment
+        assertThatThrownBy(() -> connector.read("/etc/passwd"))
+                .isInstanceOf(ConnectorException.class);
     }
 
     @Test

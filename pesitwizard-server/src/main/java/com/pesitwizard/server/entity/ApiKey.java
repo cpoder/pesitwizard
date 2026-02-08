@@ -15,10 +15,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Entity for storing API keys in the database.
@@ -56,6 +59,8 @@ public class ApiKey {
      * SHA-256 hash of the API key (never store plain text)
      */
     @Column(nullable = false, unique = true, length = 64)
+    @JsonIgnore
+    @ToString.Exclude
     private String keyHash;
 
     /**
@@ -69,6 +74,8 @@ public class ApiKey {
      * Never persisted to database.
      */
     @jakarta.persistence.Transient
+    @JsonIgnore
+    @ToString.Exclude
     private transient String key;
 
     /**
@@ -130,6 +137,12 @@ public class ApiKey {
      */
     @Column(length = 100)
     private String createdBy;
+
+    /**
+     * Optimistic locking version
+     */
+    @Version
+    private Long version;
 
     /**
      * Check if key is expired

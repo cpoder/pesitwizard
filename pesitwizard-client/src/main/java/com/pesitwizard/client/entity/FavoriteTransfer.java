@@ -13,10 +13,12 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Favorite transfer configuration for quick replay
@@ -78,6 +80,8 @@ public class FavoriteTransfer {
     private String virtualFile;
 
     /** Encrypted PeSIT partner password (encrypted via SecretsService) */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String password;
 
     /** Transfer config ID */

@@ -1,63 +1,80 @@
-# PeSIT Wizard PeSIT
+# pesitwizard-pesit
 
-Java library implementing the PeSIT protocol (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation).
+Core PeSIT protocol library. Implements FPDU encoding/decoding, session management, and transport abstraction per the PeSIT E specification (September 1989).
 
-## Features
+## Packages
 
-- **FPDU Encoding/Decoding**: Binary serialization compliant with PeSIT E specification
-- **All Message Types**: CONNECT, CREATE, SELECT, OPEN, WRITE, READ, DTF, etc.
-- **PeSIT Parameters**: Full support for PI and PGI
-- **PeSIT Session**: TCP connection management and message exchange
+| Package | Description |
+|---------|-------------|
+| `com.pesitwizard.fpdu` | FPDU serialization, parsing, builders, and PI definitions |
+| `com.pesitwizard.session` | PeSIT session management and FPDU exchange |
+| `com.pesitwizard.transport` | Transport channel abstraction (TCP, TLS, X.25) |
+| `com.pesitwizard.exception` | Protocol-specific exceptions |
 
-## Installation
+## Key Classes
+
+- **`Fpdu`** - Core FPDU data structure with serialization/deserialization
+- **`FpduType`** - Enum of 30+ FPDU types with parameter requirements
+- **`FpduParser`** / **`FpduBuilder`** - Parse raw bytes to FPDU and build FPDU to bytes
+- **`FpduReader`** / **`FpduIO`** - Stream-level FPDU I/O with concatenated FPDU handling (PeSIT section 4.5)
+- **`ParameterIdentifier`** - 96 PI definitions with types and max lengths
+- **`PesitSession`** - Manages FPDU exchange, ACK validation, error handling
+- **`TransportChannel`** - Abstraction over TCP/TLS sockets with dynamic timeout
+
+## FPDU Structure
+
+```
+[Length(2)][Phase(1)][Type(1)][IdDst(1)][IdSrc(1)][Parameters or Data]
+```
+
+- **Phase**: `0x40` (session), `0xC0` (file), `0x00` (data transfer)
+- **Parameters**: PI (Parameter Information) codes with typed values
+
+## Usage
+
+This module is a library dependency used by `pesitwizard-client` and `pesitwizard-server`.
 
 ```xml
 <dependency>
     <groupId>com.pesitwizard</groupId>
     <artifactId>pesitwizard-pesit</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>${project.version}</version>
 </dependency>
 ```
-
-## Build
-
-```bash
-mvn clean install
-```
-
-## Usage
 
 ### Create a CONNECT Message
 
 ```java
-import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.fpdu.FpduType;
-import com.pesitwizard.fpdu.ParameterValue;
-import static com.pesitwizard.fpdu.ParameterIdentifier.*;
-
 Fpdu connect = new Fpdu(FpduType.CONNECT)
     .withIdSrc(1)
     .withParameter(new ParameterValue(PI_03_DEMANDEUR, "MY_CLIENT"))
     .withParameter(new ParameterValue(PI_04_SERVEUR, "BANK_SERVER"));
 
-byte[] data = connect.toBytes();
+byte[] data = FpduBuilder.buildFpdu(connect);
 ```
 
-### Decode an FPDU
+### Parse an FPDU
 
 ```java
-byte[] received = // ... data received from the network
-Fpdu fpdu = Fpdu.fromBytes(received);
+byte[] received = // ... data from network
+Fpdu fpdu = new FpduParser(received).parse();
 
-if (fpdu.getType() == FpduType.ACONNECT) {
+if (fpdu.getFpduType() == FpduType.ACONNECT) {
     int serverId = fpdu.getIdSrc();
 }
+```
+
+## Building
+
+```bash
+mvn clean install
+mvn test
 ```
 
 ## Prerequisites
 
 - Java 21+
-- Maven 3.6+
+- Maven 3.9+
 
 ## Reference
 

@@ -1,7 +1,9 @@
 package com.pesitwizard.server.entity;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.DisplayName;
@@ -110,12 +112,8 @@ class PesitServerConfigTest {
         config.onCreate();
         Instant originalUpdated = config.getUpdatedAt();
 
-        // Wait a bit to ensure time difference
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        // Wait to ensure time difference
+        await().atMost(Duration.ofMillis(200)).pollDelay(Duration.ofMillis(10)).until(() -> true);
 
         config.onUpdate();
 

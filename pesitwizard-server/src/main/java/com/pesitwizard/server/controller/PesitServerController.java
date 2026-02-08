@@ -18,6 +18,7 @@ import com.pesitwizard.server.dto.ServerStatusResponse;
 import com.pesitwizard.server.entity.PesitServerConfig;
 import com.pesitwizard.server.service.PesitServerManager;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,7 +55,7 @@ public class PesitServerController {
      * Create a new server configuration
      */
     @PostMapping
-    public ResponseEntity<?> createServer(@RequestBody PesitServerConfig config) {
+    public ResponseEntity<?> createServer(@Valid @RequestBody PesitServerConfig config) {
         try {
             PesitServerConfig created = serverManager.createServer(config);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -68,7 +69,7 @@ public class PesitServerController {
      */
     @PutMapping("/{serverId}")
     public ResponseEntity<?> updateServer(@PathVariable String serverId,
-            @RequestBody PesitServerConfig config) {
+            @Valid @RequestBody PesitServerConfig config) {
         try {
             PesitServerConfig updated = serverManager.updateServer(serverId, config);
             return ResponseEntity.ok(updated);

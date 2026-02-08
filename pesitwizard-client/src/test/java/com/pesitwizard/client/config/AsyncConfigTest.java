@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -170,7 +172,7 @@ class AsyncConfigTest {
         });
 
         // Assert - Task should have executed in caller thread (or completed in pool)
-        Thread.sleep(200);
-        assertTrue(executionThreadName[0] != null, "Task should have been executed");
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
+            .untilAsserted(() -> assertNotNull(executionThreadName[0], "Task should have been executed"));
     }
 }

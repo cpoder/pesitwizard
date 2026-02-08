@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
 import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
@@ -32,6 +33,7 @@ public class CertificateService {
 
     private final CertificateStoreRepository certificateRepository;
     private final SslContextFactory sslContextFactory;
+    private final SecretsService secretsService;
 
     // ========== CRUD Operations ==========
 
@@ -58,7 +60,7 @@ public class CertificateService {
             throw new IllegalArgumentException("Certificate store already exists: " + name);
         }
 
-        // Build the entity
+        // Build the entity (with plaintext passwords for validation)
         CertificateStore store = CertificateStore.builder()
                 .name(name)
                 .description(description)
@@ -77,7 +79,7 @@ public class CertificateService {
                 .createdBy(createdBy)
                 .build();
 
-        // Validate the store
+        // Validate the store (needs plaintext passwords)
         sslContextFactory.validateStore(store);
 
         // Extract certificate info
@@ -95,6 +97,10 @@ public class CertificateService {
         } catch (Exception e) {
             log.warn("Could not extract certificate info: {}", e.getMessage());
         }
+
+        // Encrypt passwords before persisting
+        store.setStorePassword(encryptPassword(storePassword, name, "storePassword"));
+        store.setKeyPassword(encryptPassword(keyPassword, name, "keyPassword"));
 
         // If this is set as default, unset other defaults
         if (isDefault) {
@@ -131,13 +137,14 @@ public class CertificateService {
 
         if (storeData != null && storeData.length > 0) {
             store.setStoreData(storeData);
+            // Set plaintext passwords temporarily for validation
             store.setStorePassword(storePassword);
             store.setKeyPassword(keyPassword);
             if (keyAlias != null) {
                 store.setKeyAlias(keyAlias);
             }
 
-            // Validate and extract info
+            // Validate and extract info (needs plaintext passwords)
             sslContextFactory.validateStore(store);
             try {
                 CertificateInfo info = sslContextFactory.extractCertificateInfo(store);
@@ -150,6 +157,10 @@ public class CertificateService {
             } catch (Exception e) {
                 log.warn("Could not extract certificate info: {}", e.getMessage());
             }
+
+            // Encrypt passwords before persisting
+            store.setStorePassword(encryptPassword(storePassword, store.getName(), "storePassword"));
+            store.setKeyPassword(encryptPassword(keyPassword, store.getName(), "keyPassword"));
         }
 
         if (active != null) {
@@ -357,6 +368,20 @@ public class CertificateService {
     // ========== Helper Methods ==========
 
     /**
+     * Encrypt a password for storage if not already encrypted.
+     * Returns null for null/blank input.
+     */
+    private String encryptPassword(String password, String storeName, String fieldName) {
+        if (password == null || password.isBlank()) {
+            return password;
+        }
+        if (secretsService.isEncrypted(password)) {
+            return password;
+        }
+        return secretsService.encryptForStorage(password, "certstore", storeName, fieldName);
+    }
+
+    /**
      * Unset default flag on other stores of the same type
      */
     private void unsetOtherDefaults(StoreType type) {
@@ -400,7 +425,7 @@ public class CertificateService {
                     .storeType(StoreType.KEYSTORE)
                     .format(format)
                     .storeData(emptyStore)
-                    .storePassword(storePassword)
+                    .storePassword(encryptPassword(storePassword, name, "storePassword"))
                     .purpose(purpose)
                     .partnerId(partnerId)
                     .isDefault(isDefault)
@@ -450,7 +475,7 @@ public class CertificateService {
                     .storeType(StoreType.TRUSTSTORE)
                     .format(format)
                     .storeData(emptyStore)
-                    .storePassword(storePassword)
+                    .storePassword(encryptPassword(storePassword, name, "storePassword"))
                     .purpose(CertificatePurpose.CA)
                     .partnerId(partnerId)
                     .isDefault(isDefault)
@@ -536,7 +561,7 @@ public class CertificateService {
                     store, certificateData, privateKeyData, alias, keyPassword);
             store.setStoreData(updatedStore);
             store.setKeyAlias(alias);
-            store.setKeyPassword(keyPassword);
+            store.setKeyPassword(encryptPassword(keyPassword, store.getName(), "keyPassword"));
             store.setUpdatedAt(java.time.Instant.now());
 
             // Update certificate info
