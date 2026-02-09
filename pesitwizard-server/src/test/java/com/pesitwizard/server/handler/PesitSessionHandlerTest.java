@@ -292,8 +292,8 @@ class PesitSessionHandlerTest {
         SessionContext ctx = handler.createSession("192.168.1.100");
         byte[] invalidData = new byte[] { 0x00, 0x01, 0x02 }; // Too short to be valid
 
-        // IllegalArgumentException when FPDU is too short to parse
-        assertThrows(IllegalArgumentException.class,
+        // FpduException when FPDU is too short to parse
+        assertThrows(com.pesitwizard.fpdu.FpduException.class,
                 () -> handler.processIncomingFpdu(ctx, invalidData, null, null));
     }
 
