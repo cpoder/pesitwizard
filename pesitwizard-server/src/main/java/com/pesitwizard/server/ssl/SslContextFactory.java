@@ -6,10 +6,12 @@ import java.security.MessageDigest;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -46,25 +48,40 @@ public class SslContextFactory {
     private static final String TLS_PROTOCOL = "TLSv1.3";
     private static final String FALLBACK_PROTOCOL = "TLSv1.2";
 
+    /** Cache TTL: cached SSLContext entries are considered fresh for this duration. */
+    private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+
+    /** Cache of SSLContext by composite key (e.g., "default", "partner:xyz", "envvar"). */
+    private final ConcurrentHashMap<String, CachedContext> sslContextCache = new ConcurrentHashMap<>();
+
+    private record CachedContext(SSLContext context, Instant cachedAt) {
+        boolean isExpired() {
+            return Duration.between(cachedAt, Instant.now()).compareTo(CACHE_TTL) > 0;
+        }
+    }
+
     /**
-     * Create an SSL context using the default keystore and truststore
+     * Create an SSL context using the default keystore and truststore.
+     * Results are cached for {@link #CACHE_TTL} to avoid repeated KeyStore parsing.
      */
     public SSLContext createDefaultSslContext() throws SslConfigurationException {
-        CertificateStore keystore = certificateRepository
-                .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
-                .orElseThrow(() -> new SslConfigurationException("No default keystore configured"));
+        return getCachedOrCreate("default", () -> {
+            CertificateStore keystore = certificateRepository
+                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
+                    .orElseThrow(() -> new SslConfigurationException("No default keystore configured"));
 
-        CertificateStore truststore = certificateRepository
-                .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
-                .orElse(null); // Truststore is optional
+            CertificateStore truststore = certificateRepository
+                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
+                    .orElse(null);
 
-        return createSslContext(keystore, truststore);
+            return createSslContextUncached(keystore, truststore);
+        });
     }
 
     /**
      * Create an SSL context using named keystore and truststore.
      * If environment variable based certificates are configured, those take
-     * precedence.
+     * precedence. Results are cached for {@link #CACHE_TTL}.
      */
     public SSLContext createSslContext(String keystoreName, String truststoreName)
             throws SslConfigurationException {
@@ -75,33 +92,41 @@ public class SslContextFactory {
             return createSslContextFromEnvVars();
         }
 
-        CertificateStore keystore = certificateRepository
-                .findByNameAndStoreType(keystoreName, StoreType.KEYSTORE)
-                .orElseThrow(() -> new SslConfigurationException("Keystore not found: " + keystoreName));
+        String cacheKey = "named:" + keystoreName + ":" + (truststoreName != null ? truststoreName : "null");
+        return getCachedOrCreate(cacheKey, () -> {
+            CertificateStore keystore = certificateRepository
+                    .findByNameAndStoreType(keystoreName, StoreType.KEYSTORE)
+                    .orElseThrow(() -> new SslConfigurationException("Keystore not found: " + keystoreName));
 
-        if (!keystore.getActive()) {
-            throw new SslConfigurationException("Keystore is not active: " + keystoreName);
-        }
-
-        CertificateStore truststore = null;
-        if (truststoreName != null) {
-            truststore = certificateRepository
-                    .findByNameAndStoreType(truststoreName, StoreType.TRUSTSTORE)
-                    .orElseThrow(() -> new SslConfigurationException("Truststore not found: " + truststoreName));
-
-            if (!truststore.getActive()) {
-                throw new SslConfigurationException("Truststore is not active: " + truststoreName);
+            if (!keystore.getActive()) {
+                throw new SslConfigurationException("Keystore is not active: " + keystoreName);
             }
-        }
 
-        return createSslContext(keystore, truststore);
+            CertificateStore truststore = null;
+            if (truststoreName != null) {
+                truststore = certificateRepository
+                        .findByNameAndStoreType(truststoreName, StoreType.TRUSTSTORE)
+                        .orElseThrow(() -> new SslConfigurationException("Truststore not found: " + truststoreName));
+
+                if (!truststore.getActive()) {
+                    throw new SslConfigurationException("Truststore is not active: " + truststoreName);
+                }
+            }
+
+            return createSslContextUncached(keystore, truststore);
+        });
     }
 
     /**
      * Create an SSL context from environment variable based certificates.
      * Used in Kubernetes deployments where certificates are passed via ConfigMap.
+     * Cached permanently since env vars are immutable at runtime.
      */
     public SSLContext createSslContextFromEnvVars() throws SslConfigurationException {
+        CachedContext cached = sslContextCache.get("envvar");
+        if (cached != null) {
+            return cached.context();
+        }
         try {
             String keystoreData = sslProperties.getKeystoreData();
             String keystorePassword = sslProperties.getKeystorePassword();
@@ -155,6 +180,7 @@ public class SslContextFactory {
             sslContext.init(kmf.getKeyManagers(), tmf != null ? tmf.getTrustManagers() : null, null);
             log.info("SSL context created successfully from environment variables");
 
+            sslContextCache.put("envvar", new CachedContext(sslContext, Instant.now()));
             return sslContext;
 
         } catch (SslConfigurationException e) {
@@ -166,34 +192,44 @@ public class SslContextFactory {
     }
 
     /**
-     * Create an SSL context for a specific partner (mutual TLS)
+     * Create an SSL context for a specific partner (mutual TLS).
+     * Results are cached for {@link #CACHE_TTL}.
      */
     public SSLContext createPartnerSslContext(String partnerId) throws SslConfigurationException {
-        // Try to find partner-specific keystore
-        CertificateStore keystore = certificateRepository
-                .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.KEYSTORE)
-                .orElseGet(() -> certificateRepository
-                        .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
-                        .orElse(null));
+        return getCachedOrCreate("partner:" + partnerId, () -> {
+            CertificateStore keystore = certificateRepository
+                    .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.KEYSTORE)
+                    .orElseGet(() -> certificateRepository
+                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
+                            .orElse(null));
 
-        if (keystore == null) {
-            throw new SslConfigurationException("No keystore available for partner: " + partnerId);
-        }
+            if (keystore == null) {
+                throw new SslConfigurationException("No keystore available for partner: " + partnerId);
+            }
 
-        // Try to find partner-specific truststore
-        CertificateStore truststore = certificateRepository
-                .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.TRUSTSTORE)
-                .orElseGet(() -> certificateRepository
-                        .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
-                        .orElse(null));
+            CertificateStore truststore = certificateRepository
+                    .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.TRUSTSTORE)
+                    .orElseGet(() -> certificateRepository
+                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
+                            .orElse(null));
 
-        return createSslContext(keystore, truststore);
+            return createSslContextUncached(keystore, truststore);
+        });
     }
 
     /**
-     * Create an SSL context from certificate store entities
+     * Create an SSL context from certificate store entities (delegates to cached version).
      */
     public SSLContext createSslContext(CertificateStore keystore, CertificateStore truststore)
+            throws SslConfigurationException {
+        String cacheKey = "stores:" + keystore.getId() + ":" + (truststore != null ? truststore.getId() : "null");
+        return getCachedOrCreate(cacheKey, () -> createSslContextUncached(keystore, truststore));
+    }
+
+    /**
+     * Create an SSL context without caching (internal).
+     */
+    private SSLContext createSslContextUncached(CertificateStore keystore, CertificateStore truststore)
             throws SslConfigurationException {
         try {
             // Load keystore (loadKeyStore handles password decryption)
@@ -267,6 +303,47 @@ public class SslContextFactory {
      */
     public SSLSocketFactory createPartnerSocketFactory(String partnerId) throws SslConfigurationException {
         return createPartnerSslContext(partnerId).getSocketFactory();
+    }
+
+    /**
+     * Clear the entire SSLContext cache. Call this after certificate stores are updated
+     * to force immediate reload on next connection.
+     */
+    public void clearCache() {
+        int size = sslContextCache.size();
+        sslContextCache.clear();
+        if (size > 0) {
+            log.info("SSLContext cache cleared ({} entries removed)", size);
+        }
+    }
+
+    /**
+     * Clear a specific cache entry by key pattern. Useful when a specific
+     * certificate store is updated.
+     */
+    public void clearCacheForPartner(String partnerId) {
+        sslContextCache.remove("partner:" + partnerId);
+    }
+
+    /**
+     * Get a cached SSLContext or create a new one. Thread-safe.
+     */
+    private SSLContext getCachedOrCreate(String key, SslContextSupplier supplier) throws SslConfigurationException {
+        CachedContext cached = sslContextCache.get(key);
+        if (cached != null && !cached.isExpired()) {
+            return cached.context();
+        }
+
+        // Cache miss or expired — create new context
+        SSLContext context = supplier.get();
+        sslContextCache.put(key, new CachedContext(context, Instant.now()));
+        log.debug("SSLContext cached: key={}", key);
+        return context;
+    }
+
+    @FunctionalInterface
+    private interface SslContextSupplier {
+        SSLContext get() throws SslConfigurationException;
     }
 
     /**

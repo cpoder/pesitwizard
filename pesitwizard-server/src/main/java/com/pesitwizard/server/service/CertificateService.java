@@ -109,6 +109,7 @@ public class CertificateService {
 
         store = certificateRepository.save(store);
         log.info("Created certificate store: {} ({})", name, storeType);
+        sslContextFactory.clearCache();
 
         return store;
     }
@@ -179,6 +180,7 @@ public class CertificateService {
 
         store = certificateRepository.save(store);
         log.info("Updated certificate store: {}", store.getName());
+        sslContextFactory.clearCache();
 
         return store;
     }
@@ -193,6 +195,7 @@ public class CertificateService {
 
         certificateRepository.delete(store);
         log.info("Deleted certificate store: {}", store.getName());
+        sslContextFactory.clearCache();
     }
 
     /**
