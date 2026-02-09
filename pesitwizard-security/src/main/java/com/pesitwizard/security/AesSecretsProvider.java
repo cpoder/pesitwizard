@@ -70,7 +70,7 @@ public class AesSecretsProvider implements SecretsProvider {
                 this.legacySecretKey = deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
                 this.available = true;
                 log.info("AES secrets provider initialized (v2 with dynamic salt)");
-            } catch (java.security.GeneralSecurityException | IOException e) {
+            } catch (java.security.GeneralSecurityException | IOException | IllegalArgumentException e) {
                 log.error("Failed to initialize AES secrets provider");
                 throw new EncryptionException("Failed to initialize AES encryption", e);
             }
