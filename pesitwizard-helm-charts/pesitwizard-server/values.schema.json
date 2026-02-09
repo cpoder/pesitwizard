@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PeSIT Wizard Server (Standalone) Helm Values",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Number of server replicas"
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "description": "Container image repository" },
+        "tag": { "type": "string", "description": "Image tag" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      },
+      "required": ["repository", "tag"]
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "pesitPort": { "type": "integer", "minimum": 1, "maximum": 65535, "description": "PeSIT protocol port" },
+        "httpPort": { "type": "integer", "minimum": 1, "maximum": 65535, "description": "HTTP API port" }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "object",
+          "properties": {
+            "memory": { "type": "string", "pattern": "^[0-9]+(Mi|Gi)$" },
+            "cpu": { "type": "string", "pattern": "^[0-9]+m?$" }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "memory": { "type": "string", "pattern": "^[0-9]+(Mi|Gi)$" },
+            "cpu": { "type": "string", "pattern": "^[0-9]+m?$" }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "storageClass": { "type": "string", "description": "StorageClass name (empty for default)" },
+        "accessMode": { "type": "string", "enum": ["ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany"] },
+        "size": { "type": "string", "pattern": "^[0-9]+(Mi|Gi|Ti)$" }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "pesit": {
+          "type": "object",
+          "properties": {
+            "serverId": { "type": "string", "minLength": 1, "maxLength": 25, "description": "PeSIT server identifier" },
+            "password": { "type": "string", "minLength": 1, "description": "PeSIT server password (change from default!)" }
+          },
+          "required": ["serverId", "password"]
+        },
+        "security": {
+          "type": "object",
+          "properties": {
+            "masterKey": { "type": "string", "description": "Master key for AES encryption (required for production)" },
+            "encryptionSalt": { "type": "string", "description": "Base64 32-byte salt (required for multi-pod). Generate: openssl rand -base64 32" }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "properties": {
+            "level": { "type": "string", "enum": ["TRACE", "DEBUG", "INFO", "WARN", "ERROR"] }
+          }
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "ingressSelector": { "type": "object" }
+      }
+    },
+    "nodeSelector": { "type": "object" },
+    "tolerations": { "type": "array", "items": { "type": "object" } },
+    "affinity": { "type": "object" }
+  }
+}

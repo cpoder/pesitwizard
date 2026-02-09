@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pesitwizard.server.cluster.ClusterMessage;
+import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
@@ -26,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 /**
  * REST controller for managing PeSIT server configuration.
  * Provides APIs for partners and virtual files management.
+ * Broadcasts config changes to all cluster nodes.
  */
 @RestController
 @RequestMapping("/api/v1/config")
@@ -34,6 +37,7 @@ public class ConfigController {
 
     private final ConfigService configService;
     private final AuditService auditService;
+    private final ClusterProvider clusterProvider;
 
     // ==================== Partners ====================
 
@@ -73,6 +77,7 @@ public class ConfigController {
         Partner created = configService.savePartner(partner);
         auditService.logConfigChange(AuditEventType.PARTNER_CREATED, "Partner", partner.getId(),
                 null, "Created partner: " + partner.getId());
+        broadcastConfigChange("PARTNER", partner.getId(), "CREATED");
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -92,6 +97,7 @@ public class ConfigController {
         Partner saved = configService.savePartner(partner);
         auditService.logConfigChange(isNew ? AuditEventType.PARTNER_CREATED : AuditEventType.PARTNER_UPDATED,
                 "Partner", id, null, (isNew ? "Created" : "Updated") + " partner: " + id);
+        broadcastConfigChange("PARTNER", id, isNew ? "CREATED" : "UPDATED");
         return ResponseEntity.ok(saved);
     }
 
@@ -106,6 +112,7 @@ public class ConfigController {
         configService.deletePartner(id);
         auditService.logConfigChange(AuditEventType.PARTNER_DELETED, "Partner", id,
                 null, "Deleted partner: " + id);
+        broadcastConfigChange("PARTNER", id, "DELETED");
         return ResponseEntity.noContent().build();
     }
 
@@ -147,6 +154,7 @@ public class ConfigController {
         VirtualFile created = configService.saveVirtualFile(file);
         auditService.logConfigChange(AuditEventType.VIRTUAL_FILE_CREATED, "VirtualFile", file.getId(),
                 null, "Created virtual file: " + file.getId());
+        broadcastConfigChange("VIRTUAL_FILE", file.getId(), "CREATED");
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -166,6 +174,7 @@ public class ConfigController {
         VirtualFile saved = configService.saveVirtualFile(file);
         auditService.logConfigChange(isNew ? AuditEventType.VIRTUAL_FILE_CREATED : AuditEventType.VIRTUAL_FILE_UPDATED,
                 "VirtualFile", id, null, (isNew ? "Created" : "Updated") + " virtual file: " + id);
+        broadcastConfigChange("VIRTUAL_FILE", id, isNew ? "CREATED" : "UPDATED");
         return ResponseEntity.ok(saved);
     }
 
@@ -180,6 +189,16 @@ public class ConfigController {
         configService.deleteVirtualFile(id);
         auditService.logConfigChange(AuditEventType.VIRTUAL_FILE_DELETED, "VirtualFile", id,
                 null, "Deleted virtual file: " + id);
+        broadcastConfigChange("VIRTUAL_FILE", id, "DELETED");
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Broadcast a config change notification to all cluster nodes.
+     * In standalone mode, this is a no-op.
+     */
+    private void broadcastConfigChange(String entityType, String entityId, String operation) {
+        clusterProvider.broadcast(
+                ClusterMessage.configChanged(clusterProvider.getNodeName(), entityType, entityId, operation));
     }
 }

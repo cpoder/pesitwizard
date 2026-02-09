@@ -20,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
 import com.pesitwizard.server.service.AuditService;
@@ -41,6 +42,9 @@ class ConfigControllerTest {
 
     @MockitoBean
     private AuditService auditService;
+
+    @MockitoBean
+    private ClusterProvider clusterProvider;
 
     @Nested
     @DisplayName("Partners")

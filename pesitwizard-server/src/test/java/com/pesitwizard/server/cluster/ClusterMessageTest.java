@@ -35,10 +35,11 @@ class ClusterMessageTest {
     @Test
     @DisplayName("should have all message types")
     void shouldHaveAllMessageTypes() {
-        assertEquals(3, ClusterMessage.Type.values().length);
+        assertEquals(4, ClusterMessage.Type.values().length);
         assertNotNull(ClusterMessage.Type.SERVER_ACQUIRED);
         assertNotNull(ClusterMessage.Type.SERVER_RELEASED);
         assertNotNull(ClusterMessage.Type.SERVER_STATE_CHANGED);
+        assertNotNull(ClusterMessage.Type.CONFIG_CHANGED);
     }
 
     @Test

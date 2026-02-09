@@ -87,7 +87,13 @@ otel:
     name: ${spring.application.name}
 
 # PeSIT Wizard client defaults
+# Security mode:
+#   SPRING_PROFILES_ACTIVE=nosecurity   → no auth (dev only)
+#   SPRING_PROFILES_ACTIVE=apikey       → static API key auth (set PESITWIZARD_SECURITY_API_KEY)
+#   SPRING_PROFILES_ACTIVE=             → OAuth2/JWT (set OAUTH2_JWK_SET_URI)
 pesitwizard:
+  security:
+    api-key: ${PESITWIZARD_SECURITY_API_KEY:}
   # CORS allowed origins (comma-separated).
   # Must be configured for production, e.g. https://myapp.example.com
   # Env var: PESITWIZARD_CORS_ALLOWED_ORIGINS

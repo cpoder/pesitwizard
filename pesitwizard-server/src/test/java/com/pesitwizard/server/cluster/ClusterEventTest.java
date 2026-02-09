@@ -73,12 +73,26 @@ class ClusterEventTest {
     @Test
     @DisplayName("should have all event types")
     void shouldHaveAllEventTypes() {
-        assertEquals(6, ClusterEvent.Type.values().length);
+        assertEquals(7, ClusterEvent.Type.values().length);
         assertNotNull(ClusterEvent.Type.VIEW_CHANGED);
         assertNotNull(ClusterEvent.Type.BECAME_LEADER);
         assertNotNull(ClusterEvent.Type.LOST_LEADERSHIP);
         assertNotNull(ClusterEvent.Type.SERVER_ACQUIRED);
         assertNotNull(ClusterEvent.Type.SERVER_RELEASED);
         assertNotNull(ClusterEvent.Type.SERVER_STATE_CHANGED);
+        assertNotNull(ClusterEvent.Type.CONFIG_CHANGED);
+    }
+
+    @Test
+    @DisplayName("configChanged should create event with entity details")
+    void configChangedShouldCreateCorrectEvent() {
+        ClusterEvent event = ClusterEvent.configChanged("node1", "PARTNER", "BNPP", "CREATED");
+
+        assertEquals(ClusterEvent.Type.CONFIG_CHANGED, event.getType());
+        assertEquals("node1", event.getNodeId());
+        assertEquals("PARTNER", event.getEntityType());
+        assertEquals("BNPP", event.getEntityId());
+        assertEquals("CREATED", event.getOperation());
+        assertNull(event.getServerId());
     }
 }

@@ -518,6 +518,12 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
             case SERVER_STATE_CHANGED -> {
                 notifyListeners(ClusterEvent.serverStateChanged(msg.getServerId(), msg.getNodeId()));
             }
+            case CONFIG_CHANGED -> {
+                log.info("Config change notification from node '{}': {} {} {}",
+                        msg.getNodeId(), msg.getOperation(), msg.getEntityType(), msg.getEntityId());
+                notifyListeners(ClusterEvent.configChanged(
+                        msg.getNodeId(), msg.getEntityType(), msg.getEntityId(), msg.getOperation()));
+            }
         }
     }
 

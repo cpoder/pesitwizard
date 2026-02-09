@@ -108,22 +108,12 @@ jobs:
 
 ### Docker (Self-Hosted)
 
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY pesitwizard-docs/package*.json ./
-RUN npm ci
-COPY pesitwizard-docs/ .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/.vitepress/dist /usr/share/nginx/html
-EXPOSE 80
-```
+A `Dockerfile` is provided in this directory:
 
 ```bash
-docker build -t pesitwizard-docs -f Dockerfile.docs .
-docker run -p 8080:80 pesitwizard-docs
+cd pesitwizard-docs
+docker build -t pesitwizard-docs .
+docker run -p 8080:8080 pesitwizard-docs
 ```
 
 ## OpenAPI Files
