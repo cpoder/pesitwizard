@@ -73,7 +73,8 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should record raw bytes and parse type")
         void shouldRecordRawBytesAndParseType() {
-            byte[] data = new byte[] { 0x40, 0x21, 0, 0, 0, 0 };
+            // Valid FPDU: [length=6][phase=0x40][type=0x21(ACONNECT)][idDst=0][idSrc=0]
+            byte[] data = new byte[] { 0x00, 0x06, 0x40, 0x21, 0, 0 };
             recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, data);
 
             assertThat(recorder.getFrames()).hasSize(1);

@@ -32,6 +32,10 @@ public class FpduParser {
         // Create a slice limited to this FPDU's data (fpduLength - 2 bytes already
         // read)
         int dataLen = fpduLength - 2;
+        if (dataLen < 0 || dataLen > buffer.remaining()) {
+            throw new FpduException("Invalid FPDU length: " + fpduLength
+                    + " (available: " + (buffer.remaining() + 2) + " bytes)");
+        }
         ByteBuffer slice = buffer.slice();
         slice.limit(dataLen);
         this.buffer = slice;
