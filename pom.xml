@@ -59,7 +59,7 @@
         <jacoco.minimum.coverage>0.50</jacoco.minimum.coverage>
         <!-- S4-10: Centralized dependency versions -->
         <spring-boot.version>3.5.7</spring-boot.version>
-        <bouncycastle.version>1.78.1</bouncycastle.version>
+        <bouncycastle.version>1.83</bouncycastle.version>
         <awssdk.version>2.41.24</awssdk.version>
         <jsch.version>0.2.21</jsch.version>
         <jgroups.version>5.3.10.Final</jgroups.version>
