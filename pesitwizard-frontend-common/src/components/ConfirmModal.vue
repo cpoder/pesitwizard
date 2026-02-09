@@ -53,7 +53,7 @@ const style = variantStyles[props.variant]
         <div class="flex min-h-full items-center justify-center p-4">
           <!-- Backdrop -->
           <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="emit('cancel')" />
-          
+
           <!-- Modal -->
           <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:w-full sm:max-w-lg">
             <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">

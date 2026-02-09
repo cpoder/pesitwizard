@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@pesitwizard/frontend-common": "file:../pesitwizard-frontend-common",
     "@stomp/stompjs": "^7.0.0",
     "axios": "^1.13.2",
     "lucide-vue-next": "^0.556.0",

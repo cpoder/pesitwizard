@@ -16,6 +16,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('src', import.meta.url)),
     },
+    preserveSymlinks: true,
   },
   server: {
     port: parseInt(process.env.VITE_PORT || '3001'),

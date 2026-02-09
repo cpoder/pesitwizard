@@ -2,8 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { Calendar, Trash2, RefreshCw, Plus, Edit, X } from 'lucide-vue-next'
 import api from '@/api'
-import ConfirmModal from '@/components/ConfirmModal.vue'
-import { useToast } from '@/composables/useToast'
+import { ConfirmModal } from '@pesitwizard/frontend-common/components'
+import { useToast } from '@pesitwizard/frontend-common/composables'
 
 const toast = useToast()
 

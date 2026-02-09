@@ -12,7 +12,7 @@ import {
   Star
 } from 'lucide-vue-next'
 import api from '@/api'
-import { useToast } from '@/composables/useToast'
+import { useToast } from '@pesitwizard/frontend-common/composables'
 
 const toast = useToast()
 

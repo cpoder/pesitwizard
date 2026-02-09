@@ -1,0 +1,21 @@
+{
+  "name": "@pesitwizard/frontend-common",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./composables": "./src/composables/index.ts",
+    "./components": "./src/components/index.ts",
+    "./api": "./src/api/index.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "axios": "^1.13.0",
+    "lucide-vue-next": "^0.556.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
