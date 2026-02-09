@@ -42,7 +42,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
         super(host, port);
         try {
             this.sslContext = SSLContext.getDefault();
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException e) {
             throw new RuntimeException("Failed to initialize default SSL context", e);
         }
     }
@@ -92,7 +92,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
 
             log.info("TLS context initialized with truststore ({} bytes)", truststoreData.length);
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | IOException e) {
             throw new RuntimeException("Failed to initialize SSL context: " + e.getMessage(), e);
         }
     }

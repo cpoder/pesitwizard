@@ -30,7 +30,7 @@ public class CsrUtils {
             return PemUtils.toPem(csr);
         } catch (CryptoException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (org.bouncycastle.operator.OperatorCreationException e) {
             throw new CryptoException("Failed to generate CSR", e);
         }
     }
@@ -44,7 +44,7 @@ public class CsrUtils {
             throw new CryptoException("Invalid CSR format");
         } catch (CryptoException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             throw new CryptoException("Failed to parse CSR", e);
         }
     }

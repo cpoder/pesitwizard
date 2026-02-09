@@ -163,7 +163,7 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Invalid keystore: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to upload keystore", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Failed to upload keystore: " + e.getMessage()));
@@ -206,7 +206,7 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Invalid truststore: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to upload truststore", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Failed to upload truststore: " + e.getMessage()));
@@ -249,7 +249,7 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Invalid certificate: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to update certificate", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Failed to update certificate: " + e.getMessage()));
@@ -443,7 +443,7 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to add certificate", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Failed to add certificate: " + e.getMessage()));
@@ -470,7 +470,7 @@ public class CertificateController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to add key pair", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Failed to add key pair: " + e.getMessage()));

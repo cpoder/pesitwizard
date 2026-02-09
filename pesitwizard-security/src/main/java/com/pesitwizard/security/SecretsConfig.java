@@ -255,7 +255,7 @@ public class SecretsConfig {
 
             byte[] hash = md.digest();
             return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException e) {
             throw new IllegalStateException(
                     "Failed to generate master key: SHA-256 MessageDigest not available. "
                     + "This indicates a broken Java installation.", e);
@@ -297,7 +297,7 @@ public class SecretsConfig {
     private String getHostname() {
         try {
             return java.net.InetAddress.getLocalHost().getHostName();
-        } catch (Exception e) {
+        } catch (java.net.UnknownHostException e) {
             return "unknown-host";
         }
     }

@@ -1,5 +1,6 @@
 package com.pesitwizard.client.controller;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -114,7 +115,7 @@ public class SecurityController {
                     "totalMigrated", result.totalMigrated(),
                     "totalSkipped", result.totalSkipped(),
                     "details", result.details()));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Migration failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
@@ -145,7 +146,7 @@ public class SecurityController {
                     "success", success,
                     "message", success ? "Encryption working correctly" : "Decryption mismatch",
                     "encrypted", encrypted.substring(0, Math.min(20, encrypted.length())) + "..."));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Encryption test failed: {}", e.getMessage());
             return ResponseEntity.ok(Map.of(
                     "success", false,
@@ -197,7 +198,10 @@ public class SecurityController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()));
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.error("Vault test failed: {}", e.getMessage());
             return ResponseEntity.ok(Map.of(
                     "success", false,
@@ -297,7 +301,10 @@ public class SecurityController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()));
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.error("AppRole test failed: {}", e.getMessage());
             return ResponseEntity.ok(Map.of(
                     "success", false,
@@ -400,7 +407,10 @@ public class SecurityController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", e.getMessage()));
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             log.error("Vault setup failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,

@@ -117,7 +117,7 @@ public class TransferEventBus {
 
             // Publish to broadcast topic
             messagingTemplate.convertAndSend(TOPIC_ALL, event);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             // Log error but don't fail transfer if WebSocket has issues
             log.error("Failed to publish WebSocket message for transfer {}: {}",
                     event.getTransferId(), e.getMessage(), e);

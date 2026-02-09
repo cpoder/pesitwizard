@@ -84,7 +84,7 @@ public class BackupServiceAdapter {
             if (result.isSuccess()) {
                 log.info("Scheduled backup completed: {}", result.getBackupName());
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Scheduled backup failed: {}", e.getMessage());
         }
     }

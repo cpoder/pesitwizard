@@ -70,7 +70,7 @@ public class AesSecretsProvider implements SecretsProvider {
                 this.legacySecretKey = deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
                 this.available = true;
                 log.info("AES secrets provider initialized (v2 with dynamic salt)");
-            } catch (Exception e) {
+            } catch (java.security.GeneralSecurityException | IOException e) {
                 log.error("Failed to initialize AES secrets provider");
                 throw new EncryptionException("Failed to initialize AES encryption", e);
             }
@@ -127,7 +127,7 @@ public class AesSecretsProvider implements SecretsProvider {
         return newSalt;
     }
 
-    private SecretKey deriveKey(String masterKey, byte[] salt) throws Exception {
+    private SecretKey deriveKey(String masterKey, byte[] salt) throws java.security.GeneralSecurityException {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         PBEKeySpec spec = new PBEKeySpec(masterKey.toCharArray(), salt, ITERATIONS, KEY_LENGTH);
         try {
@@ -165,7 +165,7 @@ public class AesSecretsProvider implements SecretsProvider {
             log.debug("Encryption successful (v2 format, {} bytes plaintext)", plaintext.length());
             return result;
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             log.error("Encryption failed");
             throw new EncryptionException("Encryption failed", e);
         }
@@ -204,7 +204,7 @@ public class AesSecretsProvider implements SecretsProvider {
             log.debug("Decryption successful (v2 format)");
             return new String(plaintext, StandardCharsets.UTF_8);
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | IllegalArgumentException e) {
             log.error("Decryption failed (v2)");
             throw new DecryptionException("Decryption failed", e);
         }
@@ -228,7 +228,7 @@ public class AesSecretsProvider implements SecretsProvider {
             log.debug("Decryption successful (legacy format - consider re-encrypting)");
             return new String(plaintext, StandardCharsets.UTF_8);
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | IllegalArgumentException e) {
             log.error("Decryption failed (legacy)");
             throw new DecryptionException("Decryption failed", e);
         }

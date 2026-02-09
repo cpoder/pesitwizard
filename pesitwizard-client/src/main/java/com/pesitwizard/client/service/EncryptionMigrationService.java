@@ -81,7 +81,7 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                     server.setTruststorePassword(vaultRef);
                     modified = true;
                     log.debug("Migrated truststore password for server: {}", server.getName());
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     log.error("Failed to migrate truststore password for {}: {}", server.getName(), e.getMessage());
                 }
             }
@@ -95,7 +95,7 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                     server.setKeystorePassword(vaultRef);
                     modified = true;
                     log.debug("Migrated keystore password for server: {}", server.getName());
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     log.error("Failed to migrate keystore password for {}: {}", server.getName(), e.getMessage());
                 }
             }
@@ -138,7 +138,7 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                 } else {
                     skipped++;
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException | java.io.IOException e) {
                 log.error("Failed to migrate connection {}: {}", conn.getName(), e.getMessage());
                 skipped++;
             }
@@ -169,7 +169,7 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                         String vaultRef = secretsService.storeInVault(key, plaintext);
                         config.put(fieldName, vaultRef);
                         modified = true;
-                    } catch (Exception e) {
+                    } catch (RuntimeException e) {
                         log.warn("Failed to migrate field {}: {}", fieldName, e.getMessage());
                     }
                 }

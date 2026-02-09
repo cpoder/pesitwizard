@@ -60,7 +60,7 @@ public class TransferSchedulerService {
 
                 log.info("Executing scheduled transfer: {}", schedule.getName());
                 executeSchedule(schedule);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.error("Failed to execute schedule {}: {}", schedule.getId(), e.getMessage());
             }
         }
@@ -120,7 +120,7 @@ public class TransferSchedulerService {
             schedule.markSuccess();
             log.info("Scheduled transfer {} completed successfully", schedule.getName());
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             schedule.markFailed(e.getMessage());
             log.error("Scheduled transfer {} failed: {}", schedule.getName(), e.getMessage());
         }
@@ -194,7 +194,7 @@ public class TransferSchedulerService {
                         if (next != null) {
                             schedule.setNextRunAt(adjustForWorkingDays(schedule, next.toInstant()));
                         }
-                    } catch (Exception e) {
+                    } catch (IllegalArgumentException e) {
                         log.error("Invalid cron expression: {}", schedule.getCronExpression());
                         schedule.setNextRunAt(now.plusDays(1).toInstant());
                     }
@@ -350,7 +350,7 @@ public class TransferSchedulerService {
                         if (next != null) {
                             return adjustForWorkingDays(schedule, next.toInstant());
                         }
-                    } catch (Exception e) {
+                    } catch (IllegalArgumentException e) {
                         log.error("Invalid cron expression: {}", schedule.getCronExpression());
                     }
                 }

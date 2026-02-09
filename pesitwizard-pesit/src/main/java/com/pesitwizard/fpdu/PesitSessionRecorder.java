@@ -63,7 +63,7 @@ public class PesitSessionRecorder {
             try {
                 Fpdu fpdu = new FpduParser(data).parse();
                 type = fpdu.getFpduType();
-            } catch (Exception e) {
+            } catch (FpduException e) {
                 log.warn("Could not parse FPDU type from raw data: {}", e.getMessage());
             }
         }
@@ -126,7 +126,7 @@ public class PesitSessionRecorder {
                 try {
                     Fpdu fpdu = new FpduParser(data).parse();
                     type = fpdu.getFpduType();
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     log.warn("Could not parse FPDU type: {}", e.getMessage());
                 }
 

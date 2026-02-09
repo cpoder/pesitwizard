@@ -57,7 +57,7 @@ public enum ParameterValueType {
             try {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss", Locale.ENGLISH);
                 return LocalDateTime.parse(dateTime, formatter).toString();
-            } catch (Exception e) {
+            } catch (java.time.format.DateTimeParseException e) {
                 return dateTime + " (invalid)";
             }
         }

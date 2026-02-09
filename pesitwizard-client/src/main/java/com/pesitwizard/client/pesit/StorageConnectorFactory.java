@@ -67,7 +67,7 @@ public class StorageConnectorFactory {
             config = decryptSensitiveFields(config);
 
             return connectorRegistry.createConnector(connection.getConnectorType(), config);
-        } catch (Exception e) {
+        } catch (java.io.IOException | com.pesitwizard.connector.ConnectorException e) {
             throw new IllegalArgumentException(
                     "Failed to create connector for connection " + connection.getName()
                             + ": " + e.getMessage(),

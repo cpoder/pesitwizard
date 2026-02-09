@@ -115,7 +115,10 @@ public class TransferService {
                                         .status(TransferStatus.COMPLETED)
                                         .serverName(server.getName())
                                         .build();
-                } catch (Exception e) {
+                } catch (RuntimeException | java.io.IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                                Thread.currentThread().interrupt();
+                        }
                         log.error("Message send failed: {}", e.getMessage(), e);
                         return TransferResponse.builder()
                                         .status(TransferStatus.FAILED)
@@ -263,7 +266,7 @@ public class TransferService {
                                 }
                         }
                         return Files.size(Path.of(request.getFilename()));
-                } catch (Exception e) {
+                } catch (java.io.IOException | com.pesitwizard.connector.ConnectorException e) {
                         throw new RuntimeException("Cannot determine file size: " + e.getMessage(), e);
                 }
         }

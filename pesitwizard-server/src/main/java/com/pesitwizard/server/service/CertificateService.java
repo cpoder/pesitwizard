@@ -94,7 +94,7 @@ public class CertificateService {
             if (keyAlias == null && info.getAlias() != null) {
                 store.setKeyAlias(info.getAlias());
             }
-        } catch (Exception e) {
+        } catch (SslConfigurationException e) {
             log.warn("Could not extract certificate info: {}", e.getMessage());
         }
 
@@ -154,7 +154,7 @@ public class CertificateService {
                 store.setValidFrom(info.getValidFrom());
                 store.setExpiresAt(info.getExpiresAt());
                 store.setFingerprint(info.getFingerprint());
-            } catch (Exception e) {
+            } catch (SslConfigurationException e) {
                 log.warn("Could not extract certificate info: {}", e.getMessage());
             }
 
@@ -443,7 +443,9 @@ public class CertificateService {
             log.info("Created empty keystore: {}", name);
             return store;
 
-        } catch (Exception e) {
+        } catch (SslConfigurationException e) {
+            throw e;
+        } catch (RuntimeException e) {
             throw new SslConfigurationException("Failed to create empty keystore: " + e.getMessage(), e);
         }
     }
@@ -493,7 +495,9 @@ public class CertificateService {
             log.info("Created empty truststore: {}", name);
             return store;
 
-        } catch (Exception e) {
+        } catch (SslConfigurationException e) {
+            throw e;
+        } catch (RuntimeException e) {
             throw new SslConfigurationException("Failed to create empty truststore: " + e.getMessage(), e);
         }
     }
@@ -523,7 +527,7 @@ public class CertificateService {
                 store.setSubjectDn(info.getSubjectDn());
                 store.setIssuerDn(info.getIssuerDn());
                 store.setFingerprint(info.getFingerprint());
-            } catch (Exception e) {
+            } catch (SslConfigurationException e) {
                 log.warn("Could not extract certificate info: {}", e.getMessage());
             }
 
@@ -533,7 +537,7 @@ public class CertificateService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             throw new SslConfigurationException("Failed to add certificate: " + e.getMessage(), e);
         }
     }
@@ -573,7 +577,7 @@ public class CertificateService {
                 store.setValidFrom(info.getValidFrom());
                 store.setExpiresAt(info.getExpiresAt());
                 store.setFingerprint(info.getFingerprint());
-            } catch (Exception e) {
+            } catch (SslConfigurationException e) {
                 log.warn("Could not extract certificate info: {}", e.getMessage());
             }
 
@@ -583,7 +587,7 @@ public class CertificateService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             throw new SslConfigurationException("Failed to add key pair: " + e.getMessage(), e);
         }
     }
@@ -617,7 +621,7 @@ public class CertificateService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             throw new SslConfigurationException("Failed to remove entry: " + e.getMessage(), e);
         }
     }

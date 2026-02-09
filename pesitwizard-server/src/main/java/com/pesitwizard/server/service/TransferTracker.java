@@ -48,7 +48,7 @@ public class TransferTracker {
 
             log.debug("[{}] Transfer tracking started: {}", ctx.getSessionId(), record.getTransferId());
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track transfer start: {}", ctx.getSessionId(), e.getMessage());
             // Don't fail the transfer if tracking fails
         }
@@ -65,7 +65,7 @@ public class TransferTracker {
 
         try {
             transferService.updateProgress(transferId, bytesTransferred);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.debug("[{}] Failed to track progress: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -81,7 +81,7 @@ public class TransferTracker {
 
         try {
             transferService.recordSyncPoint(transferId, position);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.debug("[{}] Failed to track sync point: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -120,7 +120,7 @@ public class TransferTracker {
             log.debug("[{}] Transfer tracking completed: {} ({} bytes)",
                     ctx.getSessionId(), transferId, bytesTransferred);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track transfer completion: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -140,7 +140,7 @@ public class TransferTracker {
 
             log.debug("[{}] Transfer tracking failed: {} - {}", ctx.getSessionId(), errorCode, errorMessage);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track transfer failure: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -160,7 +160,7 @@ public class TransferTracker {
 
             log.debug("[{}] Transfer tracking cancelled: {}", ctx.getSessionId(), reason);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track transfer cancellation: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -180,7 +180,7 @@ public class TransferTracker {
 
             log.debug("[{}] Transfer tracking interrupted: {}", ctx.getSessionId(), reason);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track transfer interruption: {}", ctx.getSessionId(), e.getMessage());
         }
     }
@@ -238,7 +238,7 @@ public class TransferTracker {
             log.info("[{}] Authentication failure tracked: {} - {}",
                     ctx.getSessionId(), errorCode, errorMessage);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Failed to track authentication failure: {}", ctx.getSessionId(), e.getMessage());
         }
     }

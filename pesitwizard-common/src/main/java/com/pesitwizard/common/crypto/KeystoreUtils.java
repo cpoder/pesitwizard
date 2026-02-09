@@ -19,7 +19,7 @@ public class KeystoreUtils {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
             keyGen.initialize(keySize, new SecureRandom());
             return keyGen.generateKeyPair();
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException e) {
             throw new CryptoException("Failed to generate key pair", e);
         }
     }
@@ -36,7 +36,7 @@ public class KeystoreUtils {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ks.store(bos, password.toCharArray());
             return bos.toByteArray();
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new CryptoException("Failed to create keystore", e);
         }
     }
@@ -49,7 +49,7 @@ public class KeystoreUtils {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ts.store(bos, password.toCharArray());
             return bos.toByteArray();
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new CryptoException("Failed to create truststore", e);
         }
     }
@@ -59,7 +59,7 @@ public class KeystoreUtils {
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);
             ks.load(new ByteArrayInputStream(data), password.toCharArray());
             return ks;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new CryptoException("Failed to load keystore", e);
         }
     }

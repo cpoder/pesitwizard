@@ -144,7 +144,7 @@ public class PesitServerInstance {
 
             return sslServerSocket;
 
-        } catch (Exception e) {
+        } catch (com.pesitwizard.server.ssl.SslConfigurationException e) {
             throw new IOException("Failed to create SSL server socket: " + e.getMessage(), e);
         }
     }

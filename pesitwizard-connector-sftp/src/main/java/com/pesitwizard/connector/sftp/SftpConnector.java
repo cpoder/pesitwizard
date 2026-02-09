@@ -174,8 +174,8 @@ public class SftpConnector implements StorageConnector {
                     lastException = new ConnectorException(
                             ConnectorException.ErrorCode.CONNECTION_FAILED,
                             operationName + " failed (attempt " + (attempt + 1) + "): " + e.getMessage(), e);
-                } catch (Exception e) {
-                    // JSchException, IOException, etc. — transient, retry
+                } catch (JSchException | java.io.IOException e) {
+                    // JSchException, IOException — transient, retry
                     lastException = new ConnectorException(
                             ConnectorException.ErrorCode.CONNECTION_FAILED,
                             operationName + " failed (attempt " + (attempt + 1) + "): " + e.getMessage(), e);
@@ -243,7 +243,7 @@ public class SftpConnector implements StorageConnector {
                 ensureConnected();
                 channel.pwd();
                 return true;
-            } catch (Exception e) {
+            } catch (SftpException | ConnectorException e) {
                 return false;
             }
         }
@@ -383,11 +383,11 @@ public class SftpConnector implements StorageConnector {
 
     @FunctionalInterface
     interface SftpOperation<T> {
-        T execute(ChannelSftp channel) throws Exception;
+        T execute(ChannelSftp channel) throws SftpException, JSchException, java.io.IOException, ConnectorException;
     }
 
     @FunctionalInterface
     interface SftpVoidOperation {
-        void execute(ChannelSftp channel) throws Exception;
+        void execute(ChannelSftp channel) throws SftpException, JSchException, java.io.IOException, ConnectorException;
     }
 }

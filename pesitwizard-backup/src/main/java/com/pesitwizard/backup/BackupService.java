@@ -85,7 +85,8 @@ public class BackupService {
             r.setSuccess(true);
             log.info("Backup: {} ({})", name, r.getBackupType());
             cleanupOldBackups();
-        } catch (Exception e) {
+        } catch (java.io.IOException | java.security.GeneralSecurityException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Backup failed", e);
             r.setSuccess(false);
             r.setMessage(e.getMessage());
@@ -163,7 +164,8 @@ public class BackupService {
                 }
             }
             if (r.isSuccess()) log.info("Restored: {}", filename);
-        } catch (Exception e) {
+        } catch (java.io.IOException | java.security.GeneralSecurityException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             r.setSuccess(false);
             r.setMessage(e.getMessage());
             log.error("Restore failed", e);
@@ -259,7 +261,7 @@ public class BackupService {
         return p;
     }
 
-    private int runPgDump(Path out) throws Exception {
+    private int runPgDump(Path out) throws IOException, InterruptedException {
         DbInfo db = parsePostgresUrl();
         List<String> cmd = new ArrayList<>(List.of("pg_dump", "-h", db.host, "-p", db.port,
             "-U", config.getDbUser(), "-d", db.name, "-F", "c", "-f", out.toString()));
@@ -269,7 +271,7 @@ public class BackupService {
         return pb.start().waitFor();
     }
 
-    private int runPgRestore(Path in) throws Exception {
+    private int runPgRestore(Path in) throws IOException, InterruptedException {
         DbInfo db = parsePostgresUrl();
         List<String> cmd = new ArrayList<>(List.of("pg_restore", "-h", db.host, "-p", db.port,
             "-U", config.getDbUser(), "-d", db.name, "--clean", "--if-exists", in.toString()));
@@ -302,13 +304,13 @@ public class BackupService {
             } finally {
                 spec.clearPassword();
             }
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             log.error("Failed to derive backup encryption key", e);
             return null;
         }
     }
 
-    private void encryptFile(Path input, Path output) throws Exception {
+    private void encryptFile(Path input, Path output) throws IOException, java.security.GeneralSecurityException {
         byte[] plaintext = Files.readAllBytes(input);
         byte[] iv = new byte[GCM_IV_LENGTH];
         new SecureRandom().nextBytes(iv);
@@ -324,7 +326,7 @@ public class BackupService {
         Files.write(output, combined);
     }
 
-    private void decryptFile(Path input, Path output) throws Exception {
+    private void decryptFile(Path input, Path output) throws IOException, java.security.GeneralSecurityException {
         byte[] combined = Files.readAllBytes(input);
         if (combined.length < GCM_IV_LENGTH) {
             throw new IOException("Encrypted backup file too small");

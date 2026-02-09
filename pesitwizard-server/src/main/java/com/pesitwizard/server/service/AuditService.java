@@ -1,5 +1,6 @@
 package com.pesitwizard.server.service;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -134,7 +135,7 @@ public class AuditService {
 
             String json = objectMapper.writeValueAsString(logEntry);
             log.info("AUDIT: {}", json);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("Failed to log audit event to console: {}", e.getMessage());
         }
     }

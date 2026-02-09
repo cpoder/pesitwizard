@@ -180,7 +180,7 @@ public class TcpConnectionHandler implements Runnable {
             log.error("[{}] IO error: {}",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
                     e.getMessage(), e);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[{}] Unexpected error: {}",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
                     e.getMessage(), e);

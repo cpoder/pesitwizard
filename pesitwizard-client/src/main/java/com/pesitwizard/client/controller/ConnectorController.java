@@ -161,7 +161,7 @@ public class ConnectorController {
             connectorRegistry.reloadConnectors();
             return ResponseEntity.ok(Map.of("message", "Connector imported", "filename", filename, "types",
                     connectorRegistry.getAvailableTypes()));
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.error("Failed to import connector JAR '{}' uploaded by user '{}'", filename, username, e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
@@ -252,7 +252,7 @@ public class ConnectorController {
                 conn.setLastTestError(e.getMessage());
                 connectionRepository.save(conn);
                 return ResponseEntity.ok(Map.of("success", false, "message", e.getMessage()));
-            } catch (Exception e) {
+            } catch (RuntimeException | java.io.IOException e) {
                 return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
             }
         }).orElse(ResponseEntity.notFound().build());
@@ -270,7 +270,7 @@ public class ConnectorController {
                 var files = connector.list(path);
                 connector.close();
                 return ResponseEntity.ok(files);
-            } catch (Exception e) {
+            } catch (RuntimeException | java.io.IOException | ConnectorException e) {
                 return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
             }
         }).orElse(ResponseEntity.notFound().build());
@@ -306,7 +306,7 @@ public class ConnectorController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Path not allowed"));
             }
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }

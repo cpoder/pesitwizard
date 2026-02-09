@@ -147,7 +147,7 @@ public class SslContextFactory {
             SSLContext sslContext;
             try {
                 sslContext = SSLContext.getInstance(TLS_PROTOCOL);
-            } catch (Exception e) {
+            } catch (java.security.NoSuchAlgorithmException e) {
                 log.warn("TLSv1.3 not available, falling back to TLSv1.2");
                 sslContext = SSLContext.getInstance(FALLBACK_PROTOCOL);
             }
@@ -159,7 +159,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException(
                     "Failed to create SSL context from environment variables: " + e.getMessage(), e);
         }
@@ -218,7 +218,7 @@ public class SslContextFactory {
             SSLContext sslContext;
             try {
                 sslContext = SSLContext.getInstance(TLS_PROTOCOL);
-            } catch (Exception e) {
+            } catch (java.security.NoSuchAlgorithmException e) {
                 log.warn("TLSv1.3 not available, falling back to TLSv1.2");
                 sslContext = SSLContext.getInstance(FALLBACK_PROTOCOL);
             }
@@ -235,7 +235,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Failed to create SSL context: " + e.getMessage(), e);
         }
     }
@@ -302,7 +302,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to load keystore '" + store.getName() + "': " + e.getMessage(),
                     e);
         }
@@ -328,7 +328,7 @@ public class SslContextFactory {
                                 : "cert_" + certIndex;
                         keyStore.setCertificateEntry(alias, cert);
                         certIndex++;
-                    } catch (Exception e) {
+                    } catch (java.security.cert.CertificateException e) {
                         // End of certificates or parsing error
                         break;
                     }
@@ -343,7 +343,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to load PEM store '" + store.getName() + "': " + e.getMessage(),
                     e);
         }
@@ -385,7 +385,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Failed to extract certificate info: " + e.getMessage(), e);
         }
     }
@@ -402,7 +402,7 @@ public class SslContextFactory {
                 sb.append(String.format("%02X", b));
             }
             return sb.toString();
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Failed to calculate fingerprint: " + e.getMessage(), e);
         }
     }
@@ -460,7 +460,7 @@ public class SslContextFactory {
             }
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Store validation failed: " + e.getMessage(), e);
         }
     }
@@ -488,7 +488,7 @@ public class SslContextFactory {
             keyStore.store(bos, password != null ? password.toCharArray() : null);
             return bos.toByteArray();
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to create empty keystore: " + e.getMessage(), e);
         }
     }
@@ -517,7 +517,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to add certificate: " + e.getMessage(), e);
         }
     }
@@ -556,7 +556,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to add key pair: " + e.getMessage(), e);
         }
     }
@@ -581,7 +581,7 @@ public class SslContextFactory {
             java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("RSA");
             return keyFactory.generatePrivate(keySpec);
 
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | IllegalArgumentException e) {
             throw new SslConfigurationException("Failed to parse private key: " + e.getMessage(), e);
         }
     }
@@ -618,7 +618,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Failed to list store entries: " + e.getMessage(), e);
         }
     }
@@ -645,7 +645,7 @@ public class SslContextFactory {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to remove entry: " + e.getMessage(), e);
         }
     }

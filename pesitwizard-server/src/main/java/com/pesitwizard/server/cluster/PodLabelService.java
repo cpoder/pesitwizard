@@ -66,7 +66,7 @@ public class PodLabelService implements ClusterEventListener {
             } else {
                 log.info("Not leader at init time, leader label cleared");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.warn("Could not initialize Kubernetes client: {}. Pod label updates disabled.", e.getMessage());
         }
     }
@@ -123,7 +123,7 @@ public class PodLabelService implements ClusterEventListener {
                     log.debug("Leader label not present on pod {}, nothing to remove", podName);
                 }
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Failed to update leader label on pod {}: {}", podName, e.getMessage());
         }
     }

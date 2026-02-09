@@ -158,7 +158,8 @@ public class VaultSecretsProvider implements SecretsProvider {
             }
             log.error("AppRole login failed: {}", response.statusCode());
             return false;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("AppRole login failed: {}", e.getMessage());
             return false;
         }
@@ -199,7 +200,8 @@ public class VaultSecretsProvider implements SecretsProvider {
                     .timeout(TIMEOUT).GET().build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200 || response.statusCode() == 429;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.warn("Vault health check failed: {}", e.getMessage());
             return false;
         }
@@ -273,7 +275,8 @@ public class VaultSecretsProvider implements SecretsProvider {
             }
         } catch (EncryptionException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             recordFailure();
             log.error("Failed to store secret: {}", e.getMessage());
             throw new EncryptionException("Vault store failed", e);
@@ -319,7 +322,8 @@ public class VaultSecretsProvider implements SecretsProvider {
                 log.error("Failed to get secret: {} - {}", key, response.statusCode());
             }
             return null;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             recordFailure();
             log.error("Failed to get secret: {}", e.getMessage());
             return null;
@@ -339,7 +343,8 @@ public class VaultSecretsProvider implements SecretsProvider {
                     .timeout(TIMEOUT).DELETE().build();
             httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             recordSuccess();
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             recordFailure();
             log.error("Failed to delete secret: {}", e.getMessage());
         }

@@ -121,7 +121,15 @@ public class PesitReceiveService {
                 updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex(), ctx);
                 ctx.error(e.getMessage(), e.getDiagnosticCodeHex());
                 return;
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException | ConnectorException e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                log.error("Receive {} FAILED: {}", historyId, e.getMessage(), e);
+                updateHistoryFailed(historyId, e.getMessage(), null, ctx);
+                ctx.error(e.getMessage(), null);
+                return;
+            } catch (RuntimeException e) {
                 log.error("Receive {} FAILED: {}", historyId, e.getMessage(), e);
                 updateHistoryFailed(historyId, e.getMessage(), null, ctx);
                 ctx.error(e.getMessage(), null);

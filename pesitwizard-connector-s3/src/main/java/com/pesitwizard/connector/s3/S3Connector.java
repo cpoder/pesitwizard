@@ -58,13 +58,15 @@ public class S3Connector implements StorageConnector {
             s3 = builder.build();
             initialized = true;
             log.info("S3 connected to bucket: {}", bucket);
-        } catch (Exception e) {
+        } catch (S3Exception | software.amazon.awssdk.core.exception.SdkClientException e) {
             throw new ConnectorException(ConnectorException.ErrorCode.CONNECTION_FAILED, e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ConnectorException(ConnectorException.ErrorCode.INVALID_CONFIG, e.getMessage(), e);
         }
     }
 
     @Override public boolean testConnection() throws ConnectorException {
-        checkInit(); try { s3.headBucket(HeadBucketRequest.builder().bucket(bucket).build()); return true; } catch (Exception e) { return false; }
+        checkInit(); try { s3.headBucket(HeadBucketRequest.builder().bucket(bucket).build()); return true; } catch (S3Exception | software.amazon.awssdk.core.exception.SdkClientException e) { return false; }
     }
     @Override public boolean exists(String path) throws ConnectorException {
         checkInit(); try { s3.headObject(HeadObjectRequest.builder().bucket(bucket).key(resolve(path)).build()); return true; } catch (NoSuchKeyException e) { return false; }
@@ -116,14 +118,14 @@ public class S3Connector implements StorageConnector {
                     s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).build(),
                             RequestBody.fromInputStream(pis, -1));
                     uploadFuture.complete(null);
-                } catch (Exception e) {
+                } catch (S3Exception | software.amazon.awssdk.core.exception.SdkClientException e) {
                     log.error("S3 upload error for key '{}': {}", key, e.getMessage(), e);
                     uploadFuture.completeExceptionally(e);
-                    try { pis.close(); } catch (Exception ignored) {}
+                    try { pis.close(); } catch (java.io.IOException ignored) {}
                 }
             });
             return new S3ErrorPropagatingOutputStream(pos, uploadFuture, key);
-        } catch (Exception e) { throw new ConnectorException("Write error", e); }
+        } catch (java.io.IOException e) { throw new ConnectorException("Write error", e); }
     }
 
     /**

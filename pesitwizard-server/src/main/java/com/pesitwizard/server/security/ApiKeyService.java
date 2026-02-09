@@ -288,7 +288,7 @@ public class ApiKeyService {
                 hexString.append(hex);
             }
             return hexString.toString();
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException e) {
             throw new RuntimeException("Failed to hash API key", e);
         }
     }

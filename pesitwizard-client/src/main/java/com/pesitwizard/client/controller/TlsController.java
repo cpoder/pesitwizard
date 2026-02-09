@@ -132,7 +132,7 @@ public class TlsController {
                         response.put("certExpiry", certExpiry != null ? certExpiry : "Unknown");
                         return ResponseEntity.ok(response);
 
-                    } catch (Exception e) {
+                    } catch (java.io.IOException | java.security.GeneralSecurityException e) {
                         log.error("Failed to upload truststore for server {}: {}", serverId, e.getMessage());
                         Map<String, Object> error = new HashMap<>();
                         error.put("success", false);
@@ -146,7 +146,7 @@ public class TlsController {
     /**
      * Parse a PEM-encoded X509 certificate
      */
-    private X509Certificate parsePemCertificate(String pemContent) throws Exception {
+    private X509Certificate parsePemCertificate(String pemContent) throws java.io.IOException, java.security.cert.CertificateException {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
         // Handle both with and without headers
@@ -163,7 +163,7 @@ public class TlsController {
     /**
      * Convert an X509 certificate to a PKCS12 truststore
      */
-    private byte[] convertCertToTruststore(X509Certificate cert, String password) throws Exception {
+    private byte[] convertCertToTruststore(X509Certificate cert, String password) throws java.io.IOException, java.security.GeneralSecurityException {
         KeyStore trustStore = KeyStore.getInstance("PKCS12");
         trustStore.load(null, null);
         trustStore.setCertificateEntry("ca-cert", cert);
@@ -232,7 +232,7 @@ public class TlsController {
                         response.put("certExpiry", certExpiry != null ? certExpiry : "Unknown");
                         return ResponseEntity.ok(response);
 
-                    } catch (Exception e) {
+                    } catch (java.io.IOException | java.security.GeneralSecurityException e) {
                         log.error("Failed to upload keystore for server {}: {}", serverId, e.getMessage());
                         Map<String, Object> error = new HashMap<>();
                         error.put("success", false);

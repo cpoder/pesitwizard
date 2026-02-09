@@ -98,7 +98,7 @@ public class PesitServerManager implements ClusterEventListener {
             try {
                 startServer(config.getServerId());
                 log.info("Auto-started server: {}", config.getServerId());
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.error("Failed to auto-start server {}: {}", config.getServerId(), e.getMessage(), e);
             }
         }
@@ -109,7 +109,7 @@ public class PesitServerManager implements ClusterEventListener {
         for (var entry : runningServers.entrySet()) {
             try {
                 entry.getValue().drain();
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.warn("Error draining server {}: {}", entry.getKey(), e.getMessage());
             }
         }
@@ -117,7 +117,7 @@ public class PesitServerManager implements ClusterEventListener {
             try {
                 stopServer(serverId);
                 log.info("Stopped server due to leadership loss: {}", serverId);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.error("Error stopping server {}: {}", serverId, e.getMessage(), e);
             }
         }
@@ -130,14 +130,14 @@ public class PesitServerManager implements ClusterEventListener {
         for (var entry : runningServers.entrySet()) {
             try {
                 entry.getValue().drain();
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.warn("Error draining server {}: {}", entry.getKey(), e.getMessage());
             }
         }
         for (String serverId : List.copyOf(runningServers.keySet())) {
             try {
                 stopServer(serverId);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.error("Error stopping server {}: {}", serverId, e.getMessage(), e);
             }
         }
@@ -227,7 +227,7 @@ public class PesitServerManager implements ClusterEventListener {
                     instance.stop();
                     runningServers.remove(serverId);
                     clusterProvider.releaseServerOwnership(serverId);
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     log.error("Error stopping server {} during delete: {}", serverId, e.getMessage(), e);
                 }
             }
@@ -288,7 +288,7 @@ public class PesitServerManager implements ClusterEventListener {
 
                 log.info("Started server {} on port {}", serverId, config.getPort());
 
-            } catch (Exception e) {
+            } catch (RuntimeException | java.io.IOException e) {
                 config.setStatus(ServerStatus.ERROR);
                 configRepository.save(config);
                 throw new RuntimeException("Failed to start server: " + e.getMessage(), e);
@@ -332,7 +332,7 @@ public class PesitServerManager implements ClusterEventListener {
 
                 log.info("Stopped server {}", serverId);
 
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 config.setStatus(ServerStatus.ERROR);
                 configRepository.save(config);
                 throw new RuntimeException("Failed to stop server: " + e.getMessage(), e);

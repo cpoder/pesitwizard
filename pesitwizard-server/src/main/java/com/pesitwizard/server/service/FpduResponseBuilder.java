@@ -3,6 +3,7 @@ package com.pesitwizard.server.service;
 import static com.pesitwizard.fpdu.ParameterGroupIdentifier.*;
 import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -120,7 +121,7 @@ public class FpduResponseBuilder {
                     creationDate = java.time.LocalDateTime.ofInstant(modTime, java.time.ZoneId.systemDefault())
                             .format(pesitDateFormat);
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.warn("Could not get file attributes for {}: {}", filePath, e.getMessage());
             }
         }

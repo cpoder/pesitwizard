@@ -59,7 +59,7 @@ public class CertificateUtils {
 
             ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).build(keyPair.getPrivate());
             return new JcaX509CertificateConverter().getCertificate(builder.build(signer));
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | org.bouncycastle.operator.OperatorCreationException | org.bouncycastle.cert.CertIOException e) {
             throw new CryptoException("Failed to generate certificate", e);
         }
     }
@@ -126,7 +126,7 @@ public class CertificateUtils {
 
             ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).build(issuerKey);
             return new JcaX509CertificateConverter().getCertificate(certBuilder.build(signer));
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException | org.bouncycastle.operator.OperatorCreationException | org.bouncycastle.cert.CertIOException e) {
             throw new CryptoException("Failed to build signed certificate", e);
         }
     }
@@ -152,7 +152,7 @@ public class CertificateUtils {
                 sb.append(String.format("%02X", digest[i]));
             }
             return sb.toString();
-        } catch (Exception e) {
+        } catch (java.security.GeneralSecurityException e) {
             return "N/A";
         }
     }

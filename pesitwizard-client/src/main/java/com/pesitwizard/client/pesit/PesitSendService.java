@@ -85,7 +85,14 @@ public class PesitSendService {
             log.error("Transfer {} FAILED: {} ({})", historyId, e.getMessage(), e.getDiagnosticCodeHex());
             updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex(), ctx);
             ctx.error(e.getMessage(), e.getDiagnosticCodeHex());
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException | com.pesitwizard.connector.ConnectorException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.error("Transfer {} FAILED: {}", historyId, e.getMessage(), e);
+            updateHistoryFailed(historyId, e.getMessage(), null, ctx);
+            ctx.error(e.getMessage(), null);
+        } catch (RuntimeException e) {
             log.error("Transfer {} FAILED: {}", historyId, e.getMessage(), e);
             updateHistoryFailed(historyId, e.getMessage(), null, ctx);
             ctx.error(e.getMessage(), null);

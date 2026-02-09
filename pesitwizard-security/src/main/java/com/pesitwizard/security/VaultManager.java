@@ -80,7 +80,8 @@ public class VaultManager {
                 String error = parseVaultError(response.body());
                 return new VaultTestResult(false, "AppRole login failed: " + error, null, null);
             }
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("AppRole test failed: {}", e.getMessage());
             return new VaultTestResult(false, "AppRole test failed: " + e.getMessage(), null, null);
         }
@@ -174,7 +175,8 @@ public class VaultManager {
                 log.warn("Failed to enable KV secrets engine: {}", error);
                 return new SetupResult(false, "Failed to enable secrets engine: " + error);
             }
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to setup KV secrets engine: {}", e.getMessage());
             return new SetupResult(false, "Setup failed: " + e.getMessage());
         }
@@ -203,7 +205,8 @@ public class VaultManager {
                 return mounts.has(path + "/") || mounts.path("data").has(path + "/");
             }
             return false;
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.warn("Failed to check mounts: {}", e.getMessage());
             return false;
         }
@@ -250,7 +253,8 @@ public class VaultManager {
                 String error = parseVaultError(response.body());
                 return new SetupResult(false, "Failed to create AppRole: " + error);
             }
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to setup AppRole: {}", e.getMessage());
             return new SetupResult(false, "AppRole setup failed: " + e.getMessage());
         }
@@ -279,7 +283,8 @@ public class VaultManager {
                 return root.path("data").path("role_id").asText();
             }
             return null;
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to get role_id: {}", e.getMessage());
             return null;
         }
@@ -309,13 +314,14 @@ public class VaultManager {
                 return root.path("data").path("secret_id").asText();
             }
             return null;
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to generate secret_id: {}", e.getMessage());
             return null;
         }
     }
 
-    private void enableAppRoleAuth(String token, String namespace) throws Exception {
+    private void enableAppRoleAuth(String token, String namespace) throws IOException, InterruptedException {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("type", "approle");
 
@@ -340,7 +346,7 @@ public class VaultManager {
         }
     }
 
-    private void createPolicy(String token, String policyName, String policy, String namespace) throws Exception {
+    private void createPolicy(String token, String policyName, String policy, String namespace) throws IOException, InterruptedException {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("policy", policy);
 
@@ -365,7 +371,7 @@ public class VaultManager {
             if (errors.isArray() && errors.size() > 0) {
                 return errors.get(0).asText();
             }
-        } catch (Exception ignored) {
+        } catch (IOException ignored) {
         }
         return responseBody;
     }

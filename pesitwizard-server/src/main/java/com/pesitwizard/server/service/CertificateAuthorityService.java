@@ -133,7 +133,9 @@ public class CertificateAuthorityService {
             log.info("Certificate Authority initialized successfully: {}", caStore.getSubjectDn());
             return caStore;
 
-        } catch (Exception e) {
+        } catch (SslConfigurationException e) {
+            throw e;
+        } catch (CryptoException | java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to initialize CA: " + e.getMessage(), e);
         }
     }
@@ -141,7 +143,8 @@ public class CertificateAuthorityService {
     /**
      * Create CA truststore for distribution to clients
      */
-    private void createCaTruststore(X509Certificate caCert, String createdBy) throws Exception {
+    private void createCaTruststore(X509Certificate caCert, String createdBy)
+            throws java.security.GeneralSecurityException, java.io.IOException, SslConfigurationException {
         KeyStore truststore = KeyStore.getInstance("PKCS12");
         truststore.load(null, null);
         truststore.setCertificateEntry(caProperties.getCaKeyAlias(), caCert);
@@ -205,7 +208,7 @@ public class CertificateAuthorityService {
 
             return new CertificateRequest(csrPem, privateKeyPem, commonName, purpose);
 
-        } catch (Exception e) {
+        } catch (CryptoException | org.bouncycastle.operator.OperatorCreationException e) {
             throw new SslConfigurationException("Failed to generate CSR: " + e.getMessage(), e);
         }
     }
@@ -264,7 +267,7 @@ public class CertificateAuthorityService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (CryptoException | java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to sign certificate: " + e.getMessage(), e);
         }
     }
@@ -349,7 +352,7 @@ public class CertificateAuthorityService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (CryptoException e) {
             throw new SslConfigurationException("Failed to generate partner certificate: " + e.getMessage(), e);
         }
     }
@@ -370,7 +373,7 @@ public class CertificateAuthorityService {
 
         } catch (SslConfigurationException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (CryptoException | java.security.GeneralSecurityException e) {
             throw new SslConfigurationException("Failed to get CA certificate: " + e.getMessage(), e);
         }
     }
@@ -398,7 +401,7 @@ public class CertificateAuthorityService {
 
             return true;
 
-        } catch (Exception e) {
+        } catch (CryptoException | SslConfigurationException | java.security.GeneralSecurityException e) {
             log.warn("Certificate verification failed: {}", e.getMessage());
             return false;
         }

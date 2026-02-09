@@ -226,7 +226,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
                 if (leader) {
                     try {
                         ownershipRepository.deleteByOwnerNode(entry.getValue());
-                    } catch (Exception e) {
+                    } catch (RuntimeException e) {
                         log.warn("Failed to clean up DB ownership for departed node '{}': {}",
                                 entry.getValue(), e.getMessage());
                     }
@@ -250,7 +250,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
             if (payload instanceof ClusterMessage clusterMsg) {
                 handleClusterMessage(clusterMsg, msg.getSrc());
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error processing cluster message: {}", e.getMessage(), e);
         }
     }
@@ -482,7 +482,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
                     serverOwnership.put(entry.getKey(), winner.getOwnerNode());
                 }
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Failed to resolve merge conflicts: {}", e.getMessage(), e);
         }
     }
@@ -531,7 +531,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         for (ClusterEventListener listener : listeners) {
             try {
                 listener.onClusterEvent(event);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.error("Error notifying cluster listener: {}", e.getMessage(), e);
             }
         }

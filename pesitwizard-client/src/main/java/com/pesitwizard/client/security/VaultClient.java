@@ -132,7 +132,8 @@ public class VaultClient {
                 log.error("AppRole login failed: {} - {}", response.statusCode(), response.body());
                 return false;
             }
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("AppRole login failed: {}", e.getMessage());
             return false;
         }
@@ -177,7 +178,8 @@ public class VaultClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200 || response.statusCode() == 429
                     || response.statusCode() == 472 || response.statusCode() == 473;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.warn("Vault health check failed: {}", e.getMessage());
             return false;
         }
@@ -239,7 +241,8 @@ public class VaultClient {
 
         } catch (RuntimeException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to store secret in Vault: {} - {}", key, e.getMessage());
             throw new RuntimeException("Vault error: " + e.getMessage(), e);
         }
@@ -279,7 +282,8 @@ public class VaultClient {
 
             return null;
 
-        } catch (Exception e) {
+        } catch (java.io.IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.error("Failed to retrieve secret from Vault: {} - {}", key, e.getMessage());
             return null;
         }

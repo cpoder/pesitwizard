@@ -1,5 +1,6 @@
 package com.pesitwizard.client.connector;
 
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -74,7 +75,7 @@ public class ConnectorRegistry {
             try {
                 Files.createDirectories(connectorsPath);
                 log.info("Created connectors directory: {}", connectorsPath.toAbsolutePath());
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.warn("Could not create connectors directory: {}", e.getMessage());
             }
             return;
@@ -105,7 +106,7 @@ public class ConnectorRegistry {
 
             lastScanTime = System.currentTimeMillis();
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Failed to load external connectors: {}", e.getMessage(), e);
         }
     }
@@ -113,7 +114,7 @@ public class ConnectorRegistry {
     private URL toUrl(Path path) {
         try {
             return path.toUri().toURL();
-        } catch (Exception e) {
+        } catch (java.net.MalformedURLException e) {
             log.warn("Invalid connector path: {}", path);
             return null;
         }
@@ -174,7 +175,7 @@ public class ConnectorRegistry {
         if (existing != null) {
             try {
                 existing.close();
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.warn("Error closing existing connector {}: {}", name, e.getMessage());
             }
         }
@@ -206,7 +207,7 @@ public class ConnectorRegistry {
             try {
                 connector.close();
                 log.info("Removed connector instance: {}", name);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.warn("Error closing connector {}: {}", name, e.getMessage());
             }
         }
@@ -241,7 +242,7 @@ public class ConnectorRegistry {
                     .anyMatch(p -> {
                         try {
                             return Files.getLastModifiedTime(p).toMillis() > lastScanTime;
-                        } catch (Exception e) {
+                        } catch (IOException e) {
                             return false;
                         }
                     });
@@ -251,7 +252,7 @@ public class ConnectorRegistry {
                 loadExternalConnectors();
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.debug("Error scanning connectors directory: {}", e.getMessage());
         }
     }
@@ -260,7 +261,7 @@ public class ConnectorRegistry {
         if (pluginClassLoader != null) {
             try {
                 pluginClassLoader.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.debug("Error closing plugin classloader: {}", e.getMessage());
             }
             pluginClassLoader = null;

@@ -24,7 +24,7 @@ public class SecretsTracing {
             long duration = (System.nanoTime() - startTime) / 1_000_000;
             log.debug("[trace:{}] Completed {} in {}ms", traceId, operationName, duration);
             return result;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             long duration = (System.nanoTime() - startTime) / 1_000_000;
             log.error("[trace:{}] Failed {} after {}ms: {}", traceId, operationName, duration, e.getMessage());
             throw e;

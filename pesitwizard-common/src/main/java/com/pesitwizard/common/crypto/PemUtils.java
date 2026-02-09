@@ -25,7 +25,7 @@ public class PemUtils {
                 writer.writeObject(obj);
             }
             return sw.toString();
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             throw new CryptoException("Failed to convert to PEM", e);
         }
     }
@@ -34,7 +34,7 @@ public class PemUtils {
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             return (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(pem.getBytes()));
-        } catch (Exception e) {
+        } catch (java.security.cert.CertificateException e) {
             throw new CryptoException("Failed to parse certificate", e);
         }
     }
@@ -52,7 +52,7 @@ public class PemUtils {
             throw new CryptoException("Unknown private key format: " + obj.getClass().getName());
         } catch (CryptoException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             throw new CryptoException("Failed to parse private key", e);
         }
     }

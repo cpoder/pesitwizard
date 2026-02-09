@@ -192,7 +192,7 @@ public class ApiKey {
             long mask = -1L << (32 - prefix);
 
             return (ipLong & mask) == (networkLong & mask);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return false;
         }
     }

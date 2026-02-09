@@ -193,7 +193,7 @@ public class PesitServerService {
             log.info("Connection test successful for server {} ({}:{})",
                     server.getName(), server.getHost(), server.getPort());
             return new ConnectionTestResult(true, "Connection successful");
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.warn("Connection test failed for server {} ({}:{}): {}",
                     server.getName(), server.getHost(), server.getPort(), e.getMessage());
             return new ConnectionTestResult(false, "Connection failed: " + e.getMessage());
