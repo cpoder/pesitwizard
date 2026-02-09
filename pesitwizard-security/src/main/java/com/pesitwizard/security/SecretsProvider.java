@@ -68,8 +68,19 @@ public interface SecretsProvider {
 
     /**
      * Get the provider type name.
-     * 
+     *
      * @return Provider type (e.g., "AES", "VAULT", "NONE")
      */
     String getProviderType();
+
+    /**
+     * Derive a purpose-specific SecretKey from the master key.
+     * Used for at-rest file encryption and other key derivation needs.
+     *
+     * @param purpose A unique string identifying the key purpose (e.g., "file-encryption")
+     * @return A derived AES-256 SecretKey, or null if not supported
+     */
+    default javax.crypto.SecretKey deriveKey(String purpose) {
+        return null;
+    }
 }

@@ -263,4 +263,21 @@ public class AesSecretsProvider implements SecretsProvider {
     public boolean isEncrypted(String value) {
         return value != null && (value.startsWith(V2_PREFIX) || value.startsWith(LEGACY_PREFIX));
     }
+
+    @Override
+    public SecretKey deriveKey(String purpose) {
+        if (!available || purpose == null || purpose.isBlank()) {
+            return null;
+        }
+        try {
+            // HKDF-Expand pattern: HMAC-SHA256(masterKey, purpose) → 256-bit derived key
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(secretKey);
+            byte[] derivedBytes = mac.doFinal(purpose.getBytes(StandardCharsets.UTF_8));
+            return new SecretKeySpec(derivedBytes, "AES");
+        } catch (java.security.GeneralSecurityException e) {
+            log.error("Failed to derive key for purpose: {}", purpose);
+            throw new EncryptionException("Key derivation failed for purpose: " + purpose, e);
+        }
+    }
 }

@@ -89,4 +89,10 @@ public class CompositeSecretsProvider implements SecretsProvider {
     public String getProviderType() {
         return primaryProvider.getProviderType();
     }
+
+    @Override
+    public javax.crypto.SecretKey deriveKey(String purpose) {
+        // Key derivation is always handled by the AES provider (local operation)
+        return aesProvider.deriveKey(purpose);
+    }
 }

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pesitwizard.client.connector.ConnectorRegistry;
 import com.pesitwizard.client.entity.StorageConnection;
 import com.pesitwizard.client.repository.StorageConnectionRepository;
+import com.pesitwizard.connector.EncryptingStorageConnector;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.security.SecretsService;
 
@@ -66,7 +67,21 @@ public class StorageConnectorFactory {
 
             config = decryptSensitiveFields(config);
 
-            return connectorRegistry.createConnector(connection.getConnectorType(), config);
+            StorageConnector connector = connectorRegistry.createConnector(connection.getConnectorType(), config);
+
+            // Wrap with at-rest encryption if enabled in config
+            if ("true".equalsIgnoreCase(config.get("encryptionEnabled"))) {
+                javax.crypto.SecretKey fileKey = secretsService.deriveFileEncryptionKey();
+                if (fileKey == null) {
+                    throw new IllegalStateException(
+                            "At-rest encryption enabled but no encryption key available. "
+                            + "Configure pesitwizard.security.master-key to enable encryption.");
+                }
+                connector = new EncryptingStorageConnector(connector, fileKey);
+                log.info("At-rest encryption enabled for connection: {}", connection.getName());
+            }
+
+            return connector;
         } catch (java.io.IOException | com.pesitwizard.connector.ConnectorException e) {
             throw new IllegalArgumentException(
                     "Failed to create connector for connection " + connection.getName()

@@ -132,6 +132,16 @@ public class SecretsService {
     }
 
     /**
+     * Derive a SecretKey for file at-rest encryption.
+     * Uses HMAC-based key derivation from the master key.
+     *
+     * @return AES-256 SecretKey for file encryption, or null if encryption not available
+     */
+    public javax.crypto.SecretKey deriveFileEncryptionKey() {
+        return secretsProvider.deriveKey("file-encryption");
+    }
+
+    /**
      * Check if Vault is the active provider.
      */
     public boolean isVaultAvailable() {
