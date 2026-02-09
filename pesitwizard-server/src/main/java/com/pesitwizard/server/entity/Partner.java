@@ -97,6 +97,15 @@ public class Partner {
     }
 
     /**
+     * Computed field for API responses — indicates whether a password is configured
+     * without revealing the actual password value.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("passwordConfigured")
+    public boolean isPasswordConfigured() {
+        return password != null && !password.isEmpty();
+    }
+
+    /**
      * Check if partner can perform write operations
      */
     public boolean canWrite() {

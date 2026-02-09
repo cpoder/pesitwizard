@@ -52,6 +52,12 @@ public class StorageConnection {
     @ToString.Exclude
     private String configJson;
 
+    /** Computed field indicating whether configuration is present */
+    @com.fasterxml.jackson.annotation.JsonProperty("configured")
+    public boolean isConfigured() {
+        return configJson != null && !configJson.isEmpty();
+    }
+
     /** Whether this connection is enabled */
     @Builder.Default
     private boolean enabled = true;

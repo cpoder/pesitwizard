@@ -84,6 +84,12 @@ public class FavoriteTransfer {
     @ToString.Exclude
     private String password;
 
+    /** Computed field indicating whether a password is configured */
+    @com.fasterxml.jackson.annotation.JsonProperty("passwordConfigured")
+    public boolean isPasswordConfigured() {
+        return password != null && !password.isEmpty();
+    }
+
     /** Transfer config ID */
     private String transferConfigId;
 
