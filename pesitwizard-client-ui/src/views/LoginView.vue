@@ -44,7 +44,7 @@ async function handleLogin() {
             :disabled="loading"
           />
         </div>
-        <p v-if="error" class="error">{{ error }}</p>
+        <p v-if="error" class="error" role="alert" aria-live="polite">{{ error }}</p>
         <button type="submit" :disabled="loading || !apiKeyInput">
           {{ loading ? 'Authenticating...' : 'Login' }}
         </button>

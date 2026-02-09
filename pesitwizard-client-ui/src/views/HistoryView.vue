@@ -121,18 +121,18 @@ async function addToFavorites() {
   <div>
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-900">Transfer History</h1>
-      <button @click="loadTransfers(currentPage)" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+      <button @click="loadTransfers(currentPage)" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh transfer history">
+        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
         Refresh
       </button>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="transfers.length === 0" class="card text-center py-12">
-      <Clock class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Clock class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No transfers yet</h3>
       <p class="text-gray-500 mb-4">Start a transfer to see history</p>
       <RouterLink to="/transfer" class="btn btn-primary">Start Transfer</RouterLink>
@@ -142,22 +142,22 @@ async function addToFavorites() {
       <table class="w-full">
         <thead class="bg-gray-50 border-b">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Server</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Partner</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">File</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-            <th class="px-4 py-3"></th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Server</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Partner</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">File</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
           <tr v-for="transfer in transfers" :key="transfer.id" class="hover:bg-gray-50">
             <td class="px-4 py-3">
-              <Upload v-if="transfer.direction === 'SEND'" class="h-5 w-5 text-blue-600" />
-              <Download v-else class="h-5 w-5 text-green-600" />
+              <Upload v-if="transfer.direction === 'SEND'" class="h-5 w-5 text-blue-600" aria-hidden="true" />
+              <Download v-else class="h-5 w-5 text-green-600" aria-hidden="true" />
             </td>
             <td class="px-4 py-3 font-medium text-gray-900">{{ transfer.serverName }}</td>
             <td class="px-4 py-3 text-gray-600">{{ transfer.partnerId || '-' }}</td>
@@ -171,34 +171,36 @@ async function addToFavorites() {
                 transfer.status === 'COMPLETED' ? 'badge-success' : 
                 transfer.status === 'FAILED' ? 'badge-danger' : 'badge-warning'
               ]">
-                <CheckCircle v-if="transfer.status === 'COMPLETED'" class="h-3 w-3 mr-1" />
-                <XCircle v-else-if="transfer.status === 'FAILED'" class="h-3 w-3 mr-1" />
-                <Clock v-else class="h-3 w-3 mr-1" />
+                <CheckCircle v-if="transfer.status === 'COMPLETED'" class="h-3 w-3 mr-1" aria-hidden="true" />
+                <XCircle v-else-if="transfer.status === 'FAILED'" class="h-3 w-3 mr-1" aria-hidden="true" />
+                <Clock v-else class="h-3 w-3 mr-1" aria-hidden="true" />
                 {{ transfer.status }}
               </span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(transfer.startedAt) }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ transfer.durationMs ? transfer.durationMs + 'ms' : '-' }}</td>
             <td class="px-4 py-3 flex gap-1">
-              <button 
-                @click="replayTransfer(transfer)" 
+              <button
+                @click="replayTransfer(transfer)"
                 :disabled="replaying === transfer.id || transfer.direction === 'MESSAGE'"
                 class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50"
                 title="Replay transfer"
+                aria-label="Replay transfer"
               >
-                <RefreshCw v-if="replaying === transfer.id" class="h-4 w-4 animate-spin" />
-                <Play v-else class="h-4 w-4" />
+                <RefreshCw v-if="replaying === transfer.id" class="h-4 w-4 animate-spin" aria-hidden="true" />
+                <Play v-else class="h-4 w-4" aria-hidden="true" />
               </button>
-              <button 
-                @click="openFavoriteModal(transfer)" 
+              <button
+                @click="openFavoriteModal(transfer)"
                 :disabled="transfer.direction === 'MESSAGE'"
                 class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg disabled:opacity-50"
                 title="Add to favorites"
+                aria-label="Add to favorites"
               >
-                <Star class="h-4 w-4" />
+                <Star class="h-4 w-4" aria-hidden="true" />
               </button>
-              <button @click="showDetails(transfer)" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg" title="View details">
-                <Eye class="h-4 w-4" />
+              <button @click="showDetails(transfer)" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg" title="View details" aria-label="View transfer details">
+                <Eye class="h-4 w-4" aria-hidden="true" />
               </button>
             </td>
           </tr>
@@ -230,15 +232,15 @@ async function addToFavorites() {
     </div>
 
     <!-- Details Modal -->
-    <div v-if="showModal && selectedTransfer" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showModal && selectedTransfer" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
           <div class="flex items-center gap-3 mb-6">
-            <Upload v-if="selectedTransfer.direction === 'SEND'" class="h-6 w-6 text-blue-600" />
-            <Download v-else class="h-6 w-6 text-green-600" />
-            <h2 class="text-xl font-bold text-gray-900">Transfer Details</h2>
+            <Upload v-if="selectedTransfer.direction === 'SEND'" class="h-6 w-6 text-blue-600" aria-hidden="true" />
+            <Download v-else class="h-6 w-6 text-green-600" aria-hidden="true" />
+            <h2 id="details-modal-title" class="text-xl font-bold text-gray-900">Transfer Details</h2>
           </div>
 
           <div class="space-y-3">
@@ -306,14 +308,14 @@ async function addToFavorites() {
     </div>
 
     <!-- Add to Favorites Modal -->
-    <div v-if="showFavoriteModal && selectedForFavorite" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showFavoriteModal && selectedForFavorite" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showFavoriteModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showFavoriteModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6" role="dialog" aria-modal="true" aria-labelledby="favorite-modal-title">
           <div class="flex items-center gap-3 mb-6">
-            <Star class="h-6 w-6 text-yellow-500" />
-            <h2 class="text-xl font-bold text-gray-900">Add to Favorites</h2>
+            <Star class="h-6 w-6 text-yellow-500" aria-hidden="true" />
+            <h2 id="favorite-modal-title" class="text-xl font-bold text-gray-900">Add to Favorites</h2>
           </div>
 
           <div class="space-y-4">
@@ -340,8 +342,8 @@ async function addToFavorites() {
               :disabled="!favoriteName.trim() || !!addingFavorite"
               class="btn btn-primary flex items-center gap-2"
             >
-              <RefreshCw v-if="addingFavorite" class="h-4 w-4 animate-spin" />
-              <Star v-else class="h-4 w-4" />
+              <RefreshCw v-if="addingFavorite" class="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Star v-else class="h-4 w-4" aria-hidden="true" />
               Add to Favorites
             </button>
           </div>

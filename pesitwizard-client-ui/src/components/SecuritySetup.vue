@@ -228,7 +228,7 @@ onMounted(() => {
       <!-- Degraded Mode Warning -->
       <div v-if="isDegradedMode" class="bg-red-50 border-2 border-red-300 rounded-lg p-6">
         <div class="flex items-center gap-3 mb-4">
-          <AlertTriangle class="w-8 h-8 text-red-500" />
+          <AlertTriangle class="w-8 h-8 text-red-500" aria-hidden="true" />
           <div>
             <h2 class="text-lg font-bold text-red-700">Security Not Configured</h2>
             <p class="text-red-600">Encryption must be configured before using the application.</p>
@@ -238,18 +238,18 @@ onMounted(() => {
 
       <!-- Success/Error Messages -->
       <div v-if="successMessage" class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
-        <CheckCircle class="w-5 h-5 text-green-500 flex-shrink-0" />
+        <CheckCircle class="w-5 h-5 text-green-500 flex-shrink-0" aria-hidden="true" />
         <p class="text-green-700">{{ successMessage }}</p>
-        <button @click="successMessage = null" class="ml-auto text-green-600 hover:text-green-800">
-          <XCircle class="w-4 h-4" />
+        <button @click="successMessage = null" class="ml-auto text-green-600 hover:text-green-800" aria-label="Dismiss">
+          <XCircle class="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
       <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
-        <AlertTriangle class="w-5 h-5 text-red-500 flex-shrink-0" />
+        <AlertTriangle class="w-5 h-5 text-red-500 flex-shrink-0" aria-hidden="true" />
         <p class="text-red-700">{{ error }}</p>
-        <button @click="error = null" class="ml-auto text-red-600 hover:text-red-800">
-          <XCircle class="w-4 h-4" />
+        <button @click="error = null" class="ml-auto text-red-600 hover:text-red-800" aria-label="Dismiss">
+          <XCircle class="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -257,11 +257,11 @@ onMounted(() => {
       <div class="card">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold flex items-center gap-2">
-            <Shield class="w-5 h-5" />
+            <Shield class="w-5 h-5" aria-hidden="true" />
             Security Status
           </h2>
-          <button @click="fetchStatus" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1">
-            <RefreshCw class="w-3 h-3" />
+          <button @click="fetchStatus" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-1" aria-label="Refresh security status">
+            <RefreshCw class="w-3 h-3" aria-hidden="true" />
             Refresh
           </button>
         </div>
@@ -270,7 +270,7 @@ onMounted(() => {
           <!-- AES Status -->
           <div class="p-4 rounded-lg border" :class="status?.aes?.usingFixedKey ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'">
             <div class="flex items-center gap-3">
-              <Key :class="['w-6 h-6', status?.aes?.usingFixedKey ? 'text-green-500' : 'text-yellow-500']" />
+              <Key :class="['w-6 h-6', status?.aes?.usingFixedKey ? 'text-green-500' : 'text-yellow-500']" aria-hidden="true" />
               <div>
                 <p class="font-medium">AES Encryption</p>
                 <p class="text-sm" :class="status?.aes?.usingFixedKey ? 'text-green-600' : 'text-yellow-600'">
@@ -283,7 +283,7 @@ onMounted(() => {
           <!-- Vault Status -->
           <div class="p-4 rounded-lg border" :class="status?.vault?.connected ? 'bg-green-50 border-green-200' : status?.vault?.enabled ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'">
             <div class="flex items-center gap-3">
-              <Server :class="['w-6 h-6', status?.vault?.connected ? 'text-green-500' : status?.vault?.enabled ? 'text-yellow-500' : 'text-gray-400']" />
+              <Server :class="['w-6 h-6', status?.vault?.connected ? 'text-green-500' : status?.vault?.enabled ? 'text-yellow-500' : 'text-gray-400']" aria-hidden="true" />
               <div>
                 <p class="font-medium">HashiCorp Vault</p>
                 <p class="text-sm" :class="status?.vault?.connected ? 'text-green-600' : status?.vault?.enabled ? 'text-yellow-600' : 'text-gray-500'">
@@ -306,7 +306,7 @@ onMounted(() => {
               :disabled="migratingSecrets"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
-              <RefreshCw :class="['w-4 h-4', migratingSecrets && 'animate-spin']" />
+              <RefreshCw :class="['w-4 h-4', migratingSecrets && 'animate-spin']" aria-hidden="true" />
               {{ migratingSecrets ? 'Migrating...' : 'Migrate Now' }}
             </button>
           </div>
@@ -319,7 +319,7 @@ onMounted(() => {
       <!-- AES Key Generation -->
       <div class="card">
         <h2 class="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Key class="w-5 h-5 text-green-500" />
+          <Key class="w-5 h-5 text-green-500" aria-hidden="true" />
           AES Encryption Setup
         </h2>
         
@@ -327,7 +327,7 @@ onMounted(() => {
         
         <div class="flex gap-2 mb-4">
           <button @click="generateAesKey" :disabled="generatingKey" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2">
-            <RefreshCw :class="['w-4 h-4', generatingKey && 'animate-spin']" />
+            <RefreshCw :class="['w-4 h-4', generatingKey && 'animate-spin']" aria-hidden="true" />
             Generate New Key
           </button>
         </div>
@@ -335,8 +335,8 @@ onMounted(() => {
         <div v-if="generatedKey" class="bg-gray-100 p-4 rounded-lg">
           <div class="flex items-center justify-between mb-2">
             <span class="text-sm font-medium text-gray-700">Generated Key (Base64):</span>
-            <button @click="copyToClipboard(generatedKey)" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm">
-              <Copy class="w-4 h-4" />
+            <button @click="copyToClipboard(generatedKey)" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm" aria-label="Copy to clipboard">
+              <Copy class="w-4 h-4" aria-hidden="true" />
               Copy
             </button>
           </div>
@@ -348,7 +348,7 @@ onMounted(() => {
       <!-- Vault Configuration -->
       <div class="card">
         <h2 class="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Server class="w-5 h-5 text-blue-500" />
+          <Server class="w-5 h-5 text-blue-500" aria-hidden="true" />
           Vault Configuration
         </h2>
         
@@ -388,13 +388,13 @@ onMounted(() => {
             </div>
             
             <button @click="testVaultConnection" :disabled="testingVault" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-              <Play v-if="!testingVault" class="w-4 h-4" />
-              <RefreshCw v-else class="w-4 h-4 animate-spin" />
+              <Play v-if="!testingVault" class="w-4 h-4" aria-hidden="true" />
+              <RefreshCw v-else class="w-4 h-4 animate-spin" aria-hidden="true" />
               Test Connection
             </button>
             
             <div v-if="vaultTestResult" class="mt-3 p-3 rounded-lg flex items-center gap-2" :class="vaultTestResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-              <component :is="vaultTestResult.success ? CheckCircle : XCircle" class="w-5 h-5" />
+              <component :is="vaultTestResult.success ? CheckCircle : XCircle" class="w-5 h-5" aria-hidden="true" />
               {{ vaultTestResult.message }}
             </div>
           </div>
@@ -412,7 +412,7 @@ onMounted(() => {
               :disabled="initializingVault || !vaultTestAddress || !vaultTestToken || vaultTestAuthMethod !== 'token'"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
-              <Settings :class="['w-4 h-4', initializingVault && 'animate-spin']" />
+              <Settings :class="['w-4 h-4', initializingVault && 'animate-spin']" aria-hidden="true" />
               {{ initializingVault ? 'Initializing...' : 'Initialize Vault & Create AppRole' }}
             </button>
             
@@ -429,14 +429,14 @@ onMounted(() => {
                     <span>Role ID:</span>
                     <div class="flex items-center gap-1">
                       <code>{{ initVaultResult.roleId }}</code>
-                      <button @click="copyToClipboard(initVaultResult.roleId!)" class="text-blue-600"><Copy class="w-3 h-3" /></button>
+                      <button @click="copyToClipboard(initVaultResult.roleId!)" class="text-blue-600" aria-label="Copy to clipboard"><Copy class="w-3 h-3" aria-hidden="true" /></button>
                     </div>
                   </div>
                   <div class="flex justify-between">
                     <span>Secret ID:</span>
                     <div class="flex items-center gap-1">
                       <code>{{ initVaultResult.secretId }}</code>
-                      <button @click="copyToClipboard(initVaultResult.secretId!)" class="text-blue-600"><Copy class="w-3 h-3" /></button>
+                      <button @click="copyToClipboard(initVaultResult.secretId!)" class="text-blue-600" aria-label="Copy to clipboard"><Copy class="w-3 h-3" aria-hidden="true" /></button>
                     </div>
                   </div>
                 </div>
@@ -458,8 +458,8 @@ onMounted(() => {
                 Use *_FILE (recommended)
               </span>
             </label>
-            <button @click="copyEnvVars" class="px-3 py-1 text-sm bg-gray-100 border rounded hover:bg-gray-200 flex items-center gap-1">
-              <Copy class="w-4 h-4" />
+            <button @click="copyEnvVars" class="px-3 py-1 text-sm bg-gray-100 border rounded hover:bg-gray-200 flex items-center gap-1" aria-label="Copy to clipboard">
+              <Copy class="w-4 h-4" aria-hidden="true" />
               Copy
             </button>
           </div>

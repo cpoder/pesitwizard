@@ -305,21 +305,21 @@ async function createSchedule() {
   <div>
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <Star class="h-8 w-8 text-yellow-500" />
+        <Star class="h-8 w-8 text-yellow-500" aria-hidden="true" />
         <h1 class="text-2xl font-bold text-gray-900">Favorites</h1>
       </div>
-      <button @click="loadFavorites" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+      <button @click="loadFavorites" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh favorites">
+        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
         Refresh
       </button>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="favorites.length === 0" class="card text-center py-12">
-      <Star class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Star class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No favorites yet</h3>
       <p class="text-gray-500 mb-4">Add transfers to favorites from the History page</p>
       <RouterLink to="/history" class="btn btn-primary">View History</RouterLink>
@@ -337,8 +337,8 @@ async function createSchedule() {
               'p-2 rounded-lg',
               favorite.direction === 'SEND' ? 'bg-blue-100' : 'bg-green-100'
             ]">
-              <Upload v-if="favorite.direction === 'SEND'" class="h-5 w-5 text-blue-600" />
-              <Download v-else class="h-5 w-5 text-green-600" />
+              <Upload v-if="favorite.direction === 'SEND'" class="h-5 w-5 text-blue-600" aria-hidden="true" />
+              <Download v-else class="h-5 w-5 text-green-600" aria-hidden="true" />
             </div>
             <div>
               <h3 class="font-semibold text-gray-900">{{ favorite.name }}</h3>
@@ -346,21 +346,23 @@ async function createSchedule() {
             </div>
           </div>
           <div class="flex gap-1">
-            <button 
+            <button
               @click="openEditModal(favorite)"
               class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
               title="Edit"
+              aria-label="Edit favorite"
             >
-              <Edit class="h-4 w-4" />
+              <Edit class="h-4 w-4" aria-hidden="true" />
             </button>
-            <button 
+            <button
               @click="confirmDelete(favorite)"
               :disabled="deleting === favorite.id"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="Delete"
+              aria-label="Delete favorite"
             >
-              <RefreshCw v-if="deleting === favorite.id" class="h-4 w-4 animate-spin" />
-              <Trash2 v-else class="h-4 w-4" />
+              <RefreshCw v-if="deleting === favorite.id" class="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Trash2 v-else class="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -401,7 +403,7 @@ async function createSchedule() {
           <!-- Progress bar when executing -->
           <div v-if="getExecutionState(favorite.id).status === 'executing'" class="space-y-2">
             <div class="flex items-center gap-2 text-sm text-blue-600">
-              <RefreshCw class="h-4 w-4 animate-spin" />
+              <RefreshCw class="h-4 w-4 animate-spin" aria-hidden="true" />
               <span>Transferring...</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
@@ -412,14 +414,14 @@ async function createSchedule() {
           <!-- Success indicator -->
           <div v-else-if="getExecutionState(favorite.id).status === 'success'" 
                class="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            <CheckCircle class="h-5 w-5 flex-shrink-0" />
+            <CheckCircle class="h-5 w-5 flex-shrink-0" aria-hidden="true" />
             <span>{{ getExecutionState(favorite.id).message }}</span>
           </div>
           
           <!-- Error indicator -->
           <div v-else-if="getExecutionState(favorite.id).status === 'error'" 
                class="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <XCircle class="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <XCircle class="h-5 w-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <span class="break-words">{{ getExecutionState(favorite.id).message }}</span>
           </div>
         </div>
@@ -435,7 +437,7 @@ async function createSchedule() {
                 : 'btn btn-primary'
             ]"
           >
-            <Play class="h-4 w-4" />
+            <Play class="h-4 w-4" aria-hidden="true" />
             {{ getExecutionState(favorite.id).status === 'executing' ? 'Executing...' : 'Execute' }}
           </button>
           <button 
@@ -443,21 +445,21 @@ async function createSchedule() {
             class="btn btn-secondary flex items-center gap-2"
             title="Schedule"
           >
-            <Calendar class="h-4 w-4" />
+            <Calendar class="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
     </div>
 
     <!-- Schedule Modal -->
-    <div v-if="showScheduleModal && selectedFavoriteForSchedule" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showScheduleModal && selectedFavoriteForSchedule" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showScheduleModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showScheduleModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
           <div class="flex items-center gap-3 mb-6">
-            <Calendar class="h-6 w-6 text-purple-500" />
-            <h2 class="text-xl font-bold text-gray-900">Schedule Transfer</h2>
+            <Calendar class="h-6 w-6 text-purple-500" aria-hidden="true" />
+            <h2 id="schedule-modal-title" class="text-xl font-bold text-gray-900">Schedule Transfer</h2>
           </div>
 
           <div class="space-y-4 max-h-[60vh] overflow-y-auto">
@@ -577,8 +579,8 @@ async function createSchedule() {
               :disabled="creatingSchedule"
               class="btn btn-primary flex items-center gap-2"
             >
-              <RefreshCw v-if="creatingSchedule" class="h-4 w-4 animate-spin" />
-              <Calendar v-else class="h-4 w-4" />
+              <RefreshCw v-if="creatingSchedule" class="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Calendar v-else class="h-4 w-4" aria-hidden="true" />
               Create Schedule
             </button>
           </div>
@@ -587,18 +589,18 @@ async function createSchedule() {
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEditModal && editingFavorite" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showEditModal && editingFavorite" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showEditModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showEditModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="edit-favorite-modal-title">
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">
-              <Edit class="h-6 w-6 text-blue-500" />
-              <h2 class="text-xl font-bold text-gray-900">Edit Favorite</h2>
+              <Edit class="h-6 w-6 text-blue-500" aria-hidden="true" />
+              <h2 id="edit-favorite-modal-title" class="text-xl font-bold text-gray-900">Edit Favorite</h2>
             </div>
-            <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 rounded-lg">
-              <X class="h-5 w-5 text-gray-500" />
+            <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 rounded-lg" aria-label="Close">
+              <X class="h-5 w-5 text-gray-500" aria-hidden="true" />
             </button>
           </div>
 
@@ -707,7 +709,7 @@ async function createSchedule() {
               :disabled="saving || !editForm.name || !editForm.serverId"
               class="btn btn-primary flex items-center gap-2"
             >
-              <RefreshCw v-if="saving" class="h-4 w-4 animate-spin" />
+              <RefreshCw v-if="saving" class="h-4 w-4 animate-spin" aria-hidden="true" />
               Save Changes
             </button>
           </div>

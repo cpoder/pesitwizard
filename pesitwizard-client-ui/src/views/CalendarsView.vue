@@ -176,27 +176,27 @@ async function saveCalendar() {
   <div>
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <Calendar class="h-8 w-8 text-orange-500" />
+        <Calendar class="h-8 w-8 text-orange-500" aria-hidden="true" />
         <h1 class="text-2xl font-bold text-gray-900">Business Calendars</h1>
       </div>
       <div class="flex gap-2">
-        <button @click="loadCalendars" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        <button @click="loadCalendars" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh calendars">
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
           Refresh
         </button>
-        <button @click="openCreateModal" class="btn btn-primary flex items-center gap-2">
-          <Plus class="h-4 w-4" />
+        <button @click="openCreateModal" class="btn btn-primary flex items-center gap-2" aria-label="New calendar">
+          <Plus class="h-4 w-4" aria-hidden="true" />
           New Calendar
         </button>
       </div>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="calendars.length === 0" class="card text-center py-12">
-      <Calendar class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Calendar class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No calendars configured</h3>
       <p class="text-gray-500">Calendars define working days and holidays for scheduled transfers</p>
     </div>
@@ -212,12 +212,12 @@ async function saveCalendar() {
             <p v-if="cal.description" class="text-sm text-gray-500 mt-1">{{ cal.description }}</p>
           </div>
           <div class="flex gap-1">
-            <button @click="openEditModal(cal)" class="p-2 text-gray-400 hover:text-blue-600 rounded-lg" title="Edit">
-              <Edit class="h-4 w-4" />
+            <button @click="openEditModal(cal)" class="p-2 text-gray-400 hover:text-blue-600 rounded-lg" title="Edit" aria-label="Edit calendar">
+              <Edit class="h-4 w-4" aria-hidden="true" />
             </button>
-            <button @click="confirmDelete(cal)" :disabled="deleting === cal.id" class="p-2 text-gray-400 hover:text-red-600 rounded-lg" title="Delete">
-              <RefreshCw v-if="deleting === cal.id" class="h-4 w-4 animate-spin" />
-              <Trash2 v-else class="h-4 w-4" />
+            <button @click="confirmDelete(cal)" :disabled="deleting === cal.id" class="p-2 text-gray-400 hover:text-red-600 rounded-lg" title="Delete" aria-label="Delete calendar">
+              <RefreshCw v-if="deleting === cal.id" class="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Trash2 v-else class="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -239,14 +239,14 @@ async function saveCalendar() {
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="closeModal">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="closeModal"></div>
-        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg" role="dialog" aria-modal="true" aria-labelledby="calendar-modal-title">
           <div class="flex items-center justify-between p-4 border-b">
-            <h3 class="text-lg font-semibold">{{ modalTitle }}</h3>
-            <button @click="closeModal" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
-              <X class="h-5 w-5" />
+            <h3 id="calendar-modal-title" class="text-lg font-semibold">{{ modalTitle }}</h3>
+            <button @click="closeModal" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg" aria-label="Close">
+              <X class="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
           
@@ -280,6 +280,7 @@ async function saveCalendar() {
                   :key="idx"
                   type="button"
                   @click="toggleWorkingDay(idx + 1)"
+                  :aria-pressed="form.workingDays.includes(idx + 1)"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     form.workingDays.includes(idx + 1)
@@ -302,8 +303,8 @@ async function saveCalendar() {
                   class="input flex-1"
                   @keyup.enter="addHoliday"
                 />
-                <button type="button" @click="addHoliday" class="btn btn-secondary">
-                  <Plus class="h-4 w-4" />
+                <button type="button" @click="addHoliday" class="btn btn-secondary" aria-label="Add holiday date">
+                  <Plus class="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               <div v-if="form.holidays.length > 0" class="flex flex-wrap gap-2">
@@ -313,8 +314,8 @@ async function saveCalendar() {
                   class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-lg text-sm"
                 >
                   {{ date }}
-                  <button type="button" @click="removeHoliday(date)" class="hover:text-red-900">
-                    <X class="h-3 w-3" />
+                  <button type="button" @click="removeHoliday(date)" class="hover:text-red-900" aria-label="Remove holiday">
+                    <X class="h-3 w-3" aria-hidden="true" />
                   </button>
                 </span>
               </div>
@@ -331,7 +332,7 @@ async function saveCalendar() {
             <div class="flex justify-end gap-2 pt-4 border-t">
               <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
               <button type="submit" class="btn btn-primary" :disabled="saving">
-                <RefreshCw v-if="saving" class="h-4 w-4 animate-spin mr-2" />
+                <RefreshCw v-if="saving" class="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
                 {{ isEditing ? 'Save Changes' : 'Create Calendar' }}
               </button>
             </div>

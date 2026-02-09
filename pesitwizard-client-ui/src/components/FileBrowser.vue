@@ -118,13 +118,13 @@ function formatDate(dateStr: string) {
         <h3 class="font-semibold text-gray-900">
           {{ mode === 'file' ? 'Select File' : 'Select Directory' }}
         </h3>
-        <button @click="$emit('close')" class="p-1 hover:bg-gray-100 rounded">
-          <X class="h-5 w-5 text-gray-500" />
+        <button @click="$emit('close')" class="p-1 hover:bg-gray-100 rounded" aria-label="Close file browser">
+          <X class="h-5 w-5 text-gray-500" aria-hidden="true" />
         </button>
       </div>
 
       <!-- Breadcrumb -->
-      <div class="flex items-center gap-1 px-4 py-2 bg-gray-50 border-b text-sm overflow-x-auto">
+      <nav aria-label="Breadcrumb" class="flex items-center gap-1 px-4 py-2 bg-gray-50 border-b text-sm overflow-x-auto">
         <button 
           @click="browse('.')" 
           class="hover:text-blue-600 font-medium flex-shrink-0"
@@ -132,7 +132,7 @@ function formatDate(dateStr: string) {
           Root
         </button>
         <template v-for="(part, index) in pathParts" :key="index">
-          <ChevronRight class="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <ChevronRight class="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
           <button 
             @click="navigateToIndex(index)"
             class="hover:text-blue-600 truncate max-w-[150px]"
@@ -141,12 +141,12 @@ function formatDate(dateStr: string) {
             {{ part }}
           </button>
         </template>
-      </div>
+      </nav>
 
       <!-- File List -->
       <div class="flex-1 overflow-y-auto min-h-[300px]">
         <div v-if="loading" class="flex items-center justify-center h-full">
-          <Loader2 class="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 class="h-8 w-8 animate-spin text-gray-400" aria-hidden="true" />
         </div>
 
         <div v-else-if="error" class="p-4 text-red-600 text-center">
@@ -160,30 +160,34 @@ function formatDate(dateStr: string) {
         <table v-else class="w-full text-sm">
           <thead class="bg-gray-50 sticky top-0">
             <tr>
-              <th class="text-left px-4 py-2 font-medium text-gray-600">Name</th>
-              <th class="text-right px-4 py-2 font-medium text-gray-600 w-24">Size</th>
-              <th class="text-right px-4 py-2 font-medium text-gray-600 w-40">Modified</th>
+              <th scope="col" class="text-left px-4 py-2 font-medium text-gray-600">Name</th>
+              <th scope="col" class="text-right px-4 py-2 font-medium text-gray-600 w-24">Size</th>
+              <th scope="col" class="text-right px-4 py-2 font-medium text-gray-600 w-40">Modified</th>
             </tr>
           </thead>
           <tbody>
             <!-- Parent directory -->
-            <tr 
+            <tr
               v-if="currentPath !== '.'"
               @click="navigateUp"
+              @keydown.enter="navigateUp"
+              tabindex="0"
               class="hover:bg-gray-50 cursor-pointer border-b"
             >
               <td class="px-4 py-2 flex items-center gap-2">
-                <ChevronUp class="h-4 w-4 text-gray-400" />
+                <ChevronUp class="h-4 w-4 text-gray-400" aria-hidden="true" />
                 <span class="text-gray-600">..</span>
               </td>
               <td></td>
               <td></td>
             </tr>
             <!-- Files and directories -->
-            <tr 
-              v-for="file in files" 
+            <tr
+              v-for="file in files"
               :key="file.path"
               @click="navigateTo(file)"
+              @keydown.enter="navigateTo(file)"
+              tabindex="0"
               :class="[
                 'hover:bg-gray-50 cursor-pointer border-b',
                 selectedPath === file.path ? 'bg-blue-50' : ''
@@ -191,8 +195,8 @@ function formatDate(dateStr: string) {
             >
               <td class="px-4 py-2">
                 <div class="flex items-center gap-2">
-                  <Folder v-if="file.directory" class="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                  <File v-else class="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <Folder v-if="file.directory" class="h-4 w-4 text-yellow-500 flex-shrink-0" aria-hidden="true" />
+                  <File v-else class="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
                   <span class="truncate" :title="file.name">{{ file.name }}</span>
                 </div>
               </td>
@@ -239,7 +243,7 @@ function formatDate(dateStr: string) {
             class="btn btn-primary flex items-center gap-1"
             :disabled="!selectedPath && mode === 'file'"
           >
-            <Check class="h-4 w-4" />
+            <Check class="h-4 w-4" aria-hidden="true" />
             Select
           </button>
         </div>

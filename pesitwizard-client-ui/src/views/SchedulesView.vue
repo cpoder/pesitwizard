@@ -139,21 +139,21 @@ function formatScheduleType(schedule: Schedule) {
   <div>
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <Calendar class="h-8 w-8 text-purple-500" />
+        <Calendar class="h-8 w-8 text-purple-500" aria-hidden="true" />
         <h1 class="text-2xl font-bold text-gray-900">Scheduled Transfers</h1>
       </div>
-      <button @click="loadSchedules" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+      <button @click="loadSchedules" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh schedules">
+        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
         Refresh
       </button>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="schedules.length === 0" class="card text-center py-12">
-      <Calendar class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Calendar class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No scheduled transfers</h3>
       <p class="text-gray-500 mb-4">Schedule transfers from Favorites or the Transfer page</p>
       <RouterLink to="/favorites" class="btn btn-primary">View Favorites</RouterLink>
@@ -174,8 +174,8 @@ function formatScheduleType(schedule: Schedule) {
               'p-3 rounded-lg',
               schedule.direction === 'SEND' ? 'bg-blue-100' : 'bg-green-100'
             ]">
-              <Upload v-if="schedule.direction === 'SEND'" class="h-6 w-6 text-blue-600" />
-              <Download v-else class="h-6 w-6 text-green-600" />
+              <Upload v-if="schedule.direction === 'SEND'" class="h-6 w-6 text-blue-600" aria-hidden="true" />
+              <Download v-else class="h-6 w-6 text-green-600" aria-hidden="true" />
             </div>
             
             <div class="flex-1">
@@ -205,9 +205,9 @@ function formatScheduleType(schedule: Schedule) {
                 <div>
                   <span class="text-gray-500 block">Last Run</span>
                   <div class="flex items-center gap-1">
-                    <CheckCircle v-if="schedule.lastRunStatus === 'SUCCESS'" class="h-4 w-4 text-green-500" />
-                    <XCircle v-else-if="schedule.lastRunStatus === 'FAILED'" class="h-4 w-4 text-red-500" />
-                    <Clock v-else-if="schedule.lastRunStatus === 'RUNNING'" class="h-4 w-4 text-blue-500 animate-spin" />
+                    <CheckCircle v-if="schedule.lastRunStatus === 'SUCCESS'" class="h-4 w-4 text-green-500" aria-hidden="true" />
+                    <XCircle v-else-if="schedule.lastRunStatus === 'FAILED'" class="h-4 w-4 text-red-500" aria-hidden="true" />
+                    <Clock v-else-if="schedule.lastRunStatus === 'RUNNING'" class="h-4 w-4 text-blue-500 animate-spin" aria-hidden="true" />
                     <span class="font-medium">{{ formatDate(schedule.lastRunAt) }}</span>
                   </div>
                 </div>
@@ -225,38 +225,41 @@ function formatScheduleType(schedule: Schedule) {
           </div>
 
           <div class="flex items-center gap-2">
-            <button 
+            <button
               @click="runNow(schedule)"
               :disabled="running === schedule.id"
               class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
               title="Run now"
+              aria-label="Run schedule now"
             >
-              <RefreshCw v-if="running === schedule.id" class="h-5 w-5 animate-spin" />
-              <PlayCircle v-else class="h-5 w-5" />
+              <RefreshCw v-if="running === schedule.id" class="h-5 w-5 animate-spin" aria-hidden="true" />
+              <PlayCircle v-else class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button 
+            <button
               @click="toggleSchedule(schedule)"
               :disabled="toggling === schedule.id"
               :class="[
                 'p-2 rounded-lg',
-                schedule.enabled 
-                  ? 'text-gray-400 hover:text-orange-600 hover:bg-orange-50' 
+                schedule.enabled
+                  ? 'text-gray-400 hover:text-orange-600 hover:bg-orange-50'
                   : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
               ]"
               :title="schedule.enabled ? 'Pause' : 'Resume'"
+              aria-label="Toggle schedule"
             >
-              <RefreshCw v-if="toggling === schedule.id" class="h-5 w-5 animate-spin" />
-              <Pause v-else-if="schedule.enabled" class="h-5 w-5" />
-              <Play v-else class="h-5 w-5" />
+              <RefreshCw v-if="toggling === schedule.id" class="h-5 w-5 animate-spin" aria-hidden="true" />
+              <Pause v-else-if="schedule.enabled" class="h-5 w-5" aria-hidden="true" />
+              <Play v-else class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button 
+            <button
               @click="confirmDelete(schedule)"
               :disabled="deleting === schedule.id"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="Delete"
+              aria-label="Delete schedule"
             >
-              <RefreshCw v-if="deleting === schedule.id" class="h-5 w-5 animate-spin" />
-              <Trash2 v-else class="h-5 w-5" />
+              <RefreshCw v-if="deleting === schedule.id" class="h-5 w-5 animate-spin" aria-hidden="true" />
+              <Trash2 v-else class="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
         </div>

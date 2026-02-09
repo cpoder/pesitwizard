@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@pesitwizard/frontend-common": "file:../pesitwizard-frontend-common",
@@ -37,6 +40,7 @@
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vitest": "^4.0.16",
-    "vue-tsc": "^3.1.4"
+    "vue-tsc": "^3.1.4",
+    "@playwright/test": "^1.52.0"
   }
 }

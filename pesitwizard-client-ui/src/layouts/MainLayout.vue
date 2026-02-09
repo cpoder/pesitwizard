@@ -53,8 +53,12 @@ function isActive(item: { href: string; exact: boolean }) {
 
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Skip navigation link -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[60] focus:bg-blue-600 focus:text-white focus:p-3 focus:rounded">Skip to main content</a>
+
     <!-- Sidebar -->
-    <aside 
+    <aside
+      aria-label="Navigation sidebar"
       :class="[
         'fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-200 ease-in-out',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -62,8 +66,8 @@ function isActive(item: { href: string; exact: boolean }) {
     >
       <div class="flex h-16 items-center justify-between px-6 border-b border-gray-800">
         <span class="text-xl font-bold text-white">PeSIT Wizard Client</span>
-        <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
-          <X class="h-6 w-6" />
+        <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white" aria-label="Close navigation menu">
+          <X class="h-6 w-6" aria-hidden="true" />
         </button>
       </div>
       
@@ -79,7 +83,7 @@ function isActive(item: { href: string; exact: boolean }) {
               : 'text-gray-300 hover:bg-gray-800 hover:text-white'
           ]"
         >
-          <component :is="item.icon" class="h-5 w-5" />
+          <component :is="item.icon" class="h-5 w-5" aria-hidden="true" />
           {{ item.name }}
         </RouterLink>
       </nav>
@@ -90,11 +94,13 @@ function isActive(item: { href: string; exact: boolean }) {
       <!-- Top bar -->
       <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div class="flex h-16 items-center gap-4 px-4">
-          <button 
-            @click="sidebarOpen = !sidebarOpen" 
+          <button
+            @click="sidebarOpen = !sidebarOpen"
             class="text-gray-500 hover:text-gray-700"
+            aria-label="Toggle navigation menu"
+            :aria-expanded="sidebarOpen"
           >
-            <Menu class="h-6 w-6" />
+            <Menu class="h-6 w-6" aria-hidden="true" />
           </button>
           <h1 class="text-lg font-semibold text-gray-900">PeSIT Wizard Client</h1>
         </div>
@@ -103,7 +109,7 @@ function isActive(item: { href: string; exact: boolean }) {
       <!-- Encryption Warning Banner -->
       <div v-if="encryptionWarning" class="bg-amber-500 text-white px-4 py-2 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <AlertTriangle class="h-5 w-5" />
+          <AlertTriangle class="h-5 w-5" aria-hidden="true" />
           <span class="font-medium">⚠️ Encryption not configured!</span>
           <span class="text-amber-100">Sensitive data (passwords, keys) is stored in plaintext.</span>
         </div>
@@ -113,7 +119,7 @@ function isActive(item: { href: string; exact: boolean }) {
       </div>
 
       <!-- Page content -->
-      <main class="p-6">
+      <main id="main-content" class="p-6">
         <RouterView />
       </main>
     </div>

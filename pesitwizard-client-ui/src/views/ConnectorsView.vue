@@ -228,16 +228,16 @@ function getTypeIcon(type: string) {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-900">Storage Connectors</h1>
       <div class="flex gap-3">
-        <button @click="reloadConnectors" class="btn btn-secondary flex items-center gap-2">
-          <RefreshCw class="h-4 w-4" />
+        <button @click="reloadConnectors" class="btn btn-secondary flex items-center gap-2" aria-label="Refresh connector plugins">
+          <RefreshCw class="h-4 w-4" aria-hidden="true" />
           Reload Plugins
         </button>
-        <button @click="showImportModal = true" class="btn btn-secondary flex items-center gap-2">
-          <Upload class="h-4 w-4" />
+        <button @click="showImportModal = true" class="btn btn-secondary flex items-center gap-2" aria-label="Import connector plugin">
+          <Upload class="h-4 w-4" aria-hidden="true" />
           Import Plugin
         </button>
-        <button @click="openAddModal" class="btn btn-primary flex items-center gap-2">
-          <Plus class="h-4 w-4" />
+        <button @click="openAddModal" class="btn btn-primary flex items-center gap-2" aria-label="New connection">
+          <Plus class="h-4 w-4" aria-hidden="true" />
           New Connection
         </button>
       </div>
@@ -264,11 +264,11 @@ function getTypeIcon(type: string) {
     <h2 class="text-lg font-semibold text-gray-800 mb-3">Configured Connections</h2>
     
     <div v-if="loading" class="flex items-center justify-center h-32">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="connections.length === 0" class="card text-center py-12">
-      <Plug class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Plug class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No connections configured</h3>
       <p class="text-gray-500 mb-4">Create a storage connection to access remote files</p>
       <button @click="openAddModal" class="btn btn-primary">New Connection</button>
@@ -288,10 +288,10 @@ function getTypeIcon(type: string) {
                   {{ conn.connectorType }}
                 </span>
                 <span v-if="conn.lastTestSuccess === true" class="text-green-600">
-                  <CheckCircle class="h-4 w-4 inline" /> OK
+                  <CheckCircle class="h-4 w-4 inline" aria-hidden="true" /> OK
                 </span>
                 <span v-else-if="conn.lastTestSuccess === false" class="text-red-600">
-                  <XCircle class="h-4 w-4 inline" /> Failed
+                  <XCircle class="h-4 w-4 inline" aria-hidden="true" /> Failed
                 </span>
               </div>
               <p v-if="conn.description" class="text-gray-600">{{ conn.description }}</p>
@@ -300,22 +300,22 @@ function getTypeIcon(type: string) {
           </div>
           
           <div class="flex items-center gap-2">
-            <button @click="testConnection(conn)" 
+            <button @click="testConnection(conn)"
               class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-              :disabled="testing === conn.id" title="Test">
-              <TestTube class="h-5 w-5" :class="{ 'animate-pulse': testing === conn.id }" />
+              :disabled="testing === conn.id" title="Test" aria-label="Test connection">
+              <TestTube class="h-5 w-5" :class="{ 'animate-pulse': testing === conn.id }" aria-hidden="true" />
             </button>
-            <button @click="browseConnection(conn)" 
-              class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Browse">
-              <FolderOpen class="h-5 w-5" />
+            <button @click="browseConnection(conn)"
+              class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Browse" aria-label="Browse files">
+              <FolderOpen class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button @click="openEditModal(conn)" 
-              class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg" title="Edit">
-              <Pencil class="h-5 w-5" />
+            <button @click="openEditModal(conn)"
+              class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg" title="Edit" aria-label="Edit connection">
+              <Pencil class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button @click="deleteConnection(conn)" 
-              class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete">
-              <Trash2 class="h-5 w-5" />
+            <button @click="deleteConnection(conn)"
+              class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete" aria-label="Delete connection">
+              <Trash2 class="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -323,12 +323,12 @@ function getTypeIcon(type: string) {
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-          <h2 class="text-xl font-bold text-gray-900 mb-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="connection-modal-title">
+          <h2 id="connection-modal-title" class="text-xl font-bold text-gray-900 mb-6">
             {{ editingConnection ? 'Edit Connection' : 'New Connection' }}
           </h2>
 
@@ -404,12 +404,12 @@ function getTypeIcon(type: string) {
     </div>
 
     <!-- Import Modal -->
-    <div v-if="showImportModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showImportModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showImportModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showImportModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-4">Import Connector Plugin</h2>
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+          <h2 id="import-modal-title" class="text-xl font-bold text-gray-900 mb-4">Import Connector Plugin</h2>
           <p class="text-gray-600 mb-4">Select a connector JAR file to import.</p>
           
           <input type="file" accept=".jar" @change="importConnector" class="input" />
@@ -422,12 +422,12 @@ function getTypeIcon(type: string) {
     </div>
 
     <!-- Browse Modal -->
-    <div v-if="showBrowseModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showBrowseModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showBrowseModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showBrowseModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-hidden flex flex-col">
-          <h2 class="text-xl font-bold text-gray-900 mb-2">Browse Files</h2>
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="browse-modal-title">
+          <h2 id="browse-modal-title" class="text-xl font-bold text-gray-900 mb-2">Browse Files</h2>
           <div class="flex items-center gap-2 mb-4">
             <button @click="navigateUp" class="btn btn-secondary btn-sm">⬆️ Up</button>
             <span class="text-gray-600 text-sm">{{ browsePath }}</span>
@@ -437,8 +437,8 @@ function getTypeIcon(type: string) {
             <table class="w-full text-sm">
               <thead class="bg-gray-50 sticky top-0">
                 <tr>
-                  <th class="px-4 py-2 text-left">Name</th>
-                  <th class="px-4 py-2 text-right">Size</th>
+                  <th scope="col" class="px-4 py-2 text-left">Name</th>
+                  <th scope="col" class="px-4 py-2 text-right">Size</th>
                 </tr>
               </thead>
               <tbody>

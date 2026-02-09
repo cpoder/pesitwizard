@@ -142,13 +142,14 @@ const showHelp = ref(false)
     <!-- Label -->
     <div v-if="label" class="flex items-center justify-between">
       <label class="block text-sm font-medium text-gray-700">{{ label }}</label>
-      <button 
+      <button
         type="button"
-        @click="showHelp = !showHelp" 
+        @click="showHelp = !showHelp"
         class="text-gray-400 hover:text-gray-600"
         title="Help"
+        aria-label="Show placeholder help"
       >
-        <Info class="h-4 w-4" />
+        <Info class="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
 
@@ -173,7 +174,7 @@ const showHelp = ref(false)
           class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-mono cursor-grab hover:bg-purple-200 active:cursor-grabbing"
           :title="p.desc"
         >
-          <GripVertical class="h-3 w-3 opacity-50" />
+          <GripVertical class="h-3 w-3 opacity-50" aria-hidden="true" />
           {{ p.label }}
         </button>
       </div>
@@ -189,7 +190,7 @@ const showHelp = ref(false)
           class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-mono cursor-grab hover:bg-amber-200 active:cursor-grabbing"
           :title="p.desc"
         >
-          <GripVertical class="h-3 w-3 opacity-50" />
+          <GripVertical class="h-3 w-3 opacity-50" aria-hidden="true" />
           {{ p.label }}
         </button>
       </div>

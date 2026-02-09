@@ -59,7 +59,7 @@ async function saveOtlpSettings() {
       <div class="card">
         <div class="flex items-center gap-3 mb-4">
           <div class="p-2 bg-yellow-100 rounded-lg">
-            <Zap class="h-5 w-5 text-yellow-600" />
+            <Zap class="h-5 w-5 text-yellow-600" aria-hidden="true" />
           </div>
           <div>
             <h2 class="text-lg font-semibold text-gray-900">Observability (OpenTelemetry)</h2>
@@ -106,7 +106,7 @@ async function saveOtlpSettings() {
           </div>
 
           <div v-if="otlpSaveSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-            <Check class="h-4 w-4" />
+            <Check class="h-4 w-4" aria-hidden="true" />
             OTLP settings saved successfully. Restart the client for changes to take effect.
           </div>
 
@@ -124,7 +124,7 @@ async function saveOtlpSettings() {
       <div class="card">
         <div class="flex items-center gap-3 mb-4">
           <div class="p-2 bg-blue-100 rounded-lg">
-            <Info class="h-5 w-5 text-blue-600" />
+            <Info class="h-5 w-5 text-blue-600" aria-hidden="true" />
           </div>
           <div>
             <h2 class="text-lg font-semibold text-gray-900">About</h2>

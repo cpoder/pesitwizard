@@ -254,23 +254,23 @@ async function deleteKeystore() {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-900">PeSIT Servers</h1>
       <div class="flex gap-3">
-        <button @click="loadServers" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        <button @click="loadServers" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh servers">
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
           Refresh
         </button>
-        <button @click="openAddModal" class="btn btn-primary flex items-center gap-2">
-          <Plus class="h-4 w-4" />
+        <button @click="openAddModal" class="btn btn-primary flex items-center gap-2" aria-label="Add server">
+          <Plus class="h-4 w-4" aria-hidden="true" />
           Add Server
         </button>
       </div>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <div v-else-if="servers.length === 0" class="card text-center py-12">
-      <Server class="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <Server class="h-16 w-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
       <h3 class="text-lg font-medium text-gray-900 mb-2">No servers configured</h3>
       <p class="text-gray-500 mb-4">Add a PeSIT server to start transferring files</p>
       <button @click="openAddModal" class="btn btn-primary">Add Server</button>
@@ -285,13 +285,14 @@ async function deleteKeystore() {
         <div class="flex items-start justify-between">
           <div class="flex items-start gap-4">
             <div :class="['p-3 rounded-lg', server.enabled ? 'bg-green-100' : 'bg-gray-100']">
-              <Server :class="['h-6 w-6', server.enabled ? 'text-green-600' : 'text-gray-400']" />
+              <Server :class="['h-6 w-6', server.enabled ? 'text-green-600' : 'text-gray-400']" aria-hidden="true" />
+              <span class="sr-only">{{ server.enabled ? 'Enabled' : 'Disabled' }}</span>
             </div>
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold text-gray-900">{{ server.name }}</h3>
                 <span v-if="server.defaultServer" class="badge badge-info flex items-center gap-1">
-                  <Star class="h-3 w-3" /> Default
+                  <Star class="h-3 w-3" aria-hidden="true" /> Default
                 </span>
                 <button 
                   v-if="server.tlsEnabled" 
@@ -299,7 +300,7 @@ async function deleteKeystore() {
                   class="badge badge-success flex items-center gap-1 cursor-pointer hover:bg-green-200"
                   title="Configure TLS certificates"
                 >
-                  <Shield class="h-3 w-3" /> TLS
+                  <Shield class="h-3 w-3" aria-hidden="true" /> TLS
                   <span v-if="!server.truststoreConfigured" class="text-yellow-600">!</span>
                 </button>
               </div>
@@ -310,27 +311,30 @@ async function deleteKeystore() {
           </div>
           
           <div class="flex items-center gap-2">
-            <button 
+            <button
               v-if="!server.defaultServer"
-              @click="setDefault(server)" 
+              @click="setDefault(server)"
               class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg"
               title="Set as default"
+              aria-label="Set as default server"
             >
-              <Star class="h-5 w-5" />
+              <Star class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button 
-              @click="openEditModal(server)" 
+            <button
+              @click="openEditModal(server)"
               class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg"
               title="Edit"
+              aria-label="Edit server"
             >
-              <Pencil class="h-5 w-5" />
+              <Pencil class="h-5 w-5" aria-hidden="true" />
             </button>
-            <button 
-              @click="deleteServer(server)" 
+            <button
+              @click="deleteServer(server)"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="Delete"
+              aria-label="Delete server"
             >
-              <Trash2 class="h-5 w-5" />
+              <Trash2 class="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -338,12 +342,12 @@ async function deleteKeystore() {
     </div>
 
     <!-- Add/Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-6">
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="server-modal-title">
+          <h2 id="server-modal-title" class="text-xl font-bold text-gray-900 mb-6">
             {{ editingServer ? 'Edit Server' : 'Add Server' }}
           </h2>
 
@@ -406,23 +410,23 @@ async function deleteKeystore() {
     </div>
 
     <!-- TLS Configuration Modal -->
-    <div v-if="showTlsModal" class="fixed inset-0 z-50 overflow-y-auto">
+    <div v-if="showTlsModal" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape="showTlsModal = false">
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showTlsModal = false" />
-        
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Shield class="h-6 w-6 text-green-600" />
+
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full p-6" role="dialog" aria-modal="true" aria-labelledby="tls-modal-title">
+          <h2 id="tls-modal-title" class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <Shield class="h-6 w-6 text-green-600" aria-hidden="true" />
             TLS Certificates - {{ tlsServerName }}
           </h2>
           <p class="text-sm text-gray-500 mb-6">Upload certificates to enable secure TLS connections</p>
 
           <div v-if="tlsError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-            <AlertCircle class="h-4 w-4" />
+            <AlertCircle class="h-4 w-4" aria-hidden="true" />
             {{ tlsError }}
           </div>
           <div v-if="tlsSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-            <CheckCircle class="h-4 w-4" />
+            <CheckCircle class="h-4 w-4" aria-hidden="true" />
             {{ tlsSuccess }}
           </div>
 
@@ -430,14 +434,14 @@ async function deleteKeystore() {
             <!-- Truststore (CA Certificate) -->
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-3">
-                <Lock class="h-5 w-5 text-blue-600" />
+                <Lock class="h-5 w-5 text-blue-600" aria-hidden="true" />
                 <h3 class="font-semibold">CA Certificate (Truststore)</h3>
               </div>
               <p class="text-xs text-gray-500 mb-3">Required to verify the server's certificate</p>
               
               <div v-if="tlsStatus.truststoreConfigured" class="mb-3 p-2 bg-green-50 rounded flex items-center justify-between">
                 <span class="text-sm text-green-700 flex items-center gap-1">
-                  <CheckCircle class="h-4 w-4" /> Configured
+                  <CheckCircle class="h-4 w-4" aria-hidden="true" /> Configured
                 </span>
                 <button @click="deleteTruststore" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
               </div>
@@ -457,7 +461,7 @@ async function deleteKeystore() {
                   class="btn btn-primary w-full flex items-center justify-center gap-2"
                   :disabled="uploading || !truststoreFile"
                 >
-                  <Upload class="h-4 w-4" />
+                  <Upload class="h-4 w-4" aria-hidden="true" />
                   {{ uploading ? 'Uploading...' : 'Upload CA Certificate' }}
                 </button>
               </div>
@@ -466,14 +470,14 @@ async function deleteKeystore() {
             <!-- Keystore (Client Certificate) -->
             <div class="border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-3">
-                <Key class="h-5 w-5 text-purple-600" />
+                <Key class="h-5 w-5 text-purple-600" aria-hidden="true" />
                 <h3 class="font-semibold">Client Certificate (Keystore)</h3>
               </div>
               <p class="text-xs text-gray-500 mb-3">Optional - for mutual TLS authentication</p>
               
               <div v-if="tlsStatus.keystoreConfigured" class="mb-3 p-2 bg-green-50 rounded flex items-center justify-between">
                 <span class="text-sm text-green-700 flex items-center gap-1">
-                  <CheckCircle class="h-4 w-4" /> Configured
+                  <CheckCircle class="h-4 w-4" aria-hidden="true" /> Configured
                 </span>
                 <button @click="deleteKeystore" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
               </div>
@@ -492,7 +496,7 @@ async function deleteKeystore() {
                   class="btn btn-secondary w-full flex items-center justify-center gap-2"
                   :disabled="uploading || !keystoreFile"
                 >
-                  <Upload class="h-4 w-4" />
+                  <Upload class="h-4 w-4" aria-hidden="true" />
                   {{ uploading ? 'Uploading...' : 'Upload Keystore' }}
                 </button>
               </div>

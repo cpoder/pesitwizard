@@ -129,15 +129,15 @@ function formatDate(dateStr: string) {
   <div>
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <button @click="loadDashboard" class="btn btn-secondary flex items-center gap-2" :disabled="loading">
-        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+      <button @click="loadDashboard" class="btn btn-secondary flex items-center gap-2" :disabled="loading" aria-label="Refresh dashboard">
+        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
         Refresh
       </button>
     </div>
 
     <!-- Loading -->
     <div v-if="loading && !dashboard" class="flex items-center justify-center h-64">
-      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" />
+      <RefreshCw class="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
     </div>
 
     <template v-else>
@@ -146,7 +146,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 rounded-lg">
-              <Activity class="h-6 w-6 text-blue-600" />
+              <Activity class="h-6 w-6 text-blue-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Total Transfers</p>
@@ -158,7 +158,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 rounded-lg">
-              <CheckCircle class="h-6 w-6 text-green-600" />
+              <CheckCircle class="h-6 w-6 text-green-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Completed</p>
@@ -170,7 +170,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-red-100 rounded-lg">
-              <XCircle class="h-6 w-6 text-red-600" />
+              <XCircle class="h-6 w-6 text-red-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Failed</p>
@@ -184,7 +184,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 rounded-lg">
-              <Download class="h-6 w-6 text-purple-600" />
+              <Download class="h-6 w-6 text-purple-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Data Transferred</p>
@@ -200,7 +200,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 rounded-lg" :class="transferStats().inProgress > 0 ? 'bg-yellow-100' : 'bg-gray-100'">
-              <Clock :class="['h-6 w-6', transferStats().inProgress > 0 ? 'text-yellow-600' : 'text-gray-500']" />
+              <Clock :class="['h-6 w-6', transferStats().inProgress > 0 ? 'text-yellow-600' : 'text-gray-500']" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">In Progress</p>
@@ -215,7 +215,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-indigo-100 rounded-lg">
-              <Server class="h-6 w-6 text-indigo-600" />
+              <Server class="h-6 w-6 text-indigo-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">PeSIT Servers</p>
@@ -231,7 +231,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 rounded-lg" :class="dashboard?.security?.encryptionEnabled ? 'bg-green-100' : 'bg-yellow-100'">
-              <Lock :class="['h-6 w-6', dashboard?.security?.encryptionEnabled ? 'text-green-600' : 'text-yellow-600']" />
+              <Lock :class="['h-6 w-6', dashboard?.security?.encryptionEnabled ? 'text-green-600' : 'text-yellow-600']" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Encryption</p>
@@ -246,7 +246,7 @@ function formatDate(dateStr: string) {
         <div class="card">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-gray-100 rounded-lg">
-              <Cpu class="h-6 w-6 text-gray-600" />
+              <Cpu class="h-6 w-6 text-gray-600" aria-hidden="true" />
             </div>
             <div>
               <p class="text-sm text-gray-500">Memory</p>
@@ -259,17 +259,17 @@ function formatDate(dateStr: string) {
       </div>
 
       <!-- Active Transfers Alert -->
-      <div v-if="dashboard?.activeTransfers?.length" class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div v-if="dashboard?.activeTransfers?.length" class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4" role="alert">
         <div class="flex items-center gap-3 mb-3">
-          <Activity class="h-5 w-5 text-yellow-600 animate-pulse" />
+          <Activity class="h-5 w-5 text-yellow-600 animate-pulse" aria-hidden="true" />
           <h3 class="font-semibold text-yellow-700">{{ dashboard.activeTransfers.length }} Transfer(s) In Progress</h3>
         </div>
         <div class="space-y-2">
           <div v-for="transfer in dashboard.activeTransfers.slice(0, 3)" :key="transfer.id"
                class="flex items-center justify-between text-sm bg-white p-2 rounded">
             <div class="flex items-center gap-2">
-              <Upload v-if="transfer.direction === 'SEND'" class="h-4 w-4 text-blue-500" />
-              <Download v-else class="h-4 w-4 text-green-500" />
+              <Upload v-if="transfer.direction === 'SEND'" class="h-4 w-4 text-blue-500" aria-hidden="true" />
+              <Download v-else class="h-4 w-4 text-green-500" aria-hidden="true" />
               <span class="font-medium">{{ transfer.filename }}</span>
               <span class="text-gray-500">→ {{ transfer.serverName }}</span>
             </div>
@@ -284,12 +284,12 @@ function formatDate(dateStr: string) {
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-gray-900">Configured Servers</h2>
           <RouterLink to="/servers" class="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1">
-            Manage <ArrowRight class="h-4 w-4" />
+            Manage <ArrowRight class="h-4 w-4" aria-hidden="true" />
           </RouterLink>
         </div>
 
         <div v-if="serverList().length === 0" class="text-center py-8 text-gray-500">
-          <Server class="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <Server class="h-12 w-12 mx-auto mb-2 opacity-50" aria-hidden="true" />
           <p>No servers configured</p>
           <RouterLink to="/servers" class="btn btn-primary mt-4 inline-block">Add Server</RouterLink>
         </div>
@@ -301,7 +301,8 @@ function formatDate(dateStr: string) {
             class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
           >
             <div class="flex items-center gap-3">
-              <div :class="['w-2 h-2 rounded-full', server.enabled ? 'bg-green-500' : 'bg-gray-400']" />
+              <div :class="['w-2 h-2 rounded-full', server.enabled ? 'bg-green-500' : 'bg-gray-400']" aria-hidden="true" />
+              <span class="sr-only">{{ server.enabled ? 'Enabled' : 'Disabled' }}</span>
               <div>
                 <p class="font-medium text-gray-900">{{ server.name }}</p>
                 <p class="text-sm text-gray-500">{{ server.host }}:{{ server.port }}</p>
@@ -317,12 +318,12 @@ function formatDate(dateStr: string) {
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-gray-900">Recent Transfers</h2>
           <RouterLink to="/history" class="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1">
-            View All <ArrowRight class="h-4 w-4" />
+            View All <ArrowRight class="h-4 w-4" aria-hidden="true" />
           </RouterLink>
         </div>
 
         <div v-if="recentList().length === 0" class="text-center py-8 text-gray-500">
-          <Clock class="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <Clock class="h-12 w-12 mx-auto mb-2 opacity-50" aria-hidden="true" />
           <p>No transfers yet</p>
           <RouterLink to="/transfer" class="btn btn-primary mt-4 inline-block">Start Transfer</RouterLink>
         </div>
@@ -334,8 +335,8 @@ function formatDate(dateStr: string) {
             class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
           >
             <div class="flex items-center gap-3">
-              <Upload v-if="transfer.direction === 'SEND'" class="h-5 w-5 text-blue-600" />
-              <Download v-else class="h-5 w-5 text-green-600" />
+              <Upload v-if="transfer.direction === 'SEND'" class="h-5 w-5 text-blue-600" aria-hidden="true" />
+              <Download v-else class="h-5 w-5 text-green-600" aria-hidden="true" />
               <div>
                 <p class="font-medium text-gray-900 truncate max-w-[200px]">{{ transfer.filename || transfer.remoteFilename || 'Unknown' }}</p>
                 <p class="text-sm text-gray-500">{{ formatDate(transfer.startedAt) }}</p>
@@ -358,10 +359,10 @@ function formatDate(dateStr: string) {
       <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
       <div class="flex flex-wrap gap-4">
         <RouterLink to="/transfer" class="btn btn-primary flex items-center gap-2">
-          <Upload class="h-4 w-4" /> Send File
+          <Upload class="h-4 w-4" aria-hidden="true" /> Send File
         </RouterLink>
         <RouterLink to="/servers" class="btn btn-secondary flex items-center gap-2">
-          <Server class="h-4 w-4" /> Manage Servers
+          <Server class="h-4 w-4" aria-hidden="true" /> Manage Servers
         </RouterLink>
       </div>
     </div>

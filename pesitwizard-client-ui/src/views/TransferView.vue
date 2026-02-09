@@ -351,7 +351,7 @@ async function resumeTransfer(transferId: string) {
         <h2 class="text-lg font-semibold text-gray-900 mb-4">New Transfer</h2>
 
         <div v-if="servers.length === 0 && !loading" class="text-center py-8">
-          <Server class="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <Server class="h-12 w-12 mx-auto mb-4 text-gray-400" aria-hidden="true" />
           <p class="text-gray-500 mb-4">No servers configured</p>
           <RouterLink to="/servers" class="btn btn-primary">Add Server</RouterLink>
         </div>
@@ -368,7 +368,7 @@ async function resumeTransfer(transferId: string) {
                   value="SEND" 
                   class="text-primary-600"
                 />
-                <Send class="h-4 w-4 text-blue-600" />
+                <Send class="h-4 w-4 text-blue-600" aria-hidden="true" />
                 <span>Send</span>
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
@@ -378,7 +378,7 @@ async function resumeTransfer(transferId: string) {
                   value="RECEIVE" 
                   class="text-primary-600"
                 />
-                <Download class="h-4 w-4 text-green-600" />
+                <Download class="h-4 w-4 text-green-600" aria-hidden="true" />
                 <span>Receive</span>
               </label>
             </div>
@@ -427,7 +427,7 @@ async function resumeTransfer(transferId: string) {
           <!-- Storage Connection -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-              <Plug class="h-4 w-4 inline mr-1" />
+              <Plug class="h-4 w-4 inline mr-1" aria-hidden="true" />
               {{ activeConnectionLabel }}
             </label>
             <select 
@@ -467,13 +467,14 @@ async function resumeTransfer(transferId: string) {
                   required 
                   :placeholder="form.sourceConnectionId ? 'path/to/file.txt' : '/path/to/file.txt'"
                 />
-                <button 
+                <button
                   type="button"
                   @click="openFileBrowser('file', form.sourceConnectionId)"
                   class="btn btn-secondary flex items-center gap-1"
                   title="Browse files"
+                  aria-label="Browse source files"
                 >
-                  <FolderOpen class="h-4 w-4" />
+                  <FolderOpen class="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               <p class="text-xs text-gray-500 mt-1">
@@ -491,13 +492,14 @@ async function resumeTransfer(transferId: string) {
                     direction="RECEIVE"
                   />
                 </div>
-                <button 
+                <button
                   type="button"
                   @click="openFileBrowser('directory', form.destinationConnectionId)"
                   class="btn btn-secondary flex items-center gap-1 self-start"
                   title="Browse directories"
+                  aria-label="Browse destination"
                 >
-                  <FolderOpen class="h-4 w-4" />
+                  <FolderOpen class="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               <p class="text-xs text-gray-500 mt-1">
@@ -523,14 +525,16 @@ async function resumeTransfer(transferId: string) {
 
           <!-- Advanced Options Toggle -->
           <div class="border-t pt-4">
-            <button 
+            <button
               type="button"
               @click="showAdvancedOptions = !showAdvancedOptions"
               class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              :aria-expanded="showAdvancedOptions"
             >
-              <ChevronDown 
-                class="h-4 w-4 transition-transform" 
+              <ChevronDown
+                class="h-4 w-4 transition-transform"
                 :class="{ 'rotate-180': showAdvancedOptions }"
+                aria-hidden="true"
               />
               Advanced Options
             </button>
@@ -602,10 +606,15 @@ async function resumeTransfer(transferId: string) {
               <span>{{ progress.bytesTransferredFormatted }} / {{ progress.fileSizeFormatted }}</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3">
-              <div 
+              <div
                 class="bg-primary-600 h-3 rounded-full transition-all duration-300"
                 :style="{ width: (progress.percentage >= 0 ? progress.percentage : 0) + '%' }"
                 :class="{ 'animate-pulse': progress.percentage < 0 }"
+                role="progressbar"
+                :aria-valuenow="progress.percentage >= 0 ? progress.percentage : 0"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="Transfer progress"
               ></div>
             </div>
             <p class="text-center text-sm text-gray-500">
@@ -620,8 +629,8 @@ async function resumeTransfer(transferId: string) {
               type="submit" 
               class="btn btn-primary flex-1 flex items-center justify-center gap-2"
             >
-              <Upload v-if="form.direction === 'SEND'" class="h-4 w-4" />
-              <Download v-else class="h-4 w-4" />
+              <Upload v-if="form.direction === 'SEND'" class="h-4 w-4" aria-hidden="true" />
+              <Download v-else class="h-4 w-4" aria-hidden="true" />
               {{ form.direction === 'SEND' ? 'Send File' : 'Receive File' }}
             </button>
             
@@ -631,7 +640,7 @@ async function resumeTransfer(transferId: string) {
               @click="cancelCurrentTransfer"
               class="btn btn-danger flex-1 flex items-center justify-center gap-2"
             >
-              <StopCircle class="h-4 w-4" />
+              <StopCircle class="h-4 w-4" aria-hidden="true" />
               Cancel Transfer
             </button>
           </div>
@@ -640,7 +649,7 @@ async function resumeTransfer(transferId: string) {
         <!-- Resumable Transfers Section -->
         <div v-if="resumableTransfers.length > 0" class="mt-6 border-t pt-4">
           <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <RefreshCw class="h-4 w-4" />
+            <RefreshCw class="h-4 w-4" aria-hidden="true" />
             Resumable Transfers
           </h3>
           <div class="space-y-2">
@@ -661,7 +670,7 @@ async function resumeTransfer(transferId: string) {
                 class="btn btn-success btn-sm flex items-center gap-1"
                 :disabled="transferring"
               >
-                <Play class="h-3 w-3" />
+                <Play class="h-3 w-3" aria-hidden="true" />
                 Resume
               </button>
             </div>
@@ -674,15 +683,15 @@ async function resumeTransfer(transferId: string) {
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Transfer Result</h2>
 
         <div v-if="!result" class="text-center py-12 text-gray-500">
-          <FileText class="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <FileText class="h-12 w-12 mx-auto mb-4 opacity-50" aria-hidden="true" />
           <p>Start a transfer to see results</p>
         </div>
 
         <div v-else class="space-y-4">
           <div class="flex items-center gap-3">
-            <CheckCircle v-if="result.status === 'COMPLETED'" class="h-8 w-8 text-green-600" />
-            <XCircle v-else-if="result.status === 'FAILED'" class="h-8 w-8 text-red-600" />
-            <Loader2 v-else class="h-8 w-8 text-yellow-600 animate-spin" />
+            <CheckCircle v-if="result.status === 'COMPLETED'" class="h-8 w-8 text-green-600" aria-hidden="true" />
+            <XCircle v-else-if="result.status === 'FAILED'" class="h-8 w-8 text-red-600" aria-hidden="true" />
+            <Loader2 v-else class="h-8 w-8 text-yellow-600 animate-spin" aria-hidden="true" />
             <div>
               <p class="font-semibold text-lg" :class="{
                 'text-green-600': result.status === 'COMPLETED',
@@ -740,7 +749,7 @@ async function resumeTransfer(transferId: string) {
               :disabled="transferring"
               title="Replay transfer from start"
             >
-              <RotateCcw class="h-4 w-4" />
+              <RotateCcw class="h-4 w-4" aria-hidden="true" />
               Replay
             </button>
 
@@ -752,7 +761,7 @@ async function resumeTransfer(transferId: string) {
               :disabled="transferring"
               title="Resume from last checkpoint"
             >
-              <Play class="h-4 w-4" />
+              <Play class="h-4 w-4" aria-hidden="true" />
               Resume
             </button>
           </div>

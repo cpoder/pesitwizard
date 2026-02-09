@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
 import { AlertTriangle, Trash2 } from 'lucide-vue-next'
 
 interface Props {
@@ -22,6 +23,9 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const cancelButtonRef = ref<HTMLButtonElement | null>(null)
+const modalRef = ref<HTMLDivElement | null>(null)
+
 const variantStyles = {
   danger: {
     icon: Trash2,
@@ -44,25 +48,58 @@ const variantStyles = {
 }
 
 const style = variantStyles[props.variant]
+
+// Focus management: focus cancel button when modal opens
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    nextTick(() => cancelButtonRef.value?.focus())
+  }
+})
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    emit('cancel')
+    return
+  }
+  // Focus trap: cycle focus within modal
+  if (e.key === 'Tab' && modalRef.value) {
+    const focusable = modalRef.value.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    if (focusable.length === 0) return
+    const first = focusable[0] as HTMLElement
+    const last = focusable[focusable.length - 1] as HTMLElement
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+}
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
+      <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto"
+           role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title"
+           @keydown="handleKeydown">
         <div class="flex min-h-full items-center justify-center p-4">
           <!-- Backdrop -->
-          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="emit('cancel')" />
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+               aria-hidden="true" @click="emit('cancel')" />
 
           <!-- Modal -->
-          <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:w-full sm:max-w-lg">
+          <div ref="modalRef" class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:w-full sm:max-w-lg">
             <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
               <div class="sm:flex sm:items-start">
                 <div :class="['mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full sm:mx-0 sm:h-10 sm:w-10', style.iconBg]">
-                  <component :is="style.icon" :class="['h-6 w-6', style.iconColor]" />
+                  <component :is="style.icon" :class="['h-6 w-6', style.iconColor]" aria-hidden="true" />
                 </div>
                 <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                  <h3 class="text-lg font-semibold leading-6 text-gray-900">{{ title }}</h3>
+                  <h3 id="confirm-modal-title" class="text-lg font-semibold leading-6 text-gray-900">{{ title }}</h3>
                   <div class="mt-2">
                     <p class="text-sm text-gray-500">{{ message }}</p>
                   </div>
@@ -78,6 +115,7 @@ const style = variantStyles[props.variant]
                 {{ confirmText }}
               </button>
               <button
+                ref="cancelButtonRef"
                 type="button"
                 class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
                 @click="emit('cancel')"
