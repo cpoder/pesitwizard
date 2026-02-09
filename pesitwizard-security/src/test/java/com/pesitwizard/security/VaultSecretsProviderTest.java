@@ -52,9 +52,9 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available when vault unreachable")
         void shouldNotBeAvailableWhenVaultUnreachable() {
-            // Use invalid address that will fail connection
+            // Use unreachable address that will fail connection
             VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://localhost:99999", "token", "secret/data/test");
+                    "http://localhost:39999", "token", "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -185,7 +185,7 @@ class VaultSecretsProviderTest {
         @DisplayName("should be closed initially")
         void shouldBeClosedInitially() {
             VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://localhost:99999", "token", "secret/data/test");
+                    "http://localhost:39999", "token", "secret/data/test");
             // Circuit starts closed, provider attempts connection
             assertThat(provider.getProviderType()).isEqualTo("VAULT");
         }
