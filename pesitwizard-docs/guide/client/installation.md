@@ -193,19 +193,37 @@ volumes:
 
 ## Kubernetes (Helm)
 
-The Helm chart is included in the repository under `pesitwizard-helm-charts/pesitwizard-client`:
+### Quick Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-client.sh | bash
+```
+
+### Manual Install
+
+Download the Helm chart from GitHub and install:
+
+```bash
+# Download the chart
+export PESITWIZARD_VERSION=main  # or a specific tag like v1.0.1
+curl -fsSL "https://github.com/pesitwizard/pesitwizard/archive/refs/heads/${PESITWIZARD_VERSION}.tar.gz" \
+  | tar -xz -C /tmp
+
 # Install the client (uses H2 by default)
-helm install pesitwizard-client ./pesitwizard-helm-charts/pesitwizard-client \
+helm install pesitwizard-client \
+  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-client \
   --namespace pesitwizard \
   --create-namespace
+
+# Clean up
+rm -rf /tmp/pesitwizard-${PESITWIZARD_VERSION}
 ```
 
 To use PostgreSQL instead of H2, provide database settings:
 
 ```bash
-helm install pesitwizard-client ./pesitwizard-helm-charts/pesitwizard-client \
+helm install pesitwizard-client \
+  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-client \
   --namespace pesitwizard \
   --create-namespace \
   --set database.host=postgres \

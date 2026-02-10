@@ -14,8 +14,14 @@ This guide explains how to deploy PeSIT Wizard in different environments.
 ### Installation
 
 ```bash
-# Install PeSIT Wizard Server from local chart
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+# Download the Helm chart from GitHub
+export PESITWIZARD_VERSION=main  # or a specific tag like v1.0.1
+curl -fsSL "https://github.com/pesitwizard/pesitwizard/archive/refs/heads/${PESITWIZARD_VERSION}.tar.gz" \
+  | tar -xz -C /tmp
+CHART_DIR="/tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-server"
+
+# Install PeSIT Wizard Server
+helm install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   --create-namespace \
   --set replicaCount=3 \
@@ -69,7 +75,7 @@ resources:
 Apply:
 
 ```bash
-helm upgrade --install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+helm upgrade --install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   -f values.yaml
 ```
@@ -201,6 +207,8 @@ EOF
 
 ## Deployment on Cloud Providers
 
+> **Note**: All examples below use `$CHART_DIR` which refers to the Helm chart downloaded from GitHub. See [Option 1](#option-1-quick-deployment-with-helm) above for download instructions.
+
 ### AWS EKS
 
 ```bash
@@ -216,7 +224,7 @@ eksctl create cluster \
 aws eks update-kubeconfig --name pesitwizard-cluster --region eu-west-1
 
 # Install PeSIT Wizard
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+helm install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   --create-namespace \
   --set database.host=postgres \
@@ -238,7 +246,7 @@ gcloud container clusters create pesitwizard-cluster \
 gcloud container clusters get-credentials pesitwizard-cluster --zone europe-west1-b
 
 # Install PeSIT Wizard
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+helm install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   --create-namespace
 ```
@@ -261,7 +269,7 @@ az aks create \
 az aks get-credentials --resource-group pesitwizard-rg --name pesitwizard-cluster
 
 # Install PeSIT Wizard
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+helm install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   --create-namespace
 ```
@@ -276,7 +284,7 @@ curl -sfL https://get.k3s.io | sh -
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # Install PeSIT Wizard
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+helm install pesitwizard-server "$CHART_DIR" \
   --namespace pesitwizard \
   --create-namespace \
   --set service.type=NodePort
@@ -375,7 +383,7 @@ kubectl get secret pesitwizard-tls -n pesitwizard -o yaml > pesitwizard-tls-back
 
 ```bash
 # Update the Helm chart
-helm upgrade pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server -n pesitwizard
+helm upgrade pesitwizard-server "$CHART_DIR" -n pesitwizard
 
 # Or update the image manually
 kubectl set image deployment/pesitwizard-server \

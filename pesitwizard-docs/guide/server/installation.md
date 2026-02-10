@@ -224,10 +224,25 @@ spec:
 
 ### Using the Helm Chart
 
-The Helm chart is included in the repository under `pesitwizard-helm-charts/pesitwizard-server`:
+#### Quick Install
 
 ```bash
-helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-server.sh | bash
+```
+
+#### Manual Install
+
+Download the Helm chart from GitHub and install:
+
+```bash
+# Download the chart
+export PESITWIZARD_VERSION=main  # or a specific tag like v1.0.1
+curl -fsSL "https://github.com/pesitwizard/pesitwizard/archive/refs/heads/${PESITWIZARD_VERSION}.tar.gz" \
+  | tar -xz -C /tmp
+
+# Install
+helm install pesitwizard-server \
+  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-server \
   --namespace pesitwizard \
   --create-namespace \
   --set database.host=postgres \
@@ -235,6 +250,9 @@ helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
   --set database.name=pesitwizard \
   --set database.username=pesitwizard \
   --set database.password=pesitwizard
+
+# Clean up
+rm -rf /tmp/pesitwizard-${PESITWIZARD_VERSION}
 ```
 
 ### RBAC for Labeling
