@@ -28,8 +28,13 @@ scripts/cx-*.sh
 scripts/cx-*.md
 scripts/setup-cx-test.sh
 
-# CX integration test JARs (build artifacts, too large for git)
+# CX integration test artifacts (JARs, proprietary CX binaries)
 integration-tests/cx-integration/docker/**/*.jar
+integration-tests/cx-integration/docker/cx/CX/
 
 # Session recordings
 **/recordings/
+
+# H2 database files
+**/*.mv.db
+**/*.trace.db
