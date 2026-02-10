@@ -42,8 +42,8 @@ RUN mkdir -p /data/db /data/received /data/send \
 
 USER pesit
 
-# Expose ports (REST API, PeSIT, JGroups)
-EXPOSE 8080 5000 7800
+# Expose ports (REST API, PeSIT plaintext, PeSIT TLS, JGroups)
+EXPOSE 8080 6502 5001 7800
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

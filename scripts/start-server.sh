@@ -1,10 +1,10 @@
 #!/bin/bash
-# Start Vectis Server (standalone mode)
+# Start PeSIT Wizard Server (standalone mode)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== Starting Vectis Server ==="
+echo "=== Starting PeSIT Wizard Server ==="
 
 cd "$PROJECT_DIR/pesitwizard-server"
 

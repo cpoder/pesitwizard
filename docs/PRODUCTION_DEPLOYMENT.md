@@ -109,7 +109,7 @@ Complete all items before proceeding with deployment:
 | 5432 | TCP | Internal | PostgreSQL |
 | 6379 | TCP | Internal | Redis |
 | 9090 | TCP | Internal | Prometheus metrics |
-| 7000 | TCP | Internal | Cluster communication |
+| 7800 | TCP | Internal | Cluster communication (JGroups) |
 
 ### Firewall Rules
 
@@ -553,11 +553,8 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis \
 ### Step 5: Deploy PeSIT Wizard
 
 ```bash
-# Add Helm repository (if using remote repo)
-helm repo add pesitwizard https://charts.pesitwizard.io
-
-# Deploy with production values
-helm install pesitwizard pesitwizard/pesitwizard-server \
+# Deploy with production values (from local chart)
+helm install pesitwizard ./pesitwizard-helm-charts/pesitwizard-server \
   -f deployment/production/values.yaml \
   -n pesitwizard \
   --set image.tag=1.0.0 \

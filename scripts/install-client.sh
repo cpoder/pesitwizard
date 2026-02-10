@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vectis Client Installation Script
+# PeSIT Wizard Client Installation Script
 # Usage: curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/scripts/install-client.sh | bash
 # Or with options: curl -fsSL ... | bash -s -- --port-forward --port 9090
 
@@ -460,7 +460,7 @@ configure_storage() {
 # Download and deploy via Helm from GitHub
 deploy_helm() {
     echo ""
-    echo -e "${YELLOW}Installing Vectis Client...${NC}"
+    echo -e "${YELLOW}Installing PeSIT Wizard Client...${NC}"
     
     # Create temp directory for chart
     CHART_TMP=$(mktemp -d)
@@ -538,7 +538,7 @@ show_access_info() {
     echo "║     Installation Complete!                ║"
     echo "╚═══════════════════════════════════════════╝"
     echo ""
-    echo -e "${GREEN}Vectis Client is now installed.${NC}"
+    echo -e "${GREEN}PeSIT Wizard Client is now installed.${NC}"
     echo ""
     
     # Get node IP

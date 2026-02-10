@@ -26,7 +26,7 @@ spec:
     - from: []
       ports:
         - protocol: TCP
-          port: 5000
+          port: 6502
     {{- if and .Values.cluster .Values.cluster.enabled }}
     # Allow JGroups cluster traffic between API pods
     - from:

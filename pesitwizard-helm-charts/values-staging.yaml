@@ -44,7 +44,7 @@ cluster:
 
 service:
   type: ClusterIP
-  pesitPort: 5000
+  pesitPort: 6502
   pesitTlsPort: 5001
   httpPort: 8080
   annotations:

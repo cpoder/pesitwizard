@@ -54,10 +54,12 @@ To test without bank access, you can launch our test server:
 
 ```bash
 # Launch a PeSIT Wizard test server
+# Uses port 8081 for REST API to avoid conflict with the client on 8080
 docker run -d \
   --name pesitwizard-server \
   -p 6502:6502 \
-  -p 8080:8080 \
+  -p 5001:5001 \
+  -p 8081:8080 \
   ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
 ```
 

@@ -290,8 +290,8 @@ components:
           description: Adresse IP ou hostname du serveur
         port:
           type: integer
-          default: 5000
-          description: Port PeSIT (défaut 5000)
+          default: 6502
+          description: Port PeSIT (défaut 6502)
         serverId:
           type: string
           description: Identifiant du serveur PeSIT (PI 4)

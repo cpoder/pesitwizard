@@ -20,9 +20,10 @@ USER pesit
 
 # Expose ports
 # 8080 - REST API / Management
-# 5000 - PeSIT protocol
+# 6502 - PeSIT protocol (plaintext)
+# 5001 - PeSIT protocol (TLS)
 # 7800 - JGroups cluster communication
-EXPOSE 8080 5000 7800
+EXPOSE 8080 6502 5001 7800
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

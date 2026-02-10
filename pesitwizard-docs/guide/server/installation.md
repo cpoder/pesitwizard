@@ -12,6 +12,7 @@ docker run -d \
   -p 6502:6502 \
   -p 5001:5001 \
   -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=postgres \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
   -e SPRING_DATASOURCE_USERNAME=pesitwizard \
   -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
@@ -19,6 +20,60 @@ docker run -d \
   -v pesitwizard-data:/data \
   ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
 ```
+
+## Docker Compose
+
+For a single-node server with PostgreSQL:
+
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pesitwizard
+      POSTGRES_USER: pesitwizard
+      POSTGRES_PASSWORD: pesitwizard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pesitwizard -d pesitwizard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pesitwizard-server:
+    image: ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pesitwizard
+      - SPRING_DATASOURCE_USERNAME=pesitwizard
+      - SPRING_DATASOURCE_PASSWORD=pesitwizard
+      - PESIT_CLUSTER_ENABLED=false
+    ports:
+      - "6502:6502"   # PeSIT protocol
+      - "5001:5001"   # PeSIT TLS
+      - "8080:8080"   # REST API
+    volumes:
+      - server_data:/data
+
+volumes:
+  postgres_data:
+  server_data:
+```
+
+Start with:
+
+```bash
+docker compose up -d
+```
+
+For a two-node cluster setup, see the `docker-compose.yml` in the `pesitwizard-server` module directory.
 
 ## Kubernetes Deployment
 
@@ -118,6 +173,8 @@ spec:
           name: pesit-tls
         - containerPort: 8080
           name: http
+        - containerPort: 7800
+          name: jgroups
         env:
         - name: POD_NAME
           valueFrom:
@@ -127,8 +184,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SPRING_PROFILES_ACTIVE
+          value: postgres
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://postgres:5432/pesitwizard
+        - name: SPRING_DATASOURCE_USERNAME
+          value: pesitwizard
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: pesitwizard
         - name: PESIT_CLUSTER_ENABLED
           value: "true"
         readinessProbe:
@@ -157,6 +220,21 @@ spec:
   selector:
     app: pesitwizard-server
     pesitwizard-leader: "true"  # Route only to the leader
+```
+
+### Using the Helm Chart
+
+The Helm chart is included in the repository under `pesitwizard-helm-charts/pesitwizard-server`:
+
+```bash
+helm install pesitwizard-server ./pesitwizard-helm-charts/pesitwizard-server \
+  --namespace pesitwizard \
+  --create-namespace \
+  --set database.host=postgres \
+  --set database.port=5432 \
+  --set database.name=pesitwizard \
+  --set database.username=pesitwizard \
+  --set database.password=pesitwizard
 ```
 
 ### RBAC for Labeling

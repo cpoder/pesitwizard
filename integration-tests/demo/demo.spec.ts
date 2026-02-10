@@ -87,7 +87,7 @@ test.describe('PeSIT Wizard Complete Demo', () => {
       // Host - use internal k8s service name for cluster connectivity
       const hostInput = page.locator('input[placeholder="localhost"]');
       await hostInput.clear();
-      await hostInput.fill('pesitwizard-server-vectis');
+      await hostInput.fill('pesitwizard-server-pesit');
       await pause(page, PAUSE.short);
 
       // Port - 5000 (internal service port)

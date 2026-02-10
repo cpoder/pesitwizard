@@ -193,15 +193,26 @@ volumes:
 
 ## Kubernetes (Helm)
 
-```bash
-# Add the Helm repo
-helm repo add pesitwizard https://pesitwizard.github.io/pesitwizard-helm-charts
+The Helm chart is included in the repository under `pesitwizard-helm-charts/pesitwizard-client`:
 
-# Install the client
-helm install pesitwizard-client pesitwizard/pesitwizard-client \
+```bash
+# Install the client (uses H2 by default)
+helm install pesitwizard-client ./pesitwizard-helm-charts/pesitwizard-client \
+  --namespace pesitwizard \
+  --create-namespace
+```
+
+To use PostgreSQL instead of H2, provide database settings:
+
+```bash
+helm install pesitwizard-client ./pesitwizard-helm-charts/pesitwizard-client \
   --namespace pesitwizard \
   --create-namespace \
-  --set postgresql.enabled=true
+  --set database.host=postgres \
+  --set database.port=5432 \
+  --set database.name=pesitwizard \
+  --set database.username=pesitwizard \
+  --set database.password=pesitwizard
 ```
 
 ## JAR (development)
@@ -210,20 +221,31 @@ helm install pesitwizard-client pesitwizard/pesitwizard-client \
 
 - Java 21+
 - Maven 3.9+
-- PostgreSQL
+- PostgreSQL (optional, H2 used by default)
 
 ### Build
 
+The client is a module within the main repository:
+
 ```bash
-git clone https://github.com/pesitwizard/pesitwizard-client.git
-cd pesitwizard-client
+git clone https://github.com/pesitwizard/pesitwizard.git
+cd pesitwizard/pesitwizard-client
 mvn package -DskipTests
 ```
 
 ### Run
 
+With H2 (default, no database required):
+
 ```bash
-java -jar target/pesitwizard-client-1.0.0-SNAPSHOT.jar \
+java -jar target/pesitwizard-client-1.0.0-SNAPSHOT-exec.jar
+```
+
+With PostgreSQL:
+
+```bash
+java -jar target/pesitwizard-client-1.0.0-SNAPSHOT-exec.jar \
+  --spring.profiles.active=postgres \
   --spring.datasource.url=jdbc:postgresql://localhost:5432/pesitwizard \
   --spring.datasource.username=pesitwizard \
   --spring.datasource.password=pesitwizard

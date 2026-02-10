@@ -10,6 +10,7 @@ image:
 service:
   type: ClusterIP
   pesitPort: 6502
+  pesitTlsPort: 5001
   httpPort: 8080
 
 resources:

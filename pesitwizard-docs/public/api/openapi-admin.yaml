@@ -288,7 +288,7 @@ components:
           default: 3
         pesitPort:
           type: integer
-          default: 5000
+          default: 6502
         containerImage:
           type: string
         storageHostPath:

@@ -30,8 +30,13 @@ spec:
           {{- end }}
           ports:
             - name: pesit
-              containerPort: 5000
+              containerPort: 6502
               protocol: TCP
+            {{- if .Values.service.pesitTlsPort }}
+            - name: pesit-tls
+              containerPort: {{ .Values.service.pesitTlsPort }}
+              protocol: TCP
+            {{- end }}
             - name: http
               containerPort: 8080
               protocol: TCP
