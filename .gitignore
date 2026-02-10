@@ -27,3 +27,9 @@ pesitwizard-local/
 scripts/cx-*.sh
 scripts/cx-*.md
 scripts/setup-cx-test.sh
+
+# CX integration test JARs (build artifacts, too large for git)
+integration-tests/cx-integration/docker/pw-client/*.jar
+
+# Session recordings
+**/recordings/
