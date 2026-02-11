@@ -1,8 +1,12 @@
 # Build stage
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+# Copy local dependency first (provided by CI via build context)
+COPY pesitwizard-frontend-common ./pesitwizard-frontend-common
+COPY package.json ./
+# Rewrite file: reference to use the local copy, then install
+RUN sed -i 's|\.\./pesitwizard-frontend-common|./pesitwizard-frontend-common|g' package.json \
+    && npm install
 COPY . .
 RUN npm run build
 

@@ -90,6 +90,9 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Prepare frontend-common for pesitwizard-client-ui
+        run: cp -r pesitwizard-frontend-common pesitwizard-client-ui/pesitwizard-frontend-common
+
       - name: Build and push pesitwizard-client-ui
         id: build-client-ui
         uses: docker/build-push-action@v5
