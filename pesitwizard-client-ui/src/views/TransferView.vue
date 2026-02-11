@@ -48,7 +48,6 @@ const connections = ref<StorageConnection[]>([])
 const partners = ref<Partner[]>([])
 const virtualFiles = ref<VFile[]>([])
 const loading = ref(true)
-const selectedPartnerHasPassword = ref(false)
 const transferring = ref(false)
 const result = ref<any>(null)
 const error = ref('')
@@ -112,7 +111,6 @@ watch(wsProgress, (newProgress) => {
 const form = ref({
   server: '',
   partnerId: '',
-  password: '',
   direction: 'SEND' as 'SEND' | 'RECEIVE',
   sourceConnectionId: '' as string,  // '' = local filesystem
   destinationConnectionId: '' as string,  // '' = local filesystem
@@ -170,11 +168,6 @@ const filteredVirtualFiles = computed(() => {
   const dir = form.value.direction
   return virtualFiles.value.filter(vf => vf.direction === 'BOTH' || vf.direction === dir)
 })
-
-function onPartnerInput() {
-  const match = partners.value.find(p => p.partnerId === form.value.partnerId)
-  selectedPartnerHasPassword.value = match?.passwordConfigured || false
-}
 
 function onVirtualFileInput() {
   const match = virtualFiles.value.find(vf => vf.name === form.value.remoteFilename)
@@ -304,7 +297,6 @@ async function startTransfer() {
     const payload: Record<string, any> = {
       server: form.value.server,
       partnerId: form.value.partnerId,
-      password: form.value.password || undefined,
       filename: form.value.filename,
       remoteFilename: form.value.remoteFilename,
       // Advanced options
@@ -346,7 +338,6 @@ function resetForm() {
   result.value = null
   error.value = ''
   form.value.partnerId = ''
-  form.value.password = ''
   form.value.filename = ''
   form.value.remoteFilename = ''
   form.value.sourceConnectionId = ''
@@ -356,7 +347,6 @@ function resetForm() {
   form.value.resyncEnabled = false
   form.value.recordLength = null
   showAdvancedOptions.value = false
-  selectedPartnerHasPassword.value = false
 }
 
 function formatBytes(bytes: number) {
@@ -459,7 +449,6 @@ async function resumeTransfer(transferId: string) {
               required
               placeholder="MY_CLIENT_ID"
               list="partner-list"
-              @input="onPartnerInput"
             />
             <datalist id="partner-list">
               <option v-for="p in partners" :key="p.id" :value="p.partnerId">
@@ -469,24 +458,6 @@ async function resumeTransfer(transferId: string) {
             <p class="text-xs text-gray-500 mt-1">
               {{ partners.length > 0 ? 'Select from configured partners or type a custom ID' : 'Your client identifier (must be configured as a partner on the server)' }}
             </p>
-          </div>
-
-          <!-- Password (hidden when selected partner has stored password) -->
-          <div v-if="!selectedPartnerHasPassword">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              v-model="form.password"
-              type="password"
-              class="input"
-              placeholder="Partner password (if required)"
-            />
-            <p class="text-xs text-gray-500 mt-1">
-              Leave empty if the partner doesn't require authentication
-            </p>
-          </div>
-          <div v-else class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-            <CheckCircle class="h-4 w-4" aria-hidden="true" />
-            Password stored for this partner. Override by clearing and typing a custom Partner ID.
           </div>
 
           <!-- Storage Connection -->

@@ -20,6 +20,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsConfiguration;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -115,8 +116,14 @@ public class SecurityConfig {
                 + "Set SPRING_PROFILES_ACTIVE=apikey and configure PESITWIZARD_SECURITY_API_KEY for production.");
 
         http
-                .cors(cors -> {
-                })
+                .cors(cors -> cors.configurationSource(request -> {
+                    var config = new CorsConfiguration();
+                    config.addAllowedOriginPattern("*");
+                    config.addAllowedMethod("*");
+                    config.addAllowedHeader("*");
+                    config.setAllowCredentials(true);
+                    return config;
+                }))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();

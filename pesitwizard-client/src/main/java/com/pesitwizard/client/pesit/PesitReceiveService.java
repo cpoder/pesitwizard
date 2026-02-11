@@ -21,6 +21,7 @@ import com.pesitwizard.client.entity.TransferConfig;
 import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
 import com.pesitwizard.client.event.TransferEventBus;
 import com.pesitwizard.client.repository.TransferHistoryRepository;
+import com.pesitwizard.client.service.PartnerService;
 import com.pesitwizard.client.service.RestartRequiredException;
 import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.StorageConnector;
@@ -56,6 +57,7 @@ public class PesitReceiveService {
     private final StorageConnectorFactory connectorFactory;
     private final ConnectorRegistry connectorRegistry;
     private final SecretsService secretsService;
+    private final PartnerService partnerService;
     private final TransferHistoryRepository historyRepository;
     private final TransferEventBus eventBus;
     private final ObservationRegistry observationRegistry;
@@ -160,8 +162,14 @@ public class PesitReceiveService {
                 .syncPointsEnabled(syncEnabled)
                 .resyncEnabled(resyncEnabled);
 
+        String password = null;
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            connectBuilder.password(secretsService.decrypt(request.getPassword()));
+            password = secretsService.decrypt(request.getPassword());
+        } else {
+            password = partnerService.resolvePassword(request.getPartnerId());
+        }
+        if (password != null && !password.isEmpty()) {
+            connectBuilder.password(password);
         }
 
         ctx.connectSent();

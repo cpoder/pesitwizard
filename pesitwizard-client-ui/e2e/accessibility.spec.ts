@@ -66,6 +66,9 @@ test.describe('Accessibility', () => {
       return
     }
 
+    // Wait for page to be fully rendered before testing keyboard nav
+    await expect(page.getByRole('heading', { name: /dashboard/i }).first()).toBeVisible({ timeout: 10000 })
+
     // Tab should eventually reach sidebar links
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')

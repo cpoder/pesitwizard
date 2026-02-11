@@ -19,10 +19,12 @@ test.describe('Navigation', () => {
   const routes = [
     { path: '/', heading: /dashboard/i },
     { path: '/servers', heading: /servers/i },
+    { path: '/partners', heading: /partners/i },
+    { path: '/virtual-files', heading: /virtual files/i },
     { path: '/transfer', heading: /transfer/i },
     { path: '/history', heading: /history/i },
     { path: '/favorites', heading: /favorites/i },
-    { path: '/schedules', heading: /schedules/i },
+    { path: '/schedules', heading: /scheduled transfers/i },
     { path: '/calendars', heading: /calendars/i },
     { path: '/connectors', heading: /connectors/i },
     { path: '/settings', heading: /settings/i },

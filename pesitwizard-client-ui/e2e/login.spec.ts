@@ -17,10 +17,14 @@ test.describe('Login Flow', () => {
 
   test('should reject invalid API key', async ({ page }) => {
     await page.goto('/login')
-    // Only test if login page is shown
-    const loginHeading = page.getByRole('heading', { name: /pesit wizard/i })
-    if (await loginHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await page.getByLabel(/api key/i).fill('invalid-key-12345')
+    // Only test if actually on the login page (not redirected to dashboard)
+    if (!page.url().includes('/login')) {
+      test.skip()
+      return
+    }
+    const apiKeyField = page.getByLabel(/api key/i)
+    if (await apiKeyField.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await apiKeyField.fill('invalid-key-12345')
       await page.getByRole('button', { name: /connect|login/i }).click()
       await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 })
     }
