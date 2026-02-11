@@ -24,8 +24,8 @@ import lombok.NoArgsConstructor;
  * Pre-configuring them here allows dropdown selection in the transfer form.
  */
 @Entity
-@Table(name = "virtual_files", indexes = {
-        @Index(name = "idx_virtual_file_name", columnList = "name", unique = true)
+@Table(name = "client_virtual_files", indexes = {
+        @Index(name = "idx_client_virtual_file_name", columnList = "name", unique = true)
 })
 @Data
 @NoArgsConstructor

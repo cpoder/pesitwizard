@@ -1,7 +1,9 @@
--- V2: Add partners, virtual files, and schedule password support
+-- V2: Add client partners, client virtual files, and schedule password support
+-- Table names prefixed with "client_" to avoid collision with server-side tables
+-- when both modules share the same database (e.g. k3d integration tests).
 
--- Partners table - stores PeSIT partner credentials for the client
-CREATE TABLE IF NOT EXISTS partners (
+-- Client partners table - stores PeSIT partner credentials for the client
+CREATE TABLE IF NOT EXISTS client_partners (
     id VARCHAR(255) NOT NULL PRIMARY KEY,
     partner_id VARCHAR(255) NOT NULL UNIQUE,
     description VARCHAR(255),
@@ -10,10 +12,10 @@ CREATE TABLE IF NOT EXISTS partners (
     updated_at TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_partner_partner_id ON partners (partner_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_client_partner_partner_id ON client_partners (partner_id);
 
--- Virtual files table - stores virtual file definitions for dropdown selection
-CREATE TABLE IF NOT EXISTS virtual_files (
+-- Client virtual files table - stores virtual file definitions for dropdown selection
+CREATE TABLE IF NOT EXISTS client_virtual_files (
     id VARCHAR(255) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
     description VARCHAR(255),
@@ -23,7 +25,7 @@ CREATE TABLE IF NOT EXISTS virtual_files (
     updated_at TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_virtual_file_name ON virtual_files (name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_client_virtual_file_name ON client_virtual_files (name);
 
 -- Add password column to scheduled_transfers
 ALTER TABLE scheduled_transfers ADD COLUMN IF NOT EXISTS password VARCHAR(255);

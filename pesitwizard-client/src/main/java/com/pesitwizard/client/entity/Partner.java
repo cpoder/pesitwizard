@@ -24,8 +24,8 @@ import lombok.ToString;
  * from a dropdown in the transfer form instead of typing manually.
  */
 @Entity
-@Table(name = "partners", indexes = {
-        @Index(name = "idx_partner_partner_id", columnList = "partnerId", unique = true)
+@Table(name = "client_partners", indexes = {
+        @Index(name = "idx_client_partner_partner_id", columnList = "partnerId", unique = true)
 })
 @Data
 @NoArgsConstructor

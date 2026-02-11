@@ -97,10 +97,10 @@ watch(wsProgress, (newProgress) => {
       
       // Fetch final result from API
       if (currentTransferId.value) {
-        api.get(`/transfers/${currentTransferId.value}`).then(response => {
+        api.get(`/transfers/${currentTransferId.value}`).then((response: { data: any }) => {
           result.value = response.data
           transferring.value = false
-        }).catch(e => {
+        }).catch((e: unknown) => {
           console.error('Failed to fetch transfer result:', e)
           transferring.value = false
         })
