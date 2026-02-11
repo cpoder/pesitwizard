@@ -22,6 +22,7 @@ import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
 import com.pesitwizard.client.repository.BusinessCalendarRepository;
 import com.pesitwizard.client.repository.FavoriteTransferRepository;
 import com.pesitwizard.client.repository.ScheduledTransferRepository;
+import com.pesitwizard.security.SecretsService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,8 @@ public class TransferSchedulerService {
     private final FavoriteTransferRepository favoriteRepository;
     private final BusinessCalendarRepository calendarRepository;
     private final TransferService transferService;
+    private final PartnerService partnerService;
+    private final SecretsService secretsService;
 
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Europe/Paris");
 
@@ -100,9 +103,19 @@ public class TransferSchedulerService {
         try {
             // Use filename if available, fallback to deprecated localPath
             String filename = schedule.getFilename() != null ? schedule.getFilename() : schedule.getLocalPath();
+
+            // Resolve password: schedule-level first, then Partner entity fallback
+            String password = null;
+            if (schedule.getPassword() != null && !schedule.getPassword().isBlank()) {
+                password = secretsService.decryptFromStorage(schedule.getPassword());
+            } else {
+                password = partnerService.resolvePassword(schedule.getPartnerId());
+            }
+
             TransferRequest request = TransferRequest.builder()
                     .server(schedule.getServerId())
                     .partnerId(schedule.getPartnerId())
+                    .password(password)
                     .filename(filename)
                     .sourceConnectionId(schedule.getSourceConnectionId())
                     .destinationConnectionId(schedule.getDestinationConnectionId())
@@ -267,6 +280,7 @@ public class TransferSchedulerService {
      */
     @Transactional
     public ScheduledTransfer createSchedule(ScheduledTransfer schedule) {
+        encryptPassword(schedule);
         // Set initial next run time based on schedule type and configured time
         if (schedule.getNextRunAt() == null) {
             Instant initialRunTime = calculateInitialNextRunTime(schedule);
@@ -384,6 +398,7 @@ public class TransferSchedulerService {
                             .remoteFilename(favorite.getRemoteFilename())
                             .virtualFile(favorite.getVirtualFile())
                             .transferConfigId(favorite.getTransferConfigId())
+                            .password(favorite.getPassword())
                             .scheduleType(type)
                             .scheduledAt(scheduledAt)
                             .intervalMinutes(intervalMinutes)
@@ -417,6 +432,10 @@ public class TransferSchedulerService {
                     existing.setIntervalMinutes(updated.getIntervalMinutes());
                     existing.setCronExpression(updated.getCronExpression());
                     existing.setEnabled(updated.isEnabled());
+                    if (updated.getPassword() != null) {
+                        existing.setPassword(updated.getPassword());
+                        encryptPassword(existing);
+                    }
 
                     // Recalculate next run if needed
                     if (updated.isEnabled() && existing.getNextRunAt() == null) {
@@ -464,5 +483,16 @@ public class TransferSchedulerService {
                     executeSchedule(schedule);
                     return schedule;
                 });
+    }
+
+    /**
+     * Encrypt the password field if present and not already encrypted.
+     */
+    private void encryptPassword(ScheduledTransfer schedule) {
+        String password = schedule.getPassword();
+        if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
+            String encrypted = secretsService.encryptForStorage(password, "schedule", schedule.getName(), "password");
+            schedule.setPassword(encrypted);
+        }
     }
 }

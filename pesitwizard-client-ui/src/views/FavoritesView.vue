@@ -45,6 +45,21 @@ interface StorageConnection {
   enabled: boolean
 }
 
+interface PartnerDef {
+  id: string
+  partnerId: string
+  description?: string
+  passwordConfigured?: boolean
+}
+
+interface VFileDef {
+  id: string
+  name: string
+  description?: string
+  direction: 'SEND' | 'RECEIVE' | 'BOTH'
+  recordLength?: number | null
+}
+
 interface ExecutionState {
   status: 'idle' | 'executing' | 'success' | 'error'
   message?: string
@@ -92,12 +107,34 @@ const editForm = ref({
 const saving = ref(false)
 const servers = ref<any[]>([])
 const connections = ref<StorageConnection[]>([])
+const partnerDefs = ref<PartnerDef[]>([])
+const virtualFileDefs = ref<VFileDef[]>([])
 
 onMounted(() => {
   loadFavorites()
   loadServers()
   loadConnections()
+  loadPartnerDefs()
+  loadVirtualFileDefs()
 })
+
+async function loadPartnerDefs() {
+  try {
+    const response = await api.get('/partners')
+    partnerDefs.value = response.data || []
+  } catch (e) {
+    console.error('Failed to load partners:', e)
+  }
+}
+
+async function loadVirtualFileDefs() {
+  try {
+    const response = await api.get('/virtual-files')
+    virtualFileDefs.value = response.data || []
+  } catch (e) {
+    console.error('Failed to load virtual files:', e)
+  }
+}
 
 async function loadConnections() {
   try {
@@ -639,13 +676,23 @@ async function createSchedule() {
             <!-- Partner ID -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Partner ID</label>
-              <input v-model="editForm.partnerId" type="text" class="input w-full" placeholder="MY_CLIENT_ID" />
+              <input v-model="editForm.partnerId" type="text" class="input w-full" placeholder="MY_CLIENT_ID" list="fav-partner-list" />
+              <datalist id="fav-partner-list">
+                <option v-for="p in partnerDefs" :key="p.id" :value="p.partnerId">
+                  {{ p.partnerId }}{{ p.description ? ' — ' + p.description : '' }}
+                </option>
+              </datalist>
             </div>
 
             <!-- Virtual File -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Virtual File *</label>
-              <input v-model="editForm.remoteFilename" type="text" class="input w-full" placeholder="DATA_FILE" required />
+              <input v-model="editForm.remoteFilename" type="text" class="input w-full" placeholder="DATA_FILE" required list="fav-vf-list" />
+              <datalist id="fav-vf-list">
+                <option v-for="vf in virtualFileDefs" :key="vf.id" :value="vf.name">
+                  {{ vf.name }}{{ vf.description ? ' — ' + vf.description : '' }}
+                </option>
+              </datalist>
             </div>
 
             <!-- Storage Connection -->

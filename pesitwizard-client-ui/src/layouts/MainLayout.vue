@@ -2,9 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import api from '@/api'
-import { 
-  LayoutDashboard, 
-  Server, 
+import {
+  LayoutDashboard,
+  Server,
+  Users,
+  FileText,
   Send,
   History,
   Star,
@@ -34,6 +36,8 @@ onMounted(async () => {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, exact: true },
   { name: 'Servers', href: '/servers', icon: Server, exact: false },
+  { name: 'Partners', href: '/partners', icon: Users, exact: false },
+  { name: 'Virtual Files', href: '/virtual-files', icon: FileText, exact: false },
   { name: 'Connectors', href: '/connectors', icon: Plug, exact: false },
   { name: 'Transfer', href: '/transfer', icon: Send, exact: false },
   { name: 'History', href: '/history', icon: History, exact: false },

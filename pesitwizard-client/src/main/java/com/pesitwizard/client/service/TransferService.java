@@ -56,6 +56,7 @@ public class TransferService {
         private final TransferHistoryRepository historyRepository;
         private final PathPlaceholderService placeholderService;
         private final StorageConnectorFactory connectorFactory;
+        private final PartnerService partnerService;
 
         // ========== API Publique - Transferts ==========
 
@@ -178,6 +179,7 @@ public class TransferService {
                         TransferRequest request = TransferRequest.builder()
                                         .server(original.getServerId())
                                         .partnerId(original.getPartnerId())
+                                        .password(partnerService.resolvePassword(original.getPartnerId()))
                                         .filename(original.getLocalFilename())
                                         .remoteFilename(original.getRemoteFilename())
                                         .transferConfig(original.getTransferConfigId())
@@ -198,6 +200,7 @@ public class TransferService {
                                         TransferRequest request = TransferRequest.builder()
                                                         .server(original.getServerId())
                                                         .partnerId(original.getPartnerId())
+                                                        .password(partnerService.resolvePassword(original.getPartnerId()))
                                                         .filename(original.getLocalFilename())
                                                         .remoteFilename(original.getRemoteFilename())
                                                         .transferConfig(original.getTransferConfigId())

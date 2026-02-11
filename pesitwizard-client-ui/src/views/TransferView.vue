@@ -28,9 +28,27 @@ interface StorageConnection {
   enabled: boolean
 }
 
+interface Partner {
+  id: string
+  partnerId: string
+  description?: string
+  passwordConfigured?: boolean
+}
+
+interface VFile {
+  id: string
+  name: string
+  description?: string
+  direction: 'SEND' | 'RECEIVE' | 'BOTH'
+  recordLength?: number | null
+}
+
 const servers = ref<any[]>([])
 const connections = ref<StorageConnection[]>([])
+const partners = ref<Partner[]>([])
+const virtualFiles = ref<VFile[]>([])
 const loading = ref(true)
+const selectedPartnerHasPassword = ref(false)
 const transferring = ref(false)
 const result = ref<any>(null)
 const error = ref('')
@@ -126,9 +144,44 @@ const activeConnectionLabel = computed(() =>
 
 
 onMounted(async () => {
-  await Promise.all([loadServers(), loadConnections(), loadResumableTransfers()])
+  await Promise.all([loadServers(), loadConnections(), loadPartners(), loadVirtualFiles(), loadResumableTransfers()])
   loading.value = false
 })
+
+async function loadPartners() {
+  try {
+    const response = await api.get('/partners')
+    partners.value = response.data || []
+  } catch (e) {
+    console.error('Failed to load partners:', e)
+  }
+}
+
+async function loadVirtualFiles() {
+  try {
+    const response = await api.get('/virtual-files')
+    virtualFiles.value = response.data || []
+  } catch (e) {
+    console.error('Failed to load virtual files:', e)
+  }
+}
+
+const filteredVirtualFiles = computed(() => {
+  const dir = form.value.direction
+  return virtualFiles.value.filter(vf => vf.direction === 'BOTH' || vf.direction === dir)
+})
+
+function onPartnerInput() {
+  const match = partners.value.find(p => p.partnerId === form.value.partnerId)
+  selectedPartnerHasPassword.value = match?.passwordConfigured || false
+}
+
+function onVirtualFileInput() {
+  const match = virtualFiles.value.find(vf => vf.name === form.value.remoteFilename)
+  if (match?.recordLength) {
+    form.value.recordLength = match.recordLength
+  }
+}
 
 async function loadResumableTransfers() {
   try {
@@ -303,6 +356,7 @@ function resetForm() {
   form.value.resyncEnabled = false
   form.value.recordLength = null
   showAdvancedOptions.value = false
+  selectedPartnerHasPassword.value = false
 }
 
 function formatBytes(bytes: number) {
@@ -398,30 +452,41 @@ async function resumeTransfer(transferId: string) {
           <!-- Partner ID -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Partner ID *</label>
-            <input 
-              v-model="form.partnerId" 
-              type="text" 
-              class="input" 
-              required 
+            <input
+              v-model="form.partnerId"
+              type="text"
+              class="input"
+              required
               placeholder="MY_CLIENT_ID"
+              list="partner-list"
+              @input="onPartnerInput"
             />
+            <datalist id="partner-list">
+              <option v-for="p in partners" :key="p.id" :value="p.partnerId">
+                {{ p.partnerId }}{{ p.description ? ' — ' + p.description : '' }}{{ p.passwordConfigured ? ' [password stored]' : '' }}
+              </option>
+            </datalist>
             <p class="text-xs text-gray-500 mt-1">
-              Your client identifier (must be configured as a partner on the server)
+              {{ partners.length > 0 ? 'Select from configured partners or type a custom ID' : 'Your client identifier (must be configured as a partner on the server)' }}
             </p>
           </div>
 
-          <!-- Password -->
-          <div>
+          <!-- Password (hidden when selected partner has stored password) -->
+          <div v-if="!selectedPartnerHasPassword">
             <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input 
-              v-model="form.password" 
-              type="password" 
-              class="input" 
+            <input
+              v-model="form.password"
+              type="password"
+              class="input"
               placeholder="Partner password (if required)"
             />
             <p class="text-xs text-gray-500 mt-1">
               Leave empty if the partner doesn't require authentication
             </p>
+          </div>
+          <div v-else class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+            <CheckCircle class="h-4 w-4" aria-hidden="true" />
+            Password stored for this partner. Override by clearing and typing a custom Partner ID.
           </div>
 
           <!-- Storage Connection -->
@@ -511,15 +576,22 @@ async function resumeTransfer(transferId: string) {
           <!-- Remote Filename (Virtual File ID) -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Virtual File ID *</label>
-            <input 
-              v-model="form.remoteFilename" 
-              type="text" 
-              class="input" 
-              required 
+            <input
+              v-model="form.remoteFilename"
+              type="text"
+              class="input"
+              required
               placeholder="DATA_FILE"
+              list="virtual-file-list"
+              @input="onVirtualFileInput"
             />
+            <datalist id="virtual-file-list">
+              <option v-for="vf in filteredVirtualFiles" :key="vf.id" :value="vf.name">
+                {{ vf.name }}{{ vf.description ? ' — ' + vf.description : '' }}{{ vf.recordLength ? ' [' + vf.recordLength + ' B]' : '' }}
+              </option>
+            </datalist>
             <p class="text-xs text-gray-500 mt-1">
-              The virtual file identifier configured on the server
+              {{ filteredVirtualFiles.length > 0 ? 'Select from configured virtual files or type a custom ID' : 'The virtual file identifier configured on the server' }}
             </p>
           </div>
 

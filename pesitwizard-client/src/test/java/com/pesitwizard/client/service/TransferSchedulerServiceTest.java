@@ -41,6 +41,10 @@ class TransferSchedulerServiceTest {
     private BusinessCalendarRepository calendarRepository;
     @Mock
     private TransferService transferService;
+    @Mock
+    private PartnerService partnerService;
+    @Mock
+    private com.pesitwizard.security.SecretsService secretsService;
 
     private TransferSchedulerService schedulerService;
 
@@ -50,7 +54,9 @@ class TransferSchedulerServiceTest {
                 scheduleRepository,
                 favoriteRepository,
                 calendarRepository,
-                transferService);
+                transferService,
+                partnerService,
+                secretsService);
     }
 
     @Nested

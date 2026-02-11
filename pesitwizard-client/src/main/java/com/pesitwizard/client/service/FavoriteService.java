@@ -136,6 +136,7 @@ public class FavoriteService {
                 schedule.setRemoteFilename(favorite.getRemoteFilename());
                 schedule.setVirtualFile(favorite.getVirtualFile());
                 schedule.setTransferConfigId(favorite.getTransferConfigId());
+                schedule.setPassword(favorite.getPassword());
                 scheduleRepository.save(schedule);
             }
         }

@@ -51,6 +51,8 @@ class TransferServiceTest {
     private PathPlaceholderService placeholderService;
     @Mock
     private StorageConnectorFactory connectorFactory;
+    @Mock
+    private PartnerService partnerService;
 
     private TransferService transferService;
 
@@ -64,7 +66,8 @@ class TransferServiceTest {
                 configRepository,
                 historyRepository,
                 placeholderService,
-                connectorFactory);
+                connectorFactory,
+                partnerService);
     }
 
     @Nested

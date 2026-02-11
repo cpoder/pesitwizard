@@ -25,6 +25,16 @@ const router = createRouter({
           component: () => import('../views/ServersView.vue')
         },
         {
+          path: 'partners',
+          name: 'partners',
+          component: () => import('../views/PartnersView.vue')
+        },
+        {
+          path: 'virtual-files',
+          name: 'virtual-files',
+          component: () => import('../views/VirtualFilesView.vue')
+        },
+        {
           path: 'transfer',
           name: 'transfer',
           component: () => import('../views/TransferView.vue')

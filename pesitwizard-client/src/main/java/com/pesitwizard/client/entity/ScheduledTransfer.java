@@ -14,10 +14,12 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Scheduled transfer configuration
@@ -83,6 +85,17 @@ public class ScheduledTransfer {
 
     /** Transfer config ID */
     private String transferConfigId;
+
+    /** Encrypted PeSIT partner password (encrypted via SecretsService) */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
+    private String password;
+
+    /** Computed field indicating whether a password is configured */
+    @JsonProperty("passwordConfigured")
+    public boolean isPasswordConfigured() {
+        return password != null && !password.isEmpty();
+    }
 
     /** Schedule type */
     @Enumerated(EnumType.STRING)
