@@ -232,17 +232,11 @@ curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/script
 
 #### Manual Install
 
-Download the Helm chart from GitHub and install:
+Install from the OCI registry:
 
 ```bash
-# Download the chart
-export PESITWIZARD_VERSION=main  # or a specific tag like v1.0.1
-curl -fsSL "https://github.com/pesitwizard/pesitwizard/archive/refs/heads/${PESITWIZARD_VERSION}.tar.gz" \
-  | tar -xz -C /tmp
-
-# Install
-helm install pesitwizard-server \
-  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-server \
+helm install pesitwizard-server oci://ghcr.io/pesitwizard/charts/pesitwizard-server \
+  --version 0.1.0 \
   --namespace pesitwizard \
   --create-namespace \
   --set database.host=postgres \
@@ -250,9 +244,6 @@ helm install pesitwizard-server \
   --set database.name=pesitwizard \
   --set database.username=pesitwizard \
   --set database.password=pesitwizard
-
-# Clean up
-rm -rf /tmp/pesitwizard-${PESITWIZARD_VERSION}
 ```
 
 ### RBAC for Labeling

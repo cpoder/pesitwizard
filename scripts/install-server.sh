@@ -5,9 +5,8 @@
 set -e
 
 PESITWIZARD_NAMESPACE="${PESITWIZARD_NAMESPACE:-pesitwizard}"
-GITHUB_REPO="pesitwizard/pesitwizard"
-HELM_CHART_PATH="pesitwizard-helm-charts/pesitwizard-server"
-HELM_CHART_BRANCH="${PESITWIZARD_VERSION:-main}"
+PESITWIZARD_VERSION="${PESITWIZARD_VERSION:-0.1.0}"
+OCI_CHART="oci://ghcr.io/pesitwizard/charts/pesitwizard-server"
 
 # Colors
 RED='\033[0;31m'
@@ -54,35 +53,14 @@ setup_namespace() {
     echo -e "${GREEN}✓ Namespace '$PESITWIZARD_NAMESPACE' ready${NC}"
 }
 
-# Download and install via Helm from GitHub
+# Install via Helm from OCI registry
 install_helm() {
     echo ""
     echo -e "${YELLOW}Installing PeSIT Wizard Server...${NC}"
 
-    # Create temp directory for chart
-    CHART_TMP=$(mktemp -d)
-    trap "rm -rf $CHART_TMP" EXIT
-
-    # Download chart from GitHub
-    echo -e "${YELLOW}Downloading Helm chart from GitHub...${NC}"
-    CHART_URL="https://github.com/${GITHUB_REPO}/archive/refs/heads/${HELM_CHART_BRANCH}.tar.gz"
-
-    if ! curl -fsSL "$CHART_URL" | tar -xz -C "$CHART_TMP" --strip-components=1; then
-        echo -e "${RED}ERROR: Failed to download Helm chart from GitHub${NC}"
-        echo "URL: $CHART_URL"
-        exit 1
-    fi
-
-    CHART_DIR="$CHART_TMP/$HELM_CHART_PATH"
-
-    if [ ! -d "$CHART_DIR" ]; then
-        echo -e "${RED}ERROR: Chart directory not found: $HELM_CHART_PATH${NC}"
-        exit 1
-    fi
-
-    # Install or upgrade using local chart
-    echo -e "${YELLOW}Installing Helm chart...${NC}"
-    helm upgrade --install pesitwizard-server "$CHART_DIR" \
+    echo -e "${YELLOW}Installing Helm chart from ${OCI_CHART}...${NC}"
+    helm upgrade --install pesitwizard-server "$OCI_CHART" \
+        --version "$PESITWIZARD_VERSION" \
         --namespace "$PESITWIZARD_NAMESPACE"
 
     echo -e "${GREEN}✓ Helm release deployed${NC}"

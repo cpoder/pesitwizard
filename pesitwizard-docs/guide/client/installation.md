@@ -4,36 +4,11 @@
 
 | Mode | Description | Recommended For |
 |------|-------------|-----------------|
-| Docker | Standalone container | Testing, small installations |
-| Docker Compose | With PostgreSQL | Simple production |
+| Docker Compose | API + UI + PostgreSQL | Testing, simple production |
 | Kubernetes | Helm chart | Production, high availability |
 | JAR | Direct execution | Development |
 
-## Docker (recommended)
-
-### Quick Start
-
-```bash
-docker run -d \
-  --name pesitwizard-client \
-  -p 8080:8080 \
-  -v pesitwizard-data:/data \
-  ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
-```
-
-### With PostgreSQL
-
-```bash
-docker run -d \
-  --name pesitwizard-client \
-  -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
-  -e SPRING_DATASOURCE_USERNAME=pesitwizard \
-  -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
-  ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
-```
-
-## Docker Compose
+## Docker Compose (recommended)
 
 Create a `docker-compose.yml` file:
 
@@ -44,11 +19,13 @@ services:
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: nosecurity,postgres
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
       SPRING_DATASOURCE_USERNAME: pesitwizard
       SPRING_DATASOURCE_PASSWORD: pesitwizard
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - client-data:/data
     networks:
@@ -75,6 +52,11 @@ services:
       POSTGRES_PASSWORD: pesitwizard
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pesitwizard -d pesitwizard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - client-network
 
@@ -93,6 +75,8 @@ Start with:
 docker compose up -d
 ```
 
+The UI is available at http://localhost:3001 and the API at http://localhost:8080.
+
 ### With HashiCorp Vault
 
 For secure secrets management with HashiCorp Vault:
@@ -108,14 +92,15 @@ services:
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: pesitwizard-dev-token
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://127.0.0.1:8200
     command: server -dev
     networks:
       - client-network
     healthcheck:
       test: ["CMD", "vault", "status"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 3
+      retries: 5
 
   vault-init:
     image: hashicorp/vault:1.15
@@ -139,16 +124,17 @@ services:
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: nosecurity,postgres
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pesitwizard
       SPRING_DATASOURCE_USERNAME: pesitwizard
       SPRING_DATASOURCE_PASSWORD: pesitwizard
-      PESITWIZARD_SECURITY_MODE: VAULT
+      PESITWIZARD_SECURITY_ENCRYPTION_MODE: VAULT
       PESITWIZARD_SECURITY_VAULT_ADDRESS: http://vault:8200
       PESITWIZARD_SECURITY_VAULT_TOKEN: pesitwizard-dev-token
-      PESITWIZARD_SECURITY_VAULT_PATH: secret/data/pesitwizard/client
+      PESITWIZARD_SECURITY_VAULT_SECRETS_PATH: secret/data/pesitwizard/client
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       vault-init:
         condition: service_completed_successfully
     volumes:
@@ -177,6 +163,11 @@ services:
       POSTGRES_PASSWORD: pesitwizard
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pesitwizard -d pesitwizard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - client-network
 
@@ -201,29 +192,20 @@ curl -fsSL https://raw.githubusercontent.com/pesitwizard/pesitwizard/main/script
 
 ### Manual Install
 
-Download the Helm chart from GitHub and install:
+Install from the OCI registry:
 
 ```bash
-# Download the chart
-export PESITWIZARD_VERSION=main  # or a specific tag like v1.0.1
-curl -fsSL "https://github.com/pesitwizard/pesitwizard/archive/refs/heads/${PESITWIZARD_VERSION}.tar.gz" \
-  | tar -xz -C /tmp
-
-# Install the client (uses H2 by default)
-helm install pesitwizard-client \
-  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-client \
+helm install pesitwizard-client oci://ghcr.io/pesitwizard/charts/pesitwizard-client \
+  --version 0.1.0 \
   --namespace pesitwizard \
   --create-namespace
-
-# Clean up
-rm -rf /tmp/pesitwizard-${PESITWIZARD_VERSION}
 ```
 
-To use PostgreSQL instead of H2, provide database settings:
+To use an external PostgreSQL database:
 
 ```bash
-helm install pesitwizard-client \
-  /tmp/pesitwizard-${PESITWIZARD_VERSION}/pesitwizard-helm-charts/pesitwizard-client \
+helm install pesitwizard-client oci://ghcr.io/pesitwizard/charts/pesitwizard-client \
+  --version 0.1.0 \
   --namespace pesitwizard \
   --create-namespace \
   --set database.host=postgres \
@@ -263,7 +245,7 @@ With PostgreSQL:
 
 ```bash
 java -jar target/pesitwizard-client-1.0.0-SNAPSHOT-exec.jar \
-  --spring.profiles.active=postgres \
+  --spring.profiles.active=nosecurity,postgres \
   --spring.datasource.url=jdbc:postgresql://localhost:5432/pesitwizard \
   --spring.datasource.username=pesitwizard \
   --spring.datasource.password=pesitwizard
@@ -282,8 +264,8 @@ curl http://localhost:8080/actuator/health
 ```
 
 The web interface is available at:
+- UI: http://localhost:3001
 - API: http://localhost:8080
-- UI: http://localhost:3001 (if deployed separately)
 - Swagger: http://localhost:8080/swagger-ui.html
 
 ## Next Steps

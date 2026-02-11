@@ -1,0 +1,53 @@
+name: Publish Helm Charts
+
+on:
+  push:
+    branches: [main]
+    paths: ['pesitwizard-helm-charts/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Package and push charts
+        run: |
+          for chart in pesitwizard-helm-charts/*/; do
+            chart_name=$(basename "$chart")
+            helm package "$chart" --destination /tmp/charts/
+            helm push /tmp/charts/${chart_name}-*.tgz oci://${{ env.REGISTRY }}/pesitwizard/charts/
+          done
+
+      - name: Make chart packages public
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PACKAGES_TOKEN not set, skipping visibility change"
+            exit 0
+          fi
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for CHART in pesitwizard-server pesitwizard-client; do
+            PACKAGE_NAME="charts%2F${CHART}"
+            echo "Setting charts/${CHART} visibility to public..."
+            gh api --method PATCH -H "Accept: application/vnd.github+json" \
+              "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}" \
+              -f visibility=public || echo "Could not change visibility for ${CHART}"
+          done
+        continue-on-error: true

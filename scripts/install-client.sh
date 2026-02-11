@@ -7,9 +7,8 @@ set -e
 
 # Default values
 PESITWIZARD_NAMESPACE="${PESITWIZARD_NAMESPACE:-pesitwizard}"
-GITHUB_REPO="pesitwizard/pesitwizard"
-HELM_CHART_PATH="pesitwizard-helm-charts/pesitwizard-client"
-HELM_CHART_BRANCH="${PESITWIZARD_VERSION:-main}"
+PESITWIZARD_VERSION="${PESITWIZARD_VERSION:-0.1.0}"
+OCI_CHART="oci://ghcr.io/pesitwizard/charts/pesitwizard-client"
 INSTALL_K3S=false
 INTERACTIVE=true
 STORAGE_PATH=""
@@ -41,7 +40,7 @@ parse_args() {
                 shift 2
                 ;;
             --version|-v)
-                HELM_CHART_BRANCH="$2"
+                PESITWIZARD_VERSION="$2"
                 shift 2
                 ;;
             --yes|-y)
@@ -457,32 +456,11 @@ configure_storage() {
     echo -e "${GREEN}✓ Data path: $DATA_PATH${NC}"
 }
 
-# Download and deploy via Helm from GitHub
+# Deploy via Helm from OCI registry
 deploy_helm() {
     echo ""
     echo -e "${YELLOW}Installing PeSIT Wizard Client...${NC}"
-    
-    # Create temp directory for chart
-    CHART_TMP=$(mktemp -d)
-    trap "rm -rf $CHART_TMP" EXIT
-    
-    # Download chart from GitHub
-    echo -e "${YELLOW}Downloading Helm chart from GitHub...${NC}"
-    CHART_URL="https://github.com/${GITHUB_REPO}/archive/refs/heads/${HELM_CHART_BRANCH}.tar.gz"
-    
-    if ! curl -fsSL "$CHART_URL" | tar -xz -C "$CHART_TMP" --strip-components=1; then
-        echo -e "${RED}ERROR: Failed to download Helm chart from GitHub${NC}"
-        echo "URL: $CHART_URL"
-        exit 1
-    fi
-    
-    CHART_DIR="$CHART_TMP/$HELM_CHART_PATH"
-    
-    if [ ! -d "$CHART_DIR" ]; then
-        echo -e "${RED}ERROR: Chart directory not found: $HELM_CHART_PATH${NC}"
-        exit 1
-    fi
-    
+
     # Build helm set arguments
     HELM_ARGS=""
     if [ -n "$STORE_PATH" ]; then
@@ -503,20 +481,20 @@ deploy_helm() {
     else
         HELM_ARGS="$HELM_ARGS --set tls.enabled=false"
     fi
-    
-    # Install or upgrade using local chart
-    echo -e "${YELLOW}Installing Helm chart...${NC}"
-    helm upgrade --install pesitwizard-client "$CHART_DIR" \
+
+    echo -e "${YELLOW}Installing Helm chart from ${OCI_CHART}...${NC}"
+    helm upgrade --install pesitwizard-client "$OCI_CHART" \
+        --version "$PESITWIZARD_VERSION" \
         --namespace "$PESITWIZARD_NAMESPACE" \
         $HELM_ARGS
-    
+
     echo -e "${GREEN}✓ Helm release deployed${NC}"
     echo ""
     echo -e "${YELLOW}Waiting for pods to be ready...${NC}"
-    
+
     # Wait for deployments with progress feedback
     DEPLOYMENTS=$(kubectl get deployments -n "$PESITWIZARD_NAMESPACE" -l app.kubernetes.io/instance=pesitwizard-client -o name 2>/dev/null || true)
-    
+
     if [ -n "$DEPLOYMENTS" ]; then
         for deploy in $DEPLOYMENTS; do
             echo -n "  Waiting for $deploy... "
@@ -527,7 +505,7 @@ deploy_helm() {
             fi
         done
     fi
-    
+
     echo -e "${GREEN}✓ PeSIT Wizard Client installed${NC}"
 }
 
