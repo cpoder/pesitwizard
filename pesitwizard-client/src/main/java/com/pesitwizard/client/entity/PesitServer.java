@@ -85,12 +85,6 @@ public class PesitServer {
     @Builder.Default
     private boolean hostnameVerification = true;
 
-    /** Use Connect:Express TLS framing (no 2-byte length prefix).
-     *  When false (default), uses standard PeSIT framing compatible with PeSIT Wizard server.
-     *  Set to true when connecting to Connect:Express servers over TLS. */
-    @Builder.Default
-    private boolean connectExpressMode = false;
-
     /** Connection timeout in milliseconds */
     @Builder.Default
     private Integer connectionTimeout = 30000;
