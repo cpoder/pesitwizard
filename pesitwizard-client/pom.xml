@@ -105,11 +105,11 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- H2 Database (S3-15: restricted to test scope) -->
+        <!-- H2 Database (runtime: needed for default dev profile; production uses PostgreSQL) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- PostgreSQL (for production) -->
