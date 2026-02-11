@@ -84,7 +84,7 @@ For secure secrets management with HashiCorp Vault:
 ```yaml
 services:
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     cap_add:
       - IPC_LOCK
     ports:
@@ -97,13 +97,13 @@ services:
     networks:
       - client-network
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:8200/v1/sys/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   vault-init:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     depends_on:
       vault:
         condition: service_healthy
