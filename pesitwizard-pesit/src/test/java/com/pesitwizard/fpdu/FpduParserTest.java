@@ -175,11 +175,10 @@ public class FpduParserTest {
     }
 
     @Test
-    @DisplayName("should throw on incomplete buffer with missing mandatory parameters")
+    @DisplayName("should throw on incomplete buffer with truncated parameter data")
     void shouldThrowOnIncompleteBuffer() {
         // ACONNECT with truncated parameter - buffer ends before data
-        // PI_06 (mandatory) is not fully present, so it won't be added to the FPDU,
-        // which means mandatory parameter validation will fail
+        // PI_06 has length=5 but no data follows, so parser throws on truncation
         byte[] data =
                 new byte[] {
                     0x00, 0x08, // length = 8
@@ -190,7 +189,7 @@ public class FpduParserTest {
 
         FpduParser parser = new FpduParser(data);
         FpduParseException ex = assertThrows(FpduParseException.class, () -> parser.parse());
-        assertTrue(ex.getMessage().contains("Missing mandatory parameter"));
+        assertTrue(ex.getMessage().contains("Truncated parameter"));
     }
 
     @Test
