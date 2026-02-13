@@ -43,7 +43,8 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = pw-server
-DNS.2 = localhost
+DNS.2 = pw-server-tls
+DNS.3 = localhost
 IP.1 = 127.0.0.1
 EOF
 
@@ -101,7 +102,8 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = cx-server
-DNS.2 = localhost
+DNS.2 = cx-server-tls
+DNS.3 = localhost
 IP.1 = 127.0.0.1
 EOF
 
@@ -132,7 +134,8 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = cx-client
 DNS.2 = cx-server
-DNS.3 = localhost
+DNS.3 = cx-server-tls
+DNS.4 = localhost
 IP.1 = 127.0.0.1
 EOF
 

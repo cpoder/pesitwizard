@@ -169,9 +169,9 @@ fi
 log_info "Test 4: Testing PeSIT protocol..."
 
 # Check if PeSIT client JAR exists
-CLIENT_JAR="$PROJECT_ROOT/pesitwizard-client/target/pesitwizard-client-1.0.0-SNAPSHOT.jar"
+CLIENT_JAR=$(ls "$PROJECT_ROOT"/pesitwizard-client/target/pesitwizard-client-*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1)
 
-if [ -f "$CLIENT_JAR" ]; then
+if [ -n "$CLIENT_JAR" ] && [ -f "$CLIENT_JAR" ]; then
     log_info "PeSIT client found, testing protocol..."
     
     # Test connection

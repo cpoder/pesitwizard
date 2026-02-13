@@ -258,6 +258,18 @@ jobs:
     if: always() && needs.build.result == 'success'
 
     steps:
+      - name: Determine dispatch event type
+        id: dispatch
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "event_type=oss-release" >> $GITHUB_OUTPUT
+            echo "payload={\"event_type\":\"oss-release\",\"client_payload\":{\"version\":\"${VERSION}\",\"ref\":\"${{ github.ref }}\",\"sha\":\"${{ github.sha }}\"}}" >> $GITHUB_OUTPUT
+          else
+            echo "event_type=oss-build-complete" >> $GITHUB_OUTPUT
+            echo "payload={\"event_type\":\"oss-build-complete\",\"client_payload\":{\"ref\":\"${{ github.ref }}\",\"sha\":\"${{ github.sha }}\"}}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger enterprise build
         env:
           GH_TOKEN: ${{ secrets.ENTERPRISE_DISPATCH_TOKEN }}
@@ -266,8 +278,9 @@ jobs:
             echo "ENTERPRISE_DISPATCH_TOKEN not set, skipping"
             exit 0
           fi
+          echo "Dispatching ${{ steps.dispatch.outputs.event_type }} to enterprise repo"
           curl -X POST \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/pesitwizard/pesitwizard-enterprise/dispatches \
-            -d '{"event_type":"oss-build-complete","client_payload":{"ref":"${{ github.ref }}","sha":"${{ github.sha }}"}}'
+            -d '${{ steps.dispatch.outputs.payload }}'

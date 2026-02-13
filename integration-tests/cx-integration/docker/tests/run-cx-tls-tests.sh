@@ -78,10 +78,10 @@ fi
 # Test 3: Verify CX server certificate
 echo ""
 echo "Test 3: CX Server certificate"
-if [ -f /certs/cx-server-cert.pem ]; then
-    CN=$(openssl x509 -noout -subject -in /certs/cx-server-cert.pem 2>/dev/null | grep -o "CN=.*" | cut -d= -f2 | cut -d, -f1)
+if [ -f /certs/CXSRV.pem ]; then
+    CN=$(openssl x509 -noout -subject -in /certs/CXSRV.pem 2>/dev/null | grep -o "CN=.*" | cut -d= -f2 | cut -d, -f1)
     echo "   CN: $CN"
-    if openssl verify -CAfile /certs/ca-cert.pem /certs/cx-server-cert.pem 2>/dev/null | grep -q "OK"; then
+    if openssl verify -CAfile /certs/ca-cert.pem /certs/CXSRV.pem 2>/dev/null | grep -q "OK"; then
         test_result "CX Server cert signed by CA" "pass"
     else
         test_result "CX Server cert verification" "fail"
@@ -214,6 +214,24 @@ else
     test_result "PW Server TLS configuration" "fail"
 fi
 
+# Configure partners and virtual files on PW Server
+# These are needed for the server to accept CX connections and file transfers
+echo ""
+echo "   Configuring PW Server partners and virtual files..."
+curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+    "$PW_SERVER_API/api/v1/config/partners" \
+    -d '{"id":"PWSRV01","description":"CX client","password":"","enabled":true,"accessType":"BOTH","maxConnections":10}' > /dev/null 2>&1 || true
+curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+    "$PW_SERVER_API/api/v1/config/partners" \
+    -d '{"id":"CETOM1","description":"CX server","password":"","enabled":true,"accessType":"BOTH","maxConnections":10}' > /dev/null 2>&1 || true
+curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+    "$PW_SERVER_API/api/v1/config/files" \
+    -d '{"id":"PWSEND","description":"Receive files from CX","enabled":true,"direction":"RECEIVE","receiveDirectory":"/data/received","receiveFilenamePattern":"PWSEND_${timestamp}","overwrite":true,"recordLength":4096,"recordFormat":0}' > /dev/null 2>&1 || true
+curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+    "$PW_SERVER_API/api/v1/config/files" \
+    -d '{"id":"PWRECV","description":"Send files to CX","enabled":true,"direction":"SEND","sendDirectory":"/data/send","recordLength":4096,"recordFormat":0}' > /dev/null 2>&1 || true
+echo "   Partners and virtual files configured."
+
 # Create PW Server instance
 echo ""
 echo "Test 9b: Create PW Server instance"
@@ -259,8 +277,8 @@ else
         else
             echo "   Server start: $START_RESULT"
         fi
-        # Wait for server to start
-        sleep 5
+        # Wait for server to bind to port and initialize TLS
+        sleep 10
     else
         echo "   Failed to create server: $SERVER_RESULT"
         test_result "Create PW Server instance" "fail"
@@ -277,7 +295,7 @@ echo ""
 echo "Test 10: TLS handshake to PW Server"
 # Note: PW Server needs a running PeSIT server instance with TLS enabled
 # The certificates were uploaded above, but the server may need restart or reconfiguration
-TLS_RESULT=$(timeout 10 openssl s_client -connect pw-server:5001 -CAfile /certs/ca-cert.pem < /dev/null 2>&1)
+TLS_RESULT=$(timeout 10 openssl s_client -connect pw-server:5001 -CAfile /certs/ca-cert.pem < /dev/null 2>&1 || true)
 if echo "$TLS_RESULT" | grep -q "Verify return code: 0"; then
     PROTOCOL=$(echo "$TLS_RESULT" | grep "Protocol" | head -1)
     echo "   $PROTOCOL"
@@ -420,6 +438,109 @@ fi
 
 # Cleanup
 rm -f /tmp/pw-client-send/tls_test.dat
+
+echo ""
+echo "=========================================="
+echo "  Phase 7: CX -> PW Server TLS Transfer"
+echo "=========================================="
+echo ""
+
+# Partners and virtual files were already configured in Phase 3
+
+# Verify PW Server is running and listening on port 5001
+echo ""
+echo "Test 14: Verify PW Server PeSIT listener"
+if nc -z pw-server 5001 2>/dev/null; then
+    test_result "PW Server PeSIT listener on port 5001" "pass"
+else
+    echo "   PW Server not listening on port 5001 — CX transfer will fail"
+    test_result "PW Server PeSIT listener" "fail"
+fi
+
+# Test 15: CX -> PW Server TLS transfer
+echo ""
+echo "Test 15: CX -> PW Server TLS file transfer"
+
+# Create test file in CX send volume
+echo "Hello from Connect:Express via TLS at $(date)" > /tmp/cx-send/tls-cx-to-pw-test.txt
+CX_TEST_SIZE=$(stat -c%s /tmp/cx-send/tls-cx-to-pw-test.txt 2>/dev/null || echo "0")
+echo "   Created test file ($CX_TEST_SIZE bytes)"
+
+# Count existing files in pw-received before transfer
+PW_FILES_BEFORE=$(ls /tmp/pw-received/ 2>/dev/null | wc -l)
+
+# Trigger CX outbound transfer via trigger file
+# The watcher in cx-main.sh will pick this up and call p1b8preq
+echo "   Triggering CX outbound transfer..."
+cat > /tmp/cx-send/.trigger << 'TRIGGER'
+SEND_FILE=/tmp/cx-send/tls-cx-to-pw-test.txt
+LOGICAL_FILE=PWSEND
+TRIGGER
+
+# Wait for CX to process the trigger and complete the transfer
+echo "   Waiting for CX transfer to complete..."
+TRANSFER_TIMEOUT=60
+TRANSFER_ELAPSED=0
+while [ $TRANSFER_ELAPSED -lt $TRANSFER_TIMEOUT ]; do
+    if [ -f /tmp/cx-send/.transfer_exitcode ]; then
+        CX_EXIT=$(cat /tmp/cx-send/.transfer_exitcode)
+        echo "   CX transfer exit code: $CX_EXIT"
+        if [ -f /tmp/cx-send/.transfer_log ]; then
+            echo "   CX transfer log:"
+            cat /tmp/cx-send/.transfer_log | head -20 | sed 's/^/      /'
+        fi
+        rm -f /tmp/cx-send/.transfer_exitcode /tmp/cx-send/.transfer_log
+        break
+    fi
+    sleep 2
+    TRANSFER_ELAPSED=$((TRANSFER_ELAPSED + 2))
+done
+
+if [ $TRANSFER_ELAPSED -ge $TRANSFER_TIMEOUT ]; then
+    echo "   Timed out waiting for CX transfer"
+fi
+
+# Give CX time to process the async transfer and PW Server to write received file
+sleep 15
+
+# Check if a new file appeared in pw-received
+PW_FILES_AFTER=$(ls /tmp/pw-received/ 2>/dev/null | wc -l)
+echo "   PW received files before: $PW_FILES_BEFORE, after: $PW_FILES_AFTER"
+
+if [ "$PW_FILES_AFTER" -gt "$PW_FILES_BEFORE" ]; then
+    # Find the newest file
+    NEWEST=$(ls -t /tmp/pw-received/ 2>/dev/null | head -1)
+    if [ -n "$NEWEST" ]; then
+        RECV_SIZE=$(stat -c%s "/tmp/pw-received/$NEWEST" 2>/dev/null || echo "0")
+        echo "   Received file: $NEWEST ($RECV_SIZE bytes)"
+        if [ "$RECV_SIZE" -gt 0 ]; then
+            test_result "CX -> PW Server TLS transfer" "pass"
+        else
+            test_result "CX -> PW Server TLS transfer (empty file)" "fail"
+        fi
+    else
+        test_result "CX -> PW Server TLS transfer (no file found)" "fail"
+    fi
+else
+    echo "   No new files in /tmp/pw-received/"
+    echo "   Files in /tmp/pw-received/:"
+    ls -la /tmp/pw-received/ 2>/dev/null || echo "   Directory empty"
+    # Check PW Server transfer history
+    echo "   PW Server transfer history:"
+    curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/transfers?direction=RECEIVE&limit=5" 2>/dev/null | jq '.' || true
+    # Check PW Server running status
+    echo "   PW Server instances:"
+    curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/servers" 2>/dev/null | jq '.' || true
+    # Check CX LOG for transfer errors (last 30 lines)
+    echo "   CX transfer log (last 30 lines):"
+    if [ -f /tmp/cx-send/.transfer_log ]; then
+        cat /tmp/cx-send/.transfer_log | sed 's/^/      /'
+    fi
+    test_result "CX -> PW Server TLS transfer" "fail"
+fi
+
+# Cleanup
+rm -f /tmp/cx-send/tls-cx-to-pw-test.txt
 
 echo ""
 echo "=========================================="

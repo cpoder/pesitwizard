@@ -43,19 +43,20 @@ fi
 # ============================================
 log_info "Test 2: Verifying JAR artifacts..."
 
-JARS=(
-    "pesitwizard-pesit/target/pesitwizard-pesit-1.0.0-SNAPSHOT.jar"
-    "pesitwizard-server/target/pesitwizard-server-1.0.0-SNAPSHOT.jar"
-    "pesitwizard-client/target/pesitwizard-client-1.0.0-SNAPSHOT.jar"
-    "pesitwizard-connector-api/target/pesitwizard-connector-api-1.0.0-SNAPSHOT.jar"
-    "pesitwizard-connector-local/target/pesitwizard-connector-local-1.0.0-SNAPSHOT.jar"
+MODULES=(
+    "pesitwizard-pesit"
+    "pesitwizard-server"
+    "pesitwizard-client"
+    "pesitwizard-connector-api"
+    "pesitwizard-connector-local"
 )
 
-for jar in "${JARS[@]}"; do
-    if [ -f "$PROJECT_ROOT/$jar" ]; then
+for module in "${MODULES[@]}"; do
+    jar=$(ls "$PROJECT_ROOT/$module/target/${module}"-*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1)
+    if [ -n "$jar" ] && [ -f "$jar" ]; then
         log_pass "Found: $jar"
     else
-        log_fail "Missing: $jar"
+        log_fail "Missing: $module JAR"
         ((ERRORS++))
     fi
 done

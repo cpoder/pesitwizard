@@ -45,14 +45,16 @@ services:
       dockerfile: Dockerfile
     container_name: pw-server-cx-tls
     environment:
-      - SPRING_PROFILES_ACTIVE=integration-test
+      - SPRING_PROFILES_ACTIVE=integration-test,dev
       - PESIT_SSL_ENABLED=true
       - PESIT_SSL_KEYSTORE_PATH=/app/certs/pw-server-keystore.p12
       - PESIT_SSL_KEYSTORE_PASSWORD=changeit
-      - PESIT_SSL_TRUSTSTORE_PATH=/app/certs/ca-truststore.p12
-      - PESIT_SSL_TRUSTSTORE_PASSWORD=changeit
+      - PESIT_SSL_CA_CERT_PATH=/app/certs/ca-cert.pem
       - PESIT_SSL_CLIENT_AUTH=NONE
       - PESIT_SSL_PROTOCOL=TLSv1.2
+      - MANAGEMENT_HEALTH_REDIS_ENABLED=false
+      - PESIT_SECURITY_ENABLED=false
+      - JAVA_TOOL_OPTIONS=-Dlogging.level.com.pesitwizard=DEBUG
     volumes:
       - pw-send-cx-tls:/data/send
       - pw-received-cx-tls:/data/received
@@ -111,6 +113,7 @@ services:
       - pw-client-send-cx-tls:/tmp/pw-client-send
       - pw-received-cx-tls:/tmp/pw-received
       - cx-received-tls:/tmp/cx-received
+      - cx-send-tls:/tmp/cx-send
     networks:
       - pesit-cx-tls-network
     environment:

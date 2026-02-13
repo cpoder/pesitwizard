@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-# Copy the server JAR
+# Copy the server JAR (H2 driver pre-injected into BOOT-INF/lib/ by build script)
 COPY pesitwizard-server.jar /app/pesitwizard-server.jar
 
 # Copy the entrypoint script

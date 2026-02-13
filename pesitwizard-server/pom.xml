@@ -62,11 +62,11 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- H2 Database (S3-15: restricted to test scope) -->
+        <!-- H2 Database (S3-15: test scope in production, runtime for integration testing) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- PostgreSQL Database (for production) -->

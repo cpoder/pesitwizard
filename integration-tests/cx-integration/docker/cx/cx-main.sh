@@ -119,6 +119,27 @@ if [ "${RUN_TRANSFER_TESTS:-false}" = "true" ]; then
     echo "(PW Client -> CX tests will run from the pw-client container)"
 fi
 
+# Background transfer trigger watcher
+# The test runner can trigger CX outbound transfers by creating /tmp/cx-send/.trigger
+# Format: SEND_FILE=<path> LOGICAL_FILE=<name>
+echo "Starting transfer trigger watcher..."
+(while true; do
+    if [ -f /tmp/cx-send/.trigger ]; then
+        echo "Transfer trigger detected, processing..."
+        . /tmp/cx-send/.trigger
+        rm -f /tmp/cx-send/.trigger
+        echo "Submitting transfer: file=$SEND_FILE logical=${LOGICAL_FILE:-PWSEND}"
+        # Call p1b8preq directly (don't use run-transfer.sh which has a 60s sleep)
+        $TOM_DIR/itom/p1b8preq "/SFN=${LOGICAL_FILE:-PWSEND}/SPN=PWSERVER/DIR=T" "/DSN=$SEND_FILE" > /tmp/cx-send/.transfer_log 2>&1
+        echo $? > /tmp/cx-send/.transfer_exitcode
+        echo "Transfer submitted with exit code $(cat /tmp/cx-send/.transfer_exitcode)"
+        # Wait for the actual transfer to complete (CX processes it asynchronously)
+        sleep 10
+        echo "TRANSFER_DONE" >> /tmp/cx-send/.transfer_log
+    fi
+    sleep 2
+done) &
+
 # Keep container running and tail the log
 echo "Connect:Express is running. Tailing log..."
 exec tail -f $TOM_DIR/config/LOG 2>/dev/null || sleep infinity

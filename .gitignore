@@ -28,9 +28,10 @@ scripts/cx-*.sh
 scripts/cx-*.md
 scripts/setup-cx-test.sh
 
-# CX integration test artifacts (JARs, proprietary CX binaries)
+# CX integration test artifacts (JARs, proprietary CX binaries, extracted classes)
 integration-tests/cx-integration/docker/**/*.jar
 integration-tests/cx-integration/docker/cx/CX/
+integration-tests/cx-integration/docker/BOOT-INF/
 
 # Session recordings
 **/recordings/

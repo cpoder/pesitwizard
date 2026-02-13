@@ -49,8 +49,8 @@ echo ""
 
 # Check if server JAR exists
 echo "Checking PeSIT Wizard Server..."
-SERVER_JAR="/home/cpo/pesitwizard/pesitwizard-server/target/pesitwizard-server-1.0.0-SNAPSHOT.jar"
-if [ -f "$SERVER_JAR" ]; then
+SERVER_JAR=$(ls /home/cpo/pesitwizard/pesitwizard-server/target/pesitwizard-server-*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1)
+if [ -n "$SERVER_JAR" ] && [ -f "$SERVER_JAR" ]; then
     SERVER_SIZE=$(du -h "$SERVER_JAR" | cut -f1)
     check_ok "Server JAR found: $SERVER_SIZE"
 else
