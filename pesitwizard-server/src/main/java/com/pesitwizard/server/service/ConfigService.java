@@ -1,25 +1,22 @@
 package com.pesitwizard.server.service;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.entity.VirtualFile;
 import com.pesitwizard.server.repository.PartnerRepository;
 import com.pesitwizard.server.repository.VirtualFileRepository;
-
 import jakarta.annotation.PostConstruct;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service for managing partners and virtual files configuration.
- * Combines database storage with YAML-based defaults.
+ * Service for managing partners and virtual files configuration. Combines database storage with
+ * YAML-based defaults.
  */
 @Slf4j
 @Service
@@ -31,57 +28,78 @@ public class ConfigService {
     private final PesitServerProperties serverProperties;
     private final SecretsService secretsService;
 
-    /**
-     * Initialize database with YAML-configured partners and files if empty
-     */
+    /** Initialize database with YAML-configured partners and files if empty */
     @PostConstruct
     @Transactional
     public void initializeFromYaml() {
         // Import partners from YAML if database is empty
         if (partnerRepository.count() == 0 && !serverProperties.getPartners().isEmpty()) {
-            log.info("Importing {} partners from YAML configuration", serverProperties.getPartners().size());
-            serverProperties.getPartners().forEach((key, config) -> {
-                // Encrypt password before storing in database
-                String password = config.getPassword();
-                if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
-                    password = secretsService.encryptForStorage(password);
-                    log.debug("Encrypted password for imported partner: {}", key);
-                }
+            log.info(
+                    "Importing {} partners from YAML configuration",
+                    serverProperties.getPartners().size());
+            serverProperties
+                    .getPartners()
+                    .forEach(
+                            (key, config) -> {
+                                // Encrypt password before storing in database
+                                String password = config.getPassword();
+                                if (password != null
+                                        && !password.isBlank()
+                                        && !secretsService.isEncrypted(password)) {
+                                    password = secretsService.encryptForStorage(password);
+                                    log.debug("Encrypted password for imported partner: {}", key);
+                                }
 
-                Partner partner = Partner.builder()
-                        .id(config.getId() != null ? config.getId() : key)
-                        .description(config.getDescription())
-                        .password(password)
-                        .enabled(config.isEnabled())
-                        .accessType(Partner.AccessType.valueOf(config.getAccessType().name()))
-                        .maxConnections(config.getMaxConnections())
-                        .allowedFiles(
-                                config.getAllowedFiles() != null ? String.join(",", config.getAllowedFiles()) : null)
-                        .build();
-                partnerRepository.save(partner);
-                log.debug("Imported partner: {}", partner.getId());
-            });
+                                Partner partner =
+                                        Partner.builder()
+                                                .id(config.getId() != null ? config.getId() : key)
+                                                .description(config.getDescription())
+                                                .password(password)
+                                                .enabled(config.isEnabled())
+                                                .accessType(
+                                                        Partner.AccessType.valueOf(
+                                                                config.getAccessType().name()))
+                                                .maxConnections(config.getMaxConnections())
+                                                .allowedFiles(
+                                                        config.getAllowedFiles() != null
+                                                                ? String.join(
+                                                                        ",",
+                                                                        config.getAllowedFiles())
+                                                                : null)
+                                                .build();
+                                partnerRepository.save(partner);
+                                log.debug("Imported partner: {}", partner.getId());
+                            });
         }
 
         // Import virtual files from YAML if database is empty
         if (virtualFileRepository.count() == 0 && !serverProperties.getFiles().isEmpty()) {
-            log.info("Importing {} virtual files from YAML configuration", serverProperties.getFiles().size());
-            serverProperties.getFiles().forEach((key, config) -> {
-                VirtualFile file = VirtualFile.builder()
-                        .id(config.getId() != null ? config.getId() : key)
-                        .description(config.getDescription())
-                        .enabled(config.isEnabled())
-                        .direction(VirtualFile.Direction.valueOf(config.getDirection().name()))
-                        .receiveDirectory(config.getReceiveDirectory())
-                        .sendDirectory(config.getSendDirectory())
-                        .receiveFilenamePattern(config.getReceiveFilenamePattern())
-                        .overwrite(config.isOverwrite())
-                        .maxFileSize(config.getMaxFileSize())
-                        .fileType(config.getFileType())
-                        .build();
-                virtualFileRepository.save(file);
-                log.debug("Imported virtual file: {}", file.getId());
-            });
+            log.info(
+                    "Importing {} virtual files from YAML configuration",
+                    serverProperties.getFiles().size());
+            serverProperties
+                    .getFiles()
+                    .forEach(
+                            (key, config) -> {
+                                VirtualFile file =
+                                        VirtualFile.builder()
+                                                .id(config.getId() != null ? config.getId() : key)
+                                                .description(config.getDescription())
+                                                .enabled(config.isEnabled())
+                                                .direction(
+                                                        VirtualFile.Direction.valueOf(
+                                                                config.getDirection().name()))
+                                                .receiveDirectory(config.getReceiveDirectory())
+                                                .sendDirectory(config.getSendDirectory())
+                                                .receiveFilenamePattern(
+                                                        config.getReceiveFilenamePattern())
+                                                .overwrite(config.isOverwrite())
+                                                .maxFileSize(config.getMaxFileSize())
+                                                .fileType(config.getFileType())
+                                                .build();
+                                virtualFileRepository.save(file);
+                                log.debug("Imported virtual file: {}", file.getId());
+                            });
         }
     }
 
@@ -99,17 +117,13 @@ public class ConfigService {
         return partnerRepository.findById(id);
     }
 
-    /**
-     * Find partner by ID (case-insensitive)
-     */
+    /** Find partner by ID (case-insensitive) */
     public Optional<Partner> findPartner(String partnerId) {
-        if (partnerId == null)
-            return Optional.empty();
+        if (partnerId == null) return Optional.empty();
 
         // Try exact match first
         Optional<Partner> partner = partnerRepository.findById(partnerId);
-        if (partner.isPresent())
-            return partner;
+        if (partner.isPresent()) return partner;
 
         // Try case-insensitive match
         return partnerRepository.findAll().stream()
@@ -156,17 +170,13 @@ public class ConfigService {
         return virtualFileRepository.findById(id);
     }
 
-    /**
-     * Find virtual file by filename (supports pattern matching)
-     */
+    /** Find virtual file by filename (supports pattern matching) */
     public Optional<VirtualFile> findVirtualFile(String filename) {
-        if (filename == null)
-            return Optional.empty();
+        if (filename == null) return Optional.empty();
 
         // Try exact match first
         Optional<VirtualFile> file = virtualFileRepository.findById(filename);
-        if (file.isPresent())
-            return file;
+        if (file.isPresent()) return file;
 
         // Try pattern match
         return virtualFileRepository.findByEnabled(true).stream()

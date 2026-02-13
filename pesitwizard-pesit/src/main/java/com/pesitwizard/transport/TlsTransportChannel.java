@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.security.KeyStore;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -13,31 +12,28 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * TLS/SSL transport implementation for secure PESIT connections.
- * Supports mutual TLS (mTLS) with client certificates.
+ * TLS/SSL transport implementation for secure PESIT connections. Supports mutual TLS (mTLS) with
+ * client certificates.
  */
 @Slf4j
 public class TlsTransportChannel extends AbstractSocketTransportChannel {
 
     private final SSLContext sslContext;
     private boolean hostnameVerification = true;
-    private String[] enabledProtocols = new String[] { "TLSv1.3", "TLSv1.2" };
+    private String[] enabledProtocols = new String[] {"TLSv1.3", "TLSv1.2"};
 
     /**
-     * When true (default), uses standard PeSIT framing with 2-byte length prefix
-     * (compatible with PeSIT Wizard server).
-     * When false, uses Connect:Express TLS framing where the FPDU's internal
-     * length field serves as the framing delimiter (no external prefix).
+     * When false (default), uses standard PeSIT over TLS: FPDUs are sent directly without an
+     * external length prefix. TLS records already provide frame boundaries, unlike TCP which is a
+     * continuous byte stream. When true, uses TCP-style framing with an external 2-byte length
+     * prefix (non-standard for TLS, kept for backward compatibility only).
      */
-    private boolean standardFraming = true;
+    private boolean standardFraming = false;
 
-    /**
-     * Create TLS channel with default trust (system truststore)
-     */
+    /** Create TLS channel with default trust (system truststore) */
     public TlsTransportChannel(String host, int port) {
         super(host, port);
         try {
@@ -47,29 +43,32 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
         }
     }
 
-    /**
-     * Create TLS channel with custom truststore only (no client cert)
-     */
-    public TlsTransportChannel(String host, int port, byte[] truststoreData, String truststorePassword) {
+    /** Create TLS channel with custom truststore only (no client cert) */
+    public TlsTransportChannel(
+            String host, int port, byte[] truststoreData, String truststorePassword) {
         this(host, port, truststoreData, truststorePassword, null, null);
     }
 
-    /**
-     * Create TLS channel with custom truststore and keystore (mutual TLS)
-     */
-    public TlsTransportChannel(String host, int port,
-            byte[] truststoreData, String truststorePassword,
-            byte[] keystoreData, String keystorePassword) {
+    /** Create TLS channel with custom truststore and keystore (mutual TLS) */
+    public TlsTransportChannel(
+            String host,
+            int port,
+            byte[] truststoreData,
+            String truststorePassword,
+            byte[] keystoreData,
+            String keystorePassword) {
         super(host, port);
 
         try {
             // Load truststore
             KeyStore trustStore = KeyStore.getInstance("PKCS12");
             try (ByteArrayInputStream bis = new ByteArrayInputStream(truststoreData)) {
-                trustStore.load(bis, truststorePassword != null ? truststorePassword.toCharArray() : null);
+                trustStore.load(
+                        bis, truststorePassword != null ? truststorePassword.toCharArray() : null);
             }
 
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            TrustManagerFactory tmf =
+                    TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(trustStore);
 
             KeyManager[] keyManagers = null;
@@ -78,11 +77,14 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
             if (keystoreData != null && keystoreData.length > 0) {
                 KeyStore keyStore = KeyStore.getInstance("PKCS12");
                 try (ByteArrayInputStream bis = new ByteArrayInputStream(keystoreData)) {
-                    keyStore.load(bis, keystorePassword != null ? keystorePassword.toCharArray() : null);
+                    keyStore.load(
+                            bis, keystorePassword != null ? keystorePassword.toCharArray() : null);
                 }
 
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(keyStore, keystorePassword != null ? keystorePassword.toCharArray() : null);
+                KeyManagerFactory kmf =
+                        KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(
+                        keyStore, keystorePassword != null ? keystorePassword.toCharArray() : null);
                 keyManagers = kmf.getKeyManagers();
                 log.info("Mutual TLS enabled with keystore ({} bytes)", keystoreData.length);
             }
@@ -108,15 +110,21 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
 
         // Filter out insecure cipher suites (S3-02)
         String[] ciphers = sslSocket.getEnabledCipherSuites();
-        String[] filtered = java.util.Arrays.stream(ciphers)
-                .filter(c -> {
-                    String u = c.toUpperCase();
-                    return !u.contains("_NULL") && !u.contains("_ANON")
-                            && !u.contains("EXPORT") && !u.contains("_DES_")
-                            && !u.contains("_DES40_") && !u.contains("_3DES_")
-                            && !u.contains("DES_CBC") && !u.contains("_RC4");
-                })
-                .toArray(String[]::new);
+        String[] filtered =
+                java.util.Arrays.stream(ciphers)
+                        .filter(
+                                c -> {
+                                    String u = c.toUpperCase();
+                                    return !u.contains("_NULL")
+                                            && !u.contains("_ANON")
+                                            && !u.contains("EXPORT")
+                                            && !u.contains("_DES_")
+                                            && !u.contains("_DES40_")
+                                            && !u.contains("_3DES_")
+                                            && !u.contains("DES_CBC")
+                                            && !u.contains("_RC4");
+                                })
+                        .toArray(String[]::new);
         sslSocket.setEnabledCipherSuites(filtered);
 
         // Configure hostname verification to prevent MITM attacks.
@@ -127,27 +135,30 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
             sslSocket.setSSLParameters(sslParams);
             log.debug("TLS hostname verification enabled for host: {}", host);
         } else {
-            log.warn("TLS hostname verification is DISABLED for {}:{} — vulnerable to MITM attacks", host, port);
+            log.warn(
+                    "TLS hostname verification is DISABLED for {}:{} — vulnerable to MITM attacks",
+                    host,
+                    port);
         }
 
         // Perform TLS handshake
         sslSocket.startHandshake();
 
         SSLSession session = sslSocket.getSession();
-        log.info("TLS connection established: protocol={}, cipher={}",
-                session.getProtocol(), session.getCipherSuite());
+        log.info(
+                "TLS connection established: protocol={}, cipher={}",
+                session.getProtocol(),
+                session.getCipherSuite());
 
         return sslSocket;
     }
 
     /**
      * Send data over TLS.
-     * <p>
-     * In standard framing mode (default), sends with 2-byte length prefix
-     * like TCP, compatible with PeSIT Wizard server.
-     * In Connect:Express framing mode, sends FPDU directly without prefix
-     * (FPDU contains its own length field in the first 2 bytes).
-     * </p>
+     *
+     * <p>In standard PeSIT TLS mode (default), sends FPDU directly without external length prefix.
+     * TLS records already provide frame boundaries, so no additional framing is needed. In legacy
+     * framing mode (standardFraming=true), sends with external 2-byte length prefix like TCP.
      */
     @Override
     public void send(byte[] data) throws IOException {
@@ -160,21 +171,19 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
             throw new IOException("Not connected");
         }
 
-        // Connect:Express TLS: send FPDU directly without additional length prefix
+        // PeSIT over TLS: send FPDU directly without additional length prefix
         outputStream.write(data);
         outputStream.flush();
 
-        log.debug("Sent {} bytes to {}:{} (CX framing)", data.length, host, port);
+        log.debug("Sent {} bytes to {}:{} (TLS framing)", data.length, host, port);
     }
 
     /**
      * Receive data over TLS.
-     * <p>
-     * In standard framing mode (default), reads with 2-byte length prefix
-     * like TCP, compatible with PeSIT Wizard server.
-     * In Connect:Express framing mode, reads the FPDU length from the FPDU's
-     * internal header (first 2 bytes).
-     * </p>
+     *
+     * <p>In standard PeSIT TLS mode (default), reads the FPDU directly from the TLS stream - no
+     * external length prefix (TLS records provide frame boundaries). In legacy framing mode
+     * (standardFraming=true), reads with external 2-byte length prefix like TCP.
      */
     @Override
     public byte[] receive() throws IOException {
@@ -186,7 +195,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
             throw new IOException("Not connected");
         }
 
-        // Connect:Express TLS: read FPDU length from FPDU header itself (first 2 bytes)
+        // PeSIT over TLS: read FPDU length from FPDU header itself (first 2 bytes)
         int length = inputStream.readUnsignedShort();
         if (length <= 0) {
             throw new IOException("Invalid FPDU length: " + length);
@@ -200,7 +209,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
         // Read the rest
         inputStream.readFully(data, 2, length - 2);
 
-        log.debug("Received {} bytes from {}:{} (CX framing)", length, host, port);
+        log.debug("Received {} bytes from {}:{} (TLS framing)", length, host, port);
         return data;
     }
 
@@ -215,8 +224,8 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     }
 
     /**
-     * Set the TLS protocol versions to enable on the socket.
-     * Only TLSv1.2 and TLSv1.3 are considered secure.
+     * Set the TLS protocol versions to enable on the socket. Only TLSv1.2 and TLSv1.3 are
+     * considered secure.
      *
      * @param protocols array of protocol names (e.g., "TLSv1.3", "TLSv1.2")
      */
@@ -225,13 +234,12 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     }
 
     /**
-     * Set whether TLS hostname verification is enabled.
-     * When enabled (default), the server certificate's CN/SAN must match the target hostname.
-     * <p>
-     * <b>WARNING:</b> Disabling hostname verification makes the connection vulnerable to
-     * man-in-the-middle attacks. Only disable for testing or when connecting to servers
-     * with self-signed certificates that lack proper CN/SAN entries.
-     * </p>
+     * Set whether TLS hostname verification is enabled. When enabled (default), the server
+     * certificate's CN/SAN must match the target hostname.
+     *
+     * <p><b>WARNING:</b> Disabling hostname verification makes the connection vulnerable to
+     * man-in-the-middle attacks. Only disable for testing or when connecting to servers with
+     * self-signed certificates that lack proper CN/SAN entries.
      *
      * @param enabled true to enable hostname verification (default), false to disable
      */
@@ -249,31 +257,33 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
     }
 
     /**
-     * Set whether to use standard PeSIT framing (2-byte length prefix) or
-     * Connect:Express TLS framing (no external prefix).
-     * <p>
-     * Standard framing (default) is compatible with PeSIT Wizard server.
-     * Connect:Express framing is needed for interoperability with CX servers.
-     * </p>
+     * Set the framing mode for TLS connections.
      *
-     * @param standardFraming true for standard PeSIT framing (default), false for CX framing
+     * <p>When false (default), uses standard PeSIT over TLS: FPDUs are sent directly without
+     * external length prefix. TLS records already provide frame boundaries, unlike TCP which is a
+     * continuous byte stream.
+     *
+     * <p>When true, uses legacy TCP-style framing with an external 2-byte length prefix before each
+     * FPDU. This is non-standard for TLS and should only be used for backward compatibility with
+     * specific implementations that require it.
+     *
+     * @param standardFraming true for legacy TCP-style framing, false for standard PeSIT TLS
+     *     framing (default)
      */
     public void setStandardFraming(boolean standardFraming) {
         this.standardFraming = standardFraming;
     }
 
     /**
-     * Check if standard PeSIT framing is enabled.
+     * Check if legacy TCP-style framing is enabled (external 2-byte length prefix).
      *
-     * @return true if using standard framing, false if using CX framing
+     * @return true if using legacy TCP-style framing, false if using standard PeSIT TLS framing
      */
     public boolean isStandardFraming() {
         return standardFraming;
     }
 
-    /**
-     * Get the SSL session information
-     */
+    /** Get the SSL session information */
     public SSLSession getSession() {
         return socket instanceof SSLSocket ? ((SSLSocket) socket).getSession() : null;
     }

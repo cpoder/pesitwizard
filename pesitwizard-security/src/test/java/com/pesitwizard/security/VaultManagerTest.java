@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for VaultManager.
- */
+/** Unit tests for VaultManager. */
 @DisplayName("VaultManager Tests")
 class VaultManagerTest {
 
@@ -51,7 +49,8 @@ class VaultManagerTest {
         void shouldFailConnectionWithNamespace() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.VaultTestResult result = manager.testConnection("test-token", "test-namespace");
+            VaultManager.VaultTestResult result =
+                    manager.testConnection("test-token", "test-namespace");
 
             assertThat(result.success()).isFalse();
         }
@@ -77,7 +76,8 @@ class VaultManagerTest {
         void shouldFailAppRoleTestWithNamespace() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.VaultTestResult result = manager.testAppRole("role-id", "secret-id", "my-namespace");
+            VaultManager.VaultTestResult result =
+                    manager.testAppRole("role-id", "secret-id", "my-namespace");
 
             assertThat(result.success()).isFalse();
         }
@@ -92,7 +92,8 @@ class VaultManagerTest {
         void shouldFailToEnsureKvWhenVaultNotAvailable() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.SetupResult result = manager.ensureKvSecretsEngine("token", "secret/data/test", null);
+            VaultManager.SetupResult result =
+                    manager.ensureKvSecretsEngine("token", "secret/data/test", null);
 
             assertThat(result.success()).isFalse();
         }
@@ -102,7 +103,8 @@ class VaultManagerTest {
         void shouldHandlePathStartingWithSecret() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.SetupResult result = manager.ensureKvSecretsEngine("token", "secret/data/pesitwizard", null);
+            VaultManager.SetupResult result =
+                    manager.ensureKvSecretsEngine("token", "secret/data/pesitwizard", null);
 
             assertThat(result.success()).isFalse();
         }
@@ -112,7 +114,8 @@ class VaultManagerTest {
         void shouldHandleCustomPath() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.SetupResult result = manager.ensureKvSecretsEngine("token", "custom/data/pesitwizard", null);
+            VaultManager.SetupResult result =
+                    manager.ensureKvSecretsEngine("token", "custom/data/pesitwizard", null);
 
             assertThat(result.success()).isFalse();
         }
@@ -127,7 +130,8 @@ class VaultManagerTest {
         void shouldFailToSetupAppRoleWhenVaultNotAvailable() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.SetupResult result = manager.setupAppRole("token", "pesitwizard", null, null);
+            VaultManager.SetupResult result =
+                    manager.setupAppRole("token", "pesitwizard", null, null);
 
             assertThat(result.success()).isFalse();
             assertThat(result.message()).contains("failed");
@@ -139,7 +143,8 @@ class VaultManagerTest {
             VaultManager manager = new VaultManager("http://localhost:59999");
             String policy = "path \"secret/*\" { capabilities = [\"read\"] }";
 
-            VaultManager.SetupResult result = manager.setupAppRole("token", "pesitwizard", policy, null);
+            VaultManager.SetupResult result =
+                    manager.setupAppRole("token", "pesitwizard", policy, null);
 
             assertThat(result.success()).isFalse();
         }
@@ -149,7 +154,8 @@ class VaultManagerTest {
         void shouldFailToSetupAppRoleWithNamespace() {
             VaultManager manager = new VaultManager("http://localhost:59999");
 
-            VaultManager.SetupResult result = manager.setupAppRole("token", "pesitwizard", null, "my-namespace");
+            VaultManager.SetupResult result =
+                    manager.setupAppRole("token", "pesitwizard", null, "my-namespace");
 
             assertThat(result.success()).isFalse();
         }
@@ -239,8 +245,8 @@ class VaultManagerTest {
         @Test
         @DisplayName("should create result with all fields")
         void shouldCreateResultWithAllFields() {
-            VaultManager.VaultTestResult result = new VaultManager.VaultTestResult(
-                    true, "Success", "details", "token123");
+            VaultManager.VaultTestResult result =
+                    new VaultManager.VaultTestResult(true, "Success", "details", "token123");
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isEqualTo("Success");
@@ -251,8 +257,8 @@ class VaultManagerTest {
         @Test
         @DisplayName("should create result without token")
         void shouldCreateResultWithoutToken() {
-            VaultManager.VaultTestResult result = new VaultManager.VaultTestResult(
-                    false, "Failed", "error details");
+            VaultManager.VaultTestResult result =
+                    new VaultManager.VaultTestResult(false, "Failed", "error details");
 
             assertThat(result.success()).isFalse();
             assertThat(result.message()).isEqualTo("Failed");

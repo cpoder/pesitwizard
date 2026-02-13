@@ -2,12 +2,6 @@ package com.pesitwizard.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
@@ -16,12 +10,13 @@ import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TcpTransportChannel;
-
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
-/**
- * Tests for MockPesitServer - replay functionality.
- */
+/** Tests for MockPesitServer - replay functionality. */
 @Slf4j
 @DisplayName("MockPesitServer Tests")
 public class MockPesitServerTest {
@@ -30,7 +25,8 @@ public class MockPesitServerTest {
 
     @Test
     @DisplayName("should replay CONNECT/RELEASE session")
-    @org.junit.jupiter.api.Disabled("Golden file replay requires exact byte matching - use in-memory recording for now")
+    @org.junit.jupiter.api.Disabled(
+            "Golden file replay requires exact byte matching - use in-memory recording for now")
     void shouldReplayConnectRelease() throws Exception {
         Path goldenFile = GOLDEN_DIR.resolve("connect-release.dat");
 
@@ -40,21 +36,26 @@ public class MockPesitServerTest {
             TcpTransportChannel channel = new TcpTransportChannel("localhost", server.getPort());
             try (PesitSession session = new PesitSession(channel)) {
                 // Send CONNECT
-                Fpdu connect = new ConnectMessageBuilder()
-                        .demandeur("LOOP")
-                        .serveur("CETOM1")
-                        .writeAccess()
-                        .build(1);
+                Fpdu connect =
+                        new ConnectMessageBuilder()
+                                .demandeur("LOOP")
+                                .serveur("CETOM1")
+                                .writeAccess()
+                                .build(1);
                 Fpdu aconnect = session.sendFpduWithAck(connect);
 
                 assertEquals(FpduType.ACONNECT, aconnect.getFpduType());
                 log.info("Received ACONNECT: idSrc={}", aconnect.getIdSrc());
 
                 // Send RELEASE
-                Fpdu release = new Fpdu(FpduType.RELEASE)
-                        .withIdDst(aconnect.getIdSrc())
-                        .withIdSrc(1)
-                        .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+                Fpdu release =
+                        new Fpdu(FpduType.RELEASE)
+                                .withIdDst(aconnect.getIdSrc())
+                                .withIdSrc(1)
+                                .withParameter(
+                                        new ParameterValue(
+                                                ParameterIdentifier.PI_02_DIAG,
+                                                new byte[] {0, 0, 0}));
                 Fpdu relconf = session.sendFpduWithAck(release);
 
                 assertEquals(FpduType.RELCONF, relconf.getFpduType());
@@ -74,17 +75,19 @@ public class MockPesitServerTest {
         PesitSessionRecorder recorder = new PesitSessionRecorder("test");
 
         // Simulate a CONNECT/ACONNECT exchange
-        Fpdu connect = new ConnectMessageBuilder()
-                .demandeur("TEST")
-                .serveur("MOCK")
-                .writeAccess()
-                .build(1);
+        Fpdu connect =
+                new ConnectMessageBuilder()
+                        .demandeur("TEST")
+                        .serveur("MOCK")
+                        .writeAccess()
+                        .build(1);
         recorder.record(PesitSessionRecorder.Direction.SENT, connect);
 
-        Fpdu aconnect = new Fpdu(FpduType.ACONNECT)
-                .withIdSrc(99)
-                .withIdDst(1)
-                .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, "D"));
+        Fpdu aconnect =
+                new Fpdu(FpduType.ACONNECT)
+                        .withIdSrc(99)
+                        .withIdDst(1)
+                        .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, "D"));
         recorder.record(PesitSessionRecorder.Direction.RECEIVED, aconnect);
 
         // Replay it

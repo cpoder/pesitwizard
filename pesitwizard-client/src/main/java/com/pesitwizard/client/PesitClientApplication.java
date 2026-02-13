@@ -6,15 +6,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-/**
- * PeSIT Client Application
- * REST API for PeSIT file transfers
- */
-@SpringBootApplication(exclude = {
-        // Exclude OTLP auto-configuration - enable via OTEL_METRICS_ENABLED=true
-        OtlpMetricsExportAutoConfiguration.class
-})
-@ComponentScan(basePackages = { "com.pesitwizard.client", "com.pesitwizard.security" })
+/** PeSIT Client Application REST API for PeSIT file transfers */
+@SpringBootApplication(
+        exclude = {
+            // Exclude OTLP auto-configuration - enable via OTEL_METRICS_ENABLED=true
+            OtlpMetricsExportAutoConfiguration.class
+        })
+@ComponentScan(basePackages = {"com.pesitwizard.client", "com.pesitwizard.security"})
 @EnableScheduling
 public class PesitClientApplication {
 

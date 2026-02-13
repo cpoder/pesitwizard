@@ -1,7 +1,6 @@
 package com.pesitwizard.server.entity;
 
-import java.time.LocalDateTime;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,7 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,8 +17,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * Entity representing a PeSIT partner (remote system that can connect).
- * Partners are identified by their ID which must match PI 3 (Demandeur).
+ * Entity representing a PeSIT partner (remote system that can connect). Partners are identified by
+ * their ID which must match PI 3 (Demandeur).
  */
 @Entity
 @Table(name = "partners")
@@ -29,47 +28,31 @@ import lombok.ToString;
 @AllArgsConstructor
 public class Partner {
 
-    /**
-     * Partner identifier - must match PI 3 (Demandeur)
-     */
+    /** Partner identifier - must match PI 3 (Demandeur) */
     @Id
     @Column(length = 64)
     private String id;
 
-    /**
-     * Partner description
-     */
+    /** Partner description */
     private String description;
 
-    /**
-     * Password for access control (PI 5) - empty means no password required
-     */
+    /** Password for access control (PI 5) - empty means no password required */
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @ToString.Exclude
     private String password;
 
-    /**
-     * Whether this partner is enabled
-     */
-    @Builder.Default
-    private boolean enabled = true;
+    /** Whether this partner is enabled */
+    @Builder.Default private boolean enabled = true;
 
-    /**
-     * Allowed access types: READ, WRITE, BOTH
-     */
+    /** Allowed access types: READ, WRITE, BOTH */
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private AccessType accessType = AccessType.BOTH;
 
-    /**
-     * Maximum concurrent connections from this partner
-     */
-    @Builder.Default
-    private int maxConnections = 10;
+    /** Maximum concurrent connections from this partner */
+    @Builder.Default private int maxConnections = 10;
 
-    /**
-     * Comma-separated list of allowed file patterns (empty = all)
-     */
+    /** Comma-separated list of allowed file patterns (empty = all) */
     @Column(length = 1000)
     private String allowedFiles;
 
@@ -97,31 +80,27 @@ public class Partner {
     }
 
     /**
-     * Computed field for API responses — indicates whether a password is configured
-     * without revealing the actual password value.
+     * Computed field for API responses — indicates whether a password is configured without
+     * revealing the actual password value.
      */
     @com.fasterxml.jackson.annotation.JsonProperty("passwordConfigured")
     public boolean isPasswordConfigured() {
         return password != null && !password.isEmpty();
     }
 
-    /**
-     * Check if partner can perform write operations
-     */
+    /** Check if partner can perform write operations */
     public boolean canWrite() {
         return accessType == AccessType.WRITE || accessType == AccessType.BOTH;
     }
 
-    /**
-     * Check if partner can perform read operations
-     */
+    /** Check if partner can perform read operations */
     public boolean canRead() {
         return accessType == AccessType.READ || accessType == AccessType.BOTH;
     }
 
     /**
-     * Check if partner can access a specific file.
-     * Patterns use glob-style wildcards: * matches any characters.
+     * Check if partner can access a specific file. Patterns use glob-style wildcards: * matches any
+     * characters.
      */
     public boolean canAccessFile(String filename) {
         if (allowedFiles == null || allowedFiles.isEmpty()) {
@@ -130,8 +109,7 @@ public class Partner {
         String[] patterns = allowedFiles.split(",");
         for (String pattern : patterns) {
             pattern = pattern.trim();
-            if (pattern.isEmpty())
-                continue;
+            if (pattern.isEmpty()) continue;
             // Convert glob pattern to regex: escape dots, * -> .*
             String regex = pattern.replace(".", "\\.").replace("*", ".*");
             if (pattern.equals(filename) || filename.matches(regex)) {

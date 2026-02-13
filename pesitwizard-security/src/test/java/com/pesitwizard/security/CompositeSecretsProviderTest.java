@@ -18,8 +18,7 @@ class CompositeSecretsProviderTest {
     private static final String TEST_SALT_FILE = "./target/test-encryption.salt";
     private static final String VALID_MASTER_KEY = "test-master-key-for-unit-tests-32";
 
-    @Mock
-    private SecretsProvider mockPrimaryProvider;
+    @Mock private SecretsProvider mockPrimaryProvider;
     private AesSecretsProvider aesProvider;
     private CompositeSecretsProvider compositeProvider;
 

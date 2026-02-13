@@ -11,7 +11,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,8 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 /**
- * Integration tests for TLS transport with real SSL handshake.
- * Uses self-signed certificates generated at test time.
+ * Integration tests for TLS transport with real SSL handshake. Uses self-signed certificates
+ * generated at test time.
  */
 @DisplayName("TLS Transport Integration Tests")
 class TlsTransportIntegrationTest {
@@ -58,29 +57,30 @@ class TlsTransportIntegrationTest {
             CountDownLatch serverReady = new CountDownLatch(1);
             AtomicReference<byte[]> receivedData = new AtomicReference<>();
 
-            executor.submit(() -> {
-                try {
-                    serverReady.countDown();
-                    Socket client = serverSocket.accept();
-                    DataInputStream dis = new DataInputStream(client.getInputStream());
-                    DataOutputStream dos = new DataOutputStream(client.getOutputStream());
+            executor.submit(
+                    () -> {
+                        try {
+                            serverReady.countDown();
+                            Socket client = serverSocket.accept();
+                            DataInputStream dis = new DataInputStream(client.getInputStream());
+                            DataOutputStream dos = new DataOutputStream(client.getOutputStream());
 
-                    // Read FPDU (2-byte length prefix)
-                    int len = dis.readUnsignedShort();
-                    byte[] data = new byte[len];
-                    dis.readFully(data);
-                    receivedData.set(data);
+                            // Read FPDU (2-byte length prefix)
+                            int len = dis.readUnsignedShort();
+                            byte[] data = new byte[len];
+                            dis.readFully(data);
+                            receivedData.set(data);
 
-                    // Send response
-                    dos.writeShort(4);
-                    dos.write(new byte[] { 0x0A, 0x0B, 0x0C, 0x0D });
-                    dos.flush();
+                            // Send response
+                            dos.writeShort(4);
+                            dos.write(new byte[] {0x0A, 0x0B, 0x0C, 0x0D});
+                            dos.flush();
 
-                    client.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+                            client.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
 
             serverReady.await();
 
@@ -91,7 +91,7 @@ class TlsTransportIntegrationTest {
             assertThat(channel.isConnected()).isTrue();
 
             // Send data
-            channel.send(new byte[] { 0x01, 0x02, 0x03 });
+            channel.send(new byte[] {0x01, 0x02, 0x03});
 
             // Receive response
             byte[] response = channel.receive();
@@ -118,29 +118,30 @@ class TlsTransportIntegrationTest {
             CountDownLatch serverReady = new CountDownLatch(1);
             AtomicReference<Integer> receivedLength = new AtomicReference<>();
 
-            executor.submit(() -> {
-                try {
-                    serverReady.countDown();
-                    Socket client = serverSocket.accept();
-                    DataInputStream dis = new DataInputStream(client.getInputStream());
-                    DataOutputStream dos = new DataOutputStream(client.getOutputStream());
+            executor.submit(
+                    () -> {
+                        try {
+                            serverReady.countDown();
+                            Socket client = serverSocket.accept();
+                            DataInputStream dis = new DataInputStream(client.getInputStream());
+                            DataOutputStream dos = new DataOutputStream(client.getOutputStream());
 
-                    // Read large FPDU
-                    int len = dis.readUnsignedShort();
-                    byte[] data = new byte[len];
-                    dis.readFully(data);
-                    receivedLength.set(len);
+                            // Read large FPDU
+                            int len = dis.readUnsignedShort();
+                            byte[] data = new byte[len];
+                            dis.readFully(data);
+                            receivedLength.set(len);
 
-                    // Send small ack
-                    dos.writeShort(1);
-                    dos.write(new byte[] { 0x00 });
-                    dos.flush();
+                            // Send small ack
+                            dos.writeShort(1);
+                            dos.write(new byte[] {0x00});
+                            dos.flush();
 
-                    client.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+                            client.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
 
             serverReady.await();
 
@@ -170,31 +171,32 @@ class TlsTransportIntegrationTest {
             CountDownLatch serverReady = new CountDownLatch(1);
             AtomicReference<Integer> messageCount = new AtomicReference<>(0);
 
-            executor.submit(() -> {
-                try {
-                    serverReady.countDown();
-                    Socket client = serverSocket.accept();
-                    DataInputStream dis = new DataInputStream(client.getInputStream());
-                    DataOutputStream dos = new DataOutputStream(client.getOutputStream());
+            executor.submit(
+                    () -> {
+                        try {
+                            serverReady.countDown();
+                            Socket client = serverSocket.accept();
+                            DataInputStream dis = new DataInputStream(client.getInputStream());
+                            DataOutputStream dos = new DataOutputStream(client.getOutputStream());
 
-                    // Echo 5 messages
-                    for (int i = 0; i < 5; i++) {
-                        int len = dis.readUnsignedShort();
-                        byte[] data = new byte[len];
-                        dis.readFully(data);
-                        messageCount.updateAndGet(v -> v + 1);
+                            // Echo 5 messages
+                            for (int i = 0; i < 5; i++) {
+                                int len = dis.readUnsignedShort();
+                                byte[] data = new byte[len];
+                                dis.readFully(data);
+                                messageCount.updateAndGet(v -> v + 1);
 
-                        // Echo back
-                        dos.writeShort(len);
-                        dos.write(data);
-                        dos.flush();
-                    }
+                                // Echo back
+                                dos.writeShort(len);
+                                dos.write(data);
+                                dos.flush();
+                            }
 
-                    client.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+                            client.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
 
             serverReady.await();
 
@@ -203,7 +205,7 @@ class TlsTransportIntegrationTest {
 
             // Send 5 messages and verify echo
             for (int i = 0; i < 5; i++) {
-                byte[] msg = new byte[] { (byte) i, (byte) (i + 1) };
+                byte[] msg = new byte[] {(byte) i, (byte) (i + 1)};
                 channel.send(msg);
                 byte[] response = channel.receive();
                 assertThat(response).containsExactly(msg);
@@ -223,17 +225,16 @@ class TlsTransportIntegrationTest {
         void shouldThrowWhenConnectingToClosedPort() {
             TcpTransportChannel channel = new TcpTransportChannel("localhost", 59999);
 
-            assertThatThrownBy(() -> channel.connect())
-                    .isInstanceOf(IOException.class);
+            assertThatThrownBy(() -> channel.connect()).isInstanceOf(IOException.class);
         }
 
         @Test
         @DisplayName("should throw when connecting to invalid host")
         void shouldThrowWhenConnectingToInvalidHost() {
-            TcpTransportChannel channel = new TcpTransportChannel("invalid.host.that.does.not.exist.local", 5000);
+            TcpTransportChannel channel =
+                    new TcpTransportChannel("invalid.host.that.does.not.exist.local", 5000);
 
-            assertThatThrownBy(() -> channel.connect())
-                    .isInstanceOf(IOException.class);
+            assertThatThrownBy(() -> channel.connect()).isInstanceOf(IOException.class);
         }
     }
 }

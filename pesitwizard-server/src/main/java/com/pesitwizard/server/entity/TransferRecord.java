@@ -1,7 +1,5 @@
 package com.pesitwizard.server.entity;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,24 +11,27 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Persistent record of a file transfer.
- * Tracks all transfers for audit, retry, and monitoring purposes.
+ * Persistent record of a file transfer. Tracks all transfers for audit, retry, and monitoring
+ * purposes.
  */
 @Entity
-@Table(name = "transfer_records", indexes = {
-        @Index(name = "idx_transfer_status", columnList = "status"),
-        @Index(name = "idx_transfer_partner", columnList = "partnerId"),
-        @Index(name = "idx_transfer_filename", columnList = "filename"),
-        @Index(name = "idx_transfer_started", columnList = "startedAt"),
-        @Index(name = "idx_transfer_server", columnList = "serverId"),
-        @Index(name = "idx_transfer_session", columnList = "sessionId")
-})
+@Table(
+        name = "transfer_records",
+        indexes = {
+            @Index(name = "idx_transfer_status", columnList = "status"),
+            @Index(name = "idx_transfer_partner", columnList = "partnerId"),
+            @Index(name = "idx_transfer_filename", columnList = "filename"),
+            @Index(name = "idx_transfer_started", columnList = "startedAt"),
+            @Index(name = "idx_transfer_server", columnList = "serverId"),
+            @Index(name = "idx_transfer_session", columnList = "sessionId")
+        })
 @Data
 @Builder
 @NoArgsConstructor
@@ -41,201 +42,126 @@ public class TransferRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Unique transfer identifier (UUID)
-     */
+    /** Unique transfer identifier (UUID) */
     @Column(nullable = false, unique = true, length = 36)
     private String transferId;
 
-    /**
-     * Session ID this transfer belongs to
-     */
+    /** Session ID this transfer belongs to */
     @Column(nullable = false, length = 36)
     private String sessionId;
 
-    /**
-     * Server instance handling this transfer
-     */
+    /** Server instance handling this transfer */
     @Column(nullable = false, length = 64)
     private String serverId;
 
-    /**
-     * Cluster node ID (for HA tracking)
-     */
+    /** Cluster node ID (for HA tracking) */
     @Column(length = 64)
     private String nodeId;
 
-    /**
-     * Transfer direction
-     */
+    /** Transfer direction */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TransferDirection direction;
 
-    /**
-     * Current transfer status
-     */
+    /** Current transfer status */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private TransferStatus status = TransferStatus.INITIATED;
 
-    /**
-     * Partner ID (PI 3 - Demandeur)
-     */
+    /** Partner ID (PI 3 - Demandeur) */
     @Column(nullable = false, length = 64)
     private String partnerId;
 
-    /**
-     * Logical filename (PI 12)
-     */
+    /** Logical filename (PI 12) */
     @Column(nullable = false, length = 255)
     private String filename;
 
-    /**
-     * Local file path on disk
-     */
+    /** Local file path on disk */
     @Column(length = 1024)
     private String localPath;
 
-    /**
-     * File size in bytes (expected or actual)
-     */
-    @Builder.Default
-    private Long fileSize = 0L;
+    /** File size in bytes (expected or actual) */
+    @Builder.Default private Long fileSize = 0L;
 
-    /**
-     * Bytes transferred so far
-     */
-    @Builder.Default
-    private Long bytesTransferred = 0L;
+    /** Bytes transferred so far */
+    @Builder.Default private Long bytesTransferred = 0L;
 
-    /**
-     * Transfer progress percentage (0-100)
-     */
-    @Builder.Default
-    private Integer progressPercent = 0;
+    /** Transfer progress percentage (0-100) */
+    @Builder.Default private Integer progressPercent = 0;
 
-    /**
-     * Last sync point position
-     */
-    @Builder.Default
-    private Long lastSyncPoint = 0L;
+    /** Last sync point position */
+    @Builder.Default private Long lastSyncPoint = 0L;
 
-    /**
-     * Number of sync points acknowledged
-     */
-    @Builder.Default
-    private Integer syncPointCount = 0;
+    /** Number of sync points acknowledged */
+    @Builder.Default private Integer syncPointCount = 0;
 
-    /**
-     * Number of retry attempts
-     */
-    @Builder.Default
-    private Integer retryCount = 0;
+    /** Number of retry attempts */
+    @Builder.Default private Integer retryCount = 0;
 
-    /**
-     * Maximum retry attempts allowed
-     */
-    @Builder.Default
-    private Integer maxRetries = 3;
+    /** Maximum retry attempts allowed */
+    @Builder.Default private Integer maxRetries = 3;
 
-    /**
-     * Transfer start time
-     */
+    /** Transfer start time */
     @Column(nullable = false)
     private Instant startedAt;
 
-    /**
-     * Transfer completion time
-     */
+    /** Transfer completion time */
     private Instant completedAt;
 
-    /**
-     * Last update time
-     */
+    /** Last update time */
     @Column(nullable = false)
     private Instant updatedAt;
 
-    /**
-     * Remote client address
-     */
+    /** Remote client address */
     @Column(length = 64)
     private String remoteAddress;
 
-    /**
-     * PeSIT protocol version used
-     */
-    @Builder.Default
-    private Integer protocolVersion = 2;
+    /** PeSIT protocol version used */
+    @Builder.Default private Integer protocolVersion = 2;
 
-    /**
-     * Access type (PI 22)
-     */
-    @Builder.Default
-    private Integer accessType = 0;
+    /** Access type (PI 22) */
+    @Builder.Default private Integer accessType = 0;
 
-    /**
-     * Error code if transfer failed (PI 2 diagnostic)
-     */
+    /** Error code if transfer failed (PI 2 diagnostic) */
     @Column(length = 10)
     private String errorCode;
 
-    /**
-     * Error message if transfer failed
-     */
+    /** Error message if transfer failed */
     @Column(length = 1024)
     private String errorMessage;
 
-    /**
-     * Checksum of the file (SHA-256)
-     */
+    /** Checksum of the file (SHA-256) */
     @Column(length = 64)
     private String checksum;
 
-    /**
-     * Checksum algorithm used
-     */
+    /** Checksum algorithm used */
     @Column(length = 20)
     @Builder.Default
     private String checksumAlgorithm = "SHA-256";
 
-    /**
-     * Whether this transfer can be resumed
-     */
-    @Builder.Default
-    private Boolean resumable = true;
+    /** Whether this transfer can be resumed */
+    @Builder.Default private Boolean resumable = true;
 
-    /**
-     * Parent transfer ID (for retries)
-     */
+    /** Parent transfer ID (for retries) */
     @Column(length = 36)
     private String parentTransferId;
 
-    /**
-     * Additional metadata (JSON)
-     */
+    /** Additional metadata (JSON) */
     @Lob
     @Column(columnDefinition = "TEXT")
     private String metadata;
 
-    /**
-     * Optimistic locking version
-     */
-    @Version
-    private Long version;
+    /** Optimistic locking version */
+    @Version private Long version;
 
-    /**
-     * Transfer direction enum
-     */
+    /** Transfer direction enum */
     public enum TransferDirection {
         SEND, // Server sending to client
         RECEIVE // Server receiving from client
     }
 
-    /**
-     * Transfer status enum
-     */
+    /** Transfer status enum */
     public enum TransferStatus {
         INITIATED, // Transfer request received
         IN_PROGRESS, // Data transfer ongoing
@@ -247,9 +173,7 @@ public class TransferRecord {
         RETRY_PENDING // Waiting for retry
     }
 
-    /**
-     * Calculate transfer speed in bytes per second
-     */
+    /** Calculate transfer speed in bytes per second */
     public Long getTransferSpeed() {
         if (startedAt == null || bytesTransferred == null || bytesTransferred == 0) {
             return 0L;
@@ -262,9 +186,7 @@ public class TransferRecord {
         return (bytesTransferred * 1000) / durationMs;
     }
 
-    /**
-     * Calculate estimated time remaining in seconds
-     */
+    /** Calculate estimated time remaining in seconds */
     public Long getEstimatedTimeRemaining() {
         if (fileSize == null || fileSize == 0 || bytesTransferred == null) {
             return null;
@@ -277,9 +199,7 @@ public class TransferRecord {
         return remaining / speed;
     }
 
-    /**
-     * Update progress based on bytes transferred
-     */
+    /** Update progress based on bytes transferred */
     public void updateProgress(long bytes) {
         this.bytesTransferred = bytes;
         this.updatedAt = Instant.now();
@@ -288,9 +208,7 @@ public class TransferRecord {
         }
     }
 
-    /**
-     * Mark transfer as completed
-     */
+    /** Mark transfer as completed */
     public void markCompleted() {
         this.status = TransferStatus.COMPLETED;
         this.completedAt = Instant.now();
@@ -298,9 +216,7 @@ public class TransferRecord {
         this.progressPercent = 100;
     }
 
-    /**
-     * Mark transfer as failed
-     */
+    /** Mark transfer as failed */
     public void markFailed(String errorCode, String errorMessage) {
         this.status = TransferStatus.FAILED;
         this.completedAt = Instant.now();
@@ -309,11 +225,10 @@ public class TransferRecord {
         this.errorMessage = errorMessage;
     }
 
-    /**
-     * Check if transfer can be retried
-     */
+    /** Check if transfer can be retried */
     public boolean canRetry() {
-        return resumable && retryCount < maxRetries &&
-                (status == TransferStatus.FAILED || status == TransferStatus.INTERRUPTED);
+        return resumable
+                && retryCount < maxRetries
+                && (status == TransferStatus.FAILED || status == TransferStatus.INTERRUPTED);
     }
 }

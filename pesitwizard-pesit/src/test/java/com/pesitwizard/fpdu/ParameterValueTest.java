@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 public class ParameterValueTest {
     @Test
     void testParameterValueCreation() {
-        ParameterValue value1 = new ParameterValue(PI_02_DIAG, new byte[] { 0x01, 0x02, 0x03 });
+        ParameterValue value1 = new ParameterValue(PI_02_DIAG, new byte[] {0x01, 0x02, 0x03});
         assertEquals(PI_02_DIAG, value1.getParameter());
         assertEquals(5, value1.getBytes().length);
         assertEquals(PI_02_DIAG.getId(), value1.getBytes()[0]);
@@ -25,12 +25,18 @@ public class ParameterValueTest {
 
     @Test()
     void testParameterValueWithString() {
-        ParameterValue value1 = new ParameterValue(PI_02_DIAG, new byte[] { 0x01, 0x02, 0x03 });
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> new ParameterValue(PGI_09_ID_FICHIER,
-                        value1, new ParameterValue(PI_99_MESSAGE_LIBRE, "test message")));
+        ParameterValue value1 = new ParameterValue(PI_02_DIAG, new byte[] {0x01, 0x02, 0x03});
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () ->
+                                new ParameterValue(
+                                        PGI_09_ID_FICHIER,
+                                        value1,
+                                        new ParameterValue(PI_99_MESSAGE_LIBRE, "test message")));
 
-        assertEquals("Parameter Diagnostic is not part of PGI File Identifier", exception.getMessage());
+        assertEquals(
+                "Parameter Diagnostic is not part of PGI File Identifier", exception.getMessage());
     }
 
     @Test

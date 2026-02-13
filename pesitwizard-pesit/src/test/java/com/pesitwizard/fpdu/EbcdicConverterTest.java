@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for EbcdicConverter.
- */
+/** Unit tests for EbcdicConverter. */
 @DisplayName("EbcdicConverter Tests")
 class EbcdicConverterTest {
 
@@ -25,7 +23,7 @@ class EbcdicConverterTest {
         @Test
         @DisplayName("should return false for data shorter than 6 bytes")
         void shouldReturnFalseForShortData() {
-            assertThat(EbcdicConverter.isEbcdic(new byte[] { 1, 2, 3 })).isFalse();
+            assertThat(EbcdicConverter.isEbcdic(new byte[] {1, 2, 3})).isFalse();
         }
 
         @Test
@@ -39,15 +37,17 @@ class EbcdicConverterTest {
         @DisplayName("should return true for EBCDIC data with high bytes")
         void shouldReturnTrueForEbcdicData() {
             // Data with many high bytes (>= 0x80) in header
-            byte[] ebcdicData = new byte[] { (byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5,
-                    (byte) 0xC6 };
+            byte[] ebcdicData =
+                    new byte[] {
+                        (byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5, (byte) 0xC6
+                    };
             assertThat(EbcdicConverter.isEbcdic(ebcdicData)).isTrue();
         }
 
         @Test
         @DisplayName("should return false when only few high bytes in header")
         void shouldReturnFalseWhenFewHighBytes() {
-            byte[] mixedData = new byte[] { 0x01, 0x02, (byte) 0x80, 0x04, 0x05, 0x06 };
+            byte[] mixedData = new byte[] {0x01, 0x02, (byte) 0x80, 0x04, 0x05, 0x06};
             assertThat(EbcdicConverter.isEbcdic(mixedData)).isFalse();
         }
     }
@@ -66,7 +66,7 @@ class EbcdicConverterTest {
         @DisplayName("should convert EBCDIC bytes to ASCII")
         void shouldConvertEbcdicBytesToAscii() {
             // EBCDIC 'A' is 0xC1, 'B' is 0xC2, etc.
-            byte[] ebcdic = new byte[] { (byte) 0xC1, (byte) 0xC2, (byte) 0xC3 };
+            byte[] ebcdic = new byte[] {(byte) 0xC1, (byte) 0xC2, (byte) 0xC3};
             byte[] ascii = EbcdicConverter.ebcdicToAscii(ebcdic);
 
             assertThat(ascii).isNotNull();
@@ -122,7 +122,7 @@ class EbcdicConverterTest {
         @Test
         @DisplayName("should return data as-is for short data")
         void shouldReturnDataAsIsForShortData() {
-            byte[] shortData = new byte[] { 1, 2, 3 };
+            byte[] shortData = new byte[] {1, 2, 3};
             assertThat(EbcdicConverter.convertFpduFromEbcdic(shortData)).isEqualTo(shortData);
         }
 
@@ -156,7 +156,7 @@ class EbcdicConverterTest {
         @Test
         @DisplayName("convertFpduToEbcdic should return data as-is for short data")
         void convertFpduToEbcdicShouldReturnDataAsIsForShortData() {
-            byte[] shortData = new byte[] { 1, 2, 3 };
+            byte[] shortData = new byte[] {1, 2, 3};
             assertThat(EbcdicConverter.convertFpduToEbcdic(shortData)).isEqualTo(shortData);
         }
     }
@@ -183,8 +183,10 @@ class EbcdicConverterTest {
         @DisplayName("should convert EBCDIC data to ASCII")
         void shouldConvertEbcdicDataToAscii() {
             // High bytes that will be detected as EBCDIC
-            byte[] ebcdicData = new byte[] { (byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5,
-                    (byte) 0xC6 };
+            byte[] ebcdicData =
+                    new byte[] {
+                        (byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5, (byte) 0xC6
+                    };
             byte[] result = EbcdicConverter.toAscii(ebcdicData);
             assertThat(result).isNotEqualTo(ebcdicData);
         }
@@ -232,7 +234,7 @@ class EbcdicConverterTest {
         @Test
         @DisplayName("should return empty string for invalid offset")
         void shouldReturnEmptyStringForInvalidOffset() {
-            byte[] data = new byte[] { 1, 2, 3 };
+            byte[] data = new byte[] {1, 2, 3};
             assertThat(EbcdicConverter.ebcdicToAsciiString(data, -1, 2)).isEmpty();
             assertThat(EbcdicConverter.ebcdicToAsciiString(data, 5, 2)).isEmpty();
         }
@@ -240,7 +242,8 @@ class EbcdicConverterTest {
         @Test
         @DisplayName("should convert subset to string")
         void shouldConvertSubsetToString() {
-            byte[] ebcdicData = new byte[] { (byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5 };
+            byte[] ebcdicData =
+                    new byte[] {(byte) 0xC1, (byte) 0xC2, (byte) 0xC3, (byte) 0xC4, (byte) 0xC5};
             String result = EbcdicConverter.ebcdicToAsciiString(ebcdicData, 0, 3);
             assertThat(result).hasSize(3);
         }

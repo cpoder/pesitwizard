@@ -1,7 +1,6 @@
 package com.pesitwizard.server.entity;
 
-import java.time.Instant;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,7 +12,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,15 +20,17 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * Entity for storing encrypted secrets in the database.
- * Provides centralized secret management for the cluster.
+ * Entity for storing encrypted secrets in the database. Provides centralized secret management for
+ * the cluster.
  */
 @Entity
-@Table(name = "secrets", indexes = {
-        @Index(name = "idx_secret_name", columnList = "name"),
-        @Index(name = "idx_secret_type", columnList = "secretType"),
-        @Index(name = "idx_secret_scope", columnList = "scope")
-})
+@Table(
+        name = "secrets",
+        indexes = {
+            @Index(name = "idx_secret_name", columnList = "name"),
+            @Index(name = "idx_secret_type", columnList = "secretType"),
+            @Index(name = "idx_secret_scope", columnList = "scope")
+        })
 @Data
 @Builder
 @NoArgsConstructor
@@ -40,113 +41,76 @@ public class SecretEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Unique name for this secret
-     */
+    /** Unique name for this secret */
     @Column(nullable = false, unique = true, length = 255)
     private String name;
 
-    /**
-     * Description of the secret
-     */
+    /** Description of the secret */
     @Column(length = 500)
     private String description;
 
-    /**
-     * Type of secret
-     */
+    /** Type of secret */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
     private SecretType secretType = SecretType.GENERIC;
 
-    /**
-     * Encrypted value of the secret
-     * Uses AES-256-GCM encryption
-     */
+    /** Encrypted value of the secret Uses AES-256-GCM encryption */
     @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     @JsonIgnore
     @ToString.Exclude
     private String encryptedValue;
 
-    /**
-     * Initialization vector for encryption
-     */
+    /** Initialization vector for encryption */
     @Column(nullable = false, length = 32)
     @JsonIgnore
     @ToString.Exclude
     private String iv;
 
-    /**
-     * Scope of the secret
-     */
+    /** Scope of the secret */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private SecretScope scope = SecretScope.GLOBAL;
 
-    /**
-     * Partner ID if scope is PARTNER
-     */
+    /** Partner ID if scope is PARTNER */
     @Column(length = 64)
     private String partnerId;
 
-    /**
-     * Server ID if scope is SERVER
-     */
+    /** Server ID if scope is SERVER */
     @Column(length = 64)
     private String serverId;
 
-    /**
-     * Optimistic locking version (also tracks secret rotation)
-     */
-    @Version
-    private Long version;
+    /** Optimistic locking version (also tracks secret rotation) */
+    @Version private Long version;
 
-    /**
-     * Whether this secret is active
-     */
-    @Builder.Default
-    private Boolean active = true;
+    /** Whether this secret is active */
+    @Builder.Default private Boolean active = true;
 
-    /**
-     * Expiration date (null = never expires)
-     */
+    /** Expiration date (null = never expires) */
     private Instant expiresAt;
 
-    /**
-     * Last rotation date
-     */
+    /** Last rotation date */
     private Instant lastRotatedAt;
 
-    /**
-     * Creation timestamp
-     */
+    /** Creation timestamp */
     @Column(nullable = false)
     private Instant createdAt;
 
-    /**
-     * Last update timestamp
-     */
+    /** Last update timestamp */
     @Column(nullable = false)
     private Instant updatedAt;
 
-    /**
-     * User who created this secret
-     */
+    /** User who created this secret */
     @Column(length = 100)
     private String createdBy;
 
-    /**
-     * User who last updated this secret
-     */
+    /** User who last updated this secret */
     @Column(length = 100)
     private String updatedBy;
 
-    /**
-     * Secret type enum
-     */
+    /** Secret type enum */
     public enum SecretType {
         GENERIC, // Generic secret value
         PASSWORD, // Password
@@ -158,25 +122,19 @@ public class SecretEntry {
         CONNECTION_STRING // Connection string
     }
 
-    /**
-     * Secret scope enum
-     */
+    /** Secret scope enum */
     public enum SecretScope {
         GLOBAL, // Available to all servers
         SERVER, // Specific to a server instance
         PARTNER // Specific to a partner
     }
 
-    /**
-     * Check if secret is expired
-     */
+    /** Check if secret is expired */
     public boolean isExpired() {
         return expiresAt != null && Instant.now().isAfter(expiresAt);
     }
 
-    /**
-     * Check if secret is valid (active and not expired)
-     */
+    /** Check if secret is valid (active and not expired) */
     public boolean isValid() {
         return active && !isExpired();
     }

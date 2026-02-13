@@ -3,11 +3,6 @@ package com.pesitwizard.client.integration;
 import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Random;
-
-import org.junit.jupiter.api.*;
-
-import com.pesitwizard.client.pesit.FpduReader;
 import com.pesitwizard.client.pesit.FpduWriter;
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.CreateMessageBuilder;
@@ -16,31 +11,30 @@ import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TcpTransportChannel;
+import java.util.Random;
+import org.junit.jupiter.api.*;
 
 /**
  * Integration tests for error handling during restart mechanism.
  *
- * Tests cover:
- * - Invalid restart points
- * - Out-of-range sync numbers
- * - Server rejection scenarios
- * - File size mismatch between transfers
- * - Network timeout during restart
- * - Diagnostic code handling
+ * <p>Tests cover: - Invalid restart points - Out-of-range sync numbers - Server rejection scenarios
+ * - File size mismatch between transfers - Network timeout during restart - Diagnostic code
+ * handling
  *
- * Requires PeSIT server running on test host/port.
- * Run with: mvn test -Dtest=RestartErrorHandlingTest -Dpesit.integration.enabled=true
+ * <p>Requires PeSIT server running on test host/port. Run with: mvn test
+ * -Dtest=RestartErrorHandlingTest -Dpesit.integration.enabled=true
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RestartErrorHandlingTest {
 
     private static final String TEST_HOST = System.getProperty("pesit.test.host", "localhost");
-    private static final int TEST_PORT = Integer.parseInt(System.getProperty("pesit.test.port", "5100"));
+    private static final int TEST_PORT =
+            Integer.parseInt(System.getProperty("pesit.test.port", "5100"));
     private static final String SERVER_ID = System.getProperty("pesit.test.server", "CETOM1");
     private static final String PARTNER_ID = "LOOP";
-    private static final boolean INTEGRATION_ENABLED = Boolean.parseBoolean(
-            System.getProperty("pesit.integration.enabled", "false"));
+    private static final boolean INTEGRATION_ENABLED =
+            Boolean.parseBoolean(System.getProperty("pesit.integration.enabled", "false"));
 
     private static final String VFILE_RESTART = "SYNCIN";
     private static final String VFILE_STANDARD = "FILE";
@@ -48,13 +42,13 @@ public class RestartErrorHandlingTest {
 
     @BeforeAll
     void setUp() {
-        Assumptions.assumeTrue(INTEGRATION_ENABLED,
+        Assumptions.assumeTrue(
+                INTEGRATION_ENABLED,
                 "Integration tests disabled. Enable with -Dpesit.integration.enabled=true");
     }
 
     /**
-     * Test 1: Restart with invalid sync point (negative)
-     * Server should reject or handle gracefully
+     * Test 1: Restart with invalid sync point (negative) Server should reject or handle gracefully
      */
     @Test
     @Order(1)
@@ -69,13 +63,14 @@ public class RestartErrorHandlingTest {
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -88,7 +83,7 @@ public class RestartErrorHandlingTest {
                             .recordLength(506)
                             .maxEntitySize(512)
                             .fileSizeKB(50)
-                            .restart()  // PI_15 = 1 indicates restart
+                            .restart() // PI_15 = 1 indicates restart
                             .build(serverConnId));
 
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
@@ -96,8 +91,8 @@ public class RestartErrorHandlingTest {
             // Send WRITE - server decides restart point (can't directly test negative value)
             System.out.println("  Sending WRITE for restart...");
             try {
-                Fpdu ackWrite = session.sendFpduWithAck(
-                        new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
+                Fpdu ackWrite =
+                        session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
                 // Check server's response
                 ParameterValue pi2 = ackWrite.getParameter(PI_02_DIAG);
@@ -106,9 +101,11 @@ public class RestartErrorHandlingTest {
                 if (pi2 != null && pi2.getValue() != null) {
                     byte[] diag = pi2.getValue();
                     if (diag.length >= 3 && (diag[0] != 0 || diag[1] != 0 || diag[2] != 0)) {
-                        System.out.println("  Server rejected with diagnostic: " +
-                                String.format("%02X%02X%02X", diag[0], diag[1], diag[2]));
-                        System.out.println("  ✓ Server correctly rejected restart (no prior transfer state)");
+                        System.out.println(
+                                "  Server rejected with diagnostic: "
+                                        + String.format("%02X%02X%02X", diag[0], diag[1], diag[2]));
+                        System.out.println(
+                                "  ✓ Server correctly rejected restart (no prior transfer state)");
                     } else if (pi18 != null) {
                         int restartPoint = parseNumeric(pi18.getValue());
                         System.out.println("  ⚠ Server provided restart point: " + restartPoint);
@@ -124,10 +121,7 @@ public class RestartErrorHandlingTest {
         System.out.println("\n✓✓✓ TEST 1 COMPLETED ✓✓✓");
     }
 
-    /**
-     * Test 2: Restart with out-of-range sync point
-     * Sync point beyond what was actually sent
-     */
+    /** Test 2: Restart with out-of-range sync point Sync point beyond what was actually sent */
     @Test
     @Order(2)
     @DisplayName("Restart with out-of-range sync point")
@@ -148,13 +142,14 @@ public class RestartErrorHandlingTest {
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -162,20 +157,20 @@ public class RestartErrorHandlingTest {
             session.sendFpduWithAck(
                     new CreateMessageBuilder()
                             .filename(VFILE_RESTART)
-                            .transferId(transferId)  // Same transferId as partial send
+                            .transferId(transferId) // Same transferId as partial send
                             .variableFormat()
                             .recordLength(506)
                             .maxEntitySize(512)
                             .fileSizeKB(100)
-                            .restart()  // PI_15 = 1 indicates restart
+                            .restart() // PI_15 = 1 indicates restart
                             .build(serverConnId));
 
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
 
             // WRITE - server decides restart point (will use last known good sync, likely 2)
             try {
-                Fpdu ackWrite = session.sendFpduWithAck(
-                        new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
+                Fpdu ackWrite =
+                        session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
                 // Check diagnostic and restart point
                 ParameterValue pi2 = ackWrite.getParameter(PI_02_DIAG);
@@ -184,8 +179,9 @@ public class RestartErrorHandlingTest {
                 if (pi2 != null) {
                     byte[] diag = pi2.getValue();
                     if (diag != null && diag.length >= 3) {
-                        System.out.println("  Diagnostic: " +
-                                String.format("%02X%02X%02X", diag[0], diag[1], diag[2]));
+                        System.out.println(
+                                "  Diagnostic: "
+                                        + String.format("%02X%02X%02X", diag[0], diag[1], diag[2]));
                         if (diag[0] != 0 || diag[1] != 0 || diag[2] != 0) {
                             System.out.println("  ✓ Server rejected out-of-range restart point");
                         }
@@ -194,8 +190,10 @@ public class RestartErrorHandlingTest {
 
                 if (pi18 != null) {
                     int restartPoint = parseNumeric(pi18.getValue());
-                    System.out.println("  Server provided restart point: " + restartPoint +
-                            " (should be 2, last known good sync)");
+                    System.out.println(
+                            "  Server provided restart point: "
+                                    + restartPoint
+                                    + " (should be 2, last known good sync)");
                 }
             } catch (Exception e) {
                 System.out.println("  ✓ Server rejected with exception: " + e.getMessage());
@@ -208,8 +206,8 @@ public class RestartErrorHandlingTest {
     }
 
     /**
-     * Test 3: File size mismatch between original and restart transfer
-     * Transfer interrupts, then retry with different file size
+     * Test 3: File size mismatch between original and restart transfer Transfer interrupts, then
+     * retry with different file size
      */
     @Test
     @Order(3)
@@ -232,13 +230,14 @@ public class RestartErrorHandlingTest {
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -257,7 +256,8 @@ public class RestartErrorHandlingTest {
 
                 System.out.println("  ⚠ Server accepted CREATE with different file size");
             } catch (Exception e) {
-                System.out.println("  ✓ Server rejected CREATE with size mismatch: " + e.getMessage());
+                System.out.println(
+                        "  ✓ Server rejected CREATE with size mismatch: " + e.getMessage());
             }
 
             cleanup(session, serverConnId);
@@ -267,8 +267,8 @@ public class RestartErrorHandlingTest {
     }
 
     /**
-     * Test 4: Restart without sync points enabled
-     * Attempt restart when sync points were not negotiated
+     * Test 4: Restart without sync points enabled Attempt restart when sync points were not
+     * negotiated
      */
     @Test
     @Order(4)
@@ -284,13 +284,14 @@ public class RestartErrorHandlingTest {
 
         try (PesitSession session = new PesitSession(channel, false)) {
             // CONNECT without sync points
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            // Note: syncPointsEnabled(false) or not specified
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    // Note: syncPointsEnabled(false) or not specified
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -313,7 +314,7 @@ public class RestartErrorHandlingTest {
                                 .recordLength(506)
                                 .maxEntitySize(512)
                                 .fileSizeKB(50)
-                                .restart()  // PI_15 = 1, but sync not enabled
+                                .restart() // PI_15 = 1, but sync not enabled
                                 .build(serverConnId));
 
                 System.out.println("  ⚠ Server accepted CREATE with restart flag despite no sync");
@@ -322,15 +323,16 @@ public class RestartErrorHandlingTest {
 
                 // WRITE without parameters - check if server provides restart point
                 System.out.println("  Attempting restart without sync negotiation...");
-                Fpdu ackWrite = session.sendFpduWithAck(
-                        new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
+                Fpdu ackWrite =
+                        session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
                 // Check if server provided restart point
                 ParameterValue pi18 = ackWrite.getParameter(PI_18_POINT_RELANCE);
                 if (pi18 == null) {
                     System.out.println("  ✓ Server ignored restart (no sync support)");
                 } else {
-                    System.out.println("  ⚠ Server acknowledged restart despite no sync negotiation");
+                    System.out.println(
+                            "  ⚠ Server acknowledged restart despite no sync negotiation");
                 }
             } catch (Exception e) {
                 System.out.println("  ✓ Server rejected restart without sync: " + e.getMessage());
@@ -342,10 +344,7 @@ public class RestartErrorHandlingTest {
         System.out.println("\n✓✓✓ TEST 4 COMPLETED ✓✓✓");
     }
 
-    /**
-     * Test 5: Restart with zero sync point
-     * Edge case: restart from the beginning (sync 0)
-     */
+    /** Test 5: Restart with zero sync point Edge case: restart from the beginning (sync 0) */
     @Test
     @Order(5)
     @DisplayName("Restart from sync point 0 with previous data")
@@ -366,13 +365,14 @@ public class RestartErrorHandlingTest {
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
             long syncInterval = getNegotiatedSyncInterval(aconnect);
@@ -381,19 +381,19 @@ public class RestartErrorHandlingTest {
             session.sendFpduWithAck(
                     new CreateMessageBuilder()
                             .filename(VFILE_RESTART)
-                            .transferId(transferId)  // Same transferId as interrupted transfer
+                            .transferId(transferId) // Same transferId as interrupted transfer
                             .variableFormat()
                             .recordLength(506)
                             .maxEntitySize(512)
                             .fileSizeKB(100)
-                            .restart()  // PI_15 = 1 indicates this is a restarted transfer
+                            .restart() // PI_15 = 1 indicates this is a restarted transfer
                             .build(serverConnId));
 
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
 
             // WRITE with NO parameters - server tells us restart point in ACK_WRITE
-            Fpdu ackWrite = session.sendFpduWithAck(
-                    new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
+            Fpdu ackWrite =
+                    session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
             // Read restart point from ACK_WRITE response
             ParameterValue pi18 = ackWrite.getParameter(PI_18_POINT_RELANCE);
@@ -409,9 +409,10 @@ public class RestartErrorHandlingTest {
             while (offset < testData.length) {
                 if (syncInterval > 0 && bytesSinceSync > 0 && bytesSinceSync + 506 > syncInterval) {
                     syncNum++;
-                    session.sendFpduWithAck(new Fpdu(FpduType.SYN)
-                            .withIdDst(serverConnId)
-                            .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
+                    session.sendFpduWithAck(
+                            new Fpdu(FpduType.SYN)
+                                    .withIdDst(serverConnId)
+                                    .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
                     bytesSinceSync = 0;
                 }
 
@@ -424,9 +425,10 @@ public class RestartErrorHandlingTest {
             }
 
             // Complete
-            session.sendFpdu(new Fpdu(FpduType.DTF_END)
-                    .withIdDst(serverConnId)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0, 0, 0})));
+            session.sendFpdu(
+                    new Fpdu(FpduType.DTF_END)
+                            .withIdDst(serverConnId)
+                            .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
             session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnId));
 
             System.out.println("  ✓ Complete transfer from beginning successful");
@@ -437,10 +439,7 @@ public class RestartErrorHandlingTest {
         System.out.println("\n✓✓✓ TEST 5 COMPLETED ✓✓✓");
     }
 
-    /**
-     * Test 6: Restart with mismatched transfer ID
-     * Using different transfer ID for restart
-     */
+    /** Test 6: Restart with mismatched transfer ID Using different transfer ID for restart */
     @Test
     @Order(6)
     @DisplayName("Restart with mismatched transfer ID")
@@ -456,19 +455,21 @@ public class RestartErrorHandlingTest {
         sendPartialToSync(testData, originalTransferId, VFILE_RESTART, 2);
 
         // Phase 2: Try to restart with different transfer ID
-        System.out.println("\nPhase 2: Attempt restart with transfer ID " + differentTransferId + "...");
+        System.out.println(
+                "\nPhase 2: Attempt restart with transfer ID " + differentTransferId + "...");
 
         TcpTransportChannel channel = new TcpTransportChannel(TEST_HOST, TEST_PORT);
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -496,10 +497,7 @@ public class RestartErrorHandlingTest {
         System.out.println("\n✓✓✓ TEST 6 COMPLETED ✓✓✓");
     }
 
-    /**
-     * Test 7: Restart after session timeout
-     * Simulates long delay between interrupt and restart
-     */
+    /** Test 7: Restart after session timeout Simulates long delay between interrupt and restart */
     @Test
     @Order(7)
     @DisplayName("Restart after session timeout simulation")
@@ -524,13 +522,14 @@ public class RestartErrorHandlingTest {
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
 
@@ -538,25 +537,30 @@ public class RestartErrorHandlingTest {
             session.sendFpduWithAck(
                     new CreateMessageBuilder()
                             .filename(VFILE_RESTART)
-                            .transferId(transferId)  // Same transferId as interrupted transfer
+                            .transferId(transferId) // Same transferId as interrupted transfer
                             .variableFormat()
                             .recordLength(506)
                             .maxEntitySize(512)
                             .fileSizeKB(100)
-                            .restart()  // PI_15 = 1 indicates this is a restarted transfer
+                            .restart() // PI_15 = 1 indicates this is a restarted transfer
                             .build(serverConnId));
 
             session.sendFpduWithAck(new Fpdu(FpduType.OPEN).withIdDst(serverConnId));
 
             // WRITE with NO parameters - server tells us restart point in ACK_WRITE
-            Fpdu ackWrite = session.sendFpduWithAck(
-                    new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
+            Fpdu ackWrite =
+                    session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
 
             // Read restart point from ACK_WRITE response
             ParameterValue pi18 = ackWrite.getParameter(PI_18_POINT_RELANCE);
             int serverRestartPoint = pi18 != null ? parseNumeric(pi18.getValue()) : 0;
             System.out.println("  ✓ Server accepted restart after timeout");
-            System.out.println("  Server restart point: " + serverRestartPoint + " (last sync was " + lastSync + ")");
+            System.out.println(
+                    "  Server restart point: "
+                            + serverRestartPoint
+                            + " (last sync was "
+                            + lastSync
+                            + ")");
             System.out.println("  (Server maintained restart state across sessions)");
 
             cleanup(session, serverConnId);
@@ -588,19 +592,21 @@ public class RestartErrorHandlingTest {
         return 32768; // Default 32KB
     }
 
-    private int sendPartialToSync(byte[] data, int transferId, String vfile, int stopAtSync) throws Exception {
+    private int sendPartialToSync(byte[] data, int transferId, String vfile, int stopAtSync)
+            throws Exception {
         TcpTransportChannel channel = new TcpTransportChannel(TEST_HOST, TEST_PORT);
         channel.setReceiveTimeout(30000);
 
         try (PesitSession session = new PesitSession(channel, false)) {
-            Fpdu aconnect = session.sendFpduWithAck(
-                    new ConnectMessageBuilder()
-                            .demandeur(PARTNER_ID)
-                            .serveur(SERVER_ID)
-                            .writeAccess()
-                            .syncPointsEnabled(true)
-                            .syncIntervalKb(10)
-                            .build(CLIENT_CONNECTION_ID));
+            Fpdu aconnect =
+                    session.sendFpduWithAck(
+                            new ConnectMessageBuilder()
+                                    .demandeur(PARTNER_ID)
+                                    .serveur(SERVER_ID)
+                                    .writeAccess()
+                                    .syncPointsEnabled(true)
+                                    .syncIntervalKb(10)
+                                    .build(CLIENT_CONNECTION_ID));
 
             int serverConnId = aconnect.getIdSrc();
             long syncInterval = getNegotiatedSyncInterval(aconnect);
@@ -626,9 +632,10 @@ public class RestartErrorHandlingTest {
             while (offset < data.length && syncNum < stopAtSync) {
                 if (syncInterval > 0 && bytesSinceSync > 0 && bytesSinceSync + 506 > syncInterval) {
                     syncNum++;
-                    session.sendFpduWithAck(new Fpdu(FpduType.SYN)
-                            .withIdDst(serverConnId)
-                            .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
+                    session.sendFpduWithAck(
+                            new Fpdu(FpduType.SYN)
+                                    .withIdDst(serverConnId)
+                                    .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
                     bytesSinceSync = 0;
                 }
 
@@ -647,16 +654,19 @@ public class RestartErrorHandlingTest {
 
     private void cleanup(PesitSession session, int serverConnId) {
         try {
-            session.sendFpduWithAck(new Fpdu(FpduType.CLOSE)
-                    .withIdDst(serverConnId)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0, 0, 0})));
-            session.sendFpduWithAck(new Fpdu(FpduType.DESELECT)
-                    .withIdDst(serverConnId)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0, 0, 0})));
-            session.sendFpdu(new Fpdu(FpduType.RELEASE)
-                    .withIdDst(serverConnId)
-                    .withIdSrc(CLIENT_CONNECTION_ID)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[]{0, 0, 0})));
+            session.sendFpduWithAck(
+                    new Fpdu(FpduType.CLOSE)
+                            .withIdDst(serverConnId)
+                            .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
+            session.sendFpduWithAck(
+                    new Fpdu(FpduType.DESELECT)
+                            .withIdDst(serverConnId)
+                            .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
+            session.sendFpdu(
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(serverConnId)
+                            .withIdSrc(CLIENT_CONNECTION_ID)
+                            .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         } catch (Exception e) {
             System.err.println("  Warning: Cleanup failed: " + e.getMessage());
         }

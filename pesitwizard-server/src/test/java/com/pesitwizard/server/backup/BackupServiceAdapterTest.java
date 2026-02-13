@@ -3,9 +3,12 @@ package com.pesitwizard.server.backup;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.backup.BackupInfo;
+import com.pesitwizard.backup.BackupResult;
+import com.pesitwizard.backup.BackupService;
+import com.pesitwizard.backup.RestoreResult;
 import java.lang.reflect.Field;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,18 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import com.pesitwizard.backup.BackupInfo;
-import com.pesitwizard.backup.BackupResult;
-import com.pesitwizard.backup.BackupService;
-import com.pesitwizard.backup.RestoreResult;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("BackupServiceAdapter Tests")
 class BackupServiceAdapterTest {
 
-    @Mock
-    private BackupService backupService;
+    @Mock private BackupService backupService;
 
     private BackupServiceAdapter adapter;
 
@@ -128,7 +125,8 @@ class BackupServiceAdapterTest {
             BackupResult successResult = new BackupResult();
             successResult.setSuccess(true);
             successResult.setBackupName("scheduled-backup.zip");
-            when(backupService.createBackup("Scheduled automatic backup")).thenReturn(successResult);
+            when(backupService.createBackup("Scheduled automatic backup"))
+                    .thenReturn(successResult);
 
             assertThatCode(() -> adapter.scheduledBackup()).doesNotThrowAnyException();
             verify(backupService).createBackup("Scheduled automatic backup");

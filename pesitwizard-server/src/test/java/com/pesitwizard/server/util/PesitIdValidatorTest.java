@@ -42,7 +42,7 @@ class PesitIdValidatorTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = { "server", "Server1", "SERV_01", "SERV-01", "SERV 01", "SERV.01" })
+        @ValueSource(strings = {"server", "Server1", "SERV_01", "SERV-01", "SERV 01", "SERV.01"})
         @DisplayName("Should return error for invalid characters")
         void shouldReturnErrorForInvalidCharacters(String id) {
             String error = PesitIdValidator.validate(id, "Server");
@@ -55,7 +55,7 @@ class PesitIdValidatorTest {
     class IsValidTests {
 
         @ParameterizedTest
-        @ValueSource(strings = { "A", "AB", "ABCDEFGH", "12345678", "A1B2C3D4" })
+        @ValueSource(strings = {"A", "AB", "ABCDEFGH", "12345678", "A1B2C3D4"})
         @DisplayName("Should return true for valid IDs")
         void shouldReturnTrueForValidIds(String id) {
             assertThat(PesitIdValidator.isValid(id)).isTrue();
@@ -69,7 +69,7 @@ class PesitIdValidatorTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = { "lowercase", "TOOLONGID", "UNDER_SC", "special!" })
+        @ValueSource(strings = {"lowercase", "TOOLONGID", "UNDER_SC", "special!"})
         @DisplayName("Should return false for invalid IDs")
         void shouldReturnFalseForInvalidIds(String id) {
             assertThat(PesitIdValidator.isValid(id)).isFalse();

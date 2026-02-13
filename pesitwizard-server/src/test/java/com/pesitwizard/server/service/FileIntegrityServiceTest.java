@@ -4,12 +4,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.server.entity.FileChecksum;
+import com.pesitwizard.server.entity.FileChecksum.HashAlgorithm;
+import com.pesitwizard.server.entity.FileChecksum.TransferDirection;
+import com.pesitwizard.server.entity.FileChecksum.VerificationStatus;
+import com.pesitwizard.server.repository.FileChecksumRepository;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,24 +28,15 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.pesitwizard.server.entity.FileChecksum;
-import com.pesitwizard.server.entity.FileChecksum.HashAlgorithm;
-import com.pesitwizard.server.entity.FileChecksum.TransferDirection;
-import com.pesitwizard.server.entity.FileChecksum.VerificationStatus;
-import com.pesitwizard.server.repository.FileChecksumRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FileIntegrityService Tests")
 class FileIntegrityServiceTest {
 
-    @Mock
-    private FileChecksumRepository checksumRepository;
+    @Mock private FileChecksumRepository checksumRepository;
 
-    @InjectMocks
-    private FileIntegrityService service;
+    @InjectMocks private FileIntegrityService service;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -127,42 +122,61 @@ class FileIntegrityServiceTest {
         @DisplayName("Should store checksum")
         void shouldStoreChecksum() {
             when(checksumRepository.findByChecksumHash(anyString())).thenReturn(List.of());
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> {
-                FileChecksum fc = inv.getArgument(0);
-                fc.setId(1L);
-                return fc;
-            });
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(
+                            inv -> {
+                                FileChecksum fc = inv.getArgument(0);
+                                fc.setId(1L);
+                                return fc;
+                            });
 
-            FileChecksum result = service.storeChecksum(
-                    "test.txt", 1024L, "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-                    "TXN001", "PARTNER_A", "SERVER_1",
-                    TransferDirection.INBOUND, "/data/test.txt");
+            FileChecksum result =
+                    service.storeChecksum(
+                            "test.txt",
+                            1024L,
+                            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+                            "TXN001",
+                            "PARTNER_A",
+                            "SERVER_1",
+                            TransferDirection.INBOUND,
+                            "/data/test.txt");
 
             assertNotNull(result);
             assertEquals("test.txt", result.getFilename());
             assertEquals(1024L, result.getFileSize());
-            assertEquals("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", result.getChecksumHash());
+            assertEquals(
+                    "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+                    result.getChecksumHash());
             verify(checksumRepository).save(any(FileChecksum.class));
         }
 
         @Test
         @DisplayName("Should detect duplicate on store")
         void shouldDetectDuplicateOnStore() {
-            FileChecksum existing = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2")
-                    .duplicateCount(0)
-                    .build();
+            FileChecksum existing =
+                    FileChecksum.builder()
+                            .id(1L)
+                            .checksumHash(
+                                    "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2")
+                            .duplicateCount(0)
+                            .build();
 
-            when(checksumRepository
-                    .findByChecksumHash("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"))
+            when(checksumRepository.findByChecksumHash(
+                            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"))
                     .thenReturn(List.of(existing));
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            FileChecksum result = service.storeChecksum(
-                    "test2.txt", 1024L, "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-                    "TXN002", "PARTNER_A", "SERVER_1",
-                    TransferDirection.INBOUND, "/data/test2.txt");
+            FileChecksum result =
+                    service.storeChecksum(
+                            "test2.txt",
+                            1024L,
+                            "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+                            "TXN002",
+                            "PARTNER_A",
+                            "SERVER_1",
+                            TransferDirection.INBOUND,
+                            "/data/test2.txt");
 
             assertEquals(1, result.getDuplicateCount());
             verify(checksumRepository, times(2)).save(any(FileChecksum.class));
@@ -175,14 +189,17 @@ class FileIntegrityServiceTest {
             Files.writeString(testFile, "Test content");
 
             when(checksumRepository.findByChecksumHash(anyString())).thenReturn(List.of());
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> {
-                FileChecksum fc = inv.getArgument(0);
-                fc.setId(1L);
-                return fc;
-            });
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(
+                            inv -> {
+                                FileChecksum fc = inv.getArgument(0);
+                                fc.setId(1L);
+                                return fc;
+                            });
 
-            FileChecksum result = service.computeAndStore(
-                    testFile, "TXN001", "PARTNER_A", "SERVER_1", TransferDirection.INBOUND);
+            FileChecksum result =
+                    service.computeAndStore(
+                            testFile, "TXN001", "PARTNER_A", "SERVER_1", TransferDirection.INBOUND);
 
             assertNotNull(result);
             assertEquals("test.txt", result.getFilename());
@@ -201,15 +218,17 @@ class FileIntegrityServiceTest {
             Files.writeString(testFile, "Test content");
             String expectedHash = service.computeChecksum(testFile);
 
-            FileChecksum checksum = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash(expectedHash)
-                    .algorithm(HashAlgorithm.SHA_256)
-                    .localPath(testFile.toString())
-                    .build();
+            FileChecksum checksum =
+                    FileChecksum.builder()
+                            .id(1L)
+                            .checksumHash(expectedHash)
+                            .algorithm(HashAlgorithm.SHA_256)
+                            .localPath(testFile.toString())
+                            .build();
 
             when(checksumRepository.findById(1L)).thenReturn(Optional.of(checksum));
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             FileIntegrityService.VerificationResult result = service.verifyFile(1L);
 
@@ -223,16 +242,18 @@ class FileIntegrityServiceTest {
             Path testFile = tempDir.resolve("test.txt");
             Files.writeString(testFile, "Original content");
 
-            FileChecksum checksum = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash("wrong_hash_value_that_does_not_match")
-                    .algorithm(HashAlgorithm.SHA_256)
-                    .localPath(testFile.toString())
-                    .filename("test.txt")
-                    .build();
+            FileChecksum checksum =
+                    FileChecksum.builder()
+                            .id(1L)
+                            .checksumHash("wrong_hash_value_that_does_not_match")
+                            .algorithm(HashAlgorithm.SHA_256)
+                            .localPath(testFile.toString())
+                            .filename("test.txt")
+                            .build();
 
             when(checksumRepository.findById(1L)).thenReturn(Optional.of(checksum));
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             FileIntegrityService.VerificationResult result = service.verifyFile(1L);
 
@@ -243,14 +264,16 @@ class FileIntegrityServiceTest {
         @Test
         @DisplayName("Should report missing file")
         void shouldReportMissingFile() {
-            FileChecksum checksum = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash("abc123")
-                    .localPath("/nonexistent/path/file.txt")
-                    .build();
+            FileChecksum checksum =
+                    FileChecksum.builder()
+                            .id(1L)
+                            .checksumHash("abc123")
+                            .localPath("/nonexistent/path/file.txt")
+                            .build();
 
             when(checksumRepository.findById(1L)).thenReturn(Optional.of(checksum));
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             FileIntegrityService.VerificationResult result = service.verifyFile(1L);
 
@@ -261,11 +284,8 @@ class FileIntegrityServiceTest {
         @Test
         @DisplayName("Should handle null local path")
         void shouldHandleNullLocalPath() {
-            FileChecksum checksum = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash("abc123")
-                    .localPath(null)
-                    .build();
+            FileChecksum checksum =
+                    FileChecksum.builder().id(1L).checksumHash("abc123").localPath(null).build();
 
             when(checksumRepository.findById(1L)).thenReturn(Optional.of(checksum));
 
@@ -290,17 +310,19 @@ class FileIntegrityServiceTest {
             Files.writeString(testFile, "Content");
             String hash = service.computeChecksum(testFile);
 
-            FileChecksum pending = FileChecksum.builder()
-                    .id(1L)
-                    .checksumHash(hash)
-                    .algorithm(HashAlgorithm.SHA_256)
-                    .localPath(testFile.toString())
-                    .status(VerificationStatus.PENDING)
-                    .build();
+            FileChecksum pending =
+                    FileChecksum.builder()
+                            .id(1L)
+                            .checksumHash(hash)
+                            .algorithm(HashAlgorithm.SHA_256)
+                            .localPath(testFile.toString())
+                            .status(VerificationStatus.PENDING)
+                            .build();
 
             when(checksumRepository.findByStatusOrderByCreatedAtAsc(VerificationStatus.PENDING))
                     .thenReturn(List.of(pending));
-            when(checksumRepository.save(any(FileChecksum.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(checksumRepository.save(any(FileChecksum.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             int verified = service.verifyPendingFiles();
 
@@ -315,7 +337,8 @@ class FileIntegrityServiceTest {
         @Test
         @DisplayName("Should detect duplicate")
         void shouldDetectDuplicate() {
-            when(checksumRepository.existsByChecksumHashAndAlgorithm("abc123", HashAlgorithm.SHA_256))
+            when(checksumRepository.existsByChecksumHashAndAlgorithm(
+                            "abc123", HashAlgorithm.SHA_256))
                     .thenReturn(true);
 
             assertTrue(service.isDuplicate("abc123"));
@@ -324,7 +347,8 @@ class FileIntegrityServiceTest {
         @Test
         @DisplayName("Should not detect non-duplicate")
         void shouldNotDetectNonDuplicate() {
-            when(checksumRepository.existsByChecksumHashAndAlgorithm("xyz789", HashAlgorithm.SHA_256))
+            when(checksumRepository.existsByChecksumHashAndAlgorithm(
+                            "xyz789", HashAlgorithm.SHA_256))
                     .thenReturn(false);
 
             assertFalse(service.isDuplicate("xyz789"));
@@ -333,9 +357,10 @@ class FileIntegrityServiceTest {
         @Test
         @DisplayName("Should get duplicates")
         void shouldGetDuplicates() {
-            List<FileChecksum> duplicates = List.of(
-                    FileChecksum.builder().id(1L).checksumHash("abc").build(),
-                    FileChecksum.builder().id(2L).checksumHash("abc").build());
+            List<FileChecksum> duplicates =
+                    List.of(
+                            FileChecksum.builder().id(1L).checksumHash("abc").build(),
+                            FileChecksum.builder().id(2L).checksumHash("abc").build());
             when(checksumRepository.findByChecksumHash("abc")).thenReturn(duplicates);
 
             List<FileChecksum> result = service.getDuplicates("abc");
@@ -395,7 +420,8 @@ class FileIntegrityServiceTest {
         @DisplayName("Should get checksums by partner")
         void shouldGetChecksumsByPartner() {
             Page<FileChecksum> page = new PageImpl<>(List.of());
-            when(checksumRepository.findByPartnerIdOrderByCreatedAtDesc(eq("PARTNER_A"), any(PageRequest.class)))
+            when(checksumRepository.findByPartnerIdOrderByCreatedAtDesc(
+                            eq("PARTNER_A"), any(PageRequest.class)))
                     .thenReturn(page);
 
             Page<FileChecksum> result = service.getChecksumsByPartner("PARTNER_A", 0, 10);
@@ -407,11 +433,12 @@ class FileIntegrityServiceTest {
         @DisplayName("Should get checksums by status")
         void shouldGetChecksumsByStatus() {
             Page<FileChecksum> page = new PageImpl<>(List.of());
-            when(checksumRepository.findByStatusOrderByCreatedAtDesc(eq(VerificationStatus.PENDING),
-                    any(PageRequest.class)))
+            when(checksumRepository.findByStatusOrderByCreatedAtDesc(
+                            eq(VerificationStatus.PENDING), any(PageRequest.class)))
                     .thenReturn(page);
 
-            Page<FileChecksum> result = service.getChecksumsByStatus(VerificationStatus.PENDING, 0, 10);
+            Page<FileChecksum> result =
+                    service.getChecksumsByStatus(VerificationStatus.PENDING, 0, 10);
 
             assertNotNull(result);
         }

@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for AesSecretsProvider.
- */
+/** Unit tests for AesSecretsProvider. */
 @DisplayName("AesSecretsProvider Tests")
 class AesSecretsProviderTest {
 
@@ -240,8 +238,10 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should fail to decrypt with different key")
         void shouldFailToDecryptWithDifferentKey() {
-            AesSecretsProvider provider1 = new AesSecretsProvider("key-one-for-encryption", TEST_SALT_FILE);
-            AesSecretsProvider provider2 = new AesSecretsProvider("key-two-for-decryption", TEST_SALT_FILE);
+            AesSecretsProvider provider1 =
+                    new AesSecretsProvider("key-one-for-encryption", TEST_SALT_FILE);
+            AesSecretsProvider provider2 =
+                    new AesSecretsProvider("key-two-for-decryption", TEST_SALT_FILE);
 
             String encrypted = provider1.encrypt("secret");
 
@@ -398,15 +398,17 @@ class AesSecretsProviderTest {
     @DisplayName("Environment Variable Salt (Multi-Pod K8s)")
     class EnvironmentSaltTests {
 
-        private static final String VALID_SALT_BASE64 = java.util.Base64.getEncoder()
-                .encodeToString(new byte[32]); // 32 bytes = 256 bits
+        private static final String VALID_SALT_BASE64 =
+                java.util.Base64.getEncoder().encodeToString(new byte[32]); // 32 bytes = 256 bits
 
         @Test
         @DisplayName("should use base64 salt from environment over file")
         void shouldUseBase64SaltFromEnvironment() {
             // Create two providers with same base64 salt (simulating shared K8s secret)
-            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
-            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
+            AesSecretsProvider provider1 =
+                    new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
+            AesSecretsProvider provider2 =
+                    new AesSecretsProvider(VALID_MASTER_KEY, VALID_SALT_BASE64, TEST_SALT_FILE);
 
             String encrypted = provider1.encrypt("shared-secret");
             String decrypted = provider2.decrypt(encrypted);
@@ -417,9 +419,14 @@ class AesSecretsProviderTest {
         @Test
         @DisplayName("should reject invalid salt length")
         void shouldRejectInvalidSaltLength() {
-            String shortSalt = java.util.Base64.getEncoder().encodeToString(new byte[16]); // 16 bytes instead of 32
+            String shortSalt =
+                    java.util.Base64.getEncoder()
+                            .encodeToString(new byte[16]); // 16 bytes instead of 32
 
-            assertThatThrownBy(() -> new AesSecretsProvider(VALID_MASTER_KEY, shortSalt, TEST_SALT_FILE))
+            assertThatThrownBy(
+                            () ->
+                                    new AesSecretsProvider(
+                                            VALID_MASTER_KEY, shortSalt, TEST_SALT_FILE))
                     .isInstanceOf(EncryptionException.class)
                     .hasCauseInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Failed to initialize");
@@ -429,7 +436,8 @@ class AesSecretsProviderTest {
         @DisplayName("should fall back to file when env salt is empty")
         void shouldFallbackToFileWhenEnvSaltEmpty() {
             // Empty string should fall back to file
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, "", TEST_SALT_FILE);
+            AesSecretsProvider provider =
+                    new AesSecretsProvider(VALID_MASTER_KEY, "", TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isTrue();
         }
@@ -438,7 +446,8 @@ class AesSecretsProviderTest {
         @DisplayName("should fall back to file when env salt is null")
         void shouldFallbackToFileWhenEnvSaltNull() {
             // null should fall back to file
-            AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, null, TEST_SALT_FILE);
+            AesSecretsProvider provider =
+                    new AesSecretsProvider(VALID_MASTER_KEY, null, TEST_SALT_FILE);
 
             assertThat(provider.isAvailable()).isTrue();
         }
@@ -454,8 +463,10 @@ class AesSecretsProviderTest {
             String salt1 = java.util.Base64.getEncoder().encodeToString(saltBytes1);
             String salt2 = java.util.Base64.getEncoder().encodeToString(saltBytes2);
 
-            AesSecretsProvider provider1 = new AesSecretsProvider(VALID_MASTER_KEY, salt1, TEST_SALT_FILE);
-            AesSecretsProvider provider2 = new AesSecretsProvider(VALID_MASTER_KEY, salt2, TEST_SALT_FILE);
+            AesSecretsProvider provider1 =
+                    new AesSecretsProvider(VALID_MASTER_KEY, salt1, TEST_SALT_FILE);
+            AesSecretsProvider provider2 =
+                    new AesSecretsProvider(VALID_MASTER_KEY, salt2, TEST_SALT_FILE);
 
             String encrypted = provider1.encrypt("secret");
 
@@ -483,7 +494,8 @@ class AesSecretsProviderTest {
         void shouldThrowDecryptionExceptionForCorruptedV2() {
             AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             // Valid base64 but invalid ciphertext
-            String corruptedCiphertext = "AES:v2:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
+            String corruptedCiphertext =
+                    "AES:v2:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
 
             assertThatThrownBy(() -> provider.decrypt(corruptedCiphertext))
                     .isInstanceOf(RuntimeException.class);
@@ -503,7 +515,8 @@ class AesSecretsProviderTest {
         void shouldThrowDecryptionExceptionForCorruptedLegacy() {
             AesSecretsProvider provider = new AesSecretsProvider(VALID_MASTER_KEY, TEST_SALT_FILE);
             // Valid base64 but invalid ciphertext for legacy format
-            String corruptedCiphertext = "AES:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
+            String corruptedCiphertext =
+                    "AES:" + java.util.Base64.getEncoder().encodeToString(new byte[50]);
 
             assertThatThrownBy(() -> provider.decrypt(corruptedCiphertext))
                     .isInstanceOf(RuntimeException.class);

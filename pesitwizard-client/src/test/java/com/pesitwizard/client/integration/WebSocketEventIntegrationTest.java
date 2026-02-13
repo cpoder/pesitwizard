@@ -3,12 +3,14 @@ package com.pesitwizard.client.integration;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.client.event.TransferEvent;
+import com.pesitwizard.client.event.TransferEventBus;
+import com.pesitwizard.client.pesit.ClientState;
 import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -26,26 +28,19 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
-import com.pesitwizard.client.event.TransferEvent;
-import com.pesitwizard.client.event.TransferEventBus;
-import com.pesitwizard.client.pesit.ClientState;
-
 /**
- * Integration test for WebSocket event publishing.
- * Verifies that TransferEventBus correctly publishes events to WebSocket
- * topics.
+ * Integration test for WebSocket event publishing. Verifies that TransferEventBus correctly
+ * publishes events to WebSocket topics.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles({ "test", "nosecurity" })
+@ActiveProfiles({"test", "nosecurity"})
 @DisplayName("WebSocket Event Integration Tests")
 @Disabled("WebSocket tests are flaky due to async timing - run manually for verification")
 class WebSocketEventIntegrationTest {
 
-    @LocalServerPort
-    private int port;
+    @LocalServerPort private int port;
 
-    @Autowired
-    private TransferEventBus eventBus;
+    @Autowired private TransferEventBus eventBus;
 
     private WebSocketStompClient stompClient;
     private StompSession stompSession;
@@ -62,9 +57,10 @@ class WebSocketEventIntegrationTest {
 
         // Connect to WebSocket
         String wsUrl = String.format("ws://localhost:%d/ws-raw", port);
-        stompSession = stompClient.connectAsync(wsUrl, new StompSessionHandlerAdapter() {
-        })
-                .get(5, TimeUnit.SECONDS);
+        stompSession =
+                stompClient
+                        .connectAsync(wsUrl, new StompSessionHandlerAdapter() {})
+                        .get(5, TimeUnit.SECONDS);
     }
 
     @AfterEach
@@ -74,18 +70,14 @@ class WebSocketEventIntegrationTest {
         }
     }
 
-    /**
-     * Helper method to publish event and wait for async processing.
-     */
+    /** Helper method to publish event and wait for async processing. */
     private void publishAndWait(Runnable publisher) {
         publisher.run();
         // Allow websocketExecutor time to deliver message (poll timeout handles actual wait)
         await().atMost(Duration.ofSeconds(2)).pollDelay(Duration.ofMillis(100)).until(() -> true);
     }
 
-    /**
-     * Helper method to ensure subscription is fully established.
-     */
+    /** Helper method to ensure subscription is fully established. */
     private void waitForSubscription() {
         await().atMost(Duration.ofSeconds(1)).pollDelay(Duration.ofMillis(500)).until(() -> true);
     }
@@ -98,17 +90,19 @@ class WebSocketEventIntegrationTest {
         String topic = "/topic/transfer/" + transferId + "/progress";
 
         // Subscribe to topic
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
@@ -131,22 +125,28 @@ class WebSocketEventIntegrationTest {
         String transferId = "test-transfer-456";
         String topic = "/topic/transfer/" + transferId + "/progress";
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
         publishAndWait(
-                () -> eventBus.stateChange(transferId, ClientState.CN01_REPOS, ClientState.CN02A_CONNECT_PENDING));
+                () ->
+                        eventBus.stateChange(
+                                transferId,
+                                ClientState.CN01_REPOS,
+                                ClientState.CN02A_CONNECT_PENDING));
 
         // Assert
         TransferEvent event = receivedEvents.poll(5, TimeUnit.SECONDS);
@@ -164,17 +164,19 @@ class WebSocketEventIntegrationTest {
         String transferId = "test-transfer-789";
         String topic = "/topic/transfer/" + transferId + "/progress";
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
@@ -196,17 +198,19 @@ class WebSocketEventIntegrationTest {
         String transferId = "test-transfer-error";
         String topic = "/topic/transfer/" + transferId + "/progress";
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
@@ -228,17 +232,19 @@ class WebSocketEventIntegrationTest {
         String transferId = "test-transfer-completed";
         String topic = "/topic/transfer/" + transferId + "/progress";
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
@@ -259,17 +265,19 @@ class WebSocketEventIntegrationTest {
         String transferId = "test-transfer-cancelled";
         String topic = "/topic/transfer/" + transferId + "/progress";
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act
@@ -288,17 +296,19 @@ class WebSocketEventIntegrationTest {
         // Arrange
         String broadcastTopic = "/topic/transfers";
 
-        stompSession.subscribe(broadcastTopic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                broadcastTopic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act - Publish multiple events
@@ -328,17 +338,19 @@ class WebSocketEventIntegrationTest {
         String subscribedTransferId = "subscribed-transfer";
         String subscribedTopic = "/topic/transfer/" + subscribedTransferId + "/progress";
 
-        stompSession.subscribe(subscribedTopic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                subscribedTopic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                receivedEvents.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        receivedEvents.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act - Publish events for different transfers
@@ -367,29 +379,33 @@ class WebSocketEventIntegrationTest {
         BlockingQueue<TransferEvent> queue2 = new LinkedBlockingQueue<>();
 
         // Subscribe twice to same topic
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                queue1.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        queue1.add((TransferEvent) payload);
+                    }
+                });
 
-        stompSession.subscribe(topic, new StompFrameHandler() {
-            @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return TransferEvent.class;
-            }
+        stompSession.subscribe(
+                topic,
+                new StompFrameHandler() {
+                    @Override
+                    public Type getPayloadType(StompHeaders headers) {
+                        return TransferEvent.class;
+                    }
 
-            @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                queue2.add((TransferEvent) payload);
-            }
-        });
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        queue2.add((TransferEvent) payload);
+                    }
+                });
         waitForSubscription();
 
         // Act

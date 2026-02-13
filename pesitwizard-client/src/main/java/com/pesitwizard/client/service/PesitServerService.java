@@ -1,23 +1,18 @@
 package com.pesitwizard.client.service;
 
+import com.pesitwizard.client.dto.PesitServerDto;
+import com.pesitwizard.client.entity.PesitServer;
+import com.pesitwizard.client.repository.PesitServerRepository;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.List;
 import java.util.Optional;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pesitwizard.client.dto.PesitServerDto;
-import com.pesitwizard.client.entity.PesitServer;
-import com.pesitwizard.client.repository.PesitServerRepository;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * Service for managing PeSIT server configurations
- */
+/** Service for managing PeSIT server configurations */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,9 +45,7 @@ public class PesitServerService {
         return serverRepository.findByDefaultServerTrue();
     }
 
-    /**
-     * Find server by name or ID
-     */
+    /** Find server by name or ID */
     @Transactional(readOnly = true)
     public Optional<PesitServer> findServer(String nameOrId) {
         // Try by name first
@@ -67,7 +60,8 @@ public class PesitServerService {
     @Transactional
     public PesitServer createServer(PesitServerDto dto) {
         if (serverRepository.existsByName(dto.getName())) {
-            throw new IllegalArgumentException("Server with name '" + dto.getName() + "' already exists");
+            throw new IllegalArgumentException(
+                    "Server with name '" + dto.getName() + "' already exists");
         }
 
         PesitServer server = mapToEntity(dto);
@@ -78,18 +72,26 @@ public class PesitServerService {
         }
 
         server = serverRepository.save(server);
-        log.info("Created PeSIT server: {} ({}:{})", server.getName(), server.getHost(), server.getPort());
+        log.info(
+                "Created PeSIT server: {} ({}:{})",
+                server.getName(),
+                server.getHost(),
+                server.getPort());
         return server;
     }
 
     @Transactional
     public PesitServer updateServer(String id, PesitServerDto dto) {
-        PesitServer server = serverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
+        PesitServer server =
+                serverRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
 
         // Check name uniqueness if changed
-        if (!server.getName().equals(dto.getName()) && serverRepository.existsByName(dto.getName())) {
-            throw new IllegalArgumentException("Server with name '" + dto.getName() + "' already exists");
+        if (!server.getName().equals(dto.getName())
+                && serverRepository.existsByName(dto.getName())) {
+            throw new IllegalArgumentException(
+                    "Server with name '" + dto.getName() + "' already exists");
         }
 
         updateEntity(server, dto);
@@ -107,16 +109,20 @@ public class PesitServerService {
 
     @Transactional
     public void deleteServer(String id) {
-        PesitServer server = serverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
+        PesitServer server =
+                serverRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
         serverRepository.delete(server);
         log.info("Deleted PeSIT server: {}", server.getName());
     }
 
     @Transactional
     public PesitServer setDefaultServer(String id) {
-        PesitServer server = serverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
+        PesitServer server =
+                serverRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Server not found: " + id));
 
         clearDefaultServer();
         server.setDefaultServer(true);
@@ -126,10 +132,13 @@ public class PesitServerService {
     }
 
     private void clearDefaultServer() {
-        serverRepository.findByDefaultServerTrue().ifPresent(s -> {
-            s.setDefaultServer(false);
-            serverRepository.save(s);
-        });
+        serverRepository
+                .findByDefaultServerTrue()
+                .ifPresent(
+                        s -> {
+                            s.setDefaultServer(false);
+                            serverRepository.save(s);
+                        });
     }
 
     private PesitServer mapToEntity(PesitServerDto dto) {
@@ -171,8 +180,10 @@ public class PesitServerService {
                 .serverId(server.getServerId())
                 .description(server.getDescription())
                 .tlsEnabled(server.isTlsEnabled())
-                .truststoreConfigured(server.getTruststoreData() != null && server.getTruststoreData().length > 0)
-                .keystoreConfigured(server.getKeystoreData() != null && server.getKeystoreData().length > 0)
+                .truststoreConfigured(
+                        server.getTruststoreData() != null && server.getTruststoreData().length > 0)
+                .keystoreConfigured(
+                        server.getKeystoreData() != null && server.getKeystoreData().length > 0)
                 .connectionTimeout(server.getConnectionTimeout())
                 .readTimeout(server.getReadTimeout())
                 .enabled(server.isEnabled())
@@ -182,7 +193,7 @@ public class PesitServerService {
 
     /**
      * Test TCP connection to a PeSIT server.
-     * 
+     *
      * @param server the server to test
      * @return result with success status and message
      */
@@ -190,16 +201,22 @@ public class PesitServerService {
         int timeout = server.getConnectionTimeout() != null ? server.getConnectionTimeout() : 5000;
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(server.getHost(), server.getPort()), timeout);
-            log.info("Connection test successful for server {} ({}:{})",
-                    server.getName(), server.getHost(), server.getPort());
+            log.info(
+                    "Connection test successful for server {} ({}:{})",
+                    server.getName(),
+                    server.getHost(),
+                    server.getPort());
             return new ConnectionTestResult(true, "Connection successful");
         } catch (java.io.IOException e) {
-            log.warn("Connection test failed for server {} ({}:{}): {}",
-                    server.getName(), server.getHost(), server.getPort(), e.getMessage());
+            log.warn(
+                    "Connection test failed for server {} ({}:{}): {}",
+                    server.getName(),
+                    server.getHost(),
+                    server.getPort(),
+                    e.getMessage());
             return new ConnectionTestResult(false, "Connection failed: " + e.getMessage());
         }
     }
 
-    public record ConnectionTestResult(boolean success, String message) {
-    }
+    public record ConnectionTestResult(boolean success, String message) {}
 }

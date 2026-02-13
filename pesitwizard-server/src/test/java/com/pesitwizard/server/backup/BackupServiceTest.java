@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,8 +18,7 @@ class BackupServiceTest {
 
     private BackupService backupService;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -37,7 +35,8 @@ class BackupServiceTest {
         @Test
         @DisplayName("Should create backup with description")
         void shouldCreateBackupWithDescription() throws IOException {
-            ReflectionTestUtils.setField(backupService, "datasourceUrl", "jdbc:postgresql://localhost/pesit");
+            ReflectionTestUtils.setField(
+                    backupService, "datasourceUrl", "jdbc:postgresql://localhost/pesit");
 
             BackupService.BackupResult result = backupService.createBackup("Test backup");
 
@@ -55,7 +54,9 @@ class BackupServiceTest {
             Path dbFile = tempDir.resolve("testdb.mv.db");
             Files.writeString(dbFile, "fake database content");
 
-            ReflectionTestUtils.setField(backupService, "datasourceUrl",
+            ReflectionTestUtils.setField(
+                    backupService,
+                    "datasourceUrl",
                     "jdbc:h2:file:" + tempDir.resolve("testdb").toString());
 
             BackupService.BackupResult result = backupService.createBackup("H2 backup");
@@ -67,7 +68,9 @@ class BackupServiceTest {
         @Test
         @DisplayName("Should create metadata backup for non-H2 database")
         void shouldCreateMetadataBackup() throws IOException {
-            ReflectionTestUtils.setField(backupService, "datasourceUrl",
+            ReflectionTestUtils.setField(
+                    backupService,
+                    "datasourceUrl",
                     "jdbc:postgresql://localhost:5432/pesit?password=secret");
 
             BackupService.BackupResult result = backupService.createBackup("PostgreSQL backup");
@@ -119,8 +122,8 @@ class BackupServiceTest {
         @Test
         @DisplayName("Should handle non-existent backup directory")
         void shouldHandleNonExistentDirectory() throws IOException {
-            ReflectionTestUtils.setField(backupService, "backupDirectory",
-                    tempDir.resolve("nonexistent").toString());
+            ReflectionTestUtils.setField(
+                    backupService, "backupDirectory", tempDir.resolve("nonexistent").toString());
 
             List<BackupService.BackupInfo> backups = backupService.listBackups();
 
@@ -145,8 +148,8 @@ class BackupServiceTest {
         @DisplayName("Should fail restore for non-H2 database")
         void shouldFailForNonH2() throws IOException {
             Files.writeString(tempDir.resolve("backup.zip"), "content");
-            ReflectionTestUtils.setField(backupService, "datasourceUrl",
-                    "jdbc:postgresql://localhost/pesit");
+            ReflectionTestUtils.setField(
+                    backupService, "datasourceUrl", "jdbc:postgresql://localhost/pesit");
 
             BackupService.RestoreResult result = backupService.restoreBackup("backup.zip");
 
@@ -166,7 +169,9 @@ class BackupServiceTest {
             Path dbFile = dbDir.resolve("pesit.mv.db");
             Files.writeString(dbFile, "original content");
 
-            ReflectionTestUtils.setField(backupService, "datasourceUrl",
+            ReflectionTestUtils.setField(
+                    backupService,
+                    "datasourceUrl",
                     "jdbc:h2:file:" + dbDir.resolve("pesit").toString());
 
             BackupService.RestoreResult result = backupService.restoreBackup("backup.zip");
@@ -243,8 +248,8 @@ class BackupServiceTest {
         @Test
         @DisplayName("Should handle non-existent backup directory")
         void shouldHandleNonExistentDirectory() throws IOException {
-            ReflectionTestUtils.setField(backupService, "backupDirectory",
-                    tempDir.resolve("nonexistent").toString());
+            ReflectionTestUtils.setField(
+                    backupService, "backupDirectory", tempDir.resolve("nonexistent").toString());
 
             int deleted = backupService.cleanupOldBackups();
 
@@ -259,8 +264,8 @@ class BackupServiceTest {
         @Test
         @DisplayName("Should execute scheduled backup")
         void shouldExecuteScheduledBackup() {
-            ReflectionTestUtils.setField(backupService, "datasourceUrl",
-                    "jdbc:postgresql://localhost/pesit");
+            ReflectionTestUtils.setField(
+                    backupService, "datasourceUrl", "jdbc:postgresql://localhost/pesit");
 
             // Should not throw
             assertDoesNotThrow(() -> backupService.scheduledBackup());

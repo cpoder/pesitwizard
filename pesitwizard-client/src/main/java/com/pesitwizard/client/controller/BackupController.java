@@ -1,7 +1,11 @@
 package com.pesitwizard.client.controller;
 
+import com.pesitwizard.backup.BackupInfo;
+import com.pesitwizard.backup.BackupResult;
+import com.pesitwizard.backup.RestoreResult;
+import com.pesitwizard.client.backup.BackupServiceAdapter;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,13 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.backup.BackupInfo;
-import com.pesitwizard.backup.BackupResult;
-import com.pesitwizard.backup.RestoreResult;
-import com.pesitwizard.client.backup.BackupServiceAdapter;
-
-import lombok.RequiredArgsConstructor;
-
 @RestController
 @RequestMapping("/api/v1/backup")
 @RequiredArgsConstructor
@@ -26,7 +23,8 @@ public class BackupController {
     private final BackupServiceAdapter backupService;
 
     @PostMapping
-    public ResponseEntity<BackupResult> createBackup(@RequestParam(required = false) String description) {
+    public ResponseEntity<BackupResult> createBackup(
+            @RequestParam(required = false) String description) {
         return ResponseEntity.ok(backupService.createBackup(description));
     }
 

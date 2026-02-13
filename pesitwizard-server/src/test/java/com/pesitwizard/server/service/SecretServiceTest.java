@@ -4,11 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.entity.SecretEntry;
+import com.pesitwizard.server.entity.SecretEntry.SecretScope;
+import com.pesitwizard.server.entity.SecretEntry.SecretType;
+import com.pesitwizard.server.repository.SecretRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,42 +22,34 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.entity.SecretEntry;
-import com.pesitwizard.server.entity.SecretEntry.SecretScope;
-import com.pesitwizard.server.entity.SecretEntry.SecretType;
-import com.pesitwizard.server.repository.SecretRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SecretService Tests")
 class SecretServiceTest {
 
-    @Mock
-    private SecretRepository secretRepository;
+    @Mock private SecretRepository secretRepository;
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
-    @InjectMocks
-    private SecretService secretService;
+    @InjectMocks private SecretService secretService;
 
     private SecretEntry testSecret;
 
     @BeforeEach
     void setUp() {
-        testSecret = SecretEntry.builder()
-                .id(1L)
-                .name("test-secret")
-                .description("Test secret")
-                .secretType(SecretType.PASSWORD)
-                .encryptedValue("encrypted")
-                .iv("iv123")
-                .scope(SecretScope.GLOBAL)
-                .version(1L)
-                .active(true)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .build();
+        testSecret =
+                SecretEntry.builder()
+                        .id(1L)
+                        .name("test-secret")
+                        .description("Test secret")
+                        .secretType(SecretType.PASSWORD)
+                        .encryptedValue("encrypted")
+                        .iv("iv123")
+                        .scope(SecretScope.GLOBAL)
+                        .version(1L)
+                        .active(true)
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
+                        .build();
     }
 
     @Nested
@@ -65,16 +61,25 @@ class SecretServiceTest {
         void shouldCreateSecret() {
             when(secretsService.encryptForStorage(anyString())).thenReturn("AES:v2:encrypted");
             when(secretRepository.existsByName("new-secret")).thenReturn(false);
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> {
-                SecretEntry saved = inv.getArgument(0);
-                saved.setId(1L);
-                return saved;
-            });
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(
+                            inv -> {
+                                SecretEntry saved = inv.getArgument(0);
+                                saved.setId(1L);
+                                return saved;
+                            });
 
-            SecretEntry result = secretService.createSecret(
-                    "new-secret", "my-password", "Description",
-                    SecretType.PASSWORD, SecretScope.GLOBAL, null, null,
-                    null, "admin");
+            SecretEntry result =
+                    secretService.createSecret(
+                            "new-secret",
+                            "my-password",
+                            "Description",
+                            SecretType.PASSWORD,
+                            SecretScope.GLOBAL,
+                            null,
+                            null,
+                            null,
+                            "admin");
 
             assertNotNull(result);
             assertEquals("new-secret", result.getName());
@@ -89,21 +94,40 @@ class SecretServiceTest {
         void shouldRejectDuplicateName() {
             when(secretRepository.existsByName("existing")).thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class, () -> secretService.createSecret("existing", "value", null,
-                    SecretType.PASSWORD, SecretScope.GLOBAL, null, null, null, "admin"));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            secretService.createSecret(
+                                    "existing",
+                                    "value",
+                                    null,
+                                    SecretType.PASSWORD,
+                                    SecretScope.GLOBAL,
+                                    null,
+                                    null,
+                                    null,
+                                    "admin"));
         }
 
         @Test
         @DisplayName("Should create secret with expiration")
         void shouldCreateSecretWithExpiration() {
             when(secretRepository.existsByName("expiring")).thenReturn(false);
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             Instant expiry = Instant.now().plus(30, ChronoUnit.DAYS);
-            SecretEntry result = secretService.createSecret(
-                    "expiring", "value", null,
-                    SecretType.API_KEY, SecretScope.GLOBAL, null, null,
-                    expiry, "admin");
+            SecretEntry result =
+                    secretService.createSecret(
+                            "expiring",
+                            "value",
+                            null,
+                            SecretType.API_KEY,
+                            SecretScope.GLOBAL,
+                            null,
+                            null,
+                            expiry,
+                            "admin");
 
             assertEquals(expiry, result.getExpiresAt());
         }
@@ -112,12 +136,20 @@ class SecretServiceTest {
         @DisplayName("Should create partner-scoped secret")
         void shouldCreatePartnerSecret() {
             when(secretRepository.existsByName("partner-secret")).thenReturn(false);
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            SecretEntry result = secretService.createSecret(
-                    "partner-secret", "value", null,
-                    SecretType.PASSWORD, SecretScope.PARTNER, "PARTNER1", null,
-                    null, "admin");
+            SecretEntry result =
+                    secretService.createSecret(
+                            "partner-secret",
+                            "value",
+                            null,
+                            SecretType.PASSWORD,
+                            SecretScope.PARTNER,
+                            "PARTNER1",
+                            null,
+                            null,
+                            "admin");
 
             assertEquals(SecretScope.PARTNER, result.getScope());
             assertEquals("PARTNER1", result.getPartnerId());
@@ -213,9 +245,11 @@ class SecretServiceTest {
         @DisplayName("Should update secret value")
         void shouldUpdateSecretValue() {
             when(secretRepository.findByName("test-secret")).thenReturn(Optional.of(testSecret));
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            SecretEntry result = secretService.updateSecretValue("test-secret", "new-value", "admin");
+            SecretEntry result =
+                    secretService.updateSecretValue("test-secret", "new-value", "admin");
 
             assertNotNull(result);
             // version is managed by JPA @Version — not manually incremented
@@ -228,7 +262,8 @@ class SecretServiceTest {
         void shouldThrowWhenUpdatingNonExistent() {
             when(secretRepository.findByName("missing")).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(
+                    IllegalArgumentException.class,
                     () -> secretService.updateSecretValue("missing", "value", "admin"));
         }
 
@@ -236,10 +271,12 @@ class SecretServiceTest {
         @DisplayName("Should update secret metadata")
         void shouldUpdateSecretMetadata() {
             when(secretRepository.findById(1L)).thenReturn(Optional.of(testSecret));
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            SecretEntry result = secretService.updateSecretMetadata(
-                    1L, "New description", SecretType.API_KEY, false, null, "admin");
+            SecretEntry result =
+                    secretService.updateSecretMetadata(
+                            1L, "New description", SecretType.API_KEY, false, null, "admin");
 
             assertEquals("New description", result.getDescription());
             assertEquals(SecretType.API_KEY, result.getSecretType());
@@ -250,9 +287,11 @@ class SecretServiceTest {
         @DisplayName("Should rotate secret")
         void shouldRotateSecret() {
             when(secretRepository.findByName("test-secret")).thenReturn(Optional.of(testSecret));
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            SecretEntry result = secretService.rotateSecret("test-secret", "rotated-value", "admin");
+            SecretEntry result =
+                    secretService.rotateSecret("test-secret", "rotated-value", "admin");
 
             // version is managed by JPA @Version — not manually incremented
             assertNotNull(result.getLastRotatedAt());
@@ -285,7 +324,8 @@ class SecretServiceTest {
         @DisplayName("Should deactivate secret")
         void shouldDeactivateSecret() {
             when(secretRepository.findById(1L)).thenReturn(Optional.of(testSecret));
-            when(secretRepository.save(any(SecretEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(secretRepository.save(any(SecretEntry.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             SecretEntry result = secretService.deactivateSecret(1L);
 

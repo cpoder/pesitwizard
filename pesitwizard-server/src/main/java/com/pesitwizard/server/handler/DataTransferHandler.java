@@ -1,24 +1,12 @@
 package com.pesitwizard.server.handler;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-
-import org.springframework.stereotype.Component;
-
+import com.pesitwizard.channel.PesitChannel;
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduIO;
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
-import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterParser;
-import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.TransferContext;
@@ -26,13 +14,17 @@ import com.pesitwizard.server.service.FpduResponseBuilder;
 import com.pesitwizard.server.service.FpduValidator;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
-
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-/**
- * Handles data transfer operations including WRITE, READ, DTF, and sync points.
- */
+/** Handles data transfer operations including WRITE, READ, DTF, and sync points. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -42,19 +34,16 @@ public class DataTransferHandler {
     private final TransferTracker transferTracker;
     private final FpduValidator fpduValidator;
 
-    /**
-     * Handle WRITE FPDU
-     */
+    /** Handle WRITE FPDU */
     public Fpdu handleWrite(SessionContext ctx, Fpdu fpdu) {
         log.info("[{}] WRITE: starting data reception", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
         return FpduResponseBuilder.buildAckWrite(ctx, 0);
     }
 
-    /**
-     * Handle READ FPDU - streams file data to client
-     */
-    public Fpdu handleRead(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out) throws IOException {
+    /** Handle READ FPDU - streams file data to client */
+    public Fpdu handleRead(SessionContext ctx, Fpdu fpdu) throws IOException {
+        PesitChannel channel = ctx.getChannel();
         TransferContext transfer = ctx.getCurrentTransfer();
 
         if (transfer == null || transfer.getLocalPath() == null) {
@@ -72,42 +61,49 @@ public class DataTransferHandler {
         long restartPoint = extractRestartPoint(fpdu);
         if (restartPoint > 0) {
             transfer.setRestartPoint((int) restartPoint);
-            log.info("[{}] READ: resuming from position {} for {}", ctx.getSessionId(), restartPoint, filePath);
+            log.info(
+                    "[{}] READ: resuming from position {} for {}",
+                    ctx.getSessionId(),
+                    restartPoint,
+                    filePath);
         } else {
             log.info("[{}] READ: starting data transmission for {}", ctx.getSessionId(), filePath);
         }
 
         // 1. Send ACK(READ)
-        FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D0_000));
+        channel.writeFpdu(FpduResponseBuilder.buildAckRead(ctx, DiagnosticCode.D0_000));
         log.info("[{}] Sent ACK(READ)", ctx.getSessionId());
 
         // 2. Stream file data as DTF chunks (with RESYN retry loop)
-        long totalBytes;
         long currentStartPosition = restartPoint;
         int resyncAttempts = 0;
-        int maxResyncAttempts = 10; // Prevent infinite resync loops (D3_320)
+        int maxResyncAttempts = 10;
 
         while (true) {
             try {
-                totalBytes = streamFileData(ctx, filePath, currentStartPosition, in, out);
+                streamFileData(ctx, filePath, currentStartPosition);
                 break; // Normal completion
             } catch (ResyncRequestedException e) {
                 resyncAttempts++;
                 if (resyncAttempts > maxResyncAttempts) {
-                    log.error("[{}] Too many resync attempts ({}), aborting",
-                            ctx.getSessionId(), resyncAttempts);
-                    FpduIO.writeFpdu(out, FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_320));
+                    log.error(
+                            "[{}] Too many resync attempts ({}), aborting",
+                            ctx.getSessionId(),
+                            resyncAttempts);
+                    channel.writeFpdu(FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_320));
                     return null;
                 }
                 currentStartPosition = e.getBytePosition();
-                log.info("[{}] Restarting stream from byte {} after RESYN (attempt {})",
-                        ctx.getSessionId(), currentStartPosition, resyncAttempts);
-                // Loop continues with new start position
+                log.info(
+                        "[{}] Restarting stream from byte {} after RESYN (attempt {})",
+                        ctx.getSessionId(),
+                        currentStartPosition,
+                        resyncAttempts);
             }
         }
 
         // 3. Send DTF.END
-        FpduIO.writeFpdu(out, FpduResponseBuilder.buildDtfEnd(ctx));
+        channel.writeFpdu(FpduResponseBuilder.buildDtfEnd(ctx));
         log.info("[{}] Sent DTF.END", ctx.getSessionId());
 
         // Transition to waiting for TRANS.END from client
@@ -117,22 +113,16 @@ public class DataTransferHandler {
         return null;
     }
 
-    /**
-     * Stream file data to client using proper PeSIT article format.
-     * 
-     * Structure:
-     * - An ENTITY (FPDU) contains multiple ARTICLES
-     * - Each article = recordLength bytes, prefixed with 2-byte length
-     * - Within an entity: DTFDA (first) + DTFMA* (middle) + DTFFA (last)
-     * - SYN points are sent between entities (after DTFFA, before next DTFDA)
-     */
-    private long streamFileData(SessionContext ctx, Path filePath, long startPosition, DataInputStream in,
-            DataOutputStream out) throws IOException {
+    /** Stream file data to client using proper PeSIT article format. */
+    private long streamFileData(SessionContext ctx, Path filePath, long startPosition)
+            throws IOException {
+        PesitChannel channel = ctx.getChannel();
         TransferContext transfer = ctx.getCurrentTransfer();
         int maxEntitySize = properties.getMaxEntitySize();
-        int recordLength = transfer != null && transfer.getRecordLength() > 0
-                ? transfer.getRecordLength()
-                : 1024;
+        int recordLength =
+                transfer != null && transfer.getRecordLength() > 0
+                        ? transfer.getRecordLength()
+                        : 1024;
 
         // Sync point configuration
         boolean syncEnabled = ctx.isSyncPointsEnabled();
@@ -141,9 +131,6 @@ public class DataTransferHandler {
         long bytesSinceLastSync = 0;
         int syncPointNumber = transfer != null ? transfer.getCurrentSyncPoint() : 0;
 
-        // Calculate articles per entity: each article needs 6 (header) + 2 (length
-        // prefix) + recordLength
-        // But header is per FPDU, so: maxEntitySize = 6 + N * (2 + recordLength)
         int articlesPerEntity = Math.max(1, (maxEntitySize - 6) / (2 + recordLength));
 
         long totalBytes = 0;
@@ -154,54 +141,62 @@ public class DataTransferHandler {
                 java.io.BufferedInputStream fileIn = new java.io.BufferedInputStream(rawIn)) {
             if (startPosition > 0) {
                 long skipped = fileIn.skip(startPosition);
-                log.info("[{}] READ: skipped {} bytes to resume position", ctx.getSessionId(), skipped);
+                log.info(
+                        "[{}] READ: skipped {} bytes to resume position",
+                        ctx.getSessionId(),
+                        skipped);
             }
 
             long fileSize = Files.size(filePath) - startPosition;
             boolean hasMoreData = true;
 
-            // Estimate bytes per entity for sync point calculation
             int bytesPerEntity = articlesPerEntity * recordLength;
 
             while (hasMoreData) {
                 // Check if NEXT entity would exceed sync interval - send SYN BEFORE
-                if (syncEnabled && syncIntervalBytes > 0
+                if (syncEnabled
+                        && syncIntervalBytes > 0
                         && (bytesSinceLastSync + bytesPerEntity) > syncIntervalBytes) {
                     syncPointNumber++;
-                    log.info("[{}] Sending SYN point {} at {} bytes (before next entity would exceed {} limit)",
-                            ctx.getSessionId(), syncPointNumber, totalBytes, syncIntervalBytes);
+                    log.info(
+                            "[{}] Sending SYN point {} at {} bytes (before next entity would exceed {} limit)",
+                            ctx.getSessionId(),
+                            syncPointNumber,
+                            totalBytes,
+                            syncIntervalBytes);
 
-                    // Record sync point position before sending SYN
                     if (transfer != null) {
-                        transfer.recordSyncPointPosition(syncPointNumber, totalBytes + startPosition);
+                        transfer.recordSyncPointPosition(
+                                syncPointNumber, totalBytes + startPosition);
                     }
 
-                    FpduIO.writeFpdu(out, FpduResponseBuilder.buildSyn(ctx, syncPointNumber));
+                    channel.writeFpdu(FpduResponseBuilder.buildSyn(ctx, syncPointNumber));
 
-                    Fpdu ackOrResyn = readAndParseAckSyn(ctx, in, syncPointNumber);
+                    Fpdu ackOrResyn = readAndParseAckSyn(ctx, syncPointNumber);
                     if (ackOrResyn == null) {
                         throw new IOException("Timeout waiting for ACK_SYN");
                     }
 
-                    // Handle RESYN: client wants to rewind to a previous sync point
                     if (ackOrResyn.getFpduType() == FpduType.RESYN) {
                         if (!ctx.isResyncEnabled()) {
                             throw new IOException("RESYN received but resync not negotiated");
                         }
                         int resyncPoint = ParameterParser.parsePI18RestartPoint(ackOrResyn);
-                        long resyncBytePos = transfer != null ? transfer.getSyncPointBytePosition(resyncPoint) : -1;
+                        long resyncBytePos =
+                                transfer != null
+                                        ? transfer.getSyncPointBytePosition(resyncPoint)
+                                        : -1;
                         if (resyncBytePos < 0) {
                             throw new IOException("RESYN: unknown sync point " + resyncPoint);
                         }
-                        log.info("[{}] RESYN: client requests rollback to sync point {} (byte {})",
-                                ctx.getSessionId(), resyncPoint, resyncBytePos);
+                        log.info(
+                                "[{}] RESYN: client requests rollback to sync point {} (byte {})",
+                                ctx.getSessionId(),
+                                resyncPoint,
+                                resyncBytePos);
 
-                        // Send ACK_RESYN
-                        FpduIO.writeFpdu(out, FpduResponseBuilder.buildAckResyn(ctx, resyncPoint));
+                        channel.writeFpdu(FpduResponseBuilder.buildAckResyn(ctx, resyncPoint));
 
-                        // Close current input, reopen and seek to resync position
-                        // We break out, the caller re-reads from the new position
-                        // For simplicity, throw a special exception that restarts the stream
                         throw new ResyncRequestedException(resyncPoint, resyncBytePos);
                     }
 
@@ -224,16 +219,16 @@ public class DataTransferHandler {
                         break;
                     }
 
-                    byte[] article = (bytesRead == articleBuffer.length)
-                            ? articleBuffer
-                            : Arrays.copyOf(articleBuffer, bytesRead);
+                    byte[] article =
+                            (bytesRead == articleBuffer.length)
+                                    ? articleBuffer
+                                    : Arrays.copyOf(articleBuffer, bytesRead);
 
-                    // Determine article type within entity
                     FpduType articleType;
                     boolean isFirstInEntity = (articlesInEntity == 0);
-                    boolean isLastInEntity = (i == articlesPerEntity - 1) || (totalBytes + bytesRead >= fileSize);
+                    boolean isLastInEntity =
+                            (i == articlesPerEntity - 1) || (totalBytes + bytesRead >= fileSize);
 
-                    // Peek to see if more data
                     if (!isLastInEntity) {
                         fileIn.mark(1);
                         int peek = fileIn.read();
@@ -255,7 +250,6 @@ public class DataTransferHandler {
                         articleType = FpduType.DTFMA;
                     }
 
-                    // Write article with 2-byte length prefix
                     entityData.write((bytesRead >> 8) & 0xFF);
                     entityData.write(bytesRead & 0xFF);
                     entityData.write(article);
@@ -264,27 +258,38 @@ public class DataTransferHandler {
                     bytesSinceLastSync += bytesRead;
                     articlesInEntity++;
 
-                    log.debug("[{}] Article {}: {} {} bytes", ctx.getSessionId(), articlesInEntity, articleType,
+                    log.debug(
+                            "[{}] Article {}: {} {} bytes",
+                            ctx.getSessionId(),
+                            articlesInEntity,
+                            articleType,
                             bytesRead);
 
-                    if (isLastInEntity)
-                        break;
+                    if (isLastInEntity) break;
                 }
 
-                // Send the entity if we have articles - always DTF for multi-articles
+                // Send the entity
                 if (articlesInEntity > 0) {
                     byte[] data = entityData.toByteArray();
-                    // Multi-article DTF: idSrc = number of articles
-                    FpduIO.writeFpduWithData(out, FpduType.DTF, ctx.getClientConnectionId(), articlesInEntity, data);
+                    channel.writeFpduWithData(
+                            FpduType.DTF, ctx.getClientConnectionId(), articlesInEntity, data);
                     entityCount++;
-                    log.debug("[{}] Entity {}: {} articles, {} bytes",
-                            ctx.getSessionId(), entityCount, articlesInEntity, data.length);
+                    log.debug(
+                            "[{}] Entity {}: {} articles, {} bytes",
+                            ctx.getSessionId(),
+                            entityCount,
+                            articlesInEntity,
+                            data.length);
                 }
             }
         }
 
-        log.info("[{}] READ: sent {} bytes in {} entities, {} sync points",
-                ctx.getSessionId(), totalBytes, entityCount, syncPointNumber);
+        log.info(
+                "[{}] READ: sent {} bytes in {} entities, {} sync points",
+                ctx.getSessionId(),
+                totalBytes,
+                entityCount,
+                syncPointNumber);
 
         if (transfer != null) {
             transfer.setBytesTransferred(totalBytes);
@@ -294,50 +299,46 @@ public class DataTransferHandler {
         return totalBytes;
     }
 
-    /**
-     * Read and parse ACK_SYN or RESYN response from client.
-     * During a server READ, after sending SYN the client may respond with:
-     * - ACK_SYN (normal flow)
-     * - RESYN (client requests rollback to a previous sync point)
-     */
-    private Fpdu readAndParseAckSyn(SessionContext ctx, DataInputStream in, int expectedSyncPoint) throws IOException {
-        // Read FPDU length
-        int length = in.readUnsignedShort();
-        if (length <= 0 || length > 65535) {
-            log.warn("[{}] Invalid FPDU length while waiting for ACK_SYN: {}", ctx.getSessionId(), length);
+    /** Read and parse ACK_SYN or RESYN response from client. */
+    private Fpdu readAndParseAckSyn(SessionContext ctx, int expectedSyncPoint) throws IOException {
+        PesitChannel channel = ctx.getChannel();
+        byte[] data = channel.readFrame();
+        if (data == null || data.length < 6) {
+            log.warn(
+                    "[{}] Invalid FPDU data while waiting for ACK_SYN: length={}",
+                    ctx.getSessionId(),
+                    data != null ? data.length : 0);
             return null;
         }
-
-        byte[] data = new byte[length];
-        in.readFully(data);
 
         FpduParser parser = new FpduParser(data, ctx.isEbcdicEncoding());
         Fpdu fpdu = parser.parse();
 
         if (fpdu.getFpduType() == FpduType.ACK_SYN) {
-            // Normal flow - verify sync point number
             int receivedSyncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
             if (receivedSyncPoint != expectedSyncPoint) {
-                log.warn("[{}] ACK_SYN sync point mismatch: expected {}, got {}",
-                        ctx.getSessionId(), expectedSyncPoint, receivedSyncPoint);
+                log.warn(
+                        "[{}] ACK_SYN sync point mismatch: expected {}, got {}",
+                        ctx.getSessionId(),
+                        expectedSyncPoint,
+                        receivedSyncPoint);
             }
             return fpdu;
         }
 
         if (fpdu.getFpduType() == FpduType.RESYN) {
-            // Client requests resynchronization - return the RESYN FPDU
-            // Caller must handle this differently from ACK_SYN
             log.info("[{}] Received RESYN instead of ACK_SYN", ctx.getSessionId());
             return fpdu;
         }
 
-        log.warn("[{}] Expected ACK_SYN or RESYN but got {}", ctx.getSessionId(), fpdu.getFpduType());
+        log.warn(
+                "[{}] Expected ACK_SYN or RESYN but got {}",
+                ctx.getSessionId(),
+                fpdu.getFpduType());
         return null;
     }
 
-    /**
-     * TDE02B - RECEIVING DATA: Processing DTF, DTF.END, SYN, IDT
-     */
+    /** TDE02B - RECEIVING DATA: Processing DTF, DTF.END, SYN, IDT */
     public Fpdu handleTDE02B(SessionContext ctx, Fpdu fpdu) throws IOException {
         return switch (fpdu.getFpduType()) {
             case DTF, DTFDA, DTFMA, DTFFA -> handleDtf(ctx, fpdu);
@@ -346,29 +347,30 @@ public class DataTransferHandler {
             case RESYN -> handleResyn(ctx, fpdu);
             case IDT -> handleIdt(ctx, fpdu);
             default -> {
-                log.warn("[{}] Unexpected FPDU {} in TDE02B", ctx.getSessionId(), fpdu.getFpduType());
+                log.warn(
+                        "[{}] Unexpected FPDU {} in TDE02B",
+                        ctx.getSessionId(),
+                        fpdu.getFpduType());
                 yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
             }
         };
     }
 
-    /**
-     * TDL02B - SENDING DATA: Waiting for TRANS.END from client
-     */
+    /** TDL02B - SENDING DATA: Waiting for TRANS.END from client */
     public Fpdu handleTDL02B(SessionContext ctx, Fpdu fpdu) {
         return switch (fpdu.getFpduType()) {
             case TRANS_END -> handleTransEndFromClient(ctx, fpdu);
             default -> {
-                log.warn("[{}] Unexpected FPDU {} in TDL02B (expected TRANS_END)",
-                        ctx.getSessionId(), fpdu.getFpduType());
+                log.warn(
+                        "[{}] Unexpected FPDU {} in TDL02B (expected TRANS_END)",
+                        ctx.getSessionId(),
+                        fpdu.getFpduType());
                 yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
             }
         };
     }
 
-    /**
-     * TDE07 - WRITE END: Waiting for TRANS.END
-     */
+    /** TDE07 - WRITE END: Waiting for TRANS.END */
     public Fpdu handleTDE07(SessionContext ctx, Fpdu fpdu) throws IOException {
         if (fpdu.getFpduType() != FpduType.TRANS_END) {
             log.warn("[{}] Expected TRANS.END, got {}", ctx.getSessionId(), fpdu.getFpduType());
@@ -383,18 +385,21 @@ public class DataTransferHandler {
             byteCount = transfer.getBytesTransferred();
             recordCount = transfer.getRecordsTransferred();
 
-            // With streaming, data is already on disk via appendData() calls
-            // Just ensure the output stream is closed and flushed
             transfer.closeOutputStream();
 
-            log.info("[{}] TRANS.END: streaming transfer complete, {} bytes written to {}",
-                    ctx.getSessionId(), byteCount, transfer.getLocalPath());
+            log.info(
+                    "[{}] TRANS.END: streaming transfer complete, {} bytes written to {}",
+                    ctx.getSessionId(),
+                    byteCount,
+                    transfer.getLocalPath());
         }
 
-        log.info("[{}] TRANS.END: transfer complete, {} bytes, {} records",
-                ctx.getSessionId(), byteCount, recordCount);
+        log.info(
+                "[{}] TRANS.END: transfer complete, {} bytes, {} records",
+                ctx.getSessionId(),
+                byteCount,
+                recordCount);
 
-        // Track transfer completion
         transferTracker.trackTransferComplete(ctx);
 
         ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
@@ -402,11 +407,7 @@ public class DataTransferHandler {
         return FpduResponseBuilder.buildAckTransEnd(ctx, byteCount, recordCount);
     }
 
-    /**
-     * Handle DTF (Data Transfer) FPDU - no response needed
-     * Validates article length against announced record length (D2-220)
-     * Validates data without sync point (D2-222)
-     */
+    /** Handle DTF (Data Transfer) FPDU - no response needed */
     private Fpdu handleDtf(SessionContext ctx, Fpdu fpdu) {
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer == null) {
@@ -414,7 +415,6 @@ public class DataTransferHandler {
             return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
         }
 
-        // Get data payload from FPDU
         byte[] data = fpdu.getData();
         int dataLength = data != null ? data.length : 0;
 
@@ -422,36 +422,39 @@ public class DataTransferHandler {
         FpduValidator.ValidationResult validation = fpduValidator.validateDtf(fpdu, transfer, data);
         if (!validation.valid()) {
             log.warn("[{}] DTF validation failed: {}", ctx.getSessionId(), validation.message());
-            return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
+            return FpduResponseBuilder.buildAbort(
+                    ctx, validation.errorCode(), validation.message());
         }
 
         // Validate max entity size
         validation = fpduValidator.validateMaxEntitySize(data, transfer);
         if (!validation.valid()) {
-            log.warn("[{}] DTF max entity size validation failed: {}", ctx.getSessionId(), validation.message());
-            return FpduResponseBuilder.buildAbort(ctx, validation.errorCode(), validation.message());
+            log.warn(
+                    "[{}] DTF max entity size validation failed: {}",
+                    ctx.getSessionId(),
+                    validation.message());
+            return FpduResponseBuilder.buildAbort(
+                    ctx, validation.errorCode(), validation.message());
         }
 
-        // Track bytes since last sync (for logging only - client sends SYN after data,
-        // not before)
         int clientSyncIntervalKb = ctx.getClientSyncIntervalKb();
         if (clientSyncIntervalKb > 0) {
             long newBytesSinceSync = transfer.getBytesSinceLastSync() + dataLength;
             transfer.setBytesSinceLastSync(newBytesSinceSync);
         }
 
-        // Write data to output stream
-        // Only DTF (type 0x00) can have multi-article format with 2-byte length prefixes
-        // DTFDA/DTFMA/DTFFA are article segments - no prefixes, write data as-is
-        int articlesInFpdu = 1; // Default: single article per FPDU
+        int articlesInFpdu = 1;
         if (data != null && data.length > 0) {
             try {
                 boolean isMultiArticle = FpduIO.isMultiArticleDtf(fpdu);
-                log.debug("[{}] {}: {} bytes, multiArticle={}",
-                        ctx.getSessionId(), fpdu.getFpduType(), data.length, isMultiArticle);
+                log.debug(
+                        "[{}] {}: {} bytes, multiArticle={}",
+                        ctx.getSessionId(),
+                        fpdu.getFpduType(),
+                        data.length,
+                        isMultiArticle);
 
                 if (isMultiArticle) {
-                    // Extract and write articles using shared utility
                     java.util.List<byte[]> articles = FpduIO.extractArticles(data);
                     articlesInFpdu = articles.size();
                     int bytesWritten = 0;
@@ -459,53 +462,57 @@ public class DataTransferHandler {
                         transfer.appendData(article);
                         bytesWritten += article.length;
                     }
-                    log.debug("[{}] DTF: received {} bytes, wrote {} bytes ({} articles), total: {} bytes",
-                            ctx.getSessionId(), dataLength, bytesWritten, articlesInFpdu, transfer.getBytesTransferred());
+                    log.debug(
+                            "[{}] DTF: received {} bytes, wrote {} bytes ({} articles), total: {} bytes",
+                            ctx.getSessionId(),
+                            dataLength,
+                            bytesWritten,
+                            articlesInFpdu,
+                            transfer.getBytesTransferred());
                 } else {
-                    // Raw data - write as-is (single article)
                     transfer.appendData(data);
-                    log.debug("[{}] DTF: received and wrote {} bytes, total: {} bytes",
-                            ctx.getSessionId(), dataLength, transfer.getBytesTransferred());
+                    log.debug(
+                            "[{}] DTF: received and wrote {} bytes, total: {} bytes",
+                            ctx.getSessionId(),
+                            dataLength,
+                            transfer.getBytesTransferred());
                 }
             } catch (java.io.IOException e) {
                 log.error("[{}] DTF: error writing data: {}", ctx.getSessionId(), e.getMessage());
-                return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_213, "Write error: " + e.getMessage());
+                return FpduResponseBuilder.buildAbort(
+                        ctx, DiagnosticCode.D2_213, "Write error: " + e.getMessage());
             }
         } else {
             log.debug("[{}] DTF: received {} bytes (no data)", ctx.getSessionId(), dataLength);
-            articlesInFpdu = 0; // No articles in empty FPDU
+            articlesInFpdu = 0;
         }
-        // Count actual articles, not FPDUs
         transfer.setRecordsTransferred(transfer.getRecordsTransferred() + articlesInFpdu);
         return null; // No response for DTF
     }
 
-    /**
-     * Handle DTF.END FPDU - no response needed
-     */
+    /** Handle DTF.END FPDU - no response needed */
     private Fpdu handleDtfEnd(SessionContext ctx, Fpdu fpdu) {
         log.info("[{}] DTF.END: end of data transfer", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE07_WRITE_END);
-        return null; // No response for DTF.END
+        return null;
     }
 
-    /**
-     * Handle SYN (Synchronization Point) FPDU
-     */
+    /** Handle SYN (Synchronization Point) FPDU */
     private Fpdu handleSyn(SessionContext ctx, Fpdu fpdu) {
         int syncPoint = ParameterParser.parsePI20SyncNumber(fpdu);
 
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null) {
             transfer.setCurrentSyncPoint(syncPoint);
-            // Reset bytes since last sync for D2-222 tracking
             transfer.setBytesSinceLastSync(0);
             long bytesAtCheckpoint = transfer.getBytesTransferred();
-            // Record sync point byte position for RESYN rollback
             transfer.recordSyncPointPosition(syncPoint, bytesAtCheckpoint);
             transferTracker.trackSyncPoint(ctx, bytesAtCheckpoint);
-            log.info("[{}] SYN: checkpoint {} at {} bytes",
-                    ctx.getSessionId(), syncPoint, bytesAtCheckpoint);
+            log.info(
+                    "[{}] SYN: checkpoint {} at {} bytes",
+                    ctx.getSessionId(),
+                    syncPoint,
+                    bytesAtCheckpoint);
         } else {
             log.info("[{}] SYN: sync point {} (no active transfer)", ctx.getSessionId(), syncPoint);
         }
@@ -513,11 +520,7 @@ public class DataTransferHandler {
         return FpduResponseBuilder.buildAckSyn(ctx, syncPoint);
     }
 
-    /**
-     * Handle RESYN (Resynchronization) FPDU from client.
-     * The client requests rolling back to a previously confirmed sync point.
-     * Server truncates received data to that point and confirms with ACK_RESYN.
-     */
+    /** Handle RESYN (Resynchronization) FPDU from client. */
     private Fpdu handleResyn(SessionContext ctx, Fpdu fpdu) {
         if (!ctx.isResyncEnabled()) {
             log.warn("[{}] RESYN received but resync not negotiated", ctx.getSessionId());
@@ -525,7 +528,10 @@ public class DataTransferHandler {
         }
 
         int requestedSyncPoint = ParameterParser.parsePI18RestartPoint(fpdu);
-        log.info("[{}] RESYN: client requests rollback to sync point {}", ctx.getSessionId(), requestedSyncPoint);
+        log.info(
+                "[{}] RESYN: client requests rollback to sync point {}",
+                ctx.getSessionId(),
+                requestedSyncPoint);
 
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer == null) {
@@ -533,85 +539,85 @@ public class DataTransferHandler {
             return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_218);
         }
 
-        // Look up the byte position for the requested sync point
         long bytePosition = transfer.getSyncPointBytePosition(requestedSyncPoint);
         if (bytePosition < 0) {
-            log.warn("[{}] RESYN: unknown sync point {} (known: {})",
-                    ctx.getSessionId(), requestedSyncPoint, transfer.getSyncPointPositions().keySet());
+            log.warn(
+                    "[{}] RESYN: unknown sync point {} (known: {})",
+                    ctx.getSessionId(),
+                    requestedSyncPoint,
+                    transfer.getSyncPointPositions().keySet());
             return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_228);
         }
 
-        // Truncate file to the sync point position and reopen for appending
         try {
             transfer.truncateAndReopen(bytePosition);
             transfer.setCurrentSyncPoint(requestedSyncPoint);
-            log.info("[{}] RESYN: truncated to {} bytes (sync point {}), ready to receive",
-                    ctx.getSessionId(), bytePosition, requestedSyncPoint);
+            log.info(
+                    "[{}] RESYN: truncated to {} bytes (sync point {}), ready to receive",
+                    ctx.getSessionId(),
+                    bytePosition,
+                    requestedSyncPoint);
         } catch (java.io.IOException e) {
-            log.error("[{}] RESYN: failed to truncate file: {}", ctx.getSessionId(), e.getMessage());
-            return FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D2_218, "Resync failed: " + e.getMessage());
+            log.error(
+                    "[{}] RESYN: failed to truncate file: {}", ctx.getSessionId(), e.getMessage());
+            return FpduResponseBuilder.buildAbort(
+                    ctx, DiagnosticCode.D2_218, "Resync failed: " + e.getMessage());
         }
 
-        // Stay in TDE02B (receiving data) - no state transition needed
         return FpduResponseBuilder.buildAckResyn(ctx, requestedSyncPoint);
     }
 
-    /**
-     * Handle IDT (Interrupt Data Transfer) FPDU
-     * Tracks the interruption in database for potential resume.
-     */
+    /** Handle IDT (Interrupt Data Transfer) FPDU */
     private Fpdu handleIdt(SessionContext ctx, Fpdu fpdu) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long bytesAtInterrupt = transfer != null ? transfer.getBytesTransferred() : 0;
         int syncPointAtInterrupt = transfer != null ? transfer.getCurrentSyncPoint() : 0;
 
-        log.info("[{}] IDT: transfer interrupted at {} bytes, sync point {}",
-                ctx.getSessionId(), bytesAtInterrupt, syncPointAtInterrupt);
+        log.info(
+                "[{}] IDT: transfer interrupted at {} bytes, sync point {}",
+                ctx.getSessionId(),
+                bytesAtInterrupt,
+                syncPointAtInterrupt);
 
-        // Close output stream to flush data written so far
         if (transfer != null) {
             transfer.closeOutputStream();
         }
 
-        // Track interruption in database - transfer can be resumed
-        transferTracker.trackTransferInterrupted(ctx,
-                String.format("Client initiated IDT at %d bytes (sync point %d)",
+        transferTracker.trackTransferInterrupted(
+                ctx,
+                String.format(
+                        "Client initiated IDT at %d bytes (sync point %d)",
                         bytesAtInterrupt, syncPointAtInterrupt));
 
         ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
         return FpduResponseBuilder.buildAckIdt(ctx);
     }
 
-    /**
-     * Handle TRANS.END from client (after server sent file data)
-     */
+    /** Handle TRANS.END from client (after server sent file data) */
     private Fpdu handleTransEndFromClient(SessionContext ctx, Fpdu fpdu) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long byteCount = transfer != null ? transfer.getBytesTransferred() : 0;
         int recordCount = transfer != null ? transfer.getRecordsTransferred() : 0;
 
-        log.info("[{}] TRANS.END received: {} bytes, {} records transferred",
-                ctx.getSessionId(), byteCount, recordCount);
+        log.info(
+                "[{}] TRANS.END received: {} bytes, {} records transferred",
+                ctx.getSessionId(),
+                byteCount,
+                recordCount);
 
-        // Track transfer completion for SEND transfers
         transferTracker.trackTransferComplete(ctx);
 
-        // Transition back to file open state (ready for CLOSE)
         ctx.transitionTo(ServerState.OF02_TRANSFER_READY);
 
         return FpduResponseBuilder.buildAckTransEnd(ctx, byteCount, recordCount);
     }
 
-    /**
-     * Extract restart point from FPDU
-     */
+    /** Extract restart point from FPDU */
     private long extractRestartPoint(Fpdu fpdu) {
         return ParameterParser.parsePI18RestartPoint(fpdu);
     }
 
-    /**
-     * Exception for data transfer errors with diagnostic code
-     */
+    /** Exception for data transfer errors with diagnostic code */
     public static class DataTransferException extends IOException {
         private final DiagnosticCode diagnosticCode;
 
@@ -625,10 +631,7 @@ public class DataTransferHandler {
         }
     }
 
-    /**
-     * Exception thrown when a RESYN is received during server READ (streamFileData).
-     * The caller catches this and restarts streaming from the indicated byte position.
-     */
+    /** Exception thrown when a RESYN is received during server READ (streamFileData). */
     static class ResyncRequestedException extends IOException {
         private final int syncPoint;
         private final long bytePosition;

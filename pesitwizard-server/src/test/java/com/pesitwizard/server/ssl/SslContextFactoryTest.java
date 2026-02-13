@@ -3,11 +3,16 @@ package com.pesitwizard.server.ssl;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.config.SslProperties;
+import com.pesitwizard.server.entity.CertificateStore;
+import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
+import com.pesitwizard.server.entity.CertificateStore.StoreType;
+import com.pesitwizard.server.repository.CertificateStoreRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,25 +20,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.config.SslProperties;
-import com.pesitwizard.server.entity.CertificateStore;
-import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
-import com.pesitwizard.server.entity.CertificateStore.StoreType;
-import com.pesitwizard.server.repository.CertificateStoreRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SslContextFactory Tests")
 class SslContextFactoryTest {
 
-    @Mock
-    private CertificateStoreRepository certificateRepository;
+    @Mock private CertificateStoreRepository certificateRepository;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
     private SslContextFactory factory;
 
@@ -48,8 +43,9 @@ class SslContextFactoryTest {
         when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
                 .thenReturn(Optional.empty());
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createDefaultSslContext());
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class, () -> factory.createDefaultSslContext());
 
         assertTrue(exception.getMessage().contains("No default keystore"));
     }
@@ -60,8 +56,10 @@ class SslContextFactoryTest {
         when(certificateRepository.findByNameAndStoreType("missing", StoreType.KEYSTORE))
                 .thenReturn(Optional.empty());
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createSslContext("missing", null));
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class,
+                        () -> factory.createSslContext("missing", null));
 
         assertTrue(exception.getMessage().contains("Keystore not found"));
     }
@@ -74,8 +72,10 @@ class SslContextFactoryTest {
         when(certificateRepository.findByNameAndStoreType("keystore1", StoreType.KEYSTORE))
                 .thenReturn(Optional.of(keystore));
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createSslContext("keystore1", null));
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class,
+                        () -> factory.createSslContext("keystore1", null));
 
         assertTrue(exception.getMessage().contains("not active"));
     }
@@ -89,8 +89,10 @@ class SslContextFactoryTest {
         when(certificateRepository.findByNameAndStoreType("missing", StoreType.TRUSTSTORE))
                 .thenReturn(Optional.empty());
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createSslContext("keystore1", "missing"));
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class,
+                        () -> factory.createSslContext("keystore1", "missing"));
 
         assertTrue(exception.getMessage().contains("Truststore not found"));
     }
@@ -107,8 +109,10 @@ class SslContextFactoryTest {
         when(certificateRepository.findByNameAndStoreType("truststore1", StoreType.TRUSTSTORE))
                 .thenReturn(Optional.of(truststore));
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createSslContext("keystore1", "truststore1"));
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class,
+                        () -> factory.createSslContext("keystore1", "truststore1"));
 
         assertTrue(exception.getMessage().contains("not active"));
     }
@@ -116,13 +120,16 @@ class SslContextFactoryTest {
     @Test
     @DisplayName("createPartnerSslContext should throw when no keystore available")
     void createPartnerSslContextShouldThrowWhenNoKeystore() {
-        when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER1", StoreType.KEYSTORE))
+        when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                        "PARTNER1", StoreType.KEYSTORE))
                 .thenReturn(Optional.empty());
         when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
                 .thenReturn(Optional.empty());
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.createPartnerSslContext("PARTNER1"));
+        SslConfigurationException exception =
+                assertThrows(
+                        SslConfigurationException.class,
+                        () -> factory.createPartnerSslContext("PARTNER1"));
 
         assertTrue(exception.getMessage().contains("No keystore available"));
     }
@@ -142,8 +149,8 @@ class SslContextFactoryTest {
         CertificateStore store = createStore("test", StoreType.KEYSTORE);
         store.setStoreData(null);
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.validateStore(store));
+        SslConfigurationException exception =
+                assertThrows(SslConfigurationException.class, () -> factory.validateStore(store));
 
         assertTrue(exception.getMessage().contains("empty"));
     }
@@ -154,8 +161,8 @@ class SslContextFactoryTest {
         CertificateStore store = createStore("test", StoreType.KEYSTORE);
         store.setStoreData(new byte[0]);
 
-        SslConfigurationException exception = assertThrows(SslConfigurationException.class,
-                () -> factory.validateStore(store));
+        SslConfigurationException exception =
+                assertThrows(SslConfigurationException.class, () -> factory.validateStore(store));
 
         assertTrue(exception.getMessage().contains("empty"));
     }
@@ -307,7 +314,7 @@ class SslContextFactoryTest {
         store.setStoreType(type);
         store.setFormat(StoreFormat.PKCS12);
         store.setActive(true);
-        store.setStoreData(new byte[] { 1, 2, 3 }); // Dummy data
+        store.setStoreData(new byte[] {1, 2, 3}); // Dummy data
         return store;
     }
 }

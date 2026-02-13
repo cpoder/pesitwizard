@@ -2,18 +2,14 @@ package com.pesitwizard.connector.local;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.pesitwizard.connector.ConfigParameter;
+import com.pesitwizard.connector.StorageConnector;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.pesitwizard.connector.ConfigParameter;
-import com.pesitwizard.connector.StorageConnector;
-
-/**
- * Unit tests for LocalFileConnectorFactory.
- */
+/** Unit tests for LocalFileConnectorFactory. */
 @DisplayName("LocalFileConnectorFactory Tests")
 class LocalFileConnectorFactoryTest {
 

@@ -1,5 +1,9 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.server.config.ObservabilityProperties;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -7,16 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.server.config.ObservabilityProperties;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * REST controller for managing observability settings.
- * Note: Changes to tracing configuration require application restart to take
- * effect.
+ * REST controller for managing observability settings. Note: Changes to tracing configuration
+ * require application restart to take effect.
  */
 @Slf4j
 @RestController
@@ -26,24 +23,24 @@ public class ObservabilityController {
 
     private final ObservabilityProperties observabilityProperties;
 
-    /**
-     * Get current observability configuration
-     */
+    /** Get current observability configuration */
     @GetMapping("/config")
     public ResponseEntity<ObservabilityConfigResponse> getConfig() {
-        return ResponseEntity.ok(new ObservabilityConfigResponse(
-                observabilityProperties.getServiceName(),
-                observabilityProperties.getTracing().isEnabled(),
-                observabilityProperties.getTracing().getEndpoint(),
-                observabilityProperties.getMetrics().isEnabled()));
+        return ResponseEntity.ok(
+                new ObservabilityConfigResponse(
+                        observabilityProperties.getServiceName(),
+                        observabilityProperties.getTracing().isEnabled(),
+                        observabilityProperties.getTracing().getEndpoint(),
+                        observabilityProperties.getMetrics().isEnabled()));
     }
 
     /**
-     * Update observability configuration.
-     * Note: Tracing changes require application restart to take effect.
+     * Update observability configuration. Note: Tracing changes require application restart to take
+     * effect.
      */
     @PostMapping("/config")
-    public ResponseEntity<ObservabilityConfigResponse> updateConfig(@Valid @RequestBody ObservabilityConfigRequest request) {
+    public ResponseEntity<ObservabilityConfigResponse> updateConfig(
+            @Valid @RequestBody ObservabilityConfigRequest request) {
         log.info("Updating observability config: {}", request);
 
         if (request.tracingEnabled() != null) {
@@ -56,23 +53,26 @@ public class ObservabilityController {
             observabilityProperties.getMetrics().setEnabled(request.metricsEnabled());
         }
 
-        boolean restartRequired = request.tracingEnabled() != null || request.tracingEndpoint() != null;
+        boolean restartRequired =
+                request.tracingEnabled() != null || request.tracingEndpoint() != null;
 
-        log.info("Observability config updated. Restart required for tracing changes: {}", restartRequired);
+        log.info(
+                "Observability config updated. Restart required for tracing changes: {}",
+                restartRequired);
 
-        return ResponseEntity.ok(new ObservabilityConfigResponse(
-                observabilityProperties.getServiceName(),
-                observabilityProperties.getTracing().isEnabled(),
-                observabilityProperties.getTracing().getEndpoint(),
-                observabilityProperties.getMetrics().isEnabled(),
-                restartRequired ? "Restart required for tracing changes to take effect" : null));
+        return ResponseEntity.ok(
+                new ObservabilityConfigResponse(
+                        observabilityProperties.getServiceName(),
+                        observabilityProperties.getTracing().isEnabled(),
+                        observabilityProperties.getTracing().getEndpoint(),
+                        observabilityProperties.getMetrics().isEnabled(),
+                        restartRequired
+                                ? "Restart required for tracing changes to take effect"
+                                : null));
     }
 
     public record ObservabilityConfigRequest(
-            Boolean tracingEnabled,
-            String tracingEndpoint,
-            Boolean metricsEnabled) {
-    }
+            Boolean tracingEnabled, String tracingEndpoint, Boolean metricsEnabled) {}
 
     public record ObservabilityConfigResponse(
             String serviceName,
@@ -80,7 +80,10 @@ public class ObservabilityController {
             String tracingEndpoint,
             boolean metricsEnabled,
             String message) {
-        public ObservabilityConfigResponse(String serviceName, boolean tracingEnabled, String tracingEndpoint,
+        public ObservabilityConfigResponse(
+                String serviceName,
+                boolean tracingEnabled,
+                String tracingEndpoint,
                 boolean metricsEnabled) {
             this(serviceName, tracingEnabled, tracingEndpoint, metricsEnabled, null);
         }

@@ -1,19 +1,17 @@
 package com.pesitwizard.client.pesit;
 
-import org.springframework.stereotype.Component;
-
 import com.pesitwizard.client.entity.PesitServer;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.transport.TcpTransportChannel;
 import com.pesitwizard.transport.TlsTransportChannel;
 import com.pesitwizard.transport.TransportChannel;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
- * Factory for creating PeSIT transport channels.
- * Handles TCP and TLS connections with appropriate timeout configuration.
+ * Factory for creating PeSIT transport channels. Handles TCP and TLS connections with appropriate
+ * timeout configuration.
  */
 @Slf4j
 @Component
@@ -26,9 +24,7 @@ public class PesitChannelFactory {
 
     private final SecretsService secretsService;
 
-    /**
-     * Create a transport channel for the given server.
-     */
+    /** Create a transport channel for the given server. */
     public TransportChannel createChannel(PesitServer server) {
         return createChannel(server, 0);
     }
@@ -36,15 +32,19 @@ public class PesitChannelFactory {
     /**
      * Create a transport channel with timeout adjusted for file size.
      *
-     * @param server   PeSIT server configuration
+     * @param server PeSIT server configuration
      * @param fileSize Expected file size in bytes (0 for default timeout)
      */
     public TransportChannel createChannel(PesitServer server, long fileSize) {
         int timeout = calculateTimeout(server, fileSize);
 
         if (fileSize > 0) {
-            log.info("Creating channel to {}:{} with timeout {}ms for file size {} bytes",
-                    server.getHost(), server.getPort(), timeout, fileSize);
+            log.info(
+                    "Creating channel to {}:{} with timeout {}ms for file size {} bytes",
+                    server.getHost(),
+                    server.getPort(),
+                    timeout,
+                    fileSize);
         }
 
         if (server.isTlsEnabled()) {
@@ -63,13 +63,14 @@ public class PesitChannelFactory {
         TlsTransportChannel tlsChannel;
 
         if (server.getTruststoreData() != null && server.getTruststoreData().length > 0) {
-            tlsChannel = new TlsTransportChannel(
-                    server.getHost(),
-                    server.getPort(),
-                    server.getTruststoreData(),
-                    secretsService.decrypt(server.getTruststorePassword()),
-                    server.getKeystoreData(),
-                    secretsService.decrypt(server.getKeystorePassword()));
+            tlsChannel =
+                    new TlsTransportChannel(
+                            server.getHost(),
+                            server.getPort(),
+                            server.getTruststoreData(),
+                            secretsService.decrypt(server.getTruststorePassword()),
+                            server.getKeystoreData(),
+                            secretsService.decrypt(server.getKeystorePassword()));
         } else {
             tlsChannel = new TlsTransportChannel(server.getHost(), server.getPort());
         }
@@ -81,7 +82,8 @@ public class PesitChannelFactory {
     }
 
     private int calculateTimeout(PesitServer server, long fileSize) {
-        int baseTimeout = server.getReadTimeout() != null ? server.getReadTimeout() : DEFAULT_TIMEOUT_MS;
+        int baseTimeout =
+                server.getReadTimeout() != null ? server.getReadTimeout() : DEFAULT_TIMEOUT_MS;
 
         if (fileSize <= 0) {
             return baseTimeout;

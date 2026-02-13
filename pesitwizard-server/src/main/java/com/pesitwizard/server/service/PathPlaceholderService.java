@@ -7,26 +7,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.springframework.stereotype.Service;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Service for resolving placeholders in file paths.
- * 
- * Supported placeholders (PeSIT protocol context):
- * - ${partner} or ${partnerId} - Partner ID (PI 3 - Demandeur)
- * - ${virtualFile} - Virtual file name (PI 12 - Filename)
- * - ${transferId} - Transfer ID (PI 13)
- * - ${timestamp} - Current timestamp (yyyyMMdd_HHmmss)
- * - ${date} - Current date (yyyyMMdd)
- * - ${time} - Current time (HHmmss)
- * - ${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}
- * - ${uuid} - Random UUID
- * - ${direction} - Transfer direction (SEND/RECEIVE)
- * 
- * Note: PeSIT does not transmit physical filenames, only virtual file IDs.
+ *
+ * <p>Supported placeholders (PeSIT protocol context): - ${partner} or ${partnerId} - Partner ID (PI
+ * 3 - Demandeur) - ${virtualFile} - Virtual file name (PI 12 - Filename) - ${transferId} - Transfer
+ * ID (PI 13) - ${timestamp} - Current timestamp (yyyyMMdd_HHmmss) - ${date} - Current date
+ * (yyyyMMdd) - ${time} - Current time (HHmmss) - ${year}, ${month}, ${day}, ${hour}, ${minute},
+ * ${second} - ${uuid} - Random UUID - ${direction} - Transfer direction (SEND/RECEIVE)
+ *
+ * <p>Note: PeSIT does not transmit physical filenames, only virtual file IDs.
  */
 @Service
 @Slf4j
@@ -34,9 +27,7 @@ public class PathPlaceholderService {
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
 
-    /**
-     * Resolve all placeholders in a path
-     */
+    /** Resolve all placeholders in a path */
     public String resolvePath(String path, PlaceholderContext context) {
         if (path == null || !path.contains("${")) {
             return path;
@@ -101,10 +92,7 @@ public class PathPlaceholderService {
         }
     }
 
-    /**
-     * Context for placeholder resolution.
-     * Contains only data available from PeSIT protocol.
-     */
+    /** Context for placeholder resolution. Contains only data available from PeSIT protocol. */
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
@@ -112,10 +100,13 @@ public class PathPlaceholderService {
     public static class PlaceholderContext {
         /** Partner ID (PI 3 - Demandeur) */
         private String partnerId;
+
         /** Virtual file name (PI 12 - Filename) - NOT a physical filename */
         private String virtualFile;
+
         /** Transfer ID (PI 13) */
         private Long transferId;
+
         /** Transfer direction */
         private String direction;
     }

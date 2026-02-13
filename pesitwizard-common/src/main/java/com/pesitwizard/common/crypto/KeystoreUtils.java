@@ -6,7 +6,6 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
-
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -24,11 +23,19 @@ public class KeystoreUtils {
         }
     }
 
-    public static byte[] createKeystore(X509Certificate cert, PrivateKey key, String alias, String password) throws CryptoException {
-        return createKeystoreWithChain(cert, key, new Certificate[]{cert}, alias, password);
+    public static byte[] createKeystore(
+            X509Certificate cert, PrivateKey key, String alias, String password)
+            throws CryptoException {
+        return createKeystoreWithChain(cert, key, new Certificate[] {cert}, alias, password);
     }
 
-    public static byte[] createKeystoreWithChain(X509Certificate cert, PrivateKey key, Certificate[] chain, String alias, String password) throws CryptoException {
+    public static byte[] createKeystoreWithChain(
+            X509Certificate cert,
+            PrivateKey key,
+            Certificate[] chain,
+            String alias,
+            String password)
+            throws CryptoException {
         try {
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);
             ks.load(null, null);
@@ -41,7 +48,8 @@ public class KeystoreUtils {
         }
     }
 
-    public static byte[] createTruststore(String alias, X509Certificate cert, String password) throws CryptoException {
+    public static byte[] createTruststore(String alias, X509Certificate cert, String password)
+            throws CryptoException {
         try {
             KeyStore ts = KeyStore.getInstance(KEYSTORE_TYPE);
             ts.load(null, null);
@@ -64,9 +72,11 @@ public class KeystoreUtils {
         }
     }
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     public static String generateSecurePassword() {
         byte[] bytes = new byte[16];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

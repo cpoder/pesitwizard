@@ -1,8 +1,11 @@
 package com.pesitwizard.server.security;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.function.Supplier;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,16 +36,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * Security configuration for the PeSIT server.
- * Supports OAuth2/OIDC, API keys, and basic auth.
- */
+/** Security configuration for the PeSIT server. Supports OAuth2/OIDC, API keys, and basic auth. */
 @Slf4j
 @Configuration
 @EnableWebSecurity
@@ -53,16 +47,13 @@ public class SecurityConfig {
     private final SecurityProperties securityProperties;
     private final ApiKeyService apiKeyService;
 
-    /**
-     * Main security filter chain
-     */
+    /** Main security filter chain */
     @Bean
     @Order(1)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         if (!securityProperties.isEnabled()) {
             log.warn("Security is DISABLED - all endpoints are open");
-            return http
-                    .csrf(csrf -> csrf.disable())
+            return http.csrf(csrf -> csrf.disable())
                     .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                     .build();
         }
@@ -72,49 +63,68 @@ public class SecurityConfig {
 
         http
                 // CSRF protection with cookie-based token for SPA compatibility
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                )
+                .csrf(
+                        csrf ->
+                                csrf.csrfTokenRepository(
+                                                CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
 
                 // Configure CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // Security headers (OWASP recommended)
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.deny())
-                        .contentTypeOptions(Customizer.withDefaults())
-                        .xssProtection(Customizer.withDefaults())
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .maxAgeInSeconds(31536000)
-                                .includeSubDomains(true))
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'")))
+                .headers(
+                        headers ->
+                                headers.frameOptions(frame -> frame.deny())
+                                        .contentTypeOptions(Customizer.withDefaults())
+                                        .xssProtection(Customizer.withDefaults())
+                                        .httpStrictTransportSecurity(
+                                                hsts ->
+                                                        hsts.maxAgeInSeconds(31536000)
+                                                                .includeSubDomains(true))
+                                        .contentSecurityPolicy(
+                                                csp ->
+                                                        csp.policyDirectives(
+                                                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'")))
 
                 // Stateless session
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // Authorization rules
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers(publicEndpoints).permitAll()
-                        // Admin endpoints require ADMIN role
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/certificates/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/apikeys/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/secrets/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/audit/**").hasRole("ADMIN")
-                        // Server management requires OPERATOR or ADMIN
-                        .requestMatchers("/api/v1/servers/**").hasAnyRole("OPERATOR", "ADMIN")
-                        // Configuration management (partners, files) requires OPERATOR or ADMIN
-                        .requestMatchers("/api/v1/config/**").hasAnyRole("OPERATOR", "ADMIN")
-                        // Transfer management requires USER or higher
-                        .requestMatchers("/api/v1/transfers/**").hasAnyRole("USER", "OPERATOR", "ADMIN")
-                        // Cluster status is readable by any authenticated user
-                        .requestMatchers("/api/v1/cluster/**").authenticated()
-                        // All other requests require authentication
-                        .anyRequest().authenticated());
+                .authorizeHttpRequests(
+                        auth ->
+                                auth
+                                        // Public endpoints
+                                        .requestMatchers(publicEndpoints)
+                                        .permitAll()
+                                        // Admin endpoints require ADMIN role
+                                        .requestMatchers("/api/v1/admin/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers("/api/v1/certificates/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers("/api/v1/apikeys/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers("/api/v1/secrets/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers("/api/v1/audit/**")
+                                        .hasRole("ADMIN")
+                                        // Server management requires OPERATOR or ADMIN
+                                        .requestMatchers("/api/v1/servers/**")
+                                        .hasAnyRole("OPERATOR", "ADMIN")
+                                        // Configuration management (partners, files) requires
+                                        // OPERATOR or ADMIN
+                                        .requestMatchers("/api/v1/config/**")
+                                        .hasAnyRole("OPERATOR", "ADMIN")
+                                        // Transfer management requires USER or higher
+                                        .requestMatchers("/api/v1/transfers/**")
+                                        .hasAnyRole("USER", "OPERATOR", "ADMIN")
+                                        // Cluster status is readable by any authenticated user
+                                        .requestMatchers("/api/v1/cluster/**")
+                                        .authenticated()
+                                        // All other requests require authentication
+                                        .anyRequest()
+                                        .authenticated());
 
         // Add API key filter before username/password filter
         http.addFilterBefore(
@@ -122,11 +132,14 @@ public class SecurityConfig {
                 UsernamePasswordAuthenticationFilter.class);
 
         // Configure OAuth2 if enabled
-        if (securityProperties.getOauth2().isEnabled() &&
-                securityProperties.getOauth2().getJwkSetUri() != null) {
-            http.oauth2ResourceServer(oauth2 -> oauth2
-                    .jwt(jwt -> jwt
-                            .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        if (securityProperties.getOauth2().isEnabled()
+                && securityProperties.getOauth2().getJwkSetUri() != null) {
+            http.oauth2ResourceServer(
+                    oauth2 ->
+                            oauth2.jwt(
+                                    jwt ->
+                                            jwt.jwtAuthenticationConverter(
+                                                    jwtAuthenticationConverter())));
             log.info("OAuth2/JWT authentication enabled");
         }
 
@@ -139,9 +152,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * JWT authentication converter with role extraction
-     */
+    /** JWT authentication converter with role extraction */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
@@ -149,9 +160,7 @@ public class SecurityConfig {
         return converter;
     }
 
-    /**
-     * JWT decoder for OAuth2
-     */
+    /** JWT decoder for OAuth2 */
     @Bean
     @ConditionalOnProperty(prefix = "pesit.security.oauth2", name = "jwk-set-uri")
     public JwtDecoder jwtDecoder() {
@@ -160,9 +169,7 @@ public class SecurityConfig {
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
 
-    /**
-     * CORS configuration
-     */
+    /** CORS configuration */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         SecurityProperties.CorsConfig corsConfig = securityProperties.getCors();
@@ -180,58 +187,62 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * Password encoder
-     */
+    /** Password encoder */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * User details service for basic auth (development)
-     */
+    /** User details service for basic auth (development) */
     @Bean
-    @ConditionalOnProperty(prefix = "pesit.security.basic-auth", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(
+            prefix = "pesit.security.basic-auth",
+            name = "enabled",
+            havingValue = "true")
     public UserDetailsService basicAuthUserDetailsService(PasswordEncoder passwordEncoder) {
-        List<UserDetails> users = securityProperties.getBasicAuth().getUsers().entrySet().stream()
-                .filter(entry -> entry.getValue().isEnabled())
-                .map(entry -> {
-                    SecurityProperties.UserEntry userEntry = entry.getValue();
-                    String[] roles = userEntry.getRoles().toArray(new String[0]);
-                    return User.builder()
-                            .username(entry.getKey())
-                            .password(passwordEncoder.encode(userEntry.getPassword()))
-                            .roles(roles)
-                            .build();
-                })
-                .toList();
+        List<UserDetails> users =
+                securityProperties.getBasicAuth().getUsers().entrySet().stream()
+                        .filter(entry -> entry.getValue().isEnabled())
+                        .map(
+                                entry -> {
+                                    SecurityProperties.UserEntry userEntry = entry.getValue();
+                                    String[] roles = userEntry.getRoles().toArray(new String[0]);
+                                    return User.builder()
+                                            .username(entry.getKey())
+                                            .password(
+                                                    passwordEncoder.encode(userEntry.getPassword()))
+                                            .roles(roles)
+                                            .build();
+                                })
+                        .toList();
 
         if (users.isEmpty()) {
             // Create default admin user if none configured
             log.warn("No basic auth users configured, creating default admin user");
-            users = List.of(
-                    User.builder()
-                            .username("admin")
-                            .password(passwordEncoder.encode("admin"))
-                            .roles("ADMIN")
-                            .build());
+            users =
+                    List.of(
+                            User.builder()
+                                    .username("admin")
+                                    .password(passwordEncoder.encode("admin"))
+                                    .roles("ADMIN")
+                                    .build());
         }
 
         return new InMemoryUserDetailsManager(users);
     }
 
     /**
-     * SPA-compatible CSRF token request handler for Spring Security 6+.
-     * Uses XOR-based token masking for BREACH protection when the token
-     * comes via a header (set by the SPA from the XSRF-TOKEN cookie),
-     * and falls back to the plain attribute handler for form submissions.
+     * SPA-compatible CSRF token request handler for Spring Security 6+. Uses XOR-based token
+     * masking for BREACH protection when the token comes via a header (set by the SPA from the
+     * XSRF-TOKEN cookie), and falls back to the plain attribute handler for form submissions.
      */
     static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
         private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
 
         @Override
-        public void handle(HttpServletRequest request, HttpServletResponse response,
+        public void handle(
+                HttpServletRequest request,
+                HttpServletResponse response,
                 Supplier<CsrfToken> csrfToken) {
             this.delegate.handle(request, response, csrfToken);
         }

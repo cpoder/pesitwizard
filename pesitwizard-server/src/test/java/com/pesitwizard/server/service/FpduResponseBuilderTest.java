@@ -2,17 +2,16 @@ package com.pesitwizard.server.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.TransferContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("FpduResponseBuilder Tests")
 class FpduResponseBuilderTest {
@@ -33,7 +32,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACONNECT response")
         void shouldBuildAconnect() {
-            Fpdu response = FpduResponseBuilder.buildAconnect(sessionContext, 2, true, true, 4096, 32);
+            Fpdu response =
+                    FpduResponseBuilder.buildAconnect(sessionContext, 2, true, true, 4096, 32);
 
             assertEquals(FpduType.ACONNECT, response.getFpduType());
             assertEquals(1, response.getIdDst());
@@ -45,7 +45,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACONNECT without options")
         void shouldBuildAconnectWithoutOptions() {
-            Fpdu response = FpduResponseBuilder.buildAconnect(sessionContext, 2, false, false, 4096, 32);
+            Fpdu response =
+                    FpduResponseBuilder.buildAconnect(sessionContext, 2, false, false, 4096, 32);
 
             assertEquals(FpduType.ACONNECT, response.getFpduType());
         }
@@ -53,8 +54,9 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build RCONNECT response")
         void shouldBuildRconnect() {
-            Fpdu response = FpduResponseBuilder.buildRconnect(sessionContext,
-                    DiagnosticCode.D3_301, "Authentication failed");
+            Fpdu response =
+                    FpduResponseBuilder.buildRconnect(
+                            sessionContext, DiagnosticCode.D3_301, "Authentication failed");
 
             assertEquals(FpduType.RCONNECT, response.getFpduType());
             assertEquals(1, response.getIdDst());
@@ -63,8 +65,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build RCONNECT without message")
         void shouldBuildRconnectWithoutMessage() {
-            Fpdu response = FpduResponseBuilder.buildRconnect(sessionContext,
-                    DiagnosticCode.D3_301, null);
+            Fpdu response =
+                    FpduResponseBuilder.buildRconnect(sessionContext, DiagnosticCode.D3_301, null);
 
             assertEquals(FpduType.RCONNECT, response.getFpduType());
         }
@@ -87,7 +89,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_CREATE response")
         void shouldBuildAckCreate() {
-            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D0_000);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
             assertEquals(1, response.getIdDst());
@@ -96,7 +99,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_CREATE response")
         void shouldBuildNackCreate() {
-            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
         }
@@ -109,7 +113,8 @@ class FpduResponseBuilderTest {
             transfer.setTransferId(1);
             sessionContext.setCurrentTransfer(transfer);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -117,7 +122,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT response")
         void shouldBuildNackSelect() {
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -186,7 +192,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build DTF response")
         void shouldBuildDtf() {
-            byte[] data = new byte[] { 1, 2, 3, 4, 5 };
+            byte[] data = new byte[] {1, 2, 3, 4, 5};
             Fpdu response = FpduResponseBuilder.buildDtf(sessionContext, data);
 
             assertEquals(FpduType.DTF, response.getFpduType());
@@ -230,7 +236,9 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG response")
         void shouldBuildAckMsg() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, "Response message");
+            Fpdu response =
+                    FpduResponseBuilder.buildAckMsg(
+                            sessionContext, DiagnosticCode.D0_000, "Response message");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -238,7 +246,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG without message")
         void shouldBuildAckMsgWithoutMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, null);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, null);
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -246,7 +255,9 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_MSG response")
         void shouldBuildNackMsg() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D2_299, "Error message");
+            Fpdu response =
+                    FpduResponseBuilder.buildAckMsg(
+                            sessionContext, DiagnosticCode.D2_299, "Error message");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -277,8 +288,9 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ABORT response with message")
         void shouldBuildAbortWithMessage() {
-            Fpdu response = FpduResponseBuilder.buildAbort(sessionContext,
-                    DiagnosticCode.D1_100, "Fatal error");
+            Fpdu response =
+                    FpduResponseBuilder.buildAbort(
+                            sessionContext, DiagnosticCode.D1_100, "Fatal error");
 
             assertEquals(FpduType.ABORT, response.getFpduType());
         }
@@ -286,8 +298,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ABORT without message")
         void shouldBuildAbortWithNullMessage() {
-            Fpdu response = FpduResponseBuilder.buildAbort(sessionContext,
-                    DiagnosticCode.D1_100, null);
+            Fpdu response =
+                    FpduResponseBuilder.buildAbort(sessionContext, DiagnosticCode.D1_100, null);
 
             assertEquals(FpduType.ABORT, response.getFpduType());
         }
@@ -295,8 +307,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ABORT with empty message")
         void shouldBuildAbortWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildAbort(sessionContext,
-                    DiagnosticCode.D1_100, "");
+            Fpdu response =
+                    FpduResponseBuilder.buildAbort(sessionContext, DiagnosticCode.D1_100, "");
 
             assertEquals(FpduType.ABORT, response.getFpduType());
         }
@@ -309,8 +321,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build RCONNECT with empty message")
         void shouldBuildRconnectWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildRconnect(sessionContext,
-                    DiagnosticCode.D3_301, "");
+            Fpdu response =
+                    FpduResponseBuilder.buildRconnect(sessionContext, DiagnosticCode.D3_301, "");
 
             assertEquals(FpduType.RCONNECT, response.getFpduType());
         }
@@ -318,7 +330,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_CREATE with empty message")
         void shouldBuildNackCreateWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckCreate(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_CREATE, response.getFpduType());
         }
@@ -326,7 +339,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT with empty message")
         void shouldBuildNackSelectWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -334,7 +348,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build NACK_SELECT with null message")
         void shouldBuildNackSelectWithNullMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D2_205);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -342,7 +357,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACK_MSG with empty message")
         void shouldBuildAckMsgWithEmptyMessage() {
-            Fpdu response = FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, "");
+            Fpdu response =
+                    FpduResponseBuilder.buildAckMsg(sessionContext, DiagnosticCode.D0_000, "");
 
             assertEquals(FpduType.ACK_MSG, response.getFpduType());
         }
@@ -352,7 +368,8 @@ class FpduResponseBuilderTest {
         void shouldBuildAckSelectWithNullTransfer() {
             sessionContext.setCurrentTransfer(null);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -366,7 +383,8 @@ class FpduResponseBuilderTest {
             transfer.setLocalPath(null);
             sessionContext.setCurrentTransfer(transfer);
 
-            Fpdu response = FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
+            Fpdu response =
+                    FpduResponseBuilder.buildAckSelect(sessionContext, 4096, DiagnosticCode.D0_000);
 
             assertEquals(FpduType.ACK_SELECT, response.getFpduType());
         }
@@ -452,7 +470,8 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build RESYN request")
         void shouldBuildResyn() {
-            Fpdu response = FpduResponseBuilder.buildResyn(sessionContext, DiagnosticCode.D2_218, 5);
+            Fpdu response =
+                    FpduResponseBuilder.buildResyn(sessionContext, DiagnosticCode.D2_218, 5);
 
             assertEquals(FpduType.RESYN, response.getFpduType());
             assertEquals(1, response.getIdDst());

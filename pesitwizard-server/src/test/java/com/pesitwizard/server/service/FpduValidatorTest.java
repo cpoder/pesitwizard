@@ -2,11 +2,6 @@ package com.pesitwizard.server.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
@@ -14,11 +9,12 @@ import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.model.TransferContext;
 import com.pesitwizard.server.service.FpduValidator.ValidationResult;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for FpduValidator.
- * Tests validation rules from PeSIT E specification ANNEXE D.
- */
+/** Unit tests for FpduValidator. Tests validation rules from PeSIT E specification ANNEXE D. */
 @DisplayName("FpduValidator Tests")
 class FpduValidatorTest {
 
@@ -175,9 +171,12 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(1000);
             transfer.setRecordsTransferred(10);
 
-            Fpdu fpdu = new Fpdu(FpduType.TRANS_END)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_27_NB_OCTETS,
-                            new byte[] { 0x00, 0x00, 0x03, (byte) 0xE8 })); // 1000
+            Fpdu fpdu =
+                    new Fpdu(FpduType.TRANS_END)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_27_NB_OCTETS,
+                                            new byte[] {0x00, 0x00, 0x03, (byte) 0xE8})); // 1000
 
             ValidationResult result = validator.validateTransEnd(fpdu, transfer);
 
@@ -190,9 +189,12 @@ class FpduValidatorTest {
             TransferContext transfer = new TransferContext();
             transfer.setBytesTransferred(1000);
 
-            Fpdu fpdu = new Fpdu(FpduType.TRANS_END)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_27_NB_OCTETS,
-                            new byte[] { 0x00, 0x00, 0x07, (byte) 0xD0 })); // 2000
+            Fpdu fpdu =
+                    new Fpdu(FpduType.TRANS_END)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_27_NB_OCTETS,
+                                            new byte[] {0x00, 0x00, 0x07, (byte) 0xD0})); // 2000
 
             ValidationResult result = validator.validateTransEnd(fpdu, transfer);
 
@@ -221,8 +223,11 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept CREATE with required parameters")
         void shouldAcceptCreateWithRequiredParams() {
-            Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"));
 
             ValidationResult result = validator.validateCreate(fpdu);
 
@@ -244,10 +249,15 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should reject fixed format without record length")
         void shouldRejectFixedFormatWithoutRecordLength() {
-            Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_31_FORMAT_ARTICLE,
-                            new byte[] { 0x00 })); // Fixed format
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_31_FORMAT_ARTICLE,
+                                            new byte[] {0x00})); // Fixed format
 
             ValidationResult result = validator.validateCreate(fpdu);
 
@@ -259,12 +269,19 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept fixed format with valid record length")
         void shouldAcceptFixedFormatWithRecordLength() {
-            Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_31_FORMAT_ARTICLE,
-                            new byte[] { 0x00 })) // Fixed format
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_32_LONG_ARTICLE,
-                            new byte[] { 0x00, 0x50 })); // 80 bytes
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_31_FORMAT_ARTICLE,
+                                            new byte[] {0x00})) // Fixed format
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_32_LONG_ARTICLE,
+                                            new byte[] {0x00, 0x50})); // 80 bytes
 
             ValidationResult result = validator.validateCreate(fpdu);
 
@@ -274,10 +291,15 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept variable format without record length")
         void shouldAcceptVariableFormatWithoutRecordLength() {
-            Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_31_FORMAT_ARTICLE,
-                            new byte[] { (byte) 0x80 })); // Variable format
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_31_FORMAT_ARTICLE,
+                                            new byte[] {(byte) 0x80})); // Variable format
 
             ValidationResult result = validator.validateCreate(fpdu);
 
@@ -292,8 +314,11 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept SELECT with filename")
         void shouldAcceptSelectWithFilename() {
-            Fpdu fpdu = new Fpdu(FpduType.SELECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.SELECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"));
 
             ValidationResult result = validator.validateSelect(fpdu);
 
@@ -319,8 +344,11 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept CONNECT with requestor ID")
         void shouldAcceptConnectWithRequestorId() {
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"));
 
             ValidationResult result = validator.validateConnect(fpdu);
 
@@ -342,10 +370,15 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should reject unsupported version (D3-308)")
         void shouldRejectUnsupportedVersion() {
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION,
-                            new byte[] { 0x00, 0x06 })); // Version 6
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_06_VERSION,
+                                            new byte[] {0x00, 0x06})); // Version 6
 
             ValidationResult result = validator.validateConnect(fpdu);
 
@@ -356,10 +389,15 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept supported version")
         void shouldAcceptSupportedVersion() {
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION,
-                            new byte[] { 0x00, 0x05 })); // Version 5 (PeSIT E)
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT001"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_06_VERSION,
+                                            new byte[] {0x00, 0x05})); // Version 5 (PeSIT E)
 
             ValidationResult result = validator.validateConnect(fpdu);
 
@@ -377,9 +415,12 @@ class FpduValidatorTest {
             TransferContext transfer = new TransferContext();
             transfer.setCurrentSyncPoint(5);
 
-            Fpdu fpdu = new Fpdu(FpduType.SYN)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC,
-                            new byte[] { 0x00, 0x00, 0x06 })); // Sync point 6
+            Fpdu fpdu =
+                    new Fpdu(FpduType.SYN)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_20_NUM_SYNC,
+                                            new byte[] {0x00, 0x00, 0x06})); // Sync point 6
 
             ValidationResult result = validator.validateSyn(fpdu, transfer);
 
@@ -406,9 +447,14 @@ class FpduValidatorTest {
             TransferContext transfer = new TransferContext();
             transfer.setCurrentSyncPoint(10);
 
-            Fpdu fpdu = new Fpdu(FpduType.SYN)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC,
-                            new byte[] { 0x00, 0x00, 0x05 })); // Sync point 5 (less than current 10)
+            Fpdu fpdu =
+                    new Fpdu(FpduType.SYN)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_20_NUM_SYNC,
+                                            new byte[] {
+                                                0x00, 0x00, 0x05
+                                            })); // Sync point 5 (less than current 10)
 
             ValidationResult result = validator.validateSyn(fpdu, transfer);
 
@@ -422,9 +468,12 @@ class FpduValidatorTest {
             TransferContext transfer = new TransferContext();
             transfer.setCurrentSyncPoint(5);
 
-            Fpdu fpdu = new Fpdu(FpduType.SYN)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_20_NUM_SYNC,
-                            new byte[] { 0x00, 0x00, 0x05 })); // Same sync point 5
+            Fpdu fpdu =
+                    new Fpdu(FpduType.SYN)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_20_NUM_SYNC,
+                                            new byte[] {0x00, 0x00, 0x05})); // Same sync point 5
 
             ValidationResult result = validator.validateSyn(fpdu, transfer);
 
@@ -456,7 +505,8 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(0);
 
             // 50KB transferred, interval is 64KB, last sync at 0 -> OK
-            ValidationResult result = validator.validateDataWithoutSyncPoint(transfer, 50000, 65536);
+            ValidationResult result =
+                    validator.validateDataWithoutSyncPoint(transfer, 50000, 65536);
 
             assertTrue(result.valid());
         }
@@ -468,7 +518,8 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(0); // Last sync at 0
 
             // 100KB transferred since last sync, interval is 64KB -> ERROR
-            ValidationResult result = validator.validateDataWithoutSyncPoint(transfer, 100000, 65536);
+            ValidationResult result =
+                    validator.validateDataWithoutSyncPoint(transfer, 100000, 65536);
 
             assertFalse(result.valid());
             assertEquals(DiagnosticCode.D2_222, result.errorCode());
@@ -484,7 +535,8 @@ class FpduValidatorTest {
 
             // New chunk of 40KB, but we're counting from last sync
             // If last sync was at 50KB and we're now at 90KB, that's 40KB since sync
-            ValidationResult result = validator.validateDataWithoutSyncPoint(transfer, 40000, 65536);
+            ValidationResult result =
+                    validator.validateDataWithoutSyncPoint(transfer, 40000, 65536);
 
             assertTrue(result.valid());
         }
@@ -497,12 +549,19 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept CONNECT with correct PI order")
         void shouldAcceptConnectWithCorrectPiOrder() {
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, "SERVER"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, "PASS"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, "SERVER"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_05_CONTROLE_ACCES, "PASS"))
+                            .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0));
 
             ValidationResult result = validator.validatePiOrder(fpdu);
 
@@ -513,10 +572,15 @@ class FpduValidatorTest {
         @DisplayName("should reject CONNECT with incorrect PI order")
         void shouldRejectConnectWithIncorrectPiOrder() {
             // PI 22 before PI 06 is incorrect
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_22_TYPE_ACCES, 0))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
             ValidationResult result = validator.validatePiOrder(fpdu);
 
@@ -527,10 +591,17 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should accept CREATE with correct PI order")
         void shouldAcceptCreateWithCorrectPiOrder() {
-            Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, 4096))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_32_LONG_ARTICLE, 1024));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_12_NOM_FICHIER, "test.dat"))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, 4096))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_32_LONG_ARTICLE, 1024));
 
             ValidationResult result = validator.validatePiOrder(fpdu);
 
@@ -540,8 +611,11 @@ class FpduValidatorTest {
         @Test
         @DisplayName("should allow missing optional PIs")
         void shouldAllowMissingOptionalPis() {
-            Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, "CLIENT"));
             // Missing PI 04, 05, 06, etc - should be OK
 
             ValidationResult result = validator.validatePiOrder(fpdu);

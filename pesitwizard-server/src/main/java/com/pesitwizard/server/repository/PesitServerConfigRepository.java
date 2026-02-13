@@ -1,17 +1,13 @@
 package com.pesitwizard.server.repository;
 
+import com.pesitwizard.server.entity.PesitServerConfig;
+import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
 import java.util.List;
 import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.pesitwizard.server.entity.PesitServerConfig;
-import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
-
-/**
- * Repository for PeSIT server configurations
- */
+/** Repository for PeSIT server configurations */
 @Repository
 public interface PesitServerConfigRepository extends JpaRepository<PesitServerConfig, Long> {
 

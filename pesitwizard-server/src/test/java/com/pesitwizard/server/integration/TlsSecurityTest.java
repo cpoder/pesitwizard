@@ -3,21 +3,6 @@ package com.pesitwizard.server.integration;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.KeyStore;
-
-import javax.net.ssl.SSLContext;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
 import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
@@ -26,12 +11,23 @@ import com.pesitwizard.server.service.CertificateService;
 import com.pesitwizard.server.ssl.SslConfigurationException;
 import com.pesitwizard.server.ssl.SslContextFactory;
 import com.pesitwizard.server.ssl.SslContextFactory.CertificateInfo;
-
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyStore;
+import javax.net.ssl.SSLContext;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Integration tests for TLS/SSL and mTLS functionality.
- * Tests certificate management, SSL context creation, and validation.
+ * Integration tests for TLS/SSL and mTLS functionality. Tests certificate management, SSL context
+ * creation, and validation.
  */
 @Slf4j
 @SpringBootTest
@@ -42,11 +38,9 @@ public class TlsSecurityTest {
     private static final String CERTS_DIR = "src/test/resources/certs";
     private static final String PASSWORD = "changeit";
 
-    @Autowired
-    private CertificateService certificateService;
+    @Autowired private CertificateService certificateService;
 
-    @Autowired
-    private SslContextFactory sslContextFactory;
+    @Autowired private SslContextFactory sslContextFactory;
 
     private static byte[] serverKeystoreBytes;
     private static byte[] clientKeystoreBytes;
@@ -73,19 +67,20 @@ public class TlsSecurityTest {
         @DisplayName("Should upload and store server keystore")
         void shouldUploadServerKeystore() throws Exception {
             // Upload server keystore
-            CertificateStore store = certificateService.createCertificateStore(
-                    "test-server-keystore",
-                    "Test server keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    true,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "test-server-keystore",
+                            "Test server keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            true,
+                            "test");
 
             assertThat(store.getId()).isNotNull();
             assertThat(store.getName()).isEqualTo("test-server-keystore");
@@ -95,26 +90,29 @@ public class TlsSecurityTest {
             assertThat(store.getFingerprint()).isNotNull();
             assertThat(store.getIsDefault()).isTrue();
 
-            log.info("Server keystore uploaded: subject={}, fingerprint={}",
-                    store.getSubjectDn(), store.getFingerprint());
+            log.info(
+                    "Server keystore uploaded: subject={}, fingerprint={}",
+                    store.getSubjectDn(),
+                    store.getFingerprint());
         }
 
         @Test
         @DisplayName("Should upload and store CA truststore")
         void shouldUploadCaTruststore() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "test-ca-truststore",
-                    "Test CA truststore",
-                    StoreType.TRUSTSTORE,
-                    StoreFormat.PKCS12,
-                    caTruststoreBytes,
-                    PASSWORD,
-                    null,
-                    null,
-                    CertificatePurpose.CA,
-                    null,
-                    true,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "test-ca-truststore",
+                            "Test CA truststore",
+                            StoreType.TRUSTSTORE,
+                            StoreFormat.PKCS12,
+                            caTruststoreBytes,
+                            PASSWORD,
+                            null,
+                            null,
+                            CertificatePurpose.CA,
+                            null,
+                            true,
+                            "test");
 
             assertThat(store.getId()).isNotNull();
             assertThat(store.getStoreType()).isEqualTo(StoreType.TRUSTSTORE);
@@ -126,19 +124,20 @@ public class TlsSecurityTest {
         @Test
         @DisplayName("Should upload client keystore for mTLS")
         void shouldUploadClientKeystore() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "test-client-keystore",
-                    "Test client keystore for mTLS",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    clientKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "client",
-                    CertificatePurpose.CLIENT,
-                    null,
-                    false,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "test-client-keystore",
+                            "Test client keystore for mTLS",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            clientKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "client",
+                            CertificatePurpose.CLIENT,
+                            null,
+                            false,
+                            "test");
 
             assertThat(store.getId()).isNotNull();
             assertThat(store.getPurpose()).isEqualTo(CertificatePurpose.CLIENT);
@@ -150,44 +149,48 @@ public class TlsSecurityTest {
         @Test
         @DisplayName("Should upload partner-specific keystore")
         void shouldUploadPartnerKeystore() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "partner-a-keystore",
-                    "Partner A keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    partnerKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "partner",
-                    CertificatePurpose.PARTNER,
-                    "PARTNER_A",
-                    false,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "partner-a-keystore",
+                            "Partner A keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            partnerKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "partner",
+                            CertificatePurpose.PARTNER,
+                            "PARTNER_A",
+                            false,
+                            "test");
 
             assertThat(store.getId()).isNotNull();
             assertThat(store.getPartnerId()).isEqualTo("PARTNER_A");
             assertThat(store.getPurpose()).isEqualTo(CertificatePurpose.PARTNER);
 
-            log.info("Partner keystore uploaded: partnerId={}, subject={}",
-                    store.getPartnerId(), store.getSubjectDn());
+            log.info(
+                    "Partner keystore uploaded: partnerId={}, subject={}",
+                    store.getPartnerId(),
+                    store.getSubjectDn());
         }
 
         @Test
         @DisplayName("Should extract certificate info")
         void shouldExtractCertificateInfo() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "test-info-keystore",
-                    "Test keystore for info extraction",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "test-info-keystore",
+                            "Test keystore for info extraction",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "test");
 
             CertificateInfo info = certificateService.getCertificateInfo(store.getId());
 
@@ -199,8 +202,11 @@ public class TlsSecurityTest {
             assertThat(info.getValidFrom()).isNotNull();
             assertThat(info.getExpiresAt()).isNotNull();
 
-            log.info("Certificate info: subject={}, issuer={}, expires={}",
-                    info.getSubjectDn(), info.getIssuerDn(), info.getExpiresAt());
+            log.info(
+                    "Certificate info: subject={}, issuer={}, expires={}",
+                    info.getSubjectDn(),
+                    info.getIssuerDn(),
+                    info.getExpiresAt());
         }
 
         @Test
@@ -208,19 +214,22 @@ public class TlsSecurityTest {
         void shouldRejectInvalidKeystore() {
             byte[] invalidData = "not a keystore".getBytes();
 
-            assertThrows(SslConfigurationException.class, () -> certificateService.createCertificateStore(
-                    "invalid-keystore",
-                    "Invalid keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    invalidData,
-                    PASSWORD,
-                    PASSWORD,
-                    null,
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test"));
+            assertThrows(
+                    SslConfigurationException.class,
+                    () ->
+                            certificateService.createCertificateStore(
+                                    "invalid-keystore",
+                                    "Invalid keystore",
+                                    StoreType.KEYSTORE,
+                                    StoreFormat.PKCS12,
+                                    invalidData,
+                                    PASSWORD,
+                                    PASSWORD,
+                                    null,
+                                    CertificatePurpose.SERVER,
+                                    null,
+                                    false,
+                                    "test"));
 
             log.info("Invalid keystore correctly rejected");
         }
@@ -234,33 +243,35 @@ public class TlsSecurityTest {
         @DisplayName("Should create SSL context from stored certificates")
         void shouldCreateSslContext() throws Exception {
             // First upload the certificates
-            CertificateStore keystore = certificateService.createCertificateStore(
-                    "ssl-test-keystore",
-                    "SSL test keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test");
+            CertificateStore keystore =
+                    certificateService.createCertificateStore(
+                            "ssl-test-keystore",
+                            "SSL test keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "test");
 
-            CertificateStore truststore = certificateService.createCertificateStore(
-                    "ssl-test-truststore",
-                    "SSL test truststore",
-                    StoreType.TRUSTSTORE,
-                    StoreFormat.PKCS12,
-                    caTruststoreBytes,
-                    PASSWORD,
-                    null,
-                    null,
-                    CertificatePurpose.CA,
-                    null,
-                    false,
-                    "test");
+            CertificateStore truststore =
+                    certificateService.createCertificateStore(
+                            "ssl-test-truststore",
+                            "SSL test truststore",
+                            StoreType.TRUSTSTORE,
+                            StoreFormat.PKCS12,
+                            caTruststoreBytes,
+                            PASSWORD,
+                            null,
+                            null,
+                            CertificatePurpose.CA,
+                            null,
+                            false,
+                            "test");
 
             // Create SSL context
             SSLContext sslContext = sslContextFactory.createSslContext(keystore, truststore);
@@ -303,7 +314,8 @@ public class TlsSecurityTest {
                     false,
                     "test");
 
-            SSLContext sslContext = sslContextFactory.createSslContext("named-keystore", "named-truststore");
+            SSLContext sslContext =
+                    sslContextFactory.createSslContext("named-keystore", "named-truststore");
 
             assertThat(sslContext).isNotNull();
             log.info("SSL context created by name");
@@ -356,19 +368,20 @@ public class TlsSecurityTest {
         @Test
         @DisplayName("Should validate valid keystore")
         void shouldValidateValidKeystore() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "valid-keystore",
-                    "Valid keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "valid-keystore",
+                            "Valid keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "test");
 
             // Should not throw
             certificateService.validateCertificateStore(store.getId());
@@ -378,19 +391,20 @@ public class TlsSecurityTest {
         @Test
         @DisplayName("Should detect expiring certificates")
         void shouldDetectExpiringCertificates() throws Exception {
-            CertificateStore store = certificateService.createCertificateStore(
-                    "expiry-test-keystore",
-                    "Expiry test keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            "expiry-test-keystore",
+                            "Expiry test keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "test");
 
             // Certificate expires in 365 days, so should be in 400-day expiring list
             var expiringIn400Days = certificateService.getExpiringCertificates(400);
@@ -412,64 +426,68 @@ public class TlsSecurityTest {
         @DisplayName("Should setup mTLS with client certificate")
         void shouldSetupMtls() throws Exception {
             // Server keystore
-            CertificateStore serverKs = certificateService.createCertificateStore(
-                    "mtls-server-keystore",
-                    "mTLS server keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    serverKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "server",
-                    CertificatePurpose.SERVER,
-                    null,
-                    false,
-                    "test");
+            CertificateStore serverKs =
+                    certificateService.createCertificateStore(
+                            "mtls-server-keystore",
+                            "mTLS server keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            serverKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "test");
 
             // Server truststore (to verify client certs)
-            CertificateStore serverTs = certificateService.createCertificateStore(
-                    "mtls-server-truststore",
-                    "mTLS server truststore",
-                    StoreType.TRUSTSTORE,
-                    StoreFormat.PKCS12,
-                    caTruststoreBytes,
-                    PASSWORD,
-                    null,
-                    null,
-                    CertificatePurpose.CA,
-                    null,
-                    false,
-                    "test");
+            CertificateStore serverTs =
+                    certificateService.createCertificateStore(
+                            "mtls-server-truststore",
+                            "mTLS server truststore",
+                            StoreType.TRUSTSTORE,
+                            StoreFormat.PKCS12,
+                            caTruststoreBytes,
+                            PASSWORD,
+                            null,
+                            null,
+                            CertificatePurpose.CA,
+                            null,
+                            false,
+                            "test");
 
             // Client keystore
-            CertificateStore clientKs = certificateService.createCertificateStore(
-                    "mtls-client-keystore",
-                    "mTLS client keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    clientKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "client",
-                    CertificatePurpose.CLIENT,
-                    null,
-                    false,
-                    "test");
+            CertificateStore clientKs =
+                    certificateService.createCertificateStore(
+                            "mtls-client-keystore",
+                            "mTLS client keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            clientKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "client",
+                            CertificatePurpose.CLIENT,
+                            null,
+                            false,
+                            "test");
 
             // Client truststore (to verify server cert)
-            CertificateStore clientTs = certificateService.createCertificateStore(
-                    "mtls-client-truststore",
-                    "mTLS client truststore",
-                    StoreType.TRUSTSTORE,
-                    StoreFormat.PKCS12,
-                    caTruststoreBytes,
-                    PASSWORD,
-                    null,
-                    null,
-                    CertificatePurpose.CA,
-                    null,
-                    false,
-                    "test");
+            CertificateStore clientTs =
+                    certificateService.createCertificateStore(
+                            "mtls-client-truststore",
+                            "mTLS client truststore",
+                            StoreType.TRUSTSTORE,
+                            StoreFormat.PKCS12,
+                            caTruststoreBytes,
+                            PASSWORD,
+                            null,
+                            null,
+                            CertificatePurpose.CA,
+                            null,
+                            false,
+                            "test");
 
             // Create server SSL context
             SSLContext serverContext = sslContextFactory.createSslContext(serverKs, serverTs);
@@ -486,19 +504,20 @@ public class TlsSecurityTest {
         @DisplayName("Should reject untrusted client certificate")
         void shouldRejectUntrustedClient() throws Exception {
             // Upload untrusted keystore
-            CertificateStore untrustedKs = certificateService.createCertificateStore(
-                    "untrusted-client-keystore",
-                    "Untrusted client keystore",
-                    StoreType.KEYSTORE,
-                    StoreFormat.PKCS12,
-                    untrustedKeystoreBytes,
-                    PASSWORD,
-                    PASSWORD,
-                    "untrusted",
-                    CertificatePurpose.CLIENT,
-                    null,
-                    false,
-                    "test");
+            CertificateStore untrustedKs =
+                    certificateService.createCertificateStore(
+                            "untrusted-client-keystore",
+                            "Untrusted client keystore",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            untrustedKeystoreBytes,
+                            PASSWORD,
+                            PASSWORD,
+                            "untrusted",
+                            CertificatePurpose.CLIENT,
+                            null,
+                            false,
+                            "test");
 
             // The untrusted cert is self-signed, not from our CA
             CertificateInfo info = certificateService.getCertificateInfo(untrustedKs.getId());

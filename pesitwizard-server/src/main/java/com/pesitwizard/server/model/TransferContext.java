@@ -9,14 +9,12 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Context for a file transfer operation.
- * Supports streaming writes directly to disk to avoid memory issues with large
- * files.
+ * Context for a file transfer operation. Supports streaming writes directly to disk to avoid memory
+ * issues with large files.
  */
 @Data
 @Slf4j
@@ -94,9 +92,7 @@ public class TransferContext {
     /** Bank identifier (PI 62) - for store and forward */
     private String bankId;
 
-    /**
-     * Reset the transfer context for a new transfer
-     */
+    /** Reset the transfer context for a new transfer */
     public void reset() {
         closeOutputStream();
         this.transferId = 0;
@@ -125,36 +121,34 @@ public class TransferContext {
         this.bankId = null;
     }
 
-    /**
-     * Open the output stream for streaming writes.
-     * Must be called after localPath is set.
-     */
+    /** Open the output stream for streaming writes. Must be called after localPath is set. */
     public void openOutputStream() throws IOException {
         if (localPath == null) {
             throw new IllegalStateException("localPath must be set before opening output stream");
         }
         // Ensure parent directory exists
-        Files.createDirectories(localPath.getParent());
+        Path parent = localPath.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
         // Use buffered output stream with 64KB buffer for better performance
-        this.fileOutputStream = new BufferedOutputStream(new FileOutputStream(localPath.toFile()), 64 * 1024);
+        this.fileOutputStream =
+                new BufferedOutputStream(new FileOutputStream(localPath.toFile()), 64 * 1024);
         log.debug("Opened streaming output to {}", localPath);
     }
 
-    /**
-     * Append data directly to file (streaming - no memory buffering).
-     */
+    /** Append data directly to file (streaming - no memory buffering). */
     public void appendData(byte[] data) throws IOException {
         if (fileOutputStream == null) {
-            throw new IllegalStateException("Output stream not opened. Call openOutputStream() first.");
+            throw new IllegalStateException(
+                    "Output stream not opened. Call openOutputStream() first.");
         }
         fileOutputStream.write(data);
         bytesTransferred += data.length;
         // Note: recordsTransferred is managed by the caller (DataTransferHandler)
     }
 
-    /**
-     * Close the output stream and flush data to disk.
-     */
+    /** Close the output stream and flush data to disk. */
     public void closeOutputStream() {
         if (fileOutputStream != null) {
             try {
@@ -168,24 +162,22 @@ public class TransferContext {
         }
     }
 
-    /**
-     * Record a sync point with its byte position for later RESYN rollback.
-     */
+    /** Record a sync point with its byte position for later RESYN rollback. */
     public void recordSyncPointPosition(int syncPoint, long bytePosition) {
         syncPointPositions.put(syncPoint, bytePosition);
     }
 
     /**
-     * Look up the byte position for a given sync point number.
-     * Returns -1 if the sync point is unknown.
+     * Look up the byte position for a given sync point number. Returns -1 if the sync point is
+     * unknown.
      */
     public long getSyncPointBytePosition(int syncPoint) {
         return syncPointPositions.getOrDefault(syncPoint, -1L);
     }
 
     /**
-     * Truncate the file to the given byte position and reopen the output stream for appending.
-     * Used during RESYN rollback to discard data after the sync point.
+     * Truncate the file to the given byte position and reopen the output stream for appending. Used
+     * during RESYN rollback to discard data after the sync point.
      */
     public void truncateAndReopen(long bytePosition) throws IOException {
         closeOutputStream();
@@ -193,21 +185,22 @@ public class TransferContext {
             throw new IllegalStateException("Cannot truncate: file does not exist");
         }
         // Truncate the file
-        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(localPath.toFile(), "rw")) {
+        try (java.io.RandomAccessFile raf =
+                new java.io.RandomAccessFile(localPath.toFile(), "rw")) {
             raf.setLength(bytePosition);
         }
         // Reset bytes transferred to the truncated position
         this.bytesTransferred = bytePosition;
         this.bytesSinceLastSync = 0;
         // Reopen for appending
-        this.fileOutputStream = new BufferedOutputStream(new FileOutputStream(localPath.toFile(), true), 64 * 1024);
+        this.fileOutputStream =
+                new BufferedOutputStream(new FileOutputStream(localPath.toFile(), true), 64 * 1024);
         log.debug("Truncated {} to {} bytes and reopened for appending", localPath, bytePosition);
     }
 
     /**
-     * @deprecated Use streaming with appendData() and closeOutputStream() instead.
-     *             This method is kept for backward compatibility but should not be
-     *             used for large files.
+     * @deprecated Use streaming with appendData() and closeOutputStream() instead. This method is
+     *     kept for backward compatibility but should not be used for large files.
      */
     @Deprecated
     public byte[] getData() {

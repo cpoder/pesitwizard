@@ -2,26 +2,23 @@ package com.pesitwizard.client.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("Client Golden File Tests")
 public class GoldenFileClientTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @Test
     @DisplayName("verify client requests from PUSH session")
@@ -31,9 +28,8 @@ public class GoldenFileClientTest {
 
         // Get client frames (RECEIVED = from client perspective, these are what client
         // sent)
-        var clientFrames = frames.stream()
-                .filter(f -> f.direction() == Direction.RECEIVED)
-                .toList();
+        var clientFrames =
+                frames.stream().filter(f -> f.direction() == Direction.RECEIVED).toList();
 
         assertTrue(clientFrames.size() > 0);
 
@@ -52,13 +48,18 @@ public class GoldenFileClientTest {
     void verifyDtfFramesContainData() throws Exception {
         var recorder = loadGoldenFile("golden/cx-push-1mb.raw");
 
-        long dtfCount = recorder.getFrames().stream()
-                .filter(f -> f.direction() == Direction.RECEIVED)
-                .filter(f -> {
-                    FpduType t = new FpduParser(f.data()).parse().getFpduType();
-                    return t == FpduType.DTF || t == FpduType.DTFDA || t == FpduType.DTFMA || t == FpduType.DTFFA;
-                })
-                .count();
+        long dtfCount =
+                recorder.getFrames().stream()
+                        .filter(f -> f.direction() == Direction.RECEIVED)
+                        .filter(
+                                f -> {
+                                    FpduType t = new FpduParser(f.data()).parse().getFpduType();
+                                    return t == FpduType.DTF
+                                            || t == FpduType.DTFDA
+                                            || t == FpduType.DTFMA
+                                            || t == FpduType.DTFFA;
+                                })
+                        .count();
 
         assertTrue(dtfCount > 0, "Should have DTF frames for data transfer");
     }
@@ -69,9 +70,8 @@ public class GoldenFileClientTest {
         var recorder = loadGoldenFile("golden/cx-pull-1mb.raw");
         var frames = recorder.getFrames();
 
-        var clientFrames = frames.stream()
-                .filter(f -> f.direction() == Direction.RECEIVED)
-                .toList();
+        var clientFrames =
+                frames.stream().filter(f -> f.direction() == Direction.RECEIVED).toList();
 
         assertTrue(clientFrames.size() > 0);
         assertTrue(hasType(clientFrames, FpduType.CONNECT));
@@ -79,7 +79,8 @@ public class GoldenFileClientTest {
     }
 
     private boolean hasType(List<RecordedFrame> frames, FpduType type) {
-        return frames.stream().anyMatch(f -> new FpduParser(f.data()).parse().getFpduType() == type);
+        return frames.stream()
+                .anyMatch(f -> new FpduParser(f.data()).parse().getFpduType() == type);
     }
 
     private PesitSessionRecorder loadGoldenFile(String name) throws Exception {

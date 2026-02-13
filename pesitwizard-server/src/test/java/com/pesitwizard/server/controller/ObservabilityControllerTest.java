@@ -4,30 +4,27 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.pesitwizard.server.config.ObservabilityProperties;
+import com.pesitwizard.server.config.ObservabilityProperties.MetricsConfig;
+import com.pesitwizard.server.config.ObservabilityProperties.TracingConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import com.pesitwizard.server.config.ObservabilityProperties;
-import com.pesitwizard.server.config.ObservabilityProperties.MetricsConfig;
-import com.pesitwizard.server.config.ObservabilityProperties.TracingConfig;
 
 @WebMvcTest(ObservabilityController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("ObservabilityController Tests")
 class ObservabilityControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private ObservabilityProperties observabilityProperties;
+    @MockitoBean private ObservabilityProperties observabilityProperties;
 
     @BeforeEach
     void setUp() {
@@ -58,19 +55,23 @@ class ObservabilityControllerTest {
     @Test
     @DisplayName("should update tracing enabled config")
     void shouldUpdateTracingEnabledConfig() throws Exception {
-        mockMvc.perform(post("/api/v1/observability/config")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"tracingEnabled\": false}"))
+        mockMvc.perform(
+                        post("/api/v1/observability/config")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"tracingEnabled\": false}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Restart required for tracing changes to take effect"));
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Restart required for tracing changes to take effect"));
     }
 
     @Test
     @DisplayName("should update metrics config without restart message")
     void shouldUpdateMetricsConfigWithoutRestartMessage() throws Exception {
-        mockMvc.perform(post("/api/v1/observability/config")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"metricsEnabled\": false}"))
+        mockMvc.perform(
+                        post("/api/v1/observability/config")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"metricsEnabled\": false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").doesNotExist());
     }
@@ -78,10 +79,13 @@ class ObservabilityControllerTest {
     @Test
     @DisplayName("should update tracing endpoint")
     void shouldUpdateTracingEndpoint() throws Exception {
-        mockMvc.perform(post("/api/v1/observability/config")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"tracingEndpoint\": \"http://new-jaeger:4317\"}"))
+        mockMvc.perform(
+                        post("/api/v1/observability/config")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"tracingEndpoint\": \"http://new-jaeger:4317\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Restart required for tracing changes to take effect"));
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Restart required for tracing changes to take effect"));
     }
 }

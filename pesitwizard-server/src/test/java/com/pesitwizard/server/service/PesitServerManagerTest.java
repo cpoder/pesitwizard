@@ -4,17 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.server.cluster.ClusterEvent;
 import com.pesitwizard.server.cluster.ClusterProvider;
 import com.pesitwizard.server.config.PesitServerProperties;
@@ -24,31 +13,33 @@ import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
 import com.pesitwizard.server.handler.PesitSessionHandler;
 import com.pesitwizard.server.repository.PesitServerConfigRepository;
 import com.pesitwizard.server.ssl.SslContextFactory;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PesitServerManager Tests")
 class PesitServerManagerTest {
 
-    @Mock
-    private PesitServerConfigRepository configRepository;
+    @Mock private PesitServerConfigRepository configRepository;
 
-    @Mock
-    private ClusterProvider clusterProvider;
+    @Mock private ClusterProvider clusterProvider;
 
-    @Mock
-    private PesitSessionHandler sessionHandler;
+    @Mock private PesitSessionHandler sessionHandler;
 
-    @Mock
-    private FileSystemService fileSystemService;
+    @Mock private FileSystemService fileSystemService;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SslContextFactory sslContextFactory;
+    @Mock private SslContextFactory sslContextFactory;
 
-    @Mock
-    private PesitServerProperties globalProperties;
+    @Mock private PesitServerProperties globalProperties;
 
     private PesitServerManager serverManager;
 
@@ -56,8 +47,15 @@ class PesitServerManagerTest {
 
     @BeforeEach
     void setUp() {
-        serverManager = new PesitServerManager(configRepository, clusterProvider,
-                sessionHandler, fileSystemService, sslProperties, sslContextFactory, globalProperties);
+        serverManager =
+                new PesitServerManager(
+                        configRepository,
+                        clusterProvider,
+                        sessionHandler,
+                        fileSystemService,
+                        sslProperties,
+                        sslContextFactory,
+                        globalProperties);
 
         testConfig = new PesitServerConfig();
         testConfig.setId(1L);
@@ -89,8 +87,8 @@ class PesitServerManagerTest {
         void shouldThrowWhenServerIdExists() {
             when(configRepository.existsByServerId("SERVER1")).thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class,
-                    () -> serverManager.createServer(testConfig));
+            assertThrows(
+                    IllegalArgumentException.class, () -> serverManager.createServer(testConfig));
         }
 
         @Test
@@ -99,8 +97,8 @@ class PesitServerManagerTest {
             when(configRepository.existsByServerId("SERVER1")).thenReturn(false);
             when(configRepository.existsByPort(5100)).thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class,
-                    () -> serverManager.createServer(testConfig));
+            assertThrows(
+                    IllegalArgumentException.class, () -> serverManager.createServer(testConfig));
         }
 
         @Test
@@ -150,7 +148,8 @@ class PesitServerManagerTest {
         void shouldThrowWhenDeletingNonExistent() {
             when(configRepository.findByServerId("non-existent")).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(
+                    IllegalArgumentException.class,
                     () -> serverManager.deleteServer("non-existent"));
         }
     }
@@ -260,7 +259,8 @@ class PesitServerManagerTest {
         void shouldThrowWhenUpdatingNonExistent() {
             when(configRepository.findByServerId("non-existent")).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(
+                    IllegalArgumentException.class,
                     () -> serverManager.updateServer("non-existent", testConfig));
         }
 
@@ -273,7 +273,8 @@ class PesitServerManagerTest {
             when(configRepository.findByServerId("SERVER1")).thenReturn(Optional.of(testConfig));
             when(configRepository.existsByPort(5200)).thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(
+                    IllegalArgumentException.class,
                     () -> serverManager.updateServer("SERVER1", updates));
         }
     }

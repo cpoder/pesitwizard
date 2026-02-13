@@ -1,8 +1,6 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-import java.time.LocalTime;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,21 +12,22 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-/**
- * Scheduled transfer configuration
- */
+/** Scheduled transfer configuration */
 @Entity
-@Table(name = "scheduled_transfers", indexes = {
-        @Index(name = "idx_scheduled_enabled", columnList = "enabled"),
-        @Index(name = "idx_scheduled_next_run", columnList = "nextRunAt")
-})
+@Table(
+        name = "scheduled_transfers",
+        indexes = {
+            @Index(name = "idx_scheduled_enabled", columnList = "enabled"),
+            @Index(name = "idx_scheduled_next_run", columnList = "nextRunAt")
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -73,9 +72,10 @@ public class ScheduledTransfer {
     /** Filename (relative path on connector, or local path) */
     private String filename;
 
-    /** @deprecated Use filename instead */
-    @Deprecated
-    private String localPath;
+    /**
+     * @deprecated Use filename instead
+     */
+    @Deprecated private String localPath;
 
     /** Remote filename (virtual file ID) */
     private String remoteFilename;
@@ -122,8 +122,7 @@ public class ScheduledTransfer {
     private String calendarId;
 
     /** Only run on working days */
-    @Builder.Default
-    private boolean workingDaysOnly = false;
+    @Builder.Default private boolean workingDaysOnly = false;
 
     /** Scheduled time for ONCE type */
     private Instant scheduledAt;
@@ -143,16 +142,13 @@ public class ScheduledTransfer {
     private String lastRunError;
 
     /** Number of successful runs */
-    @Builder.Default
-    private int successCount = 0;
+    @Builder.Default private int successCount = 0;
 
     /** Number of failed runs */
-    @Builder.Default
-    private int failureCount = 0;
+    @Builder.Default private int failureCount = 0;
 
     /** Whether this schedule is enabled */
-    @Builder.Default
-    private boolean enabled = true;
+    @Builder.Default private boolean enabled = true;
 
     @Column(updatable = false)
     private Instant createdAt;

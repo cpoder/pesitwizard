@@ -1,19 +1,16 @@
 package com.pesitwizard.client.backup;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
 import com.pesitwizard.backup.BackupConfig;
 import com.pesitwizard.backup.BackupInfo;
 import com.pesitwizard.backup.BackupResult;
 import com.pesitwizard.backup.BackupService;
 import com.pesitwizard.backup.RestoreResult;
-
 import jakarta.annotation.PostConstruct;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -41,15 +38,16 @@ public class BackupServiceAdapter {
 
     @PostConstruct
     public void init() {
-        BackupConfig config = BackupConfig.builder()
-                .backupDirectory(backupDirectory)
-                .backupPrefix("client_backup")
-                .retentionDays(retentionDays)
-                .maxBackups(maxBackups)
-                .datasourceUrl(datasourceUrl)
-                .dbUser(dbUser)
-                .dbPassword(dbPassword)
-                .build();
+        BackupConfig config =
+                BackupConfig.builder()
+                        .backupDirectory(backupDirectory)
+                        .backupPrefix("client_backup")
+                        .retentionDays(retentionDays)
+                        .maxBackups(maxBackups)
+                        .datasourceUrl(datasourceUrl)
+                        .dbUser(dbUser)
+                        .dbPassword(dbPassword)
+                        .build();
         this.backupService = new BackupService(config);
         log.info("Client backup service initialized: {}", backupDirectory);
     }

@@ -4,10 +4,19 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.client.dto.TransferStats;
+import com.pesitwizard.client.entity.TransferHistory;
+import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
+import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
+import com.pesitwizard.client.pesit.PesitMessageService;
+import com.pesitwizard.client.pesit.PesitReceiveService;
+import com.pesitwizard.client.pesit.PesitSendService;
+import com.pesitwizard.client.pesit.StorageConnectorFactory;
+import com.pesitwizard.client.repository.TransferConfigRepository;
+import com.pesitwizard.client.repository.TransferHistoryRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,54 +29,35 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.pesitwizard.client.dto.TransferStats;
-import com.pesitwizard.client.entity.TransferHistory;
-import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
-import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
-import com.pesitwizard.client.pesit.PesitMessageService;
-import com.pesitwizard.client.pesit.PesitReceiveService;
-import com.pesitwizard.client.pesit.PesitSendService;
-import com.pesitwizard.client.pesit.StorageConnectorFactory;
-import com.pesitwizard.client.repository.TransferConfigRepository;
-import com.pesitwizard.client.repository.TransferHistoryRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferService Tests")
 class TransferServiceTest {
 
-    @Mock
-    private PesitSendService sendService;
-    @Mock
-    private PesitReceiveService receiveService;
-    @Mock
-    private PesitMessageService messageService;
-    @Mock
-    private PesitServerService serverService;
-    @Mock
-    private TransferConfigRepository configRepository;
-    @Mock
-    private TransferHistoryRepository historyRepository;
-    @Mock
-    private PathPlaceholderService placeholderService;
-    @Mock
-    private StorageConnectorFactory connectorFactory;
-    @Mock
-    private PartnerService partnerService;
+    @Mock private PesitSendService sendService;
+    @Mock private PesitReceiveService receiveService;
+    @Mock private PesitMessageService messageService;
+    @Mock private PesitServerService serverService;
+    @Mock private TransferConfigRepository configRepository;
+    @Mock private TransferHistoryRepository historyRepository;
+    @Mock private PathPlaceholderService placeholderService;
+    @Mock private StorageConnectorFactory connectorFactory;
+    @Mock private PartnerService partnerService;
 
     private TransferService transferService;
 
     @BeforeEach
     void setUp() {
-        transferService = new TransferService(
-                sendService,
-                receiveService,
-                messageService,
-                serverService,
-                configRepository,
-                historyRepository,
-                placeholderService,
-                connectorFactory,
-                partnerService);
+        transferService =
+                new TransferService(
+                        sendService,
+                        receiveService,
+                        messageService,
+                        serverService,
+                        configRepository,
+                        historyRepository,
+                        placeholderService,
+                        connectorFactory,
+                        partnerService);
     }
 
     @Nested
@@ -81,7 +71,8 @@ class TransferServiceTest {
             when(historyRepository.countByStatus(TransferStatus.COMPLETED)).thenReturn(90L);
             when(historyRepository.countByStatus(TransferStatus.FAILED)).thenReturn(5L);
             when(historyRepository.countByStatus(TransferStatus.IN_PROGRESS)).thenReturn(5L);
-            when(historyRepository.sumBytesTransferredSince(eq(TransferStatus.COMPLETED), any(Instant.class)))
+            when(historyRepository.sumBytesTransferredSince(
+                            eq(TransferStatus.COMPLETED), any(Instant.class)))
                     .thenReturn(1024000L);
 
             TransferStats stats = transferService.getStats();

@@ -3,8 +3,8 @@ package com.pesitwizard.fpdu;
 import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 
 /**
- * Utility class for parsing PeSIT FPDU parameters.
- * Centralizes numeric byte parsing logic used by both client and server.
+ * Utility class for parsing PeSIT FPDU parameters. Centralizes numeric byte parsing logic used by
+ * both client and server.
  */
 public final class ParameterParser {
 

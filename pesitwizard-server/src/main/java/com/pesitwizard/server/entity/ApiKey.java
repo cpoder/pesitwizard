@@ -1,9 +1,6 @@
 package com.pesitwizard.server.entity;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -16,7 +13,9 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,15 +23,17 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * Entity for storing API keys in the database.
- * Supports role-based access control and key expiration.
+ * Entity for storing API keys in the database. Supports role-based access control and key
+ * expiration.
  */
 @Entity
-@Table(name = "api_keys", indexes = {
-        @Index(name = "idx_apikey_key", columnList = "keyHash"),
-        @Index(name = "idx_apikey_name", columnList = "name"),
-        @Index(name = "idx_apikey_active", columnList = "active")
-})
+@Table(
+        name = "api_keys",
+        indexes = {
+            @Index(name = "idx_apikey_key", columnList = "keyHash"),
+            @Index(name = "idx_apikey_name", columnList = "name"),
+            @Index(name = "idx_apikey_active", columnList = "active")
+        })
 @Data
 @Builder
 @NoArgsConstructor
@@ -43,124 +44,82 @@ public class ApiKey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Unique name for this API key
-     */
+    /** Unique name for this API key */
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    /**
-     * Description of the API key purpose
-     */
+    /** Description of the API key purpose */
     @Column(length = 500)
     private String description;
 
-    /**
-     * SHA-256 hash of the API key (never store plain text)
-     */
+    /** SHA-256 hash of the API key (never store plain text) */
     @Column(nullable = false, unique = true, length = 64)
     @JsonIgnore
     @ToString.Exclude
     private String keyHash;
 
-    /**
-     * Key prefix for identification (first 8 chars)
-     */
+    /** Key prefix for identification (first 8 chars) */
     @Column(nullable = false, length = 8)
     private String keyPrefix;
 
     /**
-     * Transient field to hold the plain key for rate limiting lookups.
-     * Never persisted to database.
+     * Transient field to hold the plain key for rate limiting lookups. Never persisted to database.
      */
-    @jakarta.persistence.Transient
-    @JsonIgnore
-    @ToString.Exclude
-    private transient String key;
+    @jakarta.persistence.Transient @JsonIgnore @ToString.Exclude private transient String key;
 
-    /**
-     * Roles assigned to this API key
-     */
+    /** Roles assigned to this API key */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "api_key_roles", joinColumns = @JoinColumn(name = "api_key_id"))
     @Column(name = "role")
     @Builder.Default
     private List<String> roles = new ArrayList<>();
 
-    /**
-     * Whether this key is active
-     */
-    @Builder.Default
-    private Boolean active = true;
+    /** Whether this key is active */
+    @Builder.Default private Boolean active = true;
 
-    /**
-     * Expiration date (null = never expires)
-     */
+    /** Expiration date (null = never expires) */
     private Instant expiresAt;
 
-    /**
-     * Last used timestamp
-     */
+    /** Last used timestamp */
     private Instant lastUsedAt;
 
-    /**
-     * IP address restrictions (comma-separated, null = no restriction)
-     */
+    /** IP address restrictions (comma-separated, null = no restriction) */
     @Column(length = 1000)
     private String allowedIps;
 
-    /**
-     * Rate limit (requests per minute, null = no limit)
-     */
+    /** Rate limit (requests per minute, null = no limit) */
     private Integer rateLimit;
 
-    /**
-     * Partner ID if this key is partner-specific
-     */
+    /** Partner ID if this key is partner-specific */
     @Column(length = 64)
     private String partnerId;
 
-    /**
-     * Creation timestamp
-     */
+    /** Creation timestamp */
     @Column(nullable = false)
     private Instant createdAt;
 
-    /**
-     * Last update timestamp
-     */
+    /** Last update timestamp */
     @Column(nullable = false)
     private Instant updatedAt;
 
-    /**
-     * User who created this key
-     */
+    /** User who created this key */
     @Column(length = 100)
     private String createdBy;
 
-    /**
-     * Optimistic locking version
-     */
-    @Version
-    private Long version;
+    /** Optimistic locking version */
+    @Version private Long version;
 
-    /**
-     * Check if key is expired
-     */
+    /** Check if key is expired */
     public boolean isExpired() {
         return expiresAt != null && Instant.now().isAfter(expiresAt);
     }
 
-    /**
-     * Check if key is valid (active and not expired)
-     */
+    /** Check if key is valid (active and not expired) */
     public boolean isValid() {
         return active && !isExpired();
     }
 
-    /**
-     * Check if IP is allowed
-     */
+    /** Check if IP is allowed */
     public boolean isIpAllowed(String ip) {
         if (allowedIps == null || allowedIps.isBlank()) {
             return true;
@@ -178,9 +137,7 @@ public class ApiKey {
         return false;
     }
 
-    /**
-     * Simple CIDR matching
-     */
+    /** Simple CIDR matching */
     private boolean matchesCidr(String ip, String cidr) {
         try {
             String[] parts = cidr.split("/");
@@ -199,9 +156,9 @@ public class ApiKey {
 
     private long ipToLong(String ip) {
         String[] parts = ip.split("\\.");
-        return (Long.parseLong(parts[0]) << 24) +
-                (Long.parseLong(parts[1]) << 16) +
-                (Long.parseLong(parts[2]) << 8) +
-                Long.parseLong(parts[3]);
+        return (Long.parseLong(parts[0]) << 24)
+                + (Long.parseLong(parts[1]) << 16)
+                + (Long.parseLong(parts[2]) << 8)
+                + Long.parseLong(parts[3]);
     }
 }

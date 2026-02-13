@@ -2,14 +2,12 @@ package com.pesitwizard.server.entity;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.server.entity.AuditEvent.AuditCategory;
 import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
 import com.pesitwizard.server.entity.AuditEvent.AuditOutcome;
+import java.time.Instant;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("AuditEvent Entity Tests")
 class AuditEventTest {
@@ -75,33 +73,34 @@ class AuditEventTest {
     void shouldStoreAllAttributes() {
         Instant now = Instant.now();
 
-        AuditEvent event = AuditEvent.builder()
-                .id(1L)
-                .timestamp(now)
-                .category(AuditCategory.TRANSFER)
-                .eventType(AuditEventType.TRANSFER_COMPLETED)
-                .outcome(AuditOutcome.SUCCESS)
-                .username("admin")
-                .authMethod("JWT")
-                .clientIp("192.168.1.100")
-                .sessionId("sess_123")
-                .resourceType("TRANSFER")
-                .resourceId("TX_001")
-                .action("SEND")
-                .serverId("SERVER1")
-                .partnerId("PARTNER1")
-                .transferId("TX_001")
-                .filename("data.txt")
-                .bytesTransferred(1024L)
-                .durationMs(500L)
-                .errorCode(null)
-                .errorMessage(null)
-                .details("{\"key\": \"value\"}")
-                .userAgent("PesitClient/1.0")
-                .requestUri("/api/v1/transfers")
-                .httpMethod("POST")
-                .httpStatus(200)
-                .build();
+        AuditEvent event =
+                AuditEvent.builder()
+                        .id(1L)
+                        .timestamp(now)
+                        .category(AuditCategory.TRANSFER)
+                        .eventType(AuditEventType.TRANSFER_COMPLETED)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .username("admin")
+                        .authMethod("JWT")
+                        .clientIp("192.168.1.100")
+                        .sessionId("sess_123")
+                        .resourceType("TRANSFER")
+                        .resourceId("TX_001")
+                        .action("SEND")
+                        .serverId("SERVER1")
+                        .partnerId("PARTNER1")
+                        .transferId("TX_001")
+                        .filename("data.txt")
+                        .bytesTransferred(1024L)
+                        .durationMs(500L)
+                        .errorCode(null)
+                        .errorMessage(null)
+                        .details("{\"key\": \"value\"}")
+                        .userAgent("PesitClient/1.0")
+                        .requestUri("/api/v1/transfers")
+                        .httpMethod("POST")
+                        .httpStatus(200)
+                        .build();
 
         assertEquals(1L, event.getId());
         assertEquals(now, event.getTimestamp());
@@ -133,13 +132,14 @@ class AuditEventTest {
     @Test
     @DisplayName("should store error information for failed events")
     void shouldStoreErrorInformationForFailedEvents() {
-        AuditEvent event = AuditEvent.builder()
-                .category(AuditCategory.AUTHENTICATION)
-                .eventType(AuditEventType.LOGIN_FAILURE)
-                .outcome(AuditOutcome.FAILURE)
-                .errorCode("AUTH_001")
-                .errorMessage("Invalid credentials")
-                .build();
+        AuditEvent event =
+                AuditEvent.builder()
+                        .category(AuditCategory.AUTHENTICATION)
+                        .eventType(AuditEventType.LOGIN_FAILURE)
+                        .outcome(AuditOutcome.FAILURE)
+                        .errorCode("AUTH_001")
+                        .errorMessage("Invalid credentials")
+                        .build();
 
         assertEquals(AuditOutcome.FAILURE, event.getOutcome());
         assertEquals("AUTH_001", event.getErrorCode());

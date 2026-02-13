@@ -1,7 +1,6 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,7 +10,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,14 +18,15 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * PeSIT partner configuration with optional encrypted password.
- * Partners are pre-configured client identifiers that can be selected
- * from a dropdown in the transfer form instead of typing manually.
+ * PeSIT partner configuration with optional encrypted password. Partners are pre-configured client
+ * identifiers that can be selected from a dropdown in the transfer form instead of typing manually.
  */
 @Entity
-@Table(name = "client_partners", indexes = {
-        @Index(name = "idx_client_partner_partner_id", columnList = "partnerId", unique = true)
-})
+@Table(
+        name = "client_partners",
+        indexes = {
+            @Index(name = "idx_client_partner_partner_id", columnList = "partnerId", unique = true)
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

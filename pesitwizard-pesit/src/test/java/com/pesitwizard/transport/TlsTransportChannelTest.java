@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for TlsTransportChannel.
- */
+/** Unit tests for TlsTransportChannel. */
 @DisplayName("TlsTransportChannel Tests")
 class TlsTransportChannelTest {
 
@@ -38,9 +36,12 @@ class TlsTransportChannelTest {
         @Test
         @DisplayName("should throw when creating with invalid truststore data")
         void shouldThrowWhenTruststoreDataInvalid() {
-            byte[] invalidData = new byte[] { 0x00, 0x01, 0x02 };
+            byte[] invalidData = new byte[] {0x00, 0x01, 0x02};
 
-            assertThatThrownBy(() -> new TlsTransportChannel("localhost", 5000, invalidData, "password"))
+            assertThatThrownBy(
+                            () ->
+                                    new TlsTransportChannel(
+                                            "localhost", 5000, invalidData, "password"))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("Failed to initialize SSL context");
         }
@@ -113,36 +114,35 @@ class TlsTransportChannelTest {
     class FramingModeTests {
 
         @Test
-        @DisplayName("standard framing should be enabled by default")
-        void standardFramingEnabledByDefault() {
+        @DisplayName("TLS framing (no external prefix) should be the default")
+        void tlsFramingEnabledByDefault() {
             TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
-            assertThat(channel.isStandardFraming()).isTrue();
-        }
-
-        @Test
-        @DisplayName("should switch to CX framing mode")
-        void shouldSwitchToCxFraming() {
-            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
-            channel.setStandardFraming(false);
             assertThat(channel.isStandardFraming()).isFalse();
         }
 
         @Test
-        @DisplayName("should switch back to standard framing")
-        void shouldSwitchBackToStandardFraming() {
+        @DisplayName("should switch to legacy TCP-style framing")
+        void shouldSwitchToLegacyFraming() {
             TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
-            channel.setStandardFraming(false);
             channel.setStandardFraming(true);
             assertThat(channel.isStandardFraming()).isTrue();
         }
 
         @Test
-        @DisplayName("CX framing should throw on closed channel")
-        void cxFramingShouldThrowOnClosedChannel() {
+        @DisplayName("should switch back to TLS framing")
+        void shouldSwitchBackToTlsFraming() {
             TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+            channel.setStandardFraming(true);
             channel.setStandardFraming(false);
+            assertThat(channel.isStandardFraming()).isFalse();
+        }
 
-            assertThatThrownBy(() -> channel.send(new byte[] { 1, 2, 3 }))
+        @Test
+        @DisplayName("TLS framing should throw on closed channel")
+        void tlsFramingShouldThrowOnClosedChannel() {
+            TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
+
+            assertThatThrownBy(() -> channel.send(new byte[] {1, 2, 3}))
                     .isInstanceOf(java.io.IOException.class)
                     .hasMessageContaining("Not connected");
 
@@ -161,7 +161,7 @@ class TlsTransportChannelTest {
         void shouldThrowWhenSendingOnClosedChannel() {
             TlsTransportChannel channel = new TlsTransportChannel("localhost", 5000);
 
-            assertThatThrownBy(() -> channel.send(new byte[] { 1, 2, 3 }))
+            assertThatThrownBy(() -> channel.send(new byte[] {1, 2, 3}))
                     .isInstanceOf(java.io.IOException.class)
                     .hasMessageContaining("Not connected");
         }

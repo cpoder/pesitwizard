@@ -5,19 +5,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Converts JWT claims to Spring Security authorities.
- * Supports multiple IDP formats (Keycloak, Azure AD, Okta, etc.)
+ * Converts JWT claims to Spring Security authorities. Supports multiple IDP formats (Keycloak,
+ * Azure AD, Okta, etc.)
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -38,8 +36,10 @@ public class JwtRoleConverter implements Converter<Jwt, Collection<GrantedAuthor
         // Try alternative role claims (for different IDPs)
         for (String claimPath : oauth2.getAlternativeRolesClaims()) {
             // Replace ${client_id} placeholder
-            String resolvedPath = claimPath.replace("${client_id}",
-                    oauth2.getClientId() != null ? oauth2.getClientId() : "");
+            String resolvedPath =
+                    claimPath.replace(
+                            "${client_id}",
+                            oauth2.getClientId() != null ? oauth2.getClientId() : "");
             roles.addAll(extractRoles(jwt, resolvedPath));
         }
 
@@ -55,10 +55,7 @@ public class JwtRoleConverter implements Converter<Jwt, Collection<GrantedAuthor
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Extract roles from a claim path (supports nested paths like
-     * "realm_access.roles")
-     */
+    /** Extract roles from a claim path (supports nested paths like "realm_access.roles") */
     @SuppressWarnings("unchecked")
     private List<String> extractRoles(Jwt jwt, String claimPath) {
         if (claimPath == null || claimPath.isBlank()) {
@@ -81,10 +78,11 @@ public class JwtRoleConverter implements Converter<Jwt, Collection<GrantedAuthor
         }
 
         if (current instanceof List) {
-            return ((List<?>) current).stream()
-                    .filter(item -> item instanceof String)
-                    .map(item -> (String) item)
-                    .toList();
+            return ((List<?>) current)
+                    .stream()
+                            .filter(item -> item instanceof String)
+                            .map(item -> (String) item)
+                            .toList();
         } else if (current instanceof String) {
             // Some IDPs return roles as comma-separated string
             return List.of(((String) current).split(","));
@@ -93,17 +91,13 @@ public class JwtRoleConverter implements Converter<Jwt, Collection<GrantedAuthor
         return List.of();
     }
 
-    /**
-     * Map external role to internal role
-     */
+    /** Map external role to internal role */
     private String mapRole(String externalRole, SecurityProperties.RoleMappingConfig roleMapping) {
         String mapped = roleMapping.getMappings().get(externalRole);
         return mapped != null ? mapped : externalRole.toUpperCase();
     }
 
-    /**
-     * Extract username from JWT
-     */
+    /** Extract username from JWT */
     public String extractUsername(Jwt jwt) {
         SecurityProperties.OAuth2Config oauth2 = securityProperties.getOauth2();
         String usernameClaim = oauth2.getUsernameClaim();
@@ -116,16 +110,13 @@ public class JwtRoleConverter implements Converter<Jwt, Collection<GrantedAuthor
 
         // Fallback to common claims
         username = jwt.getClaimAsString("preferred_username");
-        if (username != null)
-            return username;
+        if (username != null) return username;
 
         username = jwt.getClaimAsString("email");
-        if (username != null)
-            return username;
+        if (username != null) return username;
 
         username = jwt.getClaimAsString("sub");
-        if (username != null)
-            return username;
+        if (username != null) return username;
 
         return "unknown";
     }

@@ -1,21 +1,5 @@
 package com.pesitwizard.server.controller;
 
-import java.security.Principal;
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
 import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
@@ -27,15 +11,27 @@ import com.pesitwizard.server.service.CertificateService;
 import com.pesitwizard.server.service.CertificateService.CertificateStatistics;
 import com.pesitwizard.server.ssl.SslConfigurationException;
 import com.pesitwizard.server.ssl.SslContextFactory.CertificateInfo;
-
-import org.springframework.security.access.prepost.PreAuthorize;
-
+import java.security.Principal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
- * REST API for certificate management.
- * Provides endpoints for managing keystores and truststores centrally.
+ * REST API for certificate management. Provides endpoints for managing keystores and truststores
+ * centrally.
  */
 @Slf4j
 @RestController
@@ -49,83 +45,74 @@ public class CertificateController {
 
     // ========== List & Get ==========
 
-    /**
-     * List all certificate stores
-     */
+    /** List all certificate stores */
     @GetMapping
     public ResponseEntity<List<CertificateStore>> listCertificates() {
         return ResponseEntity.ok(certificateService.getAllCertificateStores());
     }
 
-    /**
-     * List keystores
-     */
+    /** List keystores */
     @GetMapping("/keystores")
     public ResponseEntity<List<CertificateStore>> listKeystores(
             @RequestParam(defaultValue = "true") boolean activeOnly) {
         if (activeOnly) {
-            return ResponseEntity.ok(certificateService.getActiveCertificateStoresByType(StoreType.KEYSTORE));
+            return ResponseEntity.ok(
+                    certificateService.getActiveCertificateStoresByType(StoreType.KEYSTORE));
         }
         return ResponseEntity.ok(certificateService.getCertificateStoresByType(StoreType.KEYSTORE));
     }
 
-    /**
-     * List truststores
-     */
+    /** List truststores */
     @GetMapping("/truststores")
     public ResponseEntity<List<CertificateStore>> listTruststores(
             @RequestParam(defaultValue = "true") boolean activeOnly) {
         if (activeOnly) {
-            return ResponseEntity.ok(certificateService.getActiveCertificateStoresByType(StoreType.TRUSTSTORE));
+            return ResponseEntity.ok(
+                    certificateService.getActiveCertificateStoresByType(StoreType.TRUSTSTORE));
         }
-        return ResponseEntity.ok(certificateService.getCertificateStoresByType(StoreType.TRUSTSTORE));
+        return ResponseEntity.ok(
+                certificateService.getCertificateStoresByType(StoreType.TRUSTSTORE));
     }
 
-    /**
-     * Get a specific certificate store
-     */
+    /** Get a specific certificate store */
     @GetMapping("/{id}")
     public ResponseEntity<CertificateStore> getCertificate(@PathVariable Long id) {
-        return certificateService.getCertificateStore(id)
+        return certificateService
+                .getCertificateStore(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get certificate store by name
-     */
+    /** Get certificate store by name */
     @GetMapping("/name/{name}")
     public ResponseEntity<CertificateStore> getCertificateByName(@PathVariable String name) {
-        return certificateService.getCertificateStoreByName(name)
+        return certificateService
+                .getCertificateStoreByName(name)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get default keystore
-     */
+    /** Get default keystore */
     @GetMapping("/keystores/default")
     public ResponseEntity<CertificateStore> getDefaultKeystore() {
-        return certificateService.getDefaultCertificateStore(StoreType.KEYSTORE)
+        return certificateService
+                .getDefaultCertificateStore(StoreType.KEYSTORE)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get default truststore
-     */
+    /** Get default truststore */
     @GetMapping("/truststores/default")
     public ResponseEntity<CertificateStore> getDefaultTruststore() {
-        return certificateService.getDefaultCertificateStore(StoreType.TRUSTSTORE)
+        return certificateService
+                .getDefaultCertificateStore(StoreType.TRUSTSTORE)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // ========== Create ==========
 
-    /**
-     * Upload a new keystore
-     */
+    /** Upload a new keystore */
     @PostMapping(value = "/keystores", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadKeystore(
             @RequestParam("file") MultipartFile file,
@@ -141,26 +128,28 @@ public class CertificateController {
             Principal principal) {
 
         try {
-            CertificateStore store = certificateService.createCertificateStore(
-                    name,
-                    description,
-                    StoreType.KEYSTORE,
-                    format,
-                    file.getBytes(),
-                    storePassword,
-                    keyPassword,
-                    keyAlias,
-                    purpose,
-                    partnerId,
-                    isDefault,
-                    principal.getName());
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            name,
+                            description,
+                            StoreType.KEYSTORE,
+                            format,
+                            file.getBytes(),
+                            storePassword,
+                            keyPassword,
+                            keyAlias,
+                            purpose,
+                            partnerId,
+                            isDefault,
+                            principal.getName());
 
             log.info("Keystore uploaded: {}", name);
             return ResponseEntity.status(HttpStatus.CREATED).body(store);
 
         } catch (SslConfigurationException e) {
             log.error("Invalid keystore: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid keystore: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Invalid keystore: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (java.io.IOException e) {
@@ -170,9 +159,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Upload a new truststore
-     */
+    /** Upload a new truststore */
     @PostMapping(value = "/truststores", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadTruststore(
             @RequestParam("file") MultipartFile file,
@@ -184,26 +171,28 @@ public class CertificateController {
             @RequestParam(defaultValue = "false") boolean isDefault) {
 
         try {
-            CertificateStore store = certificateService.createCertificateStore(
-                    name,
-                    description,
-                    StoreType.TRUSTSTORE,
-                    format,
-                    file.getBytes(),
-                    storePassword,
-                    null,
-                    null,
-                    CertificatePurpose.CA,
-                    partnerId,
-                    isDefault,
-                    "api");
+            CertificateStore store =
+                    certificateService.createCertificateStore(
+                            name,
+                            description,
+                            StoreType.TRUSTSTORE,
+                            format,
+                            file.getBytes(),
+                            storePassword,
+                            null,
+                            null,
+                            CertificatePurpose.CA,
+                            partnerId,
+                            isDefault,
+                            "api");
 
             log.info("Truststore uploaded: {}", name);
             return ResponseEntity.status(HttpStatus.CREATED).body(store);
 
         } catch (SslConfigurationException e) {
             log.error("Invalid truststore: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid truststore: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Invalid truststore: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (java.io.IOException e) {
@@ -215,9 +204,7 @@ public class CertificateController {
 
     // ========== Update ==========
 
-    /**
-     * Update a certificate store
-     */
+    /** Update a certificate store */
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateCertificate(
             @PathVariable Long id,
@@ -232,21 +219,23 @@ public class CertificateController {
         try {
             byte[] storeData = file != null ? file.getBytes() : null;
 
-            CertificateStore store = certificateService.updateCertificateStore(
-                    id,
-                    description,
-                    storeData,
-                    storePassword,
-                    keyPassword,
-                    keyAlias,
-                    active,
-                    isDefault,
-                    "api");
+            CertificateStore store =
+                    certificateService.updateCertificateStore(
+                            id,
+                            description,
+                            storeData,
+                            storePassword,
+                            keyPassword,
+                            keyAlias,
+                            active,
+                            isDefault,
+                            "api");
 
             return ResponseEntity.ok(store);
 
         } catch (SslConfigurationException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid certificate: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Invalid certificate: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (java.io.IOException e) {
@@ -258,9 +247,7 @@ public class CertificateController {
 
     // ========== Actions ==========
 
-    /**
-     * Set a certificate store as default
-     */
+    /** Set a certificate store as default */
     @PostMapping("/{id}/set-default")
     public ResponseEntity<CertificateStore> setAsDefault(@PathVariable Long id) {
         try {
@@ -272,9 +259,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Activate a certificate store
-     */
+    /** Activate a certificate store */
     @PostMapping("/{id}/activate")
     public ResponseEntity<CertificateStore> activate(@PathVariable Long id) {
         try {
@@ -286,9 +271,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Deactivate a certificate store
-     */
+    /** Deactivate a certificate store */
     @PostMapping("/{id}/deactivate")
     public ResponseEntity<CertificateStore> deactivate(@PathVariable Long id) {
         try {
@@ -300,31 +283,29 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Validate a certificate store
-     */
+    /** Validate a certificate store */
     @PostMapping("/{id}/validate")
     public ResponseEntity<?> validate(@PathVariable Long id) {
         try {
             certificateService.validateCertificateStore(id);
             return ResponseEntity.ok(new SuccessResponse("Certificate is valid"));
         } catch (SslConfigurationException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Validation failed: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Validation failed: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Get certificate details/info
-     */
+    /** Get certificate details/info */
     @GetMapping("/{id}/info")
     public ResponseEntity<?> getCertificateInfo(@PathVariable Long id) {
         try {
             CertificateInfo info = certificateService.getCertificateInfo(id);
             return ResponseEntity.ok(info);
         } catch (SslConfigurationException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Failed to get info: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Failed to get info: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -332,9 +313,7 @@ public class CertificateController {
 
     // ========== Delete ==========
 
-    /**
-     * Delete a certificate store
-     */
+    /** Delete a certificate store */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCertificate(@PathVariable Long id) {
         try {
@@ -348,18 +327,14 @@ public class CertificateController {
 
     // ========== Expiration ==========
 
-    /**
-     * Get expiring certificates
-     */
+    /** Get expiring certificates */
     @GetMapping("/expiring")
     public ResponseEntity<List<CertificateStore>> getExpiringCertificates(
             @RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(certificateService.getExpiringCertificates(days));
     }
 
-    /**
-     * Get expired certificates
-     */
+    /** Get expired certificates */
     @GetMapping("/expired")
     public ResponseEntity<List<CertificateStore>> getExpiredCertificates() {
         return ResponseEntity.ok(certificateService.getExpiredCertificates());
@@ -367,19 +342,16 @@ public class CertificateController {
 
     // ========== Partner Certificates ==========
 
-    /**
-     * Get certificates for a partner
-     */
+    /** Get certificates for a partner */
     @GetMapping("/partner/{partnerId}")
-    public ResponseEntity<List<CertificateStore>> getPartnerCertificates(@PathVariable String partnerId) {
+    public ResponseEntity<List<CertificateStore>> getPartnerCertificates(
+            @PathVariable String partnerId) {
         return ResponseEntity.ok(certificateService.getPartnerCertificates(partnerId));
     }
 
     // ========== Create Empty Stores ==========
 
-    /**
-     * Create an empty keystore
-     */
+    /** Create an empty keystore */
     @PostMapping("/keystores/create")
     public ResponseEntity<?> createEmptyKeystore(
             @RequestParam("name") String name,
@@ -391,8 +363,16 @@ public class CertificateController {
             @RequestParam(defaultValue = "false") boolean isDefault) {
 
         try {
-            CertificateStore store = certificateService.createEmptyKeystore(
-                    name, description, format, storePassword, purpose, partnerId, isDefault, "api");
+            CertificateStore store =
+                    certificateService.createEmptyKeystore(
+                            name,
+                            description,
+                            format,
+                            storePassword,
+                            purpose,
+                            partnerId,
+                            isDefault,
+                            "api");
             return ResponseEntity.status(HttpStatus.CREATED).body(store);
         } catch (SslConfigurationException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
@@ -401,9 +381,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Create an empty truststore
-     */
+    /** Create an empty truststore */
     @PostMapping("/truststores/create")
     public ResponseEntity<?> createEmptyTruststore(
             @RequestParam("name") String name,
@@ -414,8 +392,9 @@ public class CertificateController {
             @RequestParam(defaultValue = "false") boolean isDefault) {
 
         try {
-            CertificateStore store = certificateService.createEmptyTruststore(
-                    name, description, format, storePassword, partnerId, isDefault, "api");
+            CertificateStore store =
+                    certificateService.createEmptyTruststore(
+                            name, description, format, storePassword, partnerId, isDefault, "api");
             return ResponseEntity.status(HttpStatus.CREATED).body(store);
         } catch (SslConfigurationException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
@@ -426,9 +405,7 @@ public class CertificateController {
 
     // ========== Add Certificates ==========
 
-    /**
-     * Add a certificate to a truststore
-     */
+    /** Add a certificate to a truststore */
     @PostMapping(value = "/{id}/certificates", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addCertificate(
             @PathVariable Long id,
@@ -436,7 +413,8 @@ public class CertificateController {
             @RequestParam("alias") String alias) {
 
         try {
-            CertificateStore store = certificateService.addCertificateToTruststore(id, file.getBytes(), alias);
+            CertificateStore store =
+                    certificateService.addCertificateToTruststore(id, file.getBytes(), alias);
             log.info("Added certificate '{}' to store {}", alias, id);
             return ResponseEntity.ok(store);
         } catch (SslConfigurationException e) {
@@ -450,9 +428,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Add a key pair to a keystore
-     */
+    /** Add a key pair to a keystore */
     @PostMapping(value = "/{id}/keypair", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addKeyPair(
             @PathVariable Long id,
@@ -462,8 +438,9 @@ public class CertificateController {
             @RequestParam(required = false) String keyPassword) {
 
         try {
-            CertificateStore store = certificateService.addKeyPairToKeystore(
-                    id, certificate.getBytes(), privateKey.getBytes(), alias, keyPassword);
+            CertificateStore store =
+                    certificateService.addKeyPairToKeystore(
+                            id, certificate.getBytes(), privateKey.getBytes(), alias, keyPassword);
             log.info("Added key pair '{}' to store {}", alias, id);
             return ResponseEntity.ok(store);
         } catch (SslConfigurationException e) {
@@ -479,9 +456,7 @@ public class CertificateController {
 
     // ========== List & Remove Entries ==========
 
-    /**
-     * List entries in a certificate store
-     */
+    /** List entries in a certificate store */
     @GetMapping("/{id}/entries")
     public ResponseEntity<?> listEntries(@PathVariable Long id) {
         try {
@@ -493,9 +468,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Remove an entry from a certificate store
-     */
+    /** Remove an entry from a certificate store */
     @DeleteMapping("/{id}/entries/{alias}")
     public ResponseEntity<?> removeEntry(@PathVariable Long id, @PathVariable String alias) {
         try {
@@ -511,9 +484,7 @@ public class CertificateController {
 
     // ========== Statistics ==========
 
-    /**
-     * Get certificate statistics
-     */
+    /** Get certificate statistics */
     @GetMapping("/stats")
     public ResponseEntity<CertificateStatistics> getStatistics() {
         return ResponseEntity.ok(certificateService.getStatistics());
@@ -521,9 +492,7 @@ public class CertificateController {
 
     // ========== Certificate Authority ==========
 
-    /**
-     * Initialize the private CA (creates self-signed CA certificate)
-     */
+    /** Initialize the private CA (creates self-signed CA certificate) */
     @PostMapping("/ca/initialize")
     public ResponseEntity<?> initializeCa() {
         try {
@@ -535,9 +504,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Get CA certificate in PEM format (for distribution to clients)
-     */
+    /** Get CA certificate in PEM format (for distribution to clients) */
     @GetMapping(value = "/ca/certificate", produces = "application/x-pem-file")
     public ResponseEntity<?> getCaCertificate() {
         try {
@@ -550,9 +517,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Generate a CSR (Certificate Signing Request) for a new certificate
-     */
+    /** Generate a CSR (Certificate Signing Request) for a new certificate */
     @PostMapping("/ca/csr")
     public ResponseEntity<?> generateCsr(
             @RequestParam String commonName,
@@ -560,8 +525,9 @@ public class CertificateController {
             @RequestParam(required = false) String organization,
             @RequestParam(defaultValue = "CLIENT") CertificatePurpose purpose) {
         try {
-            CertificateRequest request = caService.generateCertificateRequest(
-                    commonName, organizationalUnit, organization, purpose);
+            CertificateRequest request =
+                    caService.generateCertificateRequest(
+                            commonName, organizationalUnit, organization, purpose);
             log.info("CSR generated for: {}", commonName);
             return ResponseEntity.ok(request);
         } catch (SslConfigurationException e) {
@@ -569,9 +535,7 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Sign a CSR with the CA
-     */
+    /** Sign a CSR with the CA */
     @PostMapping("/ca/sign")
     public ResponseEntity<?> signCsr(
             @RequestParam String csrPem,
@@ -579,18 +543,20 @@ public class CertificateController {
             @RequestParam(defaultValue = "365") int validityDays,
             @RequestParam(required = false) String partnerId) {
         try {
-            SignedCertificate signed = caService.signCertificateRequest(
-                    csrPem, purpose, validityDays, partnerId, "api");
-            log.info("Certificate signed: {} (expires: {})", signed.getSubjectDn(), signed.getExpiresAt());
+            SignedCertificate signed =
+                    caService.signCertificateRequest(
+                            csrPem, purpose, validityDays, partnerId, "api");
+            log.info(
+                    "Certificate signed: {} (expires: {})",
+                    signed.getSubjectDn(),
+                    signed.getExpiresAt());
             return ResponseEntity.ok(signed);
         } catch (SslConfigurationException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 
-    /**
-     * Generate a complete certificate for a partner (key pair + signed cert)
-     */
+    /** Generate a complete certificate for a partner (key pair + signed cert) */
     @PostMapping("/ca/partner/{partnerId}/generate")
     public ResponseEntity<?> generatePartnerCertificate(
             @PathVariable String partnerId,
@@ -598,8 +564,9 @@ public class CertificateController {
             @RequestParam(defaultValue = "CLIENT") CertificatePurpose purpose,
             @RequestParam(defaultValue = "365") int validityDays) {
         try {
-            CertificateStore store = caService.generatePartnerCertificate(
-                    partnerId, commonName, purpose, validityDays, "api");
+            CertificateStore store =
+                    caService.generatePartnerCertificate(
+                            partnerId, commonName, purpose, validityDays, "api");
             log.info("Partner certificate generated: {} for {}", store.getName(), partnerId);
             return ResponseEntity.status(HttpStatus.CREATED).body(store);
         } catch (SslConfigurationException e) {
@@ -607,16 +574,16 @@ public class CertificateController {
         }
     }
 
-    /**
-     * Verify a certificate was signed by our CA
-     */
+    /** Verify a certificate was signed by our CA */
     @PostMapping("/ca/verify")
     public ResponseEntity<?> verifyCertificate(@RequestParam String certificatePem) {
         boolean valid = caService.verifyCertificate(certificatePem);
         if (valid) {
-            return ResponseEntity.ok(new SuccessResponse("Certificate is valid and signed by our CA"));
+            return ResponseEntity.ok(
+                    new SuccessResponse("Certificate is valid and signed by our CA"));
         } else {
-            return ResponseEntity.ok(new ErrorResponse("Certificate is not valid or not signed by our CA"));
+            return ResponseEntity.ok(
+                    new ErrorResponse("Certificate is not valid or not signed by our CA"));
         }
     }
 

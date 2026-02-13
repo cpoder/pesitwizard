@@ -3,9 +3,7 @@ package com.pesitwizard.connector;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * File metadata returned by storage connectors.
- */
+/** File metadata returned by storage connectors. */
 public class FileMetadata {
 
     private String name;
@@ -19,8 +17,7 @@ public class FileMetadata {
     private String checksumAlgorithm;
     private Map<String, String> attributes;
 
-    public FileMetadata() {
-    }
+    public FileMetadata() {}
 
     public String getName() {
         return name;

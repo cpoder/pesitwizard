@@ -3,19 +3,6 @@ package com.pesitwizard.connector.sftp;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
@@ -24,6 +11,17 @@ import com.jcraft.jsch.SftpException;
 import com.pesitwizard.connector.ConfigParameter;
 import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.FileMetadata;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 class SftpConnectorTest {
 
@@ -62,29 +60,41 @@ class SftpConnectorTest {
     void requiredParameters_containsHostAndUsername() {
         List<ConfigParameter> params = connector.getRequiredParameters();
         assertThat(params).hasSize(2);
-        assertThat(params).extracting(ConfigParameter::getName)
-                .containsExactly("host", "username");
+        assertThat(params).extracting(ConfigParameter::getName).containsExactly("host", "username");
     }
 
     @Test
     void optionalParameters_containsExpectedKeys() {
         List<ConfigParameter> params = connector.getOptionalParameters();
-        assertThat(params).extracting(ConfigParameter::getName)
-                .containsExactly("password", "port", "knownHostsFile", "privateKey", "basePath",
-                        "connectTimeout", "keepaliveInterval", "maxRetries");
+        assertThat(params)
+                .extracting(ConfigParameter::getName)
+                .containsExactly(
+                        "password",
+                        "port",
+                        "knownHostsFile",
+                        "privateKey",
+                        "basePath",
+                        "connectTimeout",
+                        "keepaliveInterval",
+                        "maxRetries");
     }
 
     @Test
     void optionalParameters_passwordIsSensitive() {
         List<ConfigParameter> params = connector.getOptionalParameters();
-        ConfigParameter pwd = params.stream().filter(p -> "password".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter pwd =
+                params.stream()
+                        .filter(p -> "password".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
         assertThat(pwd.isSensitive()).isTrue();
     }
 
     @Test
     void optionalParameters_portDefaultIs22() {
         List<ConfigParameter> params = connector.getOptionalParameters();
-        ConfigParameter port = params.stream().filter(p -> "port".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter port =
+                params.stream().filter(p -> "port".equals(p.getName())).findFirst().orElseThrow();
         assertThat(port.getDefaultValue()).isEqualTo("22");
     }
 
@@ -92,13 +102,25 @@ class SftpConnectorTest {
     void optionalParameters_resilienceDefaults() {
         List<ConfigParameter> params = connector.getOptionalParameters();
 
-        ConfigParameter timeout = params.stream().filter(p -> "connectTimeout".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter timeout =
+                params.stream()
+                        .filter(p -> "connectTimeout".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
         assertThat(timeout.getDefaultValue()).isEqualTo("30000");
 
-        ConfigParameter keepalive = params.stream().filter(p -> "keepaliveInterval".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter keepalive =
+                params.stream()
+                        .filter(p -> "keepaliveInterval".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
         assertThat(keepalive.getDefaultValue()).isEqualTo("60");
 
-        ConfigParameter retries = params.stream().filter(p -> "maxRetries".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter retries =
+                params.stream()
+                        .filter(p -> "maxRetries".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
         assertThat(retries.getDefaultValue()).isEqualTo("3");
     }
 
@@ -199,8 +221,7 @@ class SftpConnectorTest {
         cfg.put("maxRetries", "0"); // Don't retry during test
 
         // Connection will fail (unreachable host) with CONNECTION_FAILED
-        assertThatThrownBy(() -> connector.initialize(cfg))
-                .isInstanceOf(ConnectorException.class);
+        assertThatThrownBy(() -> connector.initialize(cfg)).isInstanceOf(ConnectorException.class);
     }
 
     // --- close ---
@@ -239,9 +260,7 @@ class SftpConnectorTest {
             setField(connector, "connectTimeout", 30000);
         }
 
-        /**
-         * Set up JSch mock so that reconnection works in retry tests.
-         */
+        /** Set up JSch mock so that reconnection works in retry tests. */
         private void setUpReconnection() throws Exception {
             JSch mockJsch = mock(JSch.class);
             when(mockJsch.getSession("testuser", "testhost", 22)).thenReturn(mockSession);
@@ -329,7 +348,8 @@ class SftpConnectorTest {
         void delete_propagatesErrors() throws Exception {
             when(mockChannel.isConnected()).thenReturn(true);
             doThrow(new SftpException(ChannelSftp.SSH_FX_PERMISSION_DENIED, "denied"))
-                    .when(mockChannel).rm("protected.txt");
+                    .when(mockChannel)
+                    .rm("protected.txt");
 
             assertThatThrownBy(() -> connector.delete("protected.txt"))
                     .isInstanceOf(ConnectorException.class)
@@ -348,7 +368,8 @@ class SftpConnectorTest {
         void mkdir_toleratesExisting() throws Exception {
             SftpATTRS attrs = mock(SftpATTRS.class);
             doThrow(new SftpException(ChannelSftp.SSH_FX_FAILURE, "exists"))
-                    .when(mockChannel).mkdir("existdir");
+                    .when(mockChannel)
+                    .mkdir("existdir");
             when(mockChannel.stat("existdir")).thenReturn(attrs);
 
             // Should not throw — mkdir is idempotent
@@ -359,7 +380,8 @@ class SftpConnectorTest {
         @DisplayName("mkdir propagates non-exists errors")
         void mkdir_propagatesErrors() throws Exception {
             doThrow(new SftpException(ChannelSftp.SSH_FX_PERMISSION_DENIED, "denied"))
-                    .when(mockChannel).mkdir("forbidden");
+                    .when(mockChannel)
+                    .mkdir("forbidden");
 
             assertThatThrownBy(() -> connector.mkdir("forbidden"))
                     .isInstanceOf(ConnectorException.class)
@@ -425,7 +447,8 @@ class SftpConnectorTest {
         @Test
         @DisplayName("testConnection returns false when channel fails")
         void testConnection_whenFails_returnsFalse() throws Exception {
-            when(mockChannel.pwd()).thenThrow(new SftpException(ChannelSftp.SSH_FX_FAILURE, "fail"));
+            when(mockChannel.pwd())
+                    .thenThrow(new SftpException(ChannelSftp.SSH_FX_FAILURE, "fail"));
 
             assertThat(connector.testConnection()).isFalse();
         }
@@ -465,8 +488,12 @@ class SftpConnectorTest {
 
             assertThatThrownBy(() -> connector.read("secret.txt"))
                     .isInstanceOf(ConnectorException.class)
-                    .satisfies(e -> assertThat(((ConnectorException) e).getErrorCode())
-                            .isEqualTo(ConnectorException.ErrorCode.PERMISSION_DENIED));
+                    .satisfies(
+                            e ->
+                                    assertThat(((ConnectorException) e).getErrorCode())
+                                            .isEqualTo(
+                                                    ConnectorException.ErrorCode
+                                                            .PERMISSION_DENIED));
             verify(mockChannel, times(1)).get("secret.txt");
         }
 

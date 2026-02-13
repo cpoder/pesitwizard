@@ -7,9 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for SecretsHealthIndicator.
- */
+/** Unit tests for SecretsHealthIndicator. */
 @DisplayName("SecretsHealthIndicator Tests")
 class SecretsHealthIndicatorTest {
 
@@ -20,8 +18,8 @@ class SecretsHealthIndicatorTest {
         @Test
         @DisplayName("should return UP when AES provider is available")
         void shouldReturnUpWhenAesProviderAvailable() {
-            AesSecretsProvider aesProvider = new AesSecretsProvider("test-key-32-chars-for-testing!!",
-                    "./target/test.salt");
+            AesSecretsProvider aesProvider =
+                    new AesSecretsProvider("test-key-32-chars-for-testing!!", "./target/test.salt");
             SecretsHealthIndicator indicator = new SecretsHealthIndicator(aesProvider);
 
             SecretsHealthIndicator.HealthStatus status = indicator.health();
@@ -73,10 +71,11 @@ class SecretsHealthIndicatorTest {
         @Test
         @DisplayName("should return DOWN when composite provider primary is unavailable")
         void shouldReturnDownWhenCompositePrimaryUnavailable() {
-            AesSecretsProvider aesProvider = new AesSecretsProvider("test-key-32-chars-for-testing!!",
-                    "./target/test.salt");
+            AesSecretsProvider aesProvider =
+                    new AesSecretsProvider("test-key-32-chars-for-testing!!", "./target/test.salt");
             VaultSecretsProvider vaultProvider = new VaultSecretsProvider(null, null, null);
-            CompositeSecretsProvider compositeProvider = new CompositeSecretsProvider(vaultProvider, aesProvider);
+            CompositeSecretsProvider compositeProvider =
+                    new CompositeSecretsProvider(vaultProvider, aesProvider);
             SecretsHealthIndicator indicator = new SecretsHealthIndicator(compositeProvider);
 
             SecretsHealthIndicator.HealthStatus status = indicator.health();
@@ -90,11 +89,13 @@ class SecretsHealthIndicatorTest {
         @Test
         @DisplayName("should return UP when composite provider primary is AES and available")
         void shouldReturnUpWhenCompositePrimaryIsAesAndAvailable() {
-            AesSecretsProvider aesProvider = new AesSecretsProvider("test-key-32-chars-for-testing!!",
-                    "./target/test.salt");
-            AesSecretsProvider fallbackAes = new AesSecretsProvider("fallback-key-32-chars-testing!!",
-                    "./target/test2.salt");
-            CompositeSecretsProvider compositeProvider = new CompositeSecretsProvider(aesProvider, fallbackAes);
+            AesSecretsProvider aesProvider =
+                    new AesSecretsProvider("test-key-32-chars-for-testing!!", "./target/test.salt");
+            AesSecretsProvider fallbackAes =
+                    new AesSecretsProvider(
+                            "fallback-key-32-chars-testing!!", "./target/test2.salt");
+            CompositeSecretsProvider compositeProvider =
+                    new CompositeSecretsProvider(aesProvider, fallbackAes);
             SecretsHealthIndicator indicator = new SecretsHealthIndicator(compositeProvider);
 
             SecretsHealthIndicator.HealthStatus status = indicator.health();

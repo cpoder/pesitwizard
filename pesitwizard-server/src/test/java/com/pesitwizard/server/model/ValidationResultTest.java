@@ -2,10 +2,9 @@ package com.pesitwizard.server.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.fpdu.DiagnosticCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.pesitwizard.fpdu.DiagnosticCode;
 
 @DisplayName("ValidationResult Tests")
 class ValidationResultTest {
@@ -23,8 +22,8 @@ class ValidationResultTest {
     @Test
     @DisplayName("should create error validation result")
     void shouldCreateErrorResult() {
-        ValidationResult result = ValidationResult.error(
-                DiagnosticCode.D3_301, "Partner not found");
+        ValidationResult result =
+                ValidationResult.error(DiagnosticCode.D3_301, "Partner not found");
 
         assertFalse(result.isValid());
         assertEquals(DiagnosticCode.D3_301, result.getDiagCode());

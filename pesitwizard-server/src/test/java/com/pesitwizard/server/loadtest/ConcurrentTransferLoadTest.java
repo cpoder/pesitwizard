@@ -20,35 +20,28 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-
-import lombok.Builder;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Load tests for concurrent PeSIT file transfers.
  *
- * These tests verify the server can handle production-level loads:
- * - 200 concurrent transfers (target)
- * - 500 concurrent transfers (stress test)
- * - 1000 concurrent transfers (breaking point)
+ * <p>These tests verify the server can handle production-level loads: - 200 concurrent transfers
+ * (target) - 500 concurrent transfers (stress test) - 1000 concurrent transfers (breaking point)
  *
- * Run with: mvn test -Dtest=ConcurrentTransferLoadTest -Dload-test=true
+ * <p>Run with: mvn test -Dtest=ConcurrentTransferLoadTest -Dload-test=true
  *
- * Note: These tests are disabled by default and require:
- * - Running PeSIT server
- * - Sufficient system resources
- * - Extended timeouts
+ * <p>Note: These tests are disabled by default and require: - Running PeSIT server - Sufficient
+ * system resources - Extended timeouts
  */
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -61,7 +54,7 @@ class ConcurrentTransferLoadTest {
     private static final int SERVER_PORT = 6502;
 
     // Test file sizes
-    private static final int SMALL_FILE_SIZE = 1024 * 1024;       // 1 MB
+    private static final int SMALL_FILE_SIZE = 1024 * 1024; // 1 MB
     private static final int MEDIUM_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     private static final int LARGE_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
@@ -84,25 +77,27 @@ class ConcurrentTransferLoadTest {
         if (testFilesDir != null && Files.exists(testFilesDir)) {
             Files.walk(testFilesDir)
                     .sorted((a, b) -> -a.compareTo(b))
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException e) {
-                            // Ignore
-                        }
-                    });
+                    .forEach(
+                            path -> {
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (IOException e) {
+                                    // Ignore
+                                }
+                            });
         }
     }
 
     @Test
     @DisplayName("Baseline: 10 concurrent transfers")
     void testBaselineConcurrentTransfers() throws Exception {
-        LoadTestConfig config = LoadTestConfig.builder()
-                .concurrentTransfers(10)
-                .fileSizeBytes(SMALL_FILE_SIZE)
-                .durationMinutes(1)
-                .targetErrorRate(0.0)
-                .build();
+        LoadTestConfig config =
+                LoadTestConfig.builder()
+                        .concurrentTransfers(10)
+                        .fileSizeBytes(SMALL_FILE_SIZE)
+                        .durationMinutes(1)
+                        .targetErrorRate(0.0)
+                        .build();
 
         LoadTestResult result = runLoadTest(config);
 
@@ -114,23 +109,22 @@ class ConcurrentTransferLoadTest {
     @Test
     @DisplayName("Target: 200 concurrent transfers (production target)")
     void test200ConcurrentTransfers() throws Exception {
-        LoadTestConfig config = LoadTestConfig.builder()
-                .concurrentTransfers(200)
-                .fileSizeBytes(MEDIUM_FILE_SIZE)
-                .durationMinutes(30)
-                .rampUpMinutes(5)
-                .targetErrorRate(0.01)
-                .targetP95LatencyMs(30000)
-                .build();
+        LoadTestConfig config =
+                LoadTestConfig.builder()
+                        .concurrentTransfers(200)
+                        .fileSizeBytes(MEDIUM_FILE_SIZE)
+                        .durationMinutes(30)
+                        .rampUpMinutes(5)
+                        .targetErrorRate(0.01)
+                        .targetP95LatencyMs(30000)
+                        .build();
 
         LoadTestResult result = runLoadTest(config);
 
         log.info("200 concurrent test results:\n{}", result.toDetailedReport());
 
         // Pass criteria
-        assertThat(result.getErrorRate())
-                .as("Error rate should be less than 1%")
-                .isLessThan(0.01);
+        assertThat(result.getErrorRate()).as("Error rate should be less than 1%").isLessThan(0.01);
 
         assertThat(result.getP95LatencyMs())
                 .as("P95 latency should be less than 30 seconds")
@@ -144,13 +138,14 @@ class ConcurrentTransferLoadTest {
     @Test
     @DisplayName("Stress: 500 concurrent transfers")
     void test500ConcurrentTransfers() throws Exception {
-        LoadTestConfig config = LoadTestConfig.builder()
-                .concurrentTransfers(500)
-                .fileSizeBytes(SMALL_FILE_SIZE)
-                .durationMinutes(15)
-                .rampUpMinutes(5)
-                .targetErrorRate(0.05) // Allow 5% errors under stress
-                .build();
+        LoadTestConfig config =
+                LoadTestConfig.builder()
+                        .concurrentTransfers(500)
+                        .fileSizeBytes(SMALL_FILE_SIZE)
+                        .durationMinutes(15)
+                        .rampUpMinutes(5)
+                        .targetErrorRate(0.05) // Allow 5% errors under stress
+                        .build();
 
         LoadTestResult result = runLoadTest(config);
 
@@ -162,27 +157,28 @@ class ConcurrentTransferLoadTest {
                 .isLessThan(0.05);
 
         // Should still complete some transfers
-        assertThat(result.getSuccessfulTransfers())
-                .isGreaterThan(0);
+        assertThat(result.getSuccessfulTransfers()).isGreaterThan(0);
     }
 
     @Test
     @DisplayName("Breaking point: 1000 concurrent transfers")
     void test1000ConcurrentTransfers() throws Exception {
-        LoadTestConfig config = LoadTestConfig.builder()
-                .concurrentTransfers(1000)
-                .fileSizeBytes(SMALL_FILE_SIZE)
-                .durationMinutes(10)
-                .rampUpMinutes(5)
-                .targetErrorRate(0.10) // Allow 10% errors at breaking point
-                .build();
+        LoadTestConfig config =
+                LoadTestConfig.builder()
+                        .concurrentTransfers(1000)
+                        .fileSizeBytes(SMALL_FILE_SIZE)
+                        .durationMinutes(10)
+                        .rampUpMinutes(5)
+                        .targetErrorRate(0.10) // Allow 10% errors at breaking point
+                        .build();
 
         LoadTestResult result = runLoadTest(config);
 
         log.info("Breaking point test results:\n{}", result.toDetailedReport());
 
         // Document maximum capacity
-        log.info("Maximum documented capacity: {} concurrent transfers with {}% error rate",
+        log.info(
+                "Maximum documented capacity: {} concurrent transfers with {}% error rate",
                 result.getMaxConcurrentTransfers(), result.getErrorRate() * 100);
 
         // Should not crash
@@ -195,12 +191,13 @@ class ConcurrentTransferLoadTest {
     @DisplayName("Mixed workload: various file sizes")
     void testMixedWorkload() throws Exception {
         // 50% small files, 30% medium, 20% large
-        LoadTestConfig config = LoadTestConfig.builder()
-                .concurrentTransfers(100)
-                .mixedFileSizes(true)
-                .durationMinutes(15)
-                .rampUpMinutes(3)
-                .build();
+        LoadTestConfig config =
+                LoadTestConfig.builder()
+                        .concurrentTransfers(100)
+                        .mixedFileSizes(true)
+                        .durationMinutes(15)
+                        .rampUpMinutes(3)
+                        .build();
 
         LoadTestResult result = runLoadTest(config);
 
@@ -210,8 +207,10 @@ class ConcurrentTransferLoadTest {
     }
 
     private LoadTestResult runLoadTest(LoadTestConfig config) throws Exception {
-        log.info("Starting load test: {} concurrent transfers for {} minutes",
-                config.getConcurrentTransfers(), config.getDurationMinutes());
+        log.info(
+                "Starting load test: {} concurrent transfers for {} minutes",
+                config.getConcurrentTransfers(),
+                config.getDurationMinutes());
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger errorCount = new AtomicInteger(0);
@@ -233,49 +232,54 @@ class ConcurrentTransferLoadTest {
         // Start transfers with ramp up
         for (int step = 0; step < rampUpSteps && Instant.now().isBefore(endTime); step++) {
             for (int i = 0; i < transfersPerStep; i++) {
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                    while (Instant.now().isBefore(endTime)) {
-                        try {
-                            int concurrent = currentConcurrent.incrementAndGet();
-                            maxConcurrent.updateAndGet(max -> Math.max(max, concurrent));
+                CompletableFuture<Void> future =
+                        CompletableFuture.runAsync(
+                                () -> {
+                                    while (Instant.now().isBefore(endTime)) {
+                                        try {
+                                            int concurrent = currentConcurrent.incrementAndGet();
+                                            maxConcurrent.updateAndGet(
+                                                    max -> Math.max(max, concurrent));
 
-                            long startNanos = System.nanoTime();
+                                            long startNanos = System.nanoTime();
 
-                            // Simulate transfer
-                            int fileSize = config.isMixedFileSizes()
-                                    ? getRandomFileSize()
-                                    : config.getFileSizeBytes();
+                                            // Simulate transfer
+                                            int fileSize =
+                                                    config.isMixedFileSizes()
+                                                            ? getRandomFileSize()
+                                                            : config.getFileSizeBytes();
 
-                            boolean success = simulateTransfer(fileSize);
+                                            boolean success = simulateTransfer(fileSize);
 
-                            long latencyNanos = System.nanoTime() - startNanos;
-                            long latencyMs = latencyNanos / 1_000_000;
+                                            long latencyNanos = System.nanoTime() - startNanos;
+                                            long latencyMs = latencyNanos / 1_000_000;
 
-                            if (success) {
-                                successCount.incrementAndGet();
-                                totalBytes.addAndGet(fileSize);
-                                synchronized (latencies) {
-                                    latencies.add(latencyMs);
-                                }
-                            } else {
-                                errorCount.incrementAndGet();
-                            }
-                        } catch (Exception e) {
-                            errorCount.incrementAndGet();
-                            log.debug("Transfer error: {}", e.getMessage());
-                        } finally {
-                            currentConcurrent.decrementAndGet();
-                        }
+                                            if (success) {
+                                                successCount.incrementAndGet();
+                                                totalBytes.addAndGet(fileSize);
+                                                synchronized (latencies) {
+                                                    latencies.add(latencyMs);
+                                                }
+                                            } else {
+                                                errorCount.incrementAndGet();
+                                            }
+                                        } catch (Exception e) {
+                                            errorCount.incrementAndGet();
+                                            log.debug("Transfer error: {}", e.getMessage());
+                                        } finally {
+                                            currentConcurrent.decrementAndGet();
+                                        }
 
-                        // Small delay between transfers
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                }, executor);
+                                        // Small delay between transfers
+                                        try {
+                                            Thread.sleep(100);
+                                        } catch (InterruptedException e) {
+                                            Thread.currentThread().interrupt();
+                                            break;
+                                        }
+                                    }
+                                },
+                                executor);
                 futures.add(future);
             }
 
@@ -300,9 +304,8 @@ class ConcurrentTransferLoadTest {
         int totalTransfers = successCount.get() + errorCount.get();
         double errorRate = totalTransfers > 0 ? (double) errorCount.get() / totalTransfers : 0;
 
-        LongSummaryStatistics latencyStats = latencies.stream()
-                .mapToLong(Long::longValue)
-                .summaryStatistics();
+        LongSummaryStatistics latencyStats =
+                latencies.stream().mapToLong(Long::longValue).summaryStatistics();
 
         long p50 = calculatePercentile(latencies, 50);
         long p95 = calculatePercentile(latencies, 95);
@@ -342,7 +345,7 @@ class ConcurrentTransferLoadTest {
             // 6. Send CLOSE, DESELECT, RELEASE
 
             // For now, simulate with a connection test
-            socket.getOutputStream().write(new byte[]{0x00, 0x02, 0x40, 0x01});
+            socket.getOutputStream().write(new byte[] {0x00, 0x02, 0x40, 0x01});
             Thread.sleep(fileSize / (1024 * 1024) * 100); // Simulate transfer time
 
             return true;
@@ -387,14 +390,10 @@ class ConcurrentTransferLoadTest {
         private int concurrentTransfers;
         private int fileSizeBytes;
         private int durationMinutes;
-        @Builder.Default
-        private int rampUpMinutes = 1;
-        @Builder.Default
-        private double targetErrorRate = 0.01;
-        @Builder.Default
-        private long targetP95LatencyMs = 30000;
-        @Builder.Default
-        private boolean mixedFileSizes = false;
+        @Builder.Default private int rampUpMinutes = 1;
+        @Builder.Default private double targetErrorRate = 0.01;
+        @Builder.Default private long targetP95LatencyMs = 30000;
+        @Builder.Default private boolean mixedFileSizes = false;
     }
 
     @Data
@@ -416,7 +415,8 @@ class ConcurrentTransferLoadTest {
         private boolean serverHealthy;
 
         public String toDetailedReport() {
-            return String.format("""
+            return String.format(
+                    """
                     ╔══════════════════════════════════════════════════════════════╗
                     ║                    LOAD TEST RESULTS                          ║
                     ╠══════════════════════════════════════════════════════════════╣

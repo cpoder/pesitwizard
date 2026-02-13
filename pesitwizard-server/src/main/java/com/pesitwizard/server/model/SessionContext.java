@@ -1,17 +1,14 @@
 package com.pesitwizard.server.model;
 
-import java.time.Instant;
-
+import com.pesitwizard.channel.PesitChannel;
 import com.pesitwizard.server.config.LogicalFileConfig;
 import com.pesitwizard.server.config.PartnerConfig;
 import com.pesitwizard.server.state.ServerState;
-
+import java.time.Instant;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Context for a PeSIT session
- */
+/** Context for a PeSIT session */
 @Slf4j
 @Data
 public class SessionContext {
@@ -46,9 +43,7 @@ public class SessionContext {
     /** Sync points option negotiated (PI 7) */
     private boolean syncPointsEnabled;
 
-    /**
-     * Sync point interval in KB declared by client (PI 7) - for D2-222 validation
-     */
+    /** Sync point interval in KB declared by client (PI 7) - for D2-222 validation */
     private int clientSyncIntervalKb;
 
     /** Resynchronization option negotiated (PI 23) */
@@ -87,31 +82,29 @@ public class SessionContext {
     /** Message filename for segmented message reception */
     private String messageFilename;
 
-    /** Client uses EBCDIC encoding (IBM mainframe compatibility) */
+    /** Client uses EBCDIC encoding (standard PeSIT EBCDIC mode) */
     private boolean ebcdicEncoding = false;
 
-    /** Pre-connection handshake was processed (IBM CX compatibility) */
+    /** Pre-connection handshake was processed (standard PeSIT pre-connection phase) */
     private boolean preConnectionHandled = false;
 
-    /**
-     * Create a new session context
-     */
+    /** PeSIT channel for transport-aware framing (TCP vs TLS) */
+    private PesitChannel channel;
+
+    /** Create a new session context */
     public SessionContext(String sessionId) {
         this.sessionId = sessionId;
         this.startTime = Instant.now();
         this.lastActivityTime = Instant.now();
     }
 
-    /**
-     * Update last activity time
-     */
+    /** Update last activity time */
     public void touch() {
         this.lastActivityTime = Instant.now();
     }
 
     /**
-     * Transition to a new state.
-     * Validates the transition against PeSIT protocol rules and throws
+     * Transition to a new state. Validates the transition against PeSIT protocol rules and throws
      * {@link InvalidStateTransitionException} if the transition is invalid.
      *
      * @param newState the target state
@@ -130,18 +123,14 @@ public class SessionContext {
         touch();
     }
 
-    /**
-     * Start a new transfer
-     */
+    /** Start a new transfer */
     public TransferContext startTransfer() {
         this.currentTransfer = new TransferContext();
         this.currentTransfer.setStartTime(Instant.now());
         return this.currentTransfer;
     }
 
-    /**
-     * End the current transfer
-     */
+    /** End the current transfer */
     public void endTransfer() {
         if (this.currentTransfer != null) {
             this.currentTransfer.setEndTime(Instant.now());
@@ -149,10 +138,16 @@ public class SessionContext {
         this.currentTransfer = null;
     }
 
-    /**
-     * Check if a transfer is in progress
-     */
+    /** Check if a transfer is in progress */
     public boolean hasActiveTransfer() {
         return this.currentTransfer != null;
+    }
+
+    /**
+     * Whether this session uses TLS framing. Delegates to the channel; returns false if no channel
+     * is set.
+     */
+    public boolean isTlsConnection() {
+        return channel != null && channel.isTls();
     }
 }

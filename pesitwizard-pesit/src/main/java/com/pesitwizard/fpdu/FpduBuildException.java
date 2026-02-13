@@ -1,8 +1,6 @@
 package com.pesitwizard.fpdu;
 
-/**
- * Exception thrown when FPDU building fails.
- */
+/** Exception thrown when FPDU building fails. */
 public class FpduBuildException extends FpduException {
 
     private static final long serialVersionUID = 1L;
@@ -21,7 +19,6 @@ public class FpduBuildException extends FpduException {
     }
 
     public static FpduBuildException parameterEncodingFailed(Parameter param, Throwable cause) {
-        return new FpduBuildException(
-                String.format("Failed to encode parameter %s", param), cause);
+        return new FpduBuildException(String.format("Failed to encode parameter %s", param), cause);
     }
 }

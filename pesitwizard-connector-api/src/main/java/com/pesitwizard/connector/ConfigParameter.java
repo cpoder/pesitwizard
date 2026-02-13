@@ -1,8 +1,6 @@
 package com.pesitwizard.connector;
 
-/**
- * Configuration parameter definition for storage connectors.
- */
+/** Configuration parameter definition for storage connectors. */
 public class ConfigParameter {
 
     private String name;
@@ -13,11 +11,15 @@ public class ConfigParameter {
     private String example;
 
     public enum ParameterType {
-        STRING, INTEGER, BOOLEAN, PASSWORD, PATH, URL
+        STRING,
+        INTEGER,
+        BOOLEAN,
+        PASSWORD,
+        PATH,
+        URL
     }
 
-    public ConfigParameter() {
-    }
+    public ConfigParameter() {}
 
     public String getName() {
         return name;

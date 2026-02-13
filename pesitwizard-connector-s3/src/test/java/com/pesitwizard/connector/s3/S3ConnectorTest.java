@@ -2,15 +2,13 @@ package com.pesitwizard.connector.s3;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.pesitwizard.connector.ConfigParameter;
+import com.pesitwizard.connector.ConnectorException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.pesitwizard.connector.ConfigParameter;
-import com.pesitwizard.connector.ConnectorException;
 
 class S3ConnectorTest {
 
@@ -55,15 +53,24 @@ class S3ConnectorTest {
     @Test
     void optionalParameters_containsExpectedKeys() {
         List<ConfigParameter> params = connector.getOptionalParameters();
-        assertThat(params).extracting(ConfigParameter::getName)
+        assertThat(params)
+                .extracting(ConfigParameter::getName)
                 .containsExactly("accessKey", "secretKey", "region", "endpoint");
     }
 
     @Test
     void optionalParameters_credentialsAreSensitive() {
         List<ConfigParameter> params = connector.getOptionalParameters();
-        ConfigParameter accessKey = params.stream().filter(p -> "accessKey".equals(p.getName())).findFirst().orElseThrow();
-        ConfigParameter secretKey = params.stream().filter(p -> "secretKey".equals(p.getName())).findFirst().orElseThrow();
+        ConfigParameter accessKey =
+                params.stream()
+                        .filter(p -> "accessKey".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
+        ConfigParameter secretKey =
+                params.stream()
+                        .filter(p -> "secretKey".equals(p.getName()))
+                        .findFirst()
+                        .orElseThrow();
         assertThat(accessKey.isSensitive()).isTrue();
         assertThat(secretKey.isSensitive()).isTrue();
     }
@@ -165,18 +172,24 @@ class S3ConnectorTest {
         // Path traversal should be rejected before any network call
         assertThatThrownBy(() -> connector.exists("../../etc/passwd"))
                 .isInstanceOf(ConnectorException.class)
-                .satisfies(e -> assertThat(((ConnectorException) e).getErrorCode())
-                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
+                .satisfies(
+                        e ->
+                                assertThat(((ConnectorException) e).getErrorCode())
+                                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
 
         assertThatThrownBy(() -> connector.exists("path\0with\0nulls"))
                 .isInstanceOf(ConnectorException.class)
-                .satisfies(e -> assertThat(((ConnectorException) e).getErrorCode())
-                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
+                .satisfies(
+                        e ->
+                                assertThat(((ConnectorException) e).getErrorCode())
+                                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
 
         assertThatThrownBy(() -> connector.read("../secret"))
                 .isInstanceOf(ConnectorException.class)
-                .satisfies(e -> assertThat(((ConnectorException) e).getErrorCode())
-                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
+                .satisfies(
+                        e ->
+                                assertThat(((ConnectorException) e).getErrorCode())
+                                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
 
         connector.close();
     }
@@ -192,8 +205,10 @@ class S3ConnectorTest {
 
         assertThatThrownBy(() -> connector.exists(null))
                 .isInstanceOf(ConnectorException.class)
-                .satisfies(e -> assertThat(((ConnectorException) e).getErrorCode())
-                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
+                .satisfies(
+                        e ->
+                                assertThat(((ConnectorException) e).getErrorCode())
+                                        .isEqualTo(ConnectorException.ErrorCode.INVALID_PATH));
 
         connector.close();
     }

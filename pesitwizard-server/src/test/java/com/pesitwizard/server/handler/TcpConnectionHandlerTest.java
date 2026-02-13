@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.server.config.PesitServerProperties;
+import com.pesitwizard.server.model.SessionContext;
+import com.pesitwizard.server.state.ServerState;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,25 +18,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.server.config.PesitServerProperties;
-import com.pesitwizard.server.model.SessionContext;
-import com.pesitwizard.server.state.ServerState;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TcpConnectionHandler Tests")
 class TcpConnectionHandlerTest {
 
-    @Mock
-    private Socket socket;
+    @Mock private Socket socket;
 
-    @Mock
-    private PesitSessionHandler sessionHandler;
+    @Mock private PesitSessionHandler sessionHandler;
 
-    @Mock
-    private PesitServerProperties properties;
+    @Mock private PesitServerProperties properties;
 
-    @Mock
-    private SocketAddress socketAddress;
+    @Mock private SocketAddress socketAddress;
 
     private TcpConnectionHandler handler;
 
@@ -202,5 +196,4 @@ class TcpConnectionHandlerTest {
 
         assertDoesNotThrow(() -> handler.run());
     }
-
 }

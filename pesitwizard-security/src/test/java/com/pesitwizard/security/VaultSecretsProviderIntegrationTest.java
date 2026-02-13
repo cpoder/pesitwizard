@@ -10,12 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 /**
- * Integration tests for VaultSecretsProvider using a real Vault instance.
- * Requires Vault running at localhost:8200 with dev token.
- * 
- * Run with: docker run -d --name vault-test -p 8200:8200 \
- * -e 'VAULT_DEV_ROOT_TOKEN_ID=test-root-token' \
- * -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' hashicorp/vault:latest
+ * Integration tests for VaultSecretsProvider using a real Vault instance. Requires Vault running at
+ * localhost:8200 with dev token.
+ *
+ * <p>Run with: docker run -d --name vault-test -p 8200:8200 \ -e
+ * 'VAULT_DEV_ROOT_TOKEN_ID=test-root-token' \ -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200'
+ * hashicorp/vault:latest
  */
 @Tag("integration")
 @DisplayName("VaultSecretsProvider Integration Tests")
@@ -30,14 +30,18 @@ class VaultSecretsProviderIntegrationTest {
 
     static boolean isVaultAvailable() {
         try {
-            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
-                    .connectTimeout(java.time.Duration.ofSeconds(2)).build();
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(VAULT_ADDR + "/v1/sys/health"))
-                    .timeout(java.time.Duration.ofSeconds(2))
-                    .GET().build();
-            java.net.http.HttpResponse<String> response = client.send(request,
-                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            java.net.http.HttpClient client =
+                    java.net.http.HttpClient.newBuilder()
+                            .connectTimeout(java.time.Duration.ofSeconds(2))
+                            .build();
+            java.net.http.HttpRequest request =
+                    java.net.http.HttpRequest.newBuilder()
+                            .uri(java.net.URI.create(VAULT_ADDR + "/v1/sys/health"))
+                            .timeout(java.time.Duration.ofSeconds(2))
+                            .GET()
+                            .build();
+            java.net.http.HttpResponse<String> response =
+                    client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200;
         } catch (Exception e) {
             return false;
@@ -232,21 +236,24 @@ class VaultSecretsProviderIntegrationTest {
         @Test
         @DisplayName("Should not be available with null address")
         void shouldNotBeAvailableWithNullAddress() {
-            VaultSecretsProvider unavailable = new VaultSecretsProvider(null, VAULT_TOKEN, SECRETS_PATH);
+            VaultSecretsProvider unavailable =
+                    new VaultSecretsProvider(null, VAULT_TOKEN, SECRETS_PATH);
             assertThat(unavailable.isAvailable()).isFalse();
         }
 
         @Test
         @DisplayName("Should not be available with blank address")
         void shouldNotBeAvailableWithBlankAddress() {
-            VaultSecretsProvider unavailable = new VaultSecretsProvider("   ", VAULT_TOKEN, SECRETS_PATH);
+            VaultSecretsProvider unavailable =
+                    new VaultSecretsProvider("   ", VAULT_TOKEN, SECRETS_PATH);
             assertThat(unavailable.isAvailable()).isFalse();
         }
 
         @Test
         @DisplayName("Should not be available with null token")
         void shouldNotBeAvailableWithNullToken() {
-            VaultSecretsProvider unavailable = new VaultSecretsProvider(VAULT_ADDR, null, SECRETS_PATH);
+            VaultSecretsProvider unavailable =
+                    new VaultSecretsProvider(VAULT_ADDR, null, SECRETS_PATH);
             assertThat(unavailable.isAvailable()).isFalse();
         }
 

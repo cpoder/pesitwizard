@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -18,23 +17,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Chaos engineering tests for network partition scenarios (split brain).
  *
- * These tests verify:
- * - Only one partition accepts writes during split brain
- * - Recovery after partition heals
- * - High latency handling between nodes
- * - Packet loss resilience
+ * <p>These tests verify: - Only one partition accepts writes during split brain - Recovery after
+ * partition heals - High latency handling between nodes - Packet loss resilience
  *
- * Requirements:
- * - 3-node cluster running
- * - Network manipulation capabilities (tc, iptables)
- * - Integration test profile
+ * <p>Requirements: - 3-node cluster running - Network manipulation capabilities (tc, iptables) -
+ * Integration test profile
  *
- * Run with: mvn test -Dtest=NetworkPartitionTest -Dchaos-test=true
+ * <p>Run with: mvn test -Dtest=NetworkPartitionTest -Dchaos-test=true
  */
 @Slf4j
 @SpringBootTest
@@ -66,31 +58,33 @@ class NetworkPartitionTest {
 
         // Act - Create network partition
         log.info("Creating network partition: [node-1, node-2] | [node-3]");
-        networkController.createPartition(
-                Set.of("node-1", "node-2"),
-                Set.of("node-3"));
+        networkController.createPartition(Set.of("node-1", "node-2"), Set.of("node-3"));
 
         // Assert - After partition detection timeout
-        await()
-                .atMost(PARTITION_DETECTION_TIMEOUT)
+        await().atMost(PARTITION_DETECTION_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(() -> {
-                    // Majority partition (2 nodes) should have a leader
-                    String majorityLeader = networkController.getLeaderInPartition(Set.of("node-1", "node-2"));
-                    assertThat(majorityLeader)
-                            .as("Majority partition should elect a leader")
-                            .isNotNull();
+                .untilAsserted(
+                        () -> {
+                            // Majority partition (2 nodes) should have a leader
+                            String majorityLeader =
+                                    networkController.getLeaderInPartition(
+                                            Set.of("node-1", "node-2"));
+                            assertThat(majorityLeader)
+                                    .as("Majority partition should elect a leader")
+                                    .isNotNull();
 
-                    // Minority partition (1 node) should NOT have a leader
-                    String minorityLeader = networkController.getLeaderInPartition(Set.of("node-3"));
-                    assertThat(minorityLeader)
-                            .as("Minority partition should NOT have a leader (no quorum)")
-                            .isNull();
-                });
+                            // Minority partition (1 node) should NOT have a leader
+                            String minorityLeader =
+                                    networkController.getLeaderInPartition(Set.of("node-3"));
+                            assertThat(minorityLeader)
+                                    .as("Minority partition should NOT have a leader (no quorum)")
+                                    .isNull();
+                        });
 
         // Verify writes only accepted by majority
         boolean majorityWrite = networkController.attemptWrite("node-1", "test-key", "test-value");
-        boolean minorityWrite = networkController.attemptWrite("node-3", "test-key2", "test-value2");
+        boolean minorityWrite =
+                networkController.attemptWrite("node-3", "test-key2", "test-value2");
 
         assertThat(majorityWrite).as("Majority partition should accept writes").isTrue();
         assertThat(minorityWrite).as("Minority partition should reject writes").isFalse();
@@ -100,13 +94,10 @@ class NetworkPartitionTest {
     @DisplayName("Partition heals - cluster reunifies")
     void testPartitionHealing() {
         // Arrange - Create and then heal partition
-        networkController.createPartition(
-                Set.of("node-1", "node-2"),
-                Set.of("node-3"));
+        networkController.createPartition(Set.of("node-1", "node-2"), Set.of("node-3"));
 
         // Wait for partition to be detected
-        await()
-                .atMost(PARTITION_DETECTION_TIMEOUT)
+        await().atMost(PARTITION_DETECTION_TIMEOUT)
                 .until(() -> networkController.isPartitionDetected());
 
         // Act - Heal the partition
@@ -114,22 +105,22 @@ class NetworkPartitionTest {
         networkController.healAllPartitions();
 
         // Assert - Cluster should reunify
-        await()
-                .atMost(RECOVERY_TIMEOUT)
+        await().atMost(RECOVERY_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(networkController.getActiveNodeCount())
-                            .as("All nodes should be active")
-                            .isEqualTo(3);
+                .untilAsserted(
+                        () -> {
+                            assertThat(networkController.getActiveNodeCount())
+                                    .as("All nodes should be active")
+                                    .isEqualTo(3);
 
-                    assertThat(networkController.isClusterUnified())
-                            .as("Cluster should be unified")
-                            .isTrue();
+                            assertThat(networkController.isClusterUnified())
+                                    .as("Cluster should be unified")
+                                    .isTrue();
 
-                    // Single leader across entire cluster
-                    String leader = networkController.getGlobalLeader();
-                    assertThat(leader).isNotNull();
-                });
+                            // Single leader across entire cluster
+                            String leader = networkController.getGlobalLeader();
+                            assertThat(leader).isNotNull();
+                        });
 
         // Verify data consistency after healing
         assertThat(networkController.isDataConsistent())
@@ -147,15 +138,15 @@ class NetworkPartitionTest {
         networkController.setInterNodeLatency(500);
 
         // Assert - Cluster should remain stable
-        await()
-                .during(Duration.ofSeconds(30))
+        await().during(Duration.ofSeconds(30))
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(networkController.isClusterHealthy())
-                            .as("Cluster should remain healthy under latency")
-                            .isTrue();
-                });
+                .untilAsserted(
+                        () -> {
+                            assertThat(networkController.isClusterHealthy())
+                                    .as("Cluster should remain healthy under latency")
+                                    .isTrue();
+                        });
 
         // Measure impact on operations
         long startTime = System.currentTimeMillis();
@@ -213,21 +204,20 @@ class NetworkPartitionTest {
         networkController.createAsymmetricPartition("node-3", false, true);
 
         // Wait for detection
-        await()
-                .atMost(PARTITION_DETECTION_TIMEOUT)
+        await().atMost(PARTITION_DETECTION_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(() -> {
-                    // node-3 should be detected as unreachable (can't respond to heartbeats)
-                    assertThat(networkController.isNodeConsideredHealthy("node-3"))
-                            .as("node-3 should be considered unhealthy (can't respond)")
-                            .isFalse();
-                });
+                .untilAsserted(
+                        () -> {
+                            // node-3 should be detected as unreachable (can't respond to
+                            // heartbeats)
+                            assertThat(networkController.isNodeConsideredHealthy("node-3"))
+                                    .as("node-3 should be considered unhealthy (can't respond)")
+                                    .isFalse();
+                        });
 
         // Leader should be in the functional majority
         String leader = networkController.getGlobalLeader();
-        assertThat(leader)
-                .as("Leader should not be the partitioned node")
-                .isNotEqualTo("node-3");
+        assertThat(leader).as("Leader should not be the partitioned node").isNotEqualTo("node-3");
 
         // Cleanup
         networkController.healAllPartitions();
@@ -244,9 +234,7 @@ class NetworkPartitionTest {
         for (int i = 0; i < flapCount; i++) {
             log.info("Flap cycle {} of {}", i + 1, flapCount);
 
-            networkController.createPartition(
-                    Set.of("node-1", "node-2"),
-                    Set.of("node-3"));
+            networkController.createPartition(Set.of("node-1", "node-2"), Set.of("node-3"));
 
             sleep(flapIntervalMs);
 
@@ -256,18 +244,18 @@ class NetworkPartitionTest {
         }
 
         // Assert - Cluster should stabilize after flapping stops
-        await()
-                .atMost(RECOVERY_TIMEOUT)
+        await().atMost(RECOVERY_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(networkController.isClusterHealthy())
-                            .as("Cluster should be healthy after flapping stops")
-                            .isTrue();
+                .untilAsserted(
+                        () -> {
+                            assertThat(networkController.isClusterHealthy())
+                                    .as("Cluster should be healthy after flapping stops")
+                                    .isTrue();
 
-                    assertThat(networkController.getGlobalLeader())
-                            .as("Should have a stable leader")
-                            .isNotNull();
-                });
+                            assertThat(networkController.getGlobalLeader())
+                                    .as("Should have a stable leader")
+                                    .isNotNull();
+                        });
     }
 
     private void sleep(long millis) {
@@ -279,8 +267,8 @@ class NetworkPartitionTest {
     }
 
     /**
-     * Mock network controller for testing.
-     * In real implementation, this would use tc/iptables to manipulate network.
+     * Mock network controller for testing. In real implementation, this would use tc/iptables to
+     * manipulate network.
      */
     static class MockNetworkController {
         private final ConcurrentHashMap<String, Boolean> nodeHealth = new ConcurrentHashMap<>();

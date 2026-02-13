@@ -55,8 +55,13 @@ public enum DiagnosticCode {
     D2_221(2, 221, "Echéance du délai de fin de transmission"),
     D2_222(2, 222, "Trop de données sans point de synchronisation"),
     D2_223(2, 223, "Fin de transfert anormal"),
-    D2_224(2, 224, "La taille du fichier transmis est plus importante que celle annoncée dans le F.CREATE"),
-    D2_225(2, 225,
+    D2_224(
+            2,
+            224,
+            "La taille du fichier transmis est plus importante que celle annoncée dans le F.CREATE"),
+    D2_225(
+            2,
+            225,
             "Congestion de l'application station : le fichier a bien été reçu mais SCRS n'a pu le donner à l'application station"),
     D2_226(2, 226, "Refus de transfert"),
     D2_227(2, 227, "Reprise impossible - transfert non repreniable"),
@@ -67,12 +72,15 @@ public enum DiagnosticCode {
     D2_299(2, 299, "Autres"),
     D1_100(1, 100, "Erreur de transmission");
 
-    /**
-     * Check if this diagnostic indicates a restart/resume is not supported.
-     */
+    /** Check if this diagnostic indicates a restart/resume is not supported. */
     public boolean isRestartNotSupported() {
-        return this == D2_214 || this == D2_218 || this == D2_227
-                || this == D2_228 || this == D2_229 || this == D2_230 || this == D2_043;
+        return this == D2_214
+                || this == D2_218
+                || this == D2_227
+                || this == D2_228
+                || this == D2_229
+                || this == D2_230
+                || this == D2_043;
     }
 
     private final byte code;
@@ -100,14 +108,10 @@ public enum DiagnosticCode {
     }
 
     /**
-     * Convert this diagnostic code to a 3-byte array for PI_02_DIAG parameter.
-     * Format: [code][reason_high][reason_low]
+     * Convert this diagnostic code to a 3-byte array for PI_02_DIAG parameter. Format:
+     * [code][reason_high][reason_low]
      */
     public byte[] toBytes() {
-        return new byte[] {
-                code,
-                (byte) ((reason >> 8) & 0xFF),
-                (byte) (reason & 0xFF)
-        };
+        return new byte[] {code, (byte) ((reason >> 8) & 0xFF), (byte) (reason & 0xFF)};
     }
 }

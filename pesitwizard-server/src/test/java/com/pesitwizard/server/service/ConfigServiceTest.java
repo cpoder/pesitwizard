@@ -4,9 +4,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.config.PesitServerProperties;
+import com.pesitwizard.server.entity.Partner;
+import com.pesitwizard.server.entity.VirtualFile;
+import com.pesitwizard.server.repository.PartnerRepository;
+import com.pesitwizard.server.repository.VirtualFileRepository;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,54 +21,44 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.server.config.PesitServerProperties;
-import com.pesitwizard.server.entity.Partner;
-import com.pesitwizard.server.entity.VirtualFile;
-import com.pesitwizard.server.repository.PartnerRepository;
-import com.pesitwizard.server.repository.VirtualFileRepository;
-import com.pesitwizard.security.SecretsService;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ConfigService Tests")
 class ConfigServiceTest {
 
-    @Mock
-    private PartnerRepository partnerRepository;
+    @Mock private PartnerRepository partnerRepository;
 
-    @Mock
-    private VirtualFileRepository virtualFileRepository;
+    @Mock private VirtualFileRepository virtualFileRepository;
 
-    @Mock
-    private PesitServerProperties serverProperties;
+    @Mock private PesitServerProperties serverProperties;
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
-    @InjectMocks
-    private ConfigService configService;
+    @InjectMocks private ConfigService configService;
 
     private Partner testPartner;
     private VirtualFile testVirtualFile;
 
     @BeforeEach
     void setUp() {
-        testPartner = Partner.builder()
-                .id("PARTNER1")
-                .description("Test Partner")
-                .password("secret")
-                .enabled(true)
-                .accessType(Partner.AccessType.BOTH)
-                .maxConnections(5)
-                .build();
+        testPartner =
+                Partner.builder()
+                        .id("PARTNER1")
+                        .description("Test Partner")
+                        .password("secret")
+                        .enabled(true)
+                        .accessType(Partner.AccessType.BOTH)
+                        .maxConnections(5)
+                        .build();
 
-        testVirtualFile = VirtualFile.builder()
-                .id("FILE1")
-                .description("Test File")
-                .enabled(true)
-                .direction(VirtualFile.Direction.BOTH)
-                .receiveDirectory("/data/recv")
-                .sendDirectory("/data/send")
-                .build();
+        testVirtualFile =
+                VirtualFile.builder()
+                        .id("FILE1")
+                        .description("Test File")
+                        .enabled(true)
+                        .direction(VirtualFile.Direction.BOTH)
+                        .receiveDirectory("/data/recv")
+                        .sendDirectory("/data/send")
+                        .build();
     }
 
     @Nested

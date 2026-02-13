@@ -1,10 +1,5 @@
 package com.pesitwizard.client.pesit;
 
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pesitwizard.client.connector.ConnectorRegistry;
@@ -13,22 +8,28 @@ import com.pesitwizard.client.repository.StorageConnectionRepository;
 import com.pesitwizard.connector.EncryptingStorageConnector;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.security.SecretsService;
-
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-/**
- * Factory for creating StorageConnector instances from connection
- * configurations.
- */
+/** Factory for creating StorageConnector instances from connection configurations. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class StorageConnectorFactory {
 
-    private static final List<String> SENSITIVE_FIELDS = List.of(
-            "password", "secret", "secretKey", "accessKeySecret",
-            "privateKey", "passphrase", "apiKey", "token");
+    private static final List<String> SENSITIVE_FIELDS =
+            List.of(
+                    "password",
+                    "secret",
+                    "secretKey",
+                    "accessKeySecret",
+                    "privateKey",
+                    "passphrase",
+                    "apiKey",
+                    "token");
 
     private final StorageConnectionRepository connectionRepository;
     private final ConnectorRegistry connectorRegistry;
@@ -43,9 +44,13 @@ public class StorageConnectorFactory {
      * @throws IllegalArgumentException if connection not found or disabled
      */
     public StorageConnector createFromConnectionId(String connectionId) {
-        StorageConnection connection = connectionRepository.findById(connectionId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Storage connection not found: " + connectionId));
+        StorageConnection connection =
+                connectionRepository
+                        .findById(connectionId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Storage connection not found: " + connectionId));
 
         if (!connection.isEnabled()) {
             throw new IllegalArgumentException(
@@ -55,19 +60,18 @@ public class StorageConnectorFactory {
         return createFromConnection(connection);
     }
 
-    /**
-     * Create a connector from a StorageConnection entity.
-     */
+    /** Create a connector from a StorageConnection entity. */
     public StorageConnector createFromConnection(StorageConnection connection) {
         try {
-            Map<String, String> config = objectMapper.readValue(
-                    connection.getConfigJson(),
-                    new TypeReference<Map<String, String>>() {
-                    });
+            Map<String, String> config =
+                    objectMapper.readValue(
+                            connection.getConfigJson(),
+                            new TypeReference<Map<String, String>>() {});
 
             config = decryptSensitiveFields(config);
 
-            StorageConnector connector = connectorRegistry.createConnector(connection.getConnectorType(), config);
+            StorageConnector connector =
+                    connectorRegistry.createConnector(connection.getConnectorType(), config);
 
             // Wrap with at-rest encryption if enabled in config
             if ("true".equalsIgnoreCase(config.get("encryptionEnabled"))) {
@@ -75,7 +79,7 @@ public class StorageConnectorFactory {
                 if (fileKey == null) {
                     throw new IllegalStateException(
                             "At-rest encryption enabled but no encryption key available. "
-                            + "Configure pesitwizard.security.master-key to enable encryption.");
+                                    + "Configure pesitwizard.security.master-key to enable encryption.");
                 }
                 connector = new EncryptingStorageConnector(connector, fileKey);
                 log.info("At-rest encryption enabled for connection: {}", connection.getName());
@@ -84,8 +88,10 @@ public class StorageConnectorFactory {
             return connector;
         } catch (java.io.IOException | com.pesitwizard.connector.ConnectorException e) {
             throw new IllegalArgumentException(
-                    "Failed to create connector for connection " + connection.getName()
-                            + ": " + e.getMessage(),
+                    "Failed to create connector for connection "
+                            + connection.getName()
+                            + ": "
+                            + e.getMessage(),
                     e);
         }
     }

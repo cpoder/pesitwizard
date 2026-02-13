@@ -10,24 +10,21 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Set;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * AES-GCM based secrets provider for local encryption.
- * Uses a master key from environment variable or configuration.
- * 
- * Format v2: "AES:v2:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with dynamic salt
- * Legacy format: "AES:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with static salt
+ * AES-GCM based secrets provider for local encryption. Uses a master key from environment variable
+ * or configuration.
+ *
+ * <p>Format v2: "AES:v2:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with dynamic salt Legacy format:
+ * "AES:" + BASE64(IV + CIPHERTEXT + AUTH_TAG) with static salt
  */
 @Slf4j
 public class AesSecretsProvider implements SecretsProvider {
@@ -41,6 +38,7 @@ public class AesSecretsProvider implements SecretsProvider {
     private static final String LEGACY_PREFIX = "AES:";
     private static final String V2_PREFIX = "AES:v2:";
     private static final String LEGACY_SALT = "PeSITWizardEnterprise";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final SecretKey secretKey;
     private final SecretKey legacySecretKey;
@@ -56,7 +54,8 @@ public class AesSecretsProvider implements SecretsProvider {
     public AesSecretsProvider(
             @Value("${pesitwizard.security.master-key:}") String masterKey,
             @Value("${pesitwizard.security.encryption-salt:}") String encryptionSalt,
-            @Value("${pesitwizard.security.salt-file:./config/encryption.salt}") String saltFilePath) {
+            @Value("${pesitwizard.security.salt-file:./config/encryption.salt}")
+                    String saltFilePath) {
 
         if (masterKey == null || masterKey.isBlank()) {
             log.warn("No master key configured. AES encryption not available.");
@@ -67,26 +66,27 @@ public class AesSecretsProvider implements SecretsProvider {
             try {
                 byte[] salt = loadSalt(encryptionSalt, Paths.get(saltFilePath));
                 this.secretKey = deriveKey(masterKey, salt);
-                this.legacySecretKey = deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
+                this.legacySecretKey =
+                        deriveKey(masterKey, LEGACY_SALT.getBytes(StandardCharsets.UTF_8));
                 this.available = true;
                 log.info("AES secrets provider initialized (v2 with dynamic salt)");
-            } catch (java.security.GeneralSecurityException | IOException | IllegalArgumentException e) {
+            } catch (java.security.GeneralSecurityException
+                    | IOException
+                    | IllegalArgumentException e) {
                 log.error("Failed to initialize AES secrets provider");
                 throw new EncryptionException("Failed to initialize AES encryption", e);
             }
         }
     }
 
-    /**
-     * Creates an AES secrets provider (backwards-compatible constructor).
-     */
+    /** Creates an AES secrets provider (backwards-compatible constructor). */
     public AesSecretsProvider(String masterKey, String saltFilePath) {
         this(masterKey, null, saltFilePath);
     }
 
     /**
-     * Loads salt from environment variable (base64) or from file.
-     * Priority: 1) Environment variable, 2) Existing file, 3) Generate new file
+     * Loads salt from environment variable (base64) or from file. Priority: 1) Environment
+     * variable, 2) Existing file, 3) Generate new file
      */
     private byte[] loadSalt(String encryptionSaltBase64, Path saltFile) throws IOException {
         // Priority 1: Use base64-encoded salt from environment (for K8s shared secrets)
@@ -94,7 +94,11 @@ public class AesSecretsProvider implements SecretsProvider {
             byte[] salt = Base64.getDecoder().decode(encryptionSaltBase64);
             if (salt.length != SALT_LENGTH) {
                 throw new IllegalArgumentException(
-                    "Encryption salt must be " + SALT_LENGTH + " bytes (got " + salt.length + ")");
+                        "Encryption salt must be "
+                                + SALT_LENGTH
+                                + " bytes (got "
+                                + salt.length
+                                + ")");
             }
             log.info("Using encryption salt from environment variable (shared across pods)");
             return salt;
@@ -112,13 +116,17 @@ public class AesSecretsProvider implements SecretsProvider {
 
         log.info("Generating new salt and saving to {}", saltFile);
         byte[] newSalt = new byte[SALT_LENGTH];
-        new SecureRandom().nextBytes(newSalt);
+        SECURE_RANDOM.nextBytes(newSalt);
 
-        Files.createDirectories(saltFile.getParent());
+        Path parent = saltFile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
         Files.write(saltFile, newSalt, StandardOpenOption.CREATE_NEW);
 
         try {
-            Files.setPosixFilePermissions(saltFile,
+            Files.setPosixFilePermissions(
+                    saltFile,
                     Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
         } catch (UnsupportedOperationException e) {
             log.warn("Cannot set POSIX permissions on {}", saltFile);
@@ -127,7 +135,8 @@ public class AesSecretsProvider implements SecretsProvider {
         return newSalt;
     }
 
-    private SecretKey deriveKey(String masterKey, byte[] salt) throws java.security.GeneralSecurityException {
+    private SecretKey deriveKey(String masterKey, byte[] salt)
+            throws java.security.GeneralSecurityException {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         PBEKeySpec spec = new PBEKeySpec(masterKey.toCharArray(), salt, ITERATIONS, KEY_LENGTH);
         try {
@@ -150,7 +159,7 @@ public class AesSecretsProvider implements SecretsProvider {
         try {
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             byte[] iv = new byte[GCM_IV_LENGTH];
-            new SecureRandom().nextBytes(iv);
+            SECURE_RANDOM.nextBytes(iv);
 
             GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);

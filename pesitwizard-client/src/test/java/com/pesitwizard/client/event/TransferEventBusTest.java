@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.client.pesit.ClientState;
 import java.util.concurrent.Executor;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,35 +18,29 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import com.pesitwizard.client.pesit.ClientState;
-
 /**
- * Unit tests for TransferEventBus.
- * Tests the event publishing logic to both Spring events and WebSocket.
+ * Unit tests for TransferEventBus. Tests the event publishing logic to both Spring events and
+ * WebSocket.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferEventBus Unit Tests")
 class TransferEventBusTest {
 
-    @Mock
-    private SimpMessagingTemplate messagingTemplate;
+    @Mock private SimpMessagingTemplate messagingTemplate;
 
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     /**
-     * Synchronous executor that runs tasks immediately on the calling thread.
-     * This makes tests deterministic without needing Thread.sleep().
+     * Synchronous executor that runs tasks immediately on the calling thread. This makes tests
+     * deterministic without needing Thread.sleep().
      */
     private final Executor directExecutor = Runnable::run;
 
     private TransferEventBus eventBus;
 
-    @Captor
-    private ArgumentCaptor<String> destinationCaptor;
+    @Captor private ArgumentCaptor<String> destinationCaptor;
 
-    @Captor
-    private ArgumentCaptor<TransferEvent> eventCaptor;
+    @Captor private ArgumentCaptor<TransferEvent> eventCaptor;
 
     private static final String TEST_TRANSFER_ID = "test-transfer-123";
 
@@ -73,7 +67,7 @@ class TransferEventBusTest {
 
         // WebSocket publishing runs via the executor (direct/synchronous in tests)
         verify(messagingTemplate, atLeastOnce())
-            .convertAndSend(any(String.class), any(TransferEvent.class));
+                .convertAndSend(any(String.class), any(TransferEvent.class));
     }
 
     @Test
@@ -87,11 +81,10 @@ class TransferEventBusTest {
 
         // Assert - Should publish to /topic/transfer/{id}/progress
         verify(messagingTemplate, times(1))
-            .convertAndSend(eq("/topic/transfer/" + TEST_TRANSFER_ID + "/progress"), eq(event));
+                .convertAndSend(eq("/topic/transfer/" + TEST_TRANSFER_ID + "/progress"), eq(event));
 
         // Should also publish to broadcast topic
-        verify(messagingTemplate, times(1))
-            .convertAndSend(eq("/topic/transfers"), eq(event));
+        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/transfers"), eq(event));
     }
 
     @Test
@@ -104,30 +97,29 @@ class TransferEventBusTest {
         eventBus.publish(event);
 
         // Assert
-        verify(messagingTemplate, times(1))
-            .convertAndSend(eq("/topic/transfers"), eq(event));
+        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/transfers"), eq(event));
     }
 
     @Test
     @DisplayName("publish() should handle null transferId gracefully for WebSocket")
     void publish_withNullTransferId_shouldOnlyPublishToBroadcast() {
         // Arrange
-        TransferEvent event = TransferEvent.builder()
-            .type(TransferEvent.EventType.ERROR)
-            .transferId(null)
-            .errorMessage("Test error")
-            .build();
+        TransferEvent event =
+                TransferEvent.builder()
+                        .type(TransferEvent.EventType.ERROR)
+                        .transferId(null)
+                        .errorMessage("Test error")
+                        .build();
 
         // Act
         eventBus.publish(event);
 
         // Assert - Should only publish to broadcast topic
-        verify(messagingTemplate, times(1))
-            .convertAndSend(eq("/topic/transfers"), eq(event));
+        verify(messagingTemplate, times(1)).convertAndSend(eq("/topic/transfers"), eq(event));
 
         // Should NOT publish to transfer-specific topic
         verify(messagingTemplate, never())
-            .convertAndSend(contains("/topic/transfer/"), any(TransferEvent.class));
+                .convertAndSend(contains("/topic/transfer/"), any(TransferEvent.class));
     }
 
     @Test
@@ -136,14 +128,15 @@ class TransferEventBusTest {
         // Arrange
         TransferEvent event = TransferEvent.error(TEST_TRANSFER_ID, "Test error", "1234");
         doThrow(new RuntimeException("WebSocket connection failed"))
-            .when(messagingTemplate).convertAndSend(any(String.class), any(TransferEvent.class));
+                .when(messagingTemplate)
+                .convertAndSend(any(String.class), any(TransferEvent.class));
 
         // Act - should not throw exception
         eventBus.publish(event);
 
         // Assert - verify attempt was made
         verify(messagingTemplate, atLeastOnce())
-            .convertAndSend(any(String.class), any(TransferEvent.class));
+                .convertAndSend(any(String.class), any(TransferEvent.class));
     }
 
     @Test
@@ -263,7 +256,9 @@ class TransferEventBusTest {
     @DisplayName("Multiple events should maintain order for Spring events")
     void multipleEvents_shouldMaintainOrderForSpringEvents() {
         // Arrange
-        TransferEvent event1 = TransferEvent.stateChange(TEST_TRANSFER_ID, null, ClientState.CN02A_CONNECT_PENDING);
+        TransferEvent event1 =
+                TransferEvent.stateChange(
+                        TEST_TRANSFER_ID, null, ClientState.CN02A_CONNECT_PENDING);
         TransferEvent event2 = TransferEvent.progress(TEST_TRANSFER_ID, 1000L, 10000L);
         TransferEvent event3 = TransferEvent.completed(TEST_TRANSFER_ID, 10000L);
 

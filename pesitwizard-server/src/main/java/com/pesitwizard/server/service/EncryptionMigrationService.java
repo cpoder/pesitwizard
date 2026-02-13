@@ -1,19 +1,16 @@
 package com.pesitwizard.server.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.security.AbstractEncryptionMigrationService;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.repository.CertificateStoreRepository;
 import com.pesitwizard.server.repository.PartnerRepository;
-
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -22,7 +19,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
     private final PartnerRepository partnerRepository;
     private final CertificateStoreRepository certificateStoreRepository;
 
-    public EncryptionMigrationService(SecretsService secretsService,
+    public EncryptionMigrationService(
+            SecretsService secretsService,
             PartnerRepository partnerRepository,
             CertificateStoreRepository certificateStoreRepository) {
         super(secretsService);
@@ -46,7 +44,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
         totalSkipped += c.skipped();
         details.add("Certificates: " + c.migrated() + " migrated");
 
-        return new MigrationResult(true, "Migration completed", totalMigrated, totalSkipped, details);
+        return new MigrationResult(
+                true, "Migration completed", totalMigrated, totalSkipped, details);
     }
 
     private MigrationCount migratePartners() {
@@ -54,7 +53,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
         for (Partner p : partnerRepository.findAll()) {
             if (p.getPassword() != null && !isVaultRef(p.getPassword())) {
                 String plain = decryptIfNeeded(p.getPassword());
-                p.setPassword(secretsService.encryptForStorage(plain, "partner", p.getId(), "password"));
+                p.setPassword(
+                        secretsService.encryptForStorage(plain, "partner", p.getId(), "password"));
                 partnerRepository.save(p);
                 migrated++;
             } else {
@@ -69,13 +69,21 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
         for (CertificateStore c : certificateStoreRepository.findAll()) {
             boolean mod = false;
             if (c.getStorePassword() != null && !isVaultRef(c.getStorePassword())) {
-                c.setStorePassword(secretsService.encryptForStorage(decryptIfNeeded(c.getStorePassword()), "certstore",
-                        c.getId().toString(), "storePassword"));
+                c.setStorePassword(
+                        secretsService.encryptForStorage(
+                                decryptIfNeeded(c.getStorePassword()),
+                                "certstore",
+                                c.getId().toString(),
+                                "storePassword"));
                 mod = true;
             }
             if (c.getKeyPassword() != null && !isVaultRef(c.getKeyPassword())) {
-                c.setKeyPassword(secretsService.encryptForStorage(decryptIfNeeded(c.getKeyPassword()), "certstore",
-                        c.getId().toString(), "keyPassword"));
+                c.setKeyPassword(
+                        secretsService.encryptForStorage(
+                                decryptIfNeeded(c.getKeyPassword()),
+                                "certstore",
+                                c.getId().toString(),
+                                "keyPassword"));
                 mod = true;
             }
             if (mod) {
@@ -87,5 +95,4 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
         }
         return new MigrationCount(migrated, skipped);
     }
-
 }

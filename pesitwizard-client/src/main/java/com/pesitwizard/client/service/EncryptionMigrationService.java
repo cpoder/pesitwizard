@@ -1,11 +1,5 @@
 package com.pesitwizard.client.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -15,12 +9,15 @@ import com.pesitwizard.client.repository.PesitServerRepository;
 import com.pesitwizard.client.repository.StorageConnectionRepository;
 import com.pesitwizard.security.AbstractEncryptionMigrationService;
 import com.pesitwizard.security.SecretsService;
-
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service to migrate existing secrets to Vault.
- * Handles PeSIT server passwords and storage connection credentials.
+ * Service to migrate existing secrets to Vault. Handles PeSIT server passwords and storage
+ * connection credentials.
  */
 @Slf4j
 @Service
@@ -30,7 +27,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
     private final StorageConnectionRepository connectionRepository;
     private final ObjectMapper objectMapper;
 
-    public EncryptionMigrationService(SecretsService secretsService,
+    public EncryptionMigrationService(
+            SecretsService secretsService,
             PesitServerRepository serverRepository,
             StorageConnectionRepository connectionRepository,
             ObjectMapper objectMapper) {
@@ -51,18 +49,28 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
         var serverResult = migratePesitServers();
         totalMigrated += serverResult.migrated();
         totalSkipped += serverResult.skipped();
-        details.add("PeSIT Servers: " + serverResult.migrated() + " migrated, " + serverResult.skipped() + " skipped");
+        details.add(
+                "PeSIT Servers: "
+                        + serverResult.migrated()
+                        + " migrated, "
+                        + serverResult.skipped()
+                        + " skipped");
 
         // Migrate storage connection credentials
         var connResult = migrateStorageConnections();
         totalMigrated += connResult.migrated();
         totalSkipped += connResult.skipped();
         details.add(
-                "Storage Connections: " + connResult.migrated() + " migrated, " + connResult.skipped() + " skipped");
+                "Storage Connections: "
+                        + connResult.migrated()
+                        + " migrated, "
+                        + connResult.skipped()
+                        + " skipped");
 
         log.info("Vault migration completed: {} migrated, {} skipped", totalMigrated, totalSkipped);
 
-        return new MigrationResult(true, "Migration completed successfully", totalMigrated, totalSkipped, details);
+        return new MigrationResult(
+                true, "Migration completed successfully", totalMigrated, totalSkipped, details);
     }
 
     private MigrationCount migratePesitServers() {
@@ -73,7 +81,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
             boolean modified = false;
 
             // Migrate truststore password
-            if (server.getTruststorePassword() != null && !isVaultRef(server.getTruststorePassword())) {
+            if (server.getTruststorePassword() != null
+                    && !isVaultRef(server.getTruststorePassword())) {
                 try {
                     String key = "server/" + server.getId() + "/truststorePassword";
                     String plaintext = decryptIfNeeded(server.getTruststorePassword());
@@ -82,7 +91,10 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                     modified = true;
                     log.debug("Migrated truststore password for server: {}", server.getName());
                 } catch (RuntimeException e) {
-                    log.error("Failed to migrate truststore password for {}: {}", server.getName(), e.getMessage());
+                    log.error(
+                            "Failed to migrate truststore password for {}: {}",
+                            server.getName(),
+                            e.getMessage());
                 }
             }
 
@@ -96,7 +108,10 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
                     modified = true;
                     log.debug("Migrated keystore password for server: {}", server.getName());
                 } catch (RuntimeException e) {
-                    log.error("Failed to migrate keystore password for {}: {}", server.getName(), e.getMessage());
+                    log.error(
+                            "Failed to migrate keystore password for {}: {}",
+                            server.getName(),
+                            e.getMessage());
                 }
             }
 
@@ -148,8 +163,8 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
     }
 
     /**
-     * Recursively migrate password fields in JSON config to Vault.
-     * Returns true if any field was modified.
+     * Recursively migrate password fields in JSON config to Vault. Returns true if any field was
+     * modified.
      */
     private boolean migrateJsonPasswords(ObjectNode config, String keyPrefix) {
         boolean modified = false;
@@ -187,11 +202,15 @@ public class EncryptionMigrationService extends AbstractEncryptionMigrationServi
 
     private boolean isPasswordField(String fieldName) {
         String lower = fieldName.toLowerCase();
-        return lower.contains("password") || lower.contains("secret") ||
-                lower.contains("apikey") || lower.contains("api_key") ||
-                lower.contains("accesskey") || lower.contains("access_key") ||
-                lower.contains("privatekey") || lower.contains("private_key") ||
-                lower.equals("token") || lower.equals("credential");
+        return lower.contains("password")
+                || lower.contains("secret")
+                || lower.contains("apikey")
+                || lower.contains("api_key")
+                || lower.contains("accesskey")
+                || lower.contains("access_key")
+                || lower.contains("privatekey")
+                || lower.contains("private_key")
+                || lower.equals("token")
+                || lower.equals("credential");
     }
-
 }

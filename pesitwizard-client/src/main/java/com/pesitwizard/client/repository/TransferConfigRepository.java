@@ -1,11 +1,9 @@
 package com.pesitwizard.client.repository;
 
+import com.pesitwizard.client.entity.TransferConfig;
 import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import com.pesitwizard.client.entity.TransferConfig;
 
 @Repository
 public interface TransferConfigRepository extends JpaRepository<TransferConfig, String> {

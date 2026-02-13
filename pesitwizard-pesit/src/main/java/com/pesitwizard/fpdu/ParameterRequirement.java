@@ -1,8 +1,7 @@
 package com.pesitwizard.fpdu;
 
 /**
- * Defines parameter requirements for an FPDU
- * Specifies which PIs and PGIs are mandatory or optional
+ * Defines parameter requirements for an FPDU Specifies which PIs and PGIs are mandatory or optional
  */
 public class ParameterRequirement {
     private final Parameter parameter;
@@ -28,9 +27,11 @@ public class ParameterRequirement {
 
     @Override
     public String toString() {
-        return "ParameterRequirement{" +
-                "parameter=" + parameter +
-                ", isMandatory=" + isMandatory +
-                '}';
+        return "ParameterRequirement{"
+                + "parameter="
+                + parameter
+                + ", isMandatory="
+                + isMandatory
+                + '}';
     }
 }

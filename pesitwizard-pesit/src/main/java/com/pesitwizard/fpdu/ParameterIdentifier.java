@@ -2,10 +2,7 @@ package com.pesitwizard.fpdu;
 
 import lombok.Getter;
 
-/**
- * PESIT Protocol Parameter Information (PI)
- * Based on PESIT E specification
- */
+/** PESIT Protocol Parameter Information (PI) Based on PESIT E specification */
 @Getter
 public enum ParameterIdentifier implements Parameter {
     // PI identifiers from PESIT E specification

@@ -2,28 +2,23 @@ package com.pesitwizard.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.nio.file.Path;
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-/**
- * Tests for session recording and replay functionality.
- */
+/** Tests for session recording and replay functionality. */
 @DisplayName("Session Replay Tests")
 public class SessionReplayTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     private PesitSessionRecorder recorder;
 
@@ -91,7 +86,7 @@ public class SessionReplayTest {
     @Test
     @DisplayName("should record raw byte data")
     void shouldRecordRawByteData() {
-        byte[] rawData = new byte[] { 0x00, 0x06, 0x40, 0x21, 0x01, 0x00 };
+        byte[] rawData = new byte[] {0x00, 0x06, 0x40, 0x21, 0x01, 0x00};
 
         recorder.recordRaw(Direction.RECEIVED, FpduType.DTF, rawData);
 

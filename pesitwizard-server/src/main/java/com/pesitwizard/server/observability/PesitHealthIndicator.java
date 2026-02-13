@@ -1,20 +1,17 @@
 package com.pesitwizard.server.observability;
 
+import com.pesitwizard.server.cluster.ClusterProvider;
+import com.pesitwizard.server.service.PesitServerManager;
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
-import com.pesitwizard.server.cluster.ClusterProvider;
-import com.pesitwizard.server.service.PesitServerManager;
-
-import lombok.RequiredArgsConstructor;
-
 /**
- * Health indicator for PeSIT server components.
- * Exposes health status via /actuator/health endpoint.
+ * Health indicator for PeSIT server components. Exposes health status via /actuator/health
+ * endpoint.
  */
 @Component
 @RequiredArgsConstructor
@@ -59,8 +56,6 @@ public class PesitHealthIndicator implements HealthIndicator {
                     .build();
         }
 
-        return Health.up()
-                .withDetails(details)
-                .build();
+        return Health.up().withDetails(details).build();
     }
 }

@@ -1,12 +1,10 @@
 package com.pesitwizard.client.repository;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.pesitwizard.client.entity.VirtualFile;
 import com.pesitwizard.client.entity.VirtualFile.Direction;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface VirtualFileRepository extends JpaRepository<VirtualFile, String> {
 

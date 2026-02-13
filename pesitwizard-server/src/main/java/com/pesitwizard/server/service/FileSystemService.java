@@ -5,27 +5,20 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Service for filesystem operations with proper validation and error handling.
- * Centralizes path normalization and permission checks.
+ * Service for filesystem operations with proper validation and error handling. Centralizes path
+ * normalization and permission checks.
  */
 @Slf4j
 @Service
 public class FileSystemService {
 
-    /**
-     * Result of a filesystem operation with detailed error information.
-     */
+    /** Result of a filesystem operation with detailed error information. */
     public record FileOperationResult(
-            boolean success,
-            String errorMessage,
-            FileErrorType errorType,
-            Path resolvedPath) {
+            boolean success, String errorMessage, FileErrorType errorType, Path resolvedPath) {
 
         public static FileOperationResult success(Path path) {
             return new FileOperationResult(true, null, null, path);
@@ -46,9 +39,8 @@ public class FileSystemService {
     }
 
     /**
-     * Resolve and normalize a path, removing artifacts like "./" and ensuring
-     * absolute path.
-     * 
+     * Resolve and normalize a path, removing artifacts like "./" and ensuring absolute path.
+     *
      * @param pathString The path string to resolve
      * @return Normalized absolute path
      */
@@ -69,17 +61,16 @@ public class FileSystemService {
     }
 
     /**
-     * Resolve a path relative to a base directory with normalization.
-     * Ensures the result stays within the base directory (security).
-     * 
-     * @param basePath     Base directory
+     * Resolve a path relative to a base directory with normalization. Ensures the result stays
+     * within the base directory (security).
+     *
+     * @param basePath Base directory
      * @param relativePath Relative path to resolve
      * @return Result with normalized path or error
      */
     public FileOperationResult resolveSecurePath(Path basePath, String relativePath) {
         if (basePath == null) {
-            return FileOperationResult.error(FileErrorType.INVALID_PATH,
-                    "Base path is null", null);
+            return FileOperationResult.error(FileErrorType.INVALID_PATH, "Base path is null", null);
         }
 
         Path normalizedBase = basePath.normalize().toAbsolutePath();
@@ -93,10 +84,14 @@ public class FileSystemService {
 
         // Security check: ensure resolved path is within base path
         if (!resolved.startsWith(normalizedBase)) {
-            log.warn("Path traversal attempt detected: {} trying to escape {}",
-                    relativePath, normalizedBase);
-            return FileOperationResult.error(FileErrorType.PATH_OUTSIDE_ALLOWED,
-                    "Path would escape allowed directory", resolved);
+            log.warn(
+                    "Path traversal attempt detected: {} trying to escape {}",
+                    relativePath,
+                    normalizedBase);
+            return FileOperationResult.error(
+                    FileErrorType.PATH_OUTSIDE_ALLOWED,
+                    "Path would escape allowed directory",
+                    resolved);
         }
 
         return FileOperationResult.success(resolved);
@@ -104,7 +99,7 @@ public class FileSystemService {
 
     /**
      * Check if a directory is writable.
-     * 
+     *
      * @param directory Directory to check
      * @return true if writable
      */
@@ -131,7 +126,7 @@ public class FileSystemService {
 
     /**
      * Check if a directory is readable.
-     * 
+     *
      * @param directory Directory to check
      * @return true if readable
      */
@@ -141,19 +136,21 @@ public class FileSystemService {
         }
 
         Path normalized = directory.normalize();
-        return Files.exists(normalized) && Files.isDirectory(normalized) && Files.isReadable(normalized);
+        return Files.exists(normalized)
+                && Files.isDirectory(normalized)
+                && Files.isReadable(normalized);
     }
 
     /**
      * Create directories with proper error handling.
-     * 
+     *
      * @param directory Directory to create
      * @return Result with success or detailed error
      */
     public FileOperationResult createDirectories(Path directory) {
         if (directory == null) {
-            return FileOperationResult.error(FileErrorType.INVALID_PATH,
-                    "Directory path is null", null);
+            return FileOperationResult.error(
+                    FileErrorType.INVALID_PATH, "Directory path is null", null);
         }
 
         Path normalized = directory.normalize().toAbsolutePath();
@@ -164,12 +161,16 @@ public class FileSystemService {
                 if (Files.isWritable(normalized)) {
                     return FileOperationResult.success(normalized);
                 } else {
-                    return FileOperationResult.error(FileErrorType.ACCESS_DENIED,
-                            "Directory exists but is not writable: " + normalized, normalized);
+                    return FileOperationResult.error(
+                            FileErrorType.ACCESS_DENIED,
+                            "Directory exists but is not writable: " + normalized,
+                            normalized);
                 }
             } else {
-                return FileOperationResult.error(FileErrorType.INVALID_PATH,
-                        "Path exists but is not a directory: " + normalized, normalized);
+                return FileOperationResult.error(
+                        FileErrorType.INVALID_PATH,
+                        "Path exists but is not a directory: " + normalized,
+                        normalized);
             }
         }
 
@@ -180,13 +181,17 @@ public class FileSystemService {
         }
 
         if (parent == null) {
-            return FileOperationResult.error(FileErrorType.PATH_NOT_FOUND,
-                    "No existing parent directory found for: " + normalized, normalized);
+            return FileOperationResult.error(
+                    FileErrorType.PATH_NOT_FOUND,
+                    "No existing parent directory found for: " + normalized,
+                    normalized);
         }
 
         if (!Files.isWritable(parent)) {
-            return FileOperationResult.error(FileErrorType.ACCESS_DENIED,
-                    "Cannot create directory, parent '" + parent + "' is not writable", normalized);
+            return FileOperationResult.error(
+                    FileErrorType.ACCESS_DENIED,
+                    "Cannot create directory, parent '" + parent + "' is not writable",
+                    normalized);
         }
 
         // Try to create
@@ -196,27 +201,29 @@ public class FileSystemService {
             return FileOperationResult.success(normalized);
         } catch (AccessDeniedException e) {
             log.error("Access denied creating directory '{}': {}", normalized, e.getMessage());
-            return FileOperationResult.error(FileErrorType.ACCESS_DENIED,
-                    "Access denied: " + e.getMessage(), normalized);
+            return FileOperationResult.error(
+                    FileErrorType.ACCESS_DENIED, "Access denied: " + e.getMessage(), normalized);
         } catch (IOException e) {
             log.error("IO error creating directory '{}': {}", normalized, e.getMessage());
-            return FileOperationResult.error(FileErrorType.IO_ERROR,
-                    "IO error: " + e.getMessage(), normalized);
+            return FileOperationResult.error(
+                    FileErrorType.IO_ERROR, "IO error: " + e.getMessage(), normalized);
         }
     }
 
     /**
-     * Validate that a receive directory is properly configured and accessible.
-     * Call this at startup or config validation time.
-     * 
+     * Validate that a receive directory is properly configured and accessible. Call this at startup
+     * or config validation time.
+     *
      * @param directoryPath The receive directory path
-     * @param description   Description for logging (e.g., "Virtual file 'DATA'")
+     * @param description Description for logging (e.g., "Virtual file 'DATA'")
      * @return Result with validation status
      */
     public FileOperationResult validateReceiveDirectory(String directoryPath, String description) {
         if (directoryPath == null || directoryPath.isBlank()) {
-            return FileOperationResult.error(FileErrorType.INVALID_PATH,
-                    description + ": receive directory not configured", null);
+            return FileOperationResult.error(
+                    FileErrorType.INVALID_PATH,
+                    description + ": receive directory not configured",
+                    null);
         }
 
         Path normalized = normalizePath(directoryPath);
@@ -224,8 +231,11 @@ public class FileSystemService {
         // Try to create if doesn't exist
         FileOperationResult createResult = createDirectories(normalized);
         if (!createResult.success()) {
-            log.error("{}: cannot access receive directory '{}' - {}",
-                    description, normalized, createResult.errorMessage());
+            log.error(
+                    "{}: cannot access receive directory '{}' - {}",
+                    description,
+                    normalized,
+                    createResult.errorMessage());
             return createResult;
         }
 
@@ -242,15 +252,17 @@ public class FileSystemService {
 
     /**
      * Validate that a send directory is properly configured and accessible.
-     * 
+     *
      * @param directoryPath The send directory path
-     * @param description   Description for logging
+     * @param description Description for logging
      * @return Result with validation status
      */
     public FileOperationResult validateSendDirectory(String directoryPath, String description) {
         if (directoryPath == null || directoryPath.isBlank()) {
-            return FileOperationResult.error(FileErrorType.INVALID_PATH,
-                    description + ": send directory not configured", null);
+            return FileOperationResult.error(
+                    FileErrorType.INVALID_PATH,
+                    description + ": send directory not configured",
+                    null);
         }
 
         Path normalized = normalizePath(directoryPath);
@@ -279,7 +291,7 @@ public class FileSystemService {
 
     /**
      * Get a human-readable permission string for a path.
-     * 
+     *
      * @param path Path to check
      * @return String like "rwx" or "r--" etc.
      */

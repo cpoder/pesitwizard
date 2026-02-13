@@ -11,20 +11,17 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Records PESIT sessions for replay in integration tests.
- * Captures FPDU exchanges to create "golden files" from real server
- * interactions.
+ * Records PESIT sessions for replay in integration tests. Captures FPDU exchanges to create "golden
+ * files" from real server interactions.
  */
 @Slf4j
 public class PesitSessionRecorder {
 
-    @Getter
-    private final List<RecordedFrame> frames = new ArrayList<>();
+    @Getter private final List<RecordedFrame> frames = new ArrayList<>();
     private final String sessionName;
 
     public PesitSessionRecorder(String sessionName) {
@@ -37,23 +34,13 @@ public class PesitSessionRecorder {
 
     public void record(Direction direction, Fpdu fpdu) {
         byte[] data = FpduBuilder.buildFpdu(fpdu);
-        frames.add(new RecordedFrame(
-                Instant.now(),
-                direction,
-                fpdu.getFpduType(),
-                data));
-        log.debug("Recorded {} {} FPDU ({} bytes)",
-                direction, fpdu.getFpduType(), data.length);
+        frames.add(new RecordedFrame(Instant.now(), direction, fpdu.getFpduType(), data));
+        log.debug("Recorded {} {} FPDU ({} bytes)", direction, fpdu.getFpduType(), data.length);
     }
 
     public void recordRaw(Direction direction, FpduType type, byte[] data) {
-        frames.add(new RecordedFrame(
-                Instant.now(),
-                direction,
-                type,
-                data.clone()));
-        log.debug("Recorded raw {} {} FPDU ({} bytes)",
-                direction, type, data.length);
+        frames.add(new RecordedFrame(Instant.now(), direction, type, data.clone()));
+        log.debug("Recorded raw {} {} FPDU ({} bytes)", direction, type, data.length);
     }
 
     public void recordRaw(Direction direction, byte[] data) {
@@ -67,19 +54,16 @@ public class PesitSessionRecorder {
                 log.warn("Could not parse FPDU type from raw data: {}", e.getMessage());
             }
         }
-        frames.add(new RecordedFrame(
-                Instant.now(),
-                direction,
-                type,
-                data.clone()));
-        log.debug("Recorded raw {} {} FPDU ({} bytes)",
-                direction, type, data.length);
+        frames.add(new RecordedFrame(Instant.now(), direction, type, data.clone()));
+        log.debug("Recorded raw {} {} FPDU ({} bytes)", direction, type, data.length);
     }
 
     public void saveToFile(Path path) throws IOException {
-        Files.createDirectories(path.getParent());
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                Files.newOutputStream(path))) {
+        Path parent = path.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(Files.newOutputStream(path))) {
             out.writeObject(sessionName);
             out.writeObject(frames);
         }
@@ -87,18 +71,18 @@ public class PesitSessionRecorder {
     }
 
     /**
-     * Save raw PeSIT frames to a binary file.
-     * Format per frame:
-     * - 1 byte: direction (0=RECEIVED, 1=SENT)
-     * - 2 bytes: frame length (big-endian)
-     * - N bytes: raw FPDU data
-     * 
-     * This format is portable and can be analyzed with standard tools.
+     * Save raw PeSIT frames to a binary file. Format per frame: - 1 byte: direction (0=RECEIVED,
+     * 1=SENT) - 2 bytes: frame length (big-endian) - N bytes: raw FPDU data
+     *
+     * <p>This format is portable and can be analyzed with standard tools.
      */
     public void saveRawToFile(Path path) throws IOException {
-        Files.createDirectories(path.getParent());
-        try (java.io.DataOutputStream out = new java.io.DataOutputStream(
-                Files.newOutputStream(path))) {
+        Path parent = path.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        try (java.io.DataOutputStream out =
+                new java.io.DataOutputStream(Files.newOutputStream(path))) {
             for (RecordedFrame frame : frames) {
                 out.writeByte(frame.direction() == Direction.RECEIVED ? 0 : 1);
                 out.writeShort(frame.data().length);
@@ -108,13 +92,12 @@ public class PesitSessionRecorder {
         log.info("Saved {} raw frames to {}", frames.size(), path);
     }
 
-    /**
-     * Load raw PeSIT frames from a binary file.
-     */
+    /** Load raw PeSIT frames from a binary file. */
     public static PesitSessionRecorder loadRawFromFile(Path path) throws IOException {
-        PesitSessionRecorder recorder = new PesitSessionRecorder(path.getFileName().toString());
-        try (java.io.DataInputStream in = new java.io.DataInputStream(
-                Files.newInputStream(path))) {
+        Path fileName = path.getFileName();
+        PesitSessionRecorder recorder =
+                new PesitSessionRecorder(fileName != null ? fileName.toString() : "unknown");
+        try (java.io.DataInputStream in = new java.io.DataInputStream(Files.newInputStream(path))) {
             while (in.available() > 0) {
                 int dirByte = in.readUnsignedByte();
                 Direction direction = (dirByte == 0) ? Direction.RECEIVED : Direction.SENT;
@@ -138,39 +121,41 @@ public class PesitSessionRecorder {
     }
 
     /**
-     * Allowlist of classes permitted during deserialization of session recordings.
-     * Any class not in this set is rejected, preventing arbitrary code execution
-     * via deserialization gadget chains (CWE-502).
+     * Allowlist of classes permitted during deserialization of session recordings. Any class not in
+     * this set is rejected, preventing arbitrary code execution via deserialization gadget chains
+     * (CWE-502).
      */
-    private static final Set<String> ALLOWED_CLASSES = Set.of(
-            java.lang.String.class.getName(),
-            java.lang.Enum.class.getName(),
-            java.lang.Number.class.getName(),
-            java.lang.Long.class.getName(),
-            java.lang.Integer.class.getName(),
-            java.util.ArrayList.class.getName(),
-            java.time.Instant.class.getName(),
-            "java.time.Ser",                      // Instant serialization proxy
-            byte[].class.getName(),               // [B
-            Object[].class.getName(),             // [Ljava.lang.Object; (ArrayList backing array)
-            RecordedFrame.class.getName(),
-            Direction.class.getName(),
-            FpduType.class.getName());
+    private static final Set<String> ALLOWED_CLASSES =
+            Set.of(
+                    java.lang.String.class.getName(),
+                    java.lang.Enum.class.getName(),
+                    java.lang.Number.class.getName(),
+                    java.lang.Long.class.getName(),
+                    java.lang.Integer.class.getName(),
+                    java.util.ArrayList.class.getName(),
+                    java.time.Instant.class.getName(),
+                    "java.time.Ser", // Instant serialization proxy
+                    byte[].class.getName(), // [B
+                    Object[].class.getName(), // [Ljava.lang.Object; (ArrayList backing array)
+                    RecordedFrame.class.getName(),
+                    Direction.class.getName(),
+                    FpduType.class.getName());
 
-    private static final ObjectInputFilter RECORDING_FILTER = filterInfo -> {
-        Class<?> clazz = filterInfo.serialClass();
-        if (clazz == null) {
-            return ObjectInputFilter.Status.UNDECIDED;
-        }
-        return ALLOWED_CLASSES.contains(clazz.getName())
-                ? ObjectInputFilter.Status.ALLOWED
-                : ObjectInputFilter.Status.REJECTED;
-    };
+    private static final ObjectInputFilter RECORDING_FILTER =
+            filterInfo -> {
+                Class<?> clazz = filterInfo.serialClass();
+                if (clazz == null) {
+                    return ObjectInputFilter.Status.UNDECIDED;
+                }
+                return ALLOWED_CLASSES.contains(clazz.getName())
+                        ? ObjectInputFilter.Status.ALLOWED
+                        : ObjectInputFilter.Status.REJECTED;
+            };
 
     @SuppressWarnings("unchecked")
-    public static PesitSessionRecorder loadFromFile(Path path) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream in = new ObjectInputStream(
-                Files.newInputStream(path))) {
+    public static PesitSessionRecorder loadFromFile(Path path)
+            throws IOException, ClassNotFoundException {
+        try (ObjectInputStream in = new ObjectInputStream(Files.newInputStream(path))) {
             in.setObjectInputFilter(RECORDING_FILTER);
             String name = (String) in.readObject();
             List<RecordedFrame> frames = (List<RecordedFrame>) in.readObject();
@@ -190,18 +175,14 @@ public class PesitSessionRecorder {
         RECEIVED // Server received from client
     }
 
-    public record RecordedFrame(
-            Instant timestamp,
-            Direction direction,
-            FpduType type,
-            byte[] data) implements Serializable {
+    public record RecordedFrame(Instant timestamp, Direction direction, FpduType type, byte[] data)
+            implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
         @Override
         public String toString() {
-            return String.format("[%s] %s %s (%d bytes)",
-                    timestamp, direction, type, data.length);
+            return String.format("[%s] %s %s (%d bytes)", timestamp, direction, type, data.length);
         }
     }
 }

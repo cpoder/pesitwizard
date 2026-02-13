@@ -1,12 +1,9 @@
 package com.pesitwizard.server.model;
 
 import com.pesitwizard.fpdu.DiagnosticCode;
-
 import lombok.Getter;
 
-/**
- * Result of a validation operation
- */
+/** Result of a validation operation */
 @Getter
 public class ValidationResult {
 
@@ -20,23 +17,17 @@ public class ValidationResult {
         this.message = message;
     }
 
-    /**
-     * Create a successful validation result
-     */
+    /** Create a successful validation result */
     public static ValidationResult ok() {
         return new ValidationResult(true, DiagnosticCode.D0_000, null);
     }
 
-    /**
-     * Create a failed validation result
-     */
+    /** Create a failed validation result */
     public static ValidationResult error(DiagnosticCode diagCode, String message) {
         return new ValidationResult(false, diagCode, message);
     }
 
-    /**
-     * Check if validation passed
-     */
+    /** Check if validation passed */
     public boolean isValid() {
         return valid;
     }

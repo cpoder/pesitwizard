@@ -1,16 +1,12 @@
 package com.pesitwizard.server;
 
+import com.pesitwizard.security.SecretsConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import com.pesitwizard.security.SecretsConfig;
-
-/**
- * PeSIT Server Application
- * Implements PeSIT Hors-SIT profile over TCP/IP
- */
+/** PeSIT Server Application Implements PeSIT Hors-SIT profile over TCP/IP */
 @SpringBootApplication
 @Import(SecretsConfig.class)
 @EnableScheduling

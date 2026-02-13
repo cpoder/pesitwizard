@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 /**
- * Integration tests for VaultManager using a real Vault instance.
- * Requires Vault running at localhost:8200 with dev token.
+ * Integration tests for VaultManager using a real Vault instance. Requires Vault running at
+ * localhost:8200 with dev token.
  */
 @Tag("integration")
 @DisplayName("VaultManager Integration Tests")
@@ -25,14 +25,18 @@ class VaultManagerIntegrationTest {
 
     static boolean isVaultAvailable() {
         try {
-            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
-                    .connectTimeout(java.time.Duration.ofSeconds(2)).build();
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(VAULT_ADDR + "/v1/sys/health"))
-                    .timeout(java.time.Duration.ofSeconds(2))
-                    .GET().build();
-            java.net.http.HttpResponse<String> response = client.send(request,
-                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            java.net.http.HttpClient client =
+                    java.net.http.HttpClient.newBuilder()
+                            .connectTimeout(java.time.Duration.ofSeconds(2))
+                            .build();
+            java.net.http.HttpRequest request =
+                    java.net.http.HttpRequest.newBuilder()
+                            .uri(java.net.URI.create(VAULT_ADDR + "/v1/sys/health"))
+                            .timeout(java.time.Duration.ofSeconds(2))
+                            .GET()
+                            .build();
+            java.net.http.HttpResponse<String> response =
+                    client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200;
         } catch (Exception e) {
             return false;
@@ -85,8 +89,8 @@ class VaultManagerIntegrationTest {
         @DisplayName("Should detect existing KV secrets engine")
         void shouldDetectExistingKvSecretsEngine() {
             // In dev mode, 'secret/' is already mounted
-            VaultManager.SetupResult result = vaultManager.ensureKvSecretsEngine(
-                    VAULT_TOKEN, "secret/data/test", null);
+            VaultManager.SetupResult result =
+                    vaultManager.ensureKvSecretsEngine(VAULT_TOKEN, "secret/data/test", null);
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).containsIgnoringCase("secret");
@@ -95,8 +99,9 @@ class VaultManagerIntegrationTest {
         @Test
         @DisplayName("Should handle custom path for KV engine")
         void shouldHandleCustomPath() {
-            VaultManager.SetupResult result = vaultManager.ensureKvSecretsEngine(
-                    VAULT_TOKEN, "pesitwizard/data/secrets", null);
+            VaultManager.SetupResult result =
+                    vaultManager.ensureKvSecretsEngine(
+                            VAULT_TOKEN, "pesitwizard/data/secrets", null);
 
             // Should succeed or report already exists
             assertThat(result.success()).isTrue();
@@ -110,14 +115,15 @@ class VaultManagerIntegrationTest {
         @Test
         @DisplayName("Should setup AppRole")
         void shouldSetupAppRole() {
-            String policy = """
+            String policy =
+                    """
                     path "secret/data/test/*" {
                       capabilities = ["create", "read", "update", "delete", "list"]
                     }
                     """;
 
-            VaultManager.SetupResult result = vaultManager.setupAppRole(
-                    VAULT_TOKEN, "test-role", policy, null);
+            VaultManager.SetupResult result =
+                    vaultManager.setupAppRole(VAULT_TOKEN, "test-role", policy, null);
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).contains("test-role");
@@ -168,8 +174,8 @@ class VaultManagerIntegrationTest {
         @Test
         @DisplayName("Should fail AppRole auth with invalid credentials")
         void shouldFailAppRoleAuthWithInvalidCredentials() {
-            VaultManager.VaultTestResult result = vaultManager.testAppRole(
-                    "invalid-role-id", "invalid-secret-id", null);
+            VaultManager.VaultTestResult result =
+                    vaultManager.testAppRole("invalid-role-id", "invalid-secret-id", null);
 
             assertThat(result.success()).isFalse();
             assertThat(result.message()).containsIgnoringCase("failed");
@@ -183,8 +189,9 @@ class VaultManagerIntegrationTest {
         @Test
         @DisplayName("VaultTestResult should have all fields")
         void vaultTestResultShouldHaveAllFields() {
-            VaultManager.VaultTestResult result = new VaultManager.VaultTestResult(
-                    true, "Test message", "{\"details\":true}", "test-token");
+            VaultManager.VaultTestResult result =
+                    new VaultManager.VaultTestResult(
+                            true, "Test message", "{\"details\":true}", "test-token");
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isEqualTo("Test message");
@@ -225,7 +232,8 @@ class VaultManagerIntegrationTest {
         @Test
         @DisplayName("Should return null for non-existent secret ID")
         void shouldReturnNullForNonExistentSecretId() {
-            String secretId = vaultManager.generateSecretId(VAULT_TOKEN, "non-existent-role-xyz", null);
+            String secretId =
+                    vaultManager.generateSecretId(VAULT_TOKEN, "non-existent-role-xyz", null);
             assertThat(secretId).isNull();
         }
     }

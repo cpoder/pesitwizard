@@ -1,27 +1,26 @@
 package com.pesitwizard.security;
 
 /**
- * Interface for secret management providers.
- * Supports different backends: local AES encryption, HashiCorp Vault, etc.
+ * Interface for secret management providers. Supports different backends: local AES encryption,
+ * HashiCorp Vault, etc.
  */
 public interface SecretsProvider {
 
     /**
      * Encrypt a secret value.
-     * 
+     *
      * @param plaintext The plaintext value to encrypt
      * @return The encrypted value (format depends on provider)
      */
     String encrypt(String plaintext);
 
     /**
-     * Encrypt a secret value with a contextual path for better organization.
-     * For Vault, this creates a human-readable path like
-     * "registry/github/password".
-     * For AES, this delegates to encrypt() as context is not needed.
-     * 
+     * Encrypt a secret value with a contextual path for better organization. For Vault, this
+     * creates a human-readable path like "registry/github/password". For AES, this delegates to
+     * encrypt() as context is not needed.
+     *
      * @param plaintext The plaintext value to encrypt
-     * @param context   The context path (e.g., "registry/github/password")
+     * @param context The context path (e.g., "registry/github/password")
      * @return The encrypted value (format depends on provider)
      */
     default String encrypt(String plaintext, String context) {
@@ -30,7 +29,7 @@ public interface SecretsProvider {
 
     /**
      * Decrypt a secret value.
-     * 
+     *
      * @param ciphertext The encrypted value
      * @return The decrypted plaintext
      */
@@ -38,15 +37,15 @@ public interface SecretsProvider {
 
     /**
      * Store a secret with a given key.
-     * 
-     * @param key   The secret key/path
+     *
+     * @param key The secret key/path
      * @param value The secret value
      */
     void storeSecret(String key, String value);
 
     /**
      * Retrieve a secret by key.
-     * 
+     *
      * @param key The secret key/path
      * @return The secret value, or null if not found
      */
@@ -54,14 +53,14 @@ public interface SecretsProvider {
 
     /**
      * Delete a secret.
-     * 
+     *
      * @param key The secret key/path
      */
     void deleteSecret(String key);
 
     /**
      * Check if the provider is properly configured and available.
-     * 
+     *
      * @return true if the provider is ready to use
      */
     boolean isAvailable();
@@ -74,8 +73,8 @@ public interface SecretsProvider {
     String getProviderType();
 
     /**
-     * Derive a purpose-specific SecretKey from the master key.
-     * Used for at-rest file encryption and other key derivation needs.
+     * Derive a purpose-specific SecretKey from the master key. Used for at-rest file encryption and
+     * other key derivation needs.
      *
      * @param purpose A unique string identifying the key purpose (e.g., "file-encryption")
      * @return A derived AES-256 SecretKey, or null if not supported

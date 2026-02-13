@@ -2,9 +2,7 @@ package com.pesitwizard.server.config;
 
 import lombok.Data;
 
-/**
- * Configuration for a PeSIT partner (remote system that can connect)
- */
+/** Configuration for a PeSIT partner (remote system that can connect) */
 @Data
 public class PartnerConfig {
 
@@ -35,34 +33,28 @@ public class PartnerConfig {
         BOTH // Partner can read and write
     }
 
-    /**
-     * Check if partner can perform write operations
-     */
+    /** Check if partner can perform write operations */
     public boolean canWrite() {
         return accessType == AccessType.WRITE || accessType == AccessType.BOTH;
     }
 
-    /**
-     * Check if partner can perform read operations
-     */
+    /** Check if partner can perform read operations */
     public boolean canRead() {
         return accessType == AccessType.READ || accessType == AccessType.BOTH;
     }
 
     /**
-     * Check if partner can access a specific file.
-     * Patterns use glob-style wildcards: * matches any characters.
+     * Check if partner can access a specific file. Patterns use glob-style wildcards: * matches any
+     * characters.
      */
     public boolean canAccessFile(String filename) {
         if (allowedFiles == null || allowedFiles.length == 0) {
             return true; // No restrictions
         }
         for (String allowed : allowedFiles) {
-            if (allowed == null)
-                continue;
+            if (allowed == null) continue;
             String pattern = allowed.trim();
-            if (pattern.isEmpty())
-                continue;
+            if (pattern.isEmpty()) continue;
             // Convert glob pattern to regex: * -> .*
             String regex = pattern.replace(".", "\\.").replace("*", ".*");
             if (pattern.equals(filename) || filename.matches(regex)) {

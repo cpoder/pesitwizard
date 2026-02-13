@@ -1,5 +1,10 @@
 package com.pesitwizard.server.service;
 
+import com.pesitwizard.server.entity.FileChecksum;
+import com.pesitwizard.server.entity.FileChecksum.HashAlgorithm;
+import com.pesitwizard.server.entity.FileChecksum.TransferDirection;
+import com.pesitwizard.server.entity.FileChecksum.VerificationStatus;
+import com.pesitwizard.server.repository.FileChecksumRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -11,7 +16,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,18 +25,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pesitwizard.server.entity.FileChecksum;
-import com.pesitwizard.server.entity.FileChecksum.HashAlgorithm;
-import com.pesitwizard.server.entity.FileChecksum.TransferDirection;
-import com.pesitwizard.server.entity.FileChecksum.VerificationStatus;
-import com.pesitwizard.server.repository.FileChecksumRepository;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Service for file integrity verification.
- * Computes and verifies SHA-256 checksums, detects duplicates.
+ * Service for file integrity verification. Computes and verifies SHA-256 checksums, detects
+ * duplicates.
  */
 @Slf4j
 @Service
@@ -50,16 +47,12 @@ public class FileIntegrityService {
 
     // ========== Checksum Computation ==========
 
-    /**
-     * Compute checksum for a file
-     */
+    /** Compute checksum for a file */
     public String computeChecksum(Path filePath) throws IOException {
         return computeChecksum(filePath, getDefaultAlgorithm());
     }
 
-    /**
-     * Compute checksum for a file with specified algorithm
-     */
+    /** Compute checksum for a file with specified algorithm */
     public String computeChecksum(Path filePath, HashAlgorithm algorithm) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance(algorithmToJavaName(algorithm));
@@ -78,16 +71,12 @@ public class FileIntegrityService {
         }
     }
 
-    /**
-     * Compute checksum for byte array
-     */
+    /** Compute checksum for byte array */
     public String computeChecksum(byte[] data) {
         return computeChecksum(data, getDefaultAlgorithm());
     }
 
-    /**
-     * Compute checksum for byte array with specified algorithm
-     */
+    /** Compute checksum for byte array with specified algorithm */
     public String computeChecksum(byte[] data, HashAlgorithm algorithm) {
         try {
             MessageDigest digest = MessageDigest.getInstance(algorithmToJavaName(algorithm));
@@ -99,12 +88,16 @@ public class FileIntegrityService {
 
     // ========== Checksum Storage ==========
 
-    /**
-     * Store checksum for a transferred file
-     */
+    /** Store checksum for a transferred file */
     @Transactional
-    public FileChecksum storeChecksum(String filename, long fileSize, String checksumHash,
-            String transferId, String partnerId, String serverId, TransferDirection direction,
+    public FileChecksum storeChecksum(
+            String filename,
+            long fileSize,
+            String checksumHash,
+            String transferId,
+            String partnerId,
+            String serverId,
+            TransferDirection direction,
             String localPath) {
 
         HashAlgorithm algorithm = getDefaultAlgorithm();
@@ -119,61 +112,80 @@ public class FileIntegrityService {
                 fc.setDuplicateCount(duplicateCount);
                 checksumRepository.save(fc);
             }
-            log.info("Duplicate file detected: {} (hash: {}, count: {})",
-                    filename, checksumHash.substring(0, 16) + "...", duplicateCount + 1);
+            log.info(
+                    "Duplicate file detected: {} (hash: {}, count: {})",
+                    filename,
+                    checksumHash.substring(0, 16) + "...",
+                    duplicateCount + 1);
         }
 
-        FileChecksum checksum = FileChecksum.builder()
-                .checksumHash(checksumHash)
-                .algorithm(algorithm)
-                .filename(filename)
-                .fileSize(fileSize)
-                .transferId(transferId)
-                .partnerId(partnerId)
-                .serverId(serverId)
-                .direction(direction)
-                .localPath(localPath)
-                .status(VerificationStatus.PENDING)
-                .duplicateCount(duplicateCount)
-                .build();
+        FileChecksum checksum =
+                FileChecksum.builder()
+                        .checksumHash(checksumHash)
+                        .algorithm(algorithm)
+                        .filename(filename)
+                        .fileSize(fileSize)
+                        .transferId(transferId)
+                        .partnerId(partnerId)
+                        .serverId(serverId)
+                        .direction(direction)
+                        .localPath(localPath)
+                        .status(VerificationStatus.PENDING)
+                        .duplicateCount(duplicateCount)
+                        .build();
 
         checksum = checksumRepository.save(checksum);
-        log.debug("Stored checksum for file: {} (hash: {})", filename, checksumHash.substring(0, 16) + "...");
+        log.debug(
+                "Stored checksum for file: {} (hash: {})",
+                filename,
+                checksumHash.substring(0, 16) + "...");
 
         return checksum;
     }
 
-    /**
-     * Store checksum after computing from file
-     */
+    /** Store checksum after computing from file */
     @Transactional
-    public FileChecksum computeAndStore(Path filePath, String transferId, String partnerId,
-            String serverId, TransferDirection direction) throws IOException {
+    public FileChecksum computeAndStore(
+            Path filePath,
+            String transferId,
+            String partnerId,
+            String serverId,
+            TransferDirection direction)
+            throws IOException {
 
         String checksumHash = computeChecksum(filePath);
         long fileSize = Files.size(filePath);
-        String filename = filePath.getFileName().toString();
+        Path fileNamePath = filePath.getFileName();
+        String filename = fileNamePath != null ? fileNamePath.toString() : filePath.toString();
 
-        return storeChecksum(filename, fileSize, checksumHash, transferId, partnerId,
-                serverId, direction, filePath.toString());
+        return storeChecksum(
+                filename,
+                fileSize,
+                checksumHash,
+                transferId,
+                partnerId,
+                serverId,
+                direction,
+                filePath.toString());
     }
 
     // ========== Verification ==========
 
-    /**
-     * Verify a file's integrity
-     */
+    /** Verify a file's integrity */
     @Transactional
     public VerificationResult verifyFile(Long checksumId) {
-        FileChecksum checksum = checksumRepository.findById(checksumId)
-                .orElseThrow(() -> new IllegalArgumentException("Checksum not found: " + checksumId));
+        FileChecksum checksum =
+                checksumRepository
+                        .findById(checksumId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Checksum not found: " + checksumId));
 
         return verifyFile(checksum);
     }
 
-    /**
-     * Verify a file's integrity
-     */
+    /** Verify a file's integrity */
     @Transactional
     public VerificationResult verifyFile(FileChecksum checksum) {
         if (checksum.getLocalPath() == null) {
@@ -186,7 +198,8 @@ public class FileIntegrityService {
             checksum.setStatus(VerificationStatus.MISSING);
             checksum.setVerifiedAt(Instant.now());
             checksumRepository.save(checksum);
-            return new VerificationResult(false, "File not found: " + filePath, VerificationStatus.MISSING);
+            return new VerificationResult(
+                    false, "File not found: " + filePath, VerificationStatus.MISSING);
         }
 
         try {
@@ -196,29 +209,32 @@ public class FileIntegrityService {
                 checksum.setStatus(VerificationStatus.VERIFIED);
                 checksum.setVerifiedAt(Instant.now());
                 checksumRepository.save(checksum);
-                return new VerificationResult(true, "Checksum verified", VerificationStatus.VERIFIED);
+                return new VerificationResult(
+                        true, "Checksum verified", VerificationStatus.VERIFIED);
             } else {
                 checksum.setStatus(VerificationStatus.FAILED);
                 checksum.setVerifiedAt(Instant.now());
                 checksumRepository.save(checksum);
-                log.warn("Checksum verification failed for file: {} (expected: {}, actual: {})",
+                log.warn(
+                        "Checksum verification failed for file: {} (expected: {}, actual: {})",
                         checksum.getFilename(),
                         checksum.getChecksumHash().substring(0, 16) + "...",
                         currentHash.substring(0, 16) + "...");
-                return new VerificationResult(false, "Checksum mismatch", VerificationStatus.FAILED);
+                return new VerificationResult(
+                        false, "Checksum mismatch", VerificationStatus.FAILED);
             }
         } catch (IOException e) {
             log.error("Error verifying file {}: {}", checksum.getFilename(), e.getMessage());
-            return new VerificationResult(false, "Error reading file: " + e.getMessage(), VerificationStatus.FAILED);
+            return new VerificationResult(
+                    false, "Error reading file: " + e.getMessage(), VerificationStatus.FAILED);
         }
     }
 
-    /**
-     * Verify all pending files
-     */
+    /** Verify all pending files */
     @Transactional
     public int verifyPendingFiles() {
-        List<FileChecksum> pending = checksumRepository.findByStatusOrderByCreatedAtAsc(VerificationStatus.PENDING);
+        List<FileChecksum> pending =
+                checksumRepository.findByStatusOrderByCreatedAtAsc(VerificationStatus.PENDING);
         int verified = 0;
 
         for (FileChecksum checksum : pending) {
@@ -232,15 +248,14 @@ public class FileIntegrityService {
         return verified;
     }
 
-    /**
-     * Re-verify files that haven't been checked recently
-     */
+    /** Re-verify files that haven't been checked recently */
     @Scheduled(cron = "0 0 2 * * ?") // Run at 2 AM daily
     @Transactional
     public void reVerifyOldFiles() {
         Instant cutoff = Instant.now().minus(verificationIntervalDays, ChronoUnit.DAYS);
-        List<FileChecksum> oldFiles = checksumRepository.findByVerifiedAtBeforeAndStatusOrderByVerifiedAtAsc(
-                cutoff, VerificationStatus.VERIFIED);
+        List<FileChecksum> oldFiles =
+                checksumRepository.findByVerifiedAtBeforeAndStatusOrderByVerifiedAtAsc(
+                        cutoff, VerificationStatus.VERIFIED);
 
         int reVerified = 0;
         for (FileChecksum checksum : oldFiles) {
@@ -257,76 +272,60 @@ public class FileIntegrityService {
 
     // ========== Duplicate Detection ==========
 
-    /**
-     * Check if a file is a duplicate
-     */
+    /** Check if a file is a duplicate */
     public boolean isDuplicate(String checksumHash) {
-        return checksumRepository.existsByChecksumHashAndAlgorithm(checksumHash, getDefaultAlgorithm());
+        return checksumRepository.existsByChecksumHashAndAlgorithm(
+                checksumHash, getDefaultAlgorithm());
     }
 
-    /**
-     * Get all duplicates of a file
-     */
+    /** Get all duplicates of a file */
     public List<FileChecksum> getDuplicates(String checksumHash) {
         return checksumRepository.findByChecksumHash(checksumHash);
     }
 
-    /**
-     * Get all duplicate file groups
-     */
+    /** Get all duplicate file groups */
     public List<FileChecksum> getAllDuplicates() {
         return checksumRepository.findDuplicates();
     }
 
-    /**
-     * Get files with highest duplicate counts
-     */
+    /** Get files with highest duplicate counts */
     public List<FileChecksum> getMostDuplicated(int minCount) {
-        return checksumRepository.findByDuplicateCountGreaterThanOrderByDuplicateCountDesc(minCount);
+        return checksumRepository.findByDuplicateCountGreaterThanOrderByDuplicateCountDesc(
+                minCount);
     }
 
     // ========== Queries ==========
 
-    /**
-     * Get checksum by ID
-     */
+    /** Get checksum by ID */
     public Optional<FileChecksum> getChecksum(Long id) {
         return checksumRepository.findById(id);
     }
 
-    /**
-     * Get checksum by transfer ID
-     */
+    /** Get checksum by transfer ID */
     public Optional<FileChecksum> getChecksumByTransferId(String transferId) {
         return checksumRepository.findByTransferId(transferId);
     }
 
-    /**
-     * Get checksums by partner
-     */
+    /** Get checksums by partner */
     public Page<FileChecksum> getChecksumsByPartner(String partnerId, int page, int size) {
-        return checksumRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId, PageRequest.of(page, size));
+        return checksumRepository.findByPartnerIdOrderByCreatedAtDesc(
+                partnerId, PageRequest.of(page, size));
     }
 
-    /**
-     * Get checksums by status
-     */
+    /** Get checksums by status */
     public Page<FileChecksum> getChecksumsByStatus(VerificationStatus status, int page, int size) {
-        return checksumRepository.findByStatusOrderByCreatedAtDesc(status, PageRequest.of(page, size));
+        return checksumRepository.findByStatusOrderByCreatedAtDesc(
+                status, PageRequest.of(page, size));
     }
 
-    /**
-     * Search by filename
-     */
+    /** Search by filename */
     public Page<FileChecksum> searchByFilename(String pattern, int page, int size) {
         return checksumRepository.searchByFilename(pattern, PageRequest.of(page, size));
     }
 
     // ========== Statistics ==========
 
-    /**
-     * Get integrity statistics
-     */
+    /** Get integrity statistics */
     public IntegrityStatistics getStatistics() {
         IntegrityStatistics stats = new IntegrityStatistics();
 

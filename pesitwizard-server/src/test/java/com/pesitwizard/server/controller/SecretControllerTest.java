@@ -5,35 +5,31 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
 import com.pesitwizard.server.entity.SecretEntry;
 import com.pesitwizard.server.entity.SecretEntry.SecretScope;
 import com.pesitwizard.server.entity.SecretEntry.SecretType;
 import com.pesitwizard.server.service.SecretService;
 import com.pesitwizard.server.service.SecretService.SecretStatistics;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SecretController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("SecretController Tests")
 class SecretControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private SecretService secretService;
+    @MockitoBean private SecretService secretService;
 
     @Test
     @DisplayName("listSecrets should return all secrets")
@@ -87,8 +83,7 @@ class SecretControllerTest {
     void getSecretShouldReturn404WhenNotFound() throws Exception {
         when(secretService.getSecretById(999L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/v1/secrets/999"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/secrets/999")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -141,10 +136,12 @@ class SecretControllerTest {
     @DisplayName("createSecret should create new secret")
     void createSecretShouldCreateNewSecret() throws Exception {
         SecretEntry secret = createTestSecret(1L, "newsecret");
-        when(secretService.createSecret(anyString(), anyString(), any(), any(), any(), any(), any(), any(), any()))
+        when(secretService.createSecret(
+                        anyString(), anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(secret);
 
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "name": "newsecret",
                     "value": "secret_value",
@@ -152,10 +149,11 @@ class SecretControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/secrets")
-                .principal(() -> "testuser")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/v1/secrets")
+                                .principal(() -> "testuser")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("newsecret"));
     }
@@ -163,20 +161,23 @@ class SecretControllerTest {
     @Test
     @DisplayName("createSecret should return 400 on invalid request")
     void createSecretShouldReturn400OnInvalidRequest() throws Exception {
-        when(secretService.createSecret(anyString(), anyString(), any(), any(), any(), any(), any(), any(), any()))
+        when(secretService.createSecret(
+                        anyString(), anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new IllegalArgumentException("Name already exists"));
 
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "name": "duplicate",
                     "value": "value"
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/secrets")
-                .principal(() -> "testuser")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/v1/secrets")
+                                .principal(() -> "testuser")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isBadRequest());
     }
 
@@ -186,9 +187,10 @@ class SecretControllerTest {
         SecretEntry secret = createTestSecret(1L, "updated");
         when(secretService.updateSecretValue(eq("updated"), anyString(), any())).thenReturn(secret);
 
-        mockMvc.perform(put("/api/v1/secrets/name/updated/value")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\": \"new_value\"}"))
+        mockMvc.perform(
+                        put("/api/v1/secrets/name/updated/value")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"value\": \"new_value\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -196,11 +198,13 @@ class SecretControllerTest {
     @DisplayName("updateSecretMetadata should update metadata")
     void updateSecretMetadataShouldUpdateMetadata() throws Exception {
         SecretEntry secret = createTestSecret(1L, "updated");
-        when(secretService.updateSecretMetadata(eq(1L), any(), any(), any(), any(), any())).thenReturn(secret);
+        when(secretService.updateSecretMetadata(eq(1L), any(), any(), any(), any(), any()))
+                .thenReturn(secret);
 
-        mockMvc.perform(put("/api/v1/secrets/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"description\": \"Updated\"}"))
+        mockMvc.perform(
+                        put("/api/v1/secrets/1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"description\": \"Updated\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -211,9 +215,10 @@ class SecretControllerTest {
         secret.setVersion(2L);
         when(secretService.rotateSecret(eq("rotated"), anyString(), any())).thenReturn(secret);
 
-        mockMvc.perform(post("/api/v1/secrets/name/rotated/rotate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"value\": \"new_value\"}"))
+        mockMvc.perform(
+                        post("/api/v1/secrets/name/rotated/rotate")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"value\": \"new_value\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -222,8 +227,7 @@ class SecretControllerTest {
     void deleteSecretShouldDeleteExistingSecret() throws Exception {
         doNothing().when(secretService).deleteSecret(1L);
 
-        mockMvc.perform(delete("/api/v1/secrets/1"))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/secrets/1")).andExpect(status().isNoContent());
     }
 
     @Test
@@ -231,8 +235,7 @@ class SecretControllerTest {
     void deleteSecretShouldReturn404WhenNotFound() throws Exception {
         doThrow(new IllegalArgumentException("Not found")).when(secretService).deleteSecret(999L);
 
-        mockMvc.perform(delete("/api/v1/secrets/999"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/secrets/999")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -242,8 +245,7 @@ class SecretControllerTest {
         secret.setActive(false);
         when(secretService.deactivateSecret(1L)).thenReturn(secret);
 
-        mockMvc.perform(post("/api/v1/secrets/1/deactivate"))
-                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/secrets/1/deactivate")).andExpect(status().isOk());
     }
 
     @Test

@@ -3,14 +3,12 @@ package com.pesitwizard.server.model;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.server.state.ServerState;
 import java.time.Duration;
 import java.time.Instant;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.pesitwizard.server.state.ServerState;
 
 @DisplayName("SessionContext Tests")
 class SessionContextTest {
@@ -61,7 +59,8 @@ class SessionContextTest {
     @DisplayName("should reject invalid state transition")
     void shouldRejectInvalidStateTransition() {
         // CN01 cannot transition directly to SF03 (must go through connect + create/select)
-        assertThrows(InvalidStateTransitionException.class,
+        assertThrows(
+                InvalidStateTransitionException.class,
                 () -> context.transitionTo(ServerState.SF03_FILE_SELECTED));
     }
 

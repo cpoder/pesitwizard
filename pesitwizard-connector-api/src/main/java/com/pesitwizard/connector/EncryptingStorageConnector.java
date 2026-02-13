@@ -8,7 +8,6 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
-
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
@@ -17,17 +16,19 @@ import javax.crypto.spec.GCMParameterSpec;
 
 /**
  * Decorator that adds AES-256-GCM at-rest encryption to any StorageConnector.
- * <p>
- * Encrypted file format: [12-byte IV][AES-GCM ciphertext + 16-byte auth tag]
- * <p>
- * The encryption key is supplied externally (typically derived from the master key
- * via the SecretsService). Each file gets a unique random IV.
+ *
+ * <p>Encrypted file format: [12-byte IV][AES-GCM ciphertext + 16-byte auth tag]
+ *
+ * <p>The encryption key is supplied externally (typically derived from the master key via the
+ * SecretsService). Each file gets a unique random IV.
  */
 public class EncryptingStorageConnector implements StorageConnector {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int GCM_IV_LENGTH = 12;
     private static final int GCM_TAG_BITS = 128;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final StorageConnector delegate;
     private final SecretKey encryptionKey;
@@ -53,7 +54,8 @@ public class EncryptingStorageConnector implements StorageConnector {
             while (bytesRead < GCM_IV_LENGTH) {
                 int n = raw.read(iv, bytesRead, GCM_IV_LENGTH - bytesRead);
                 if (n < 0) {
-                    throw new ConnectorException(ConnectorException.ErrorCode.UNKNOWN,
+                    throw new ConnectorException(
+                            ConnectorException.ErrorCode.UNKNOWN,
                             "Encrypted file too short - missing IV header");
                 }
                 bytesRead += n;
@@ -70,11 +72,15 @@ public class EncryptingStorageConnector implements StorageConnector {
 
             return cis;
         } catch (GeneralSecurityException e) {
-            throw new ConnectorException(ConnectorException.ErrorCode.UNKNOWN,
-                    "Decryption initialization failed: " + e.getMessage(), e);
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.UNKNOWN,
+                    "Decryption initialization failed: " + e.getMessage(),
+                    e);
         } catch (IOException e) {
-            throw new ConnectorException(ConnectorException.ErrorCode.UNKNOWN,
-                    "Failed to read encrypted file header: " + e.getMessage(), e);
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.UNKNOWN,
+                    "Failed to read encrypted file header: " + e.getMessage(),
+                    e);
         }
     }
 
@@ -88,7 +94,8 @@ public class EncryptingStorageConnector implements StorageConnector {
         if (append) {
             // GCM doesn't support appending to encrypted streams - the auth tag
             // is at the end. For resume, the entire file must be re-encrypted.
-            throw new ConnectorException(ConnectorException.ErrorCode.NOT_SUPPORTED,
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.NOT_SUPPORTED,
                     "Append mode not supported with at-rest encryption. Use full re-write instead.");
         }
 
@@ -97,7 +104,7 @@ public class EncryptingStorageConnector implements StorageConnector {
 
             // Generate random IV and write it as file header
             byte[] iv = new byte[GCM_IV_LENGTH];
-            new SecureRandom().nextBytes(iv);
+            SECURE_RANDOM.nextBytes(iv);
             raw.write(iv);
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
@@ -106,11 +113,15 @@ public class EncryptingStorageConnector implements StorageConnector {
             // Wrap in CipherOutputStream. On close, it finalizes the GCM tag.
             return new FlushSafeCipherOutputStream(raw, cipher);
         } catch (GeneralSecurityException e) {
-            throw new ConnectorException(ConnectorException.ErrorCode.NOT_SUPPORTED,
-                    "Encryption initialization failed: " + e.getMessage(), e);
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.NOT_SUPPORTED,
+                    "Encryption initialization failed: " + e.getMessage(),
+                    e);
         } catch (IOException e) {
-            throw new ConnectorException(ConnectorException.ErrorCode.NOT_SUPPORTED,
-                    "Failed to write encrypted file header: " + e.getMessage(), e);
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.NOT_SUPPORTED,
+                    "Failed to write encrypted file header: " + e.getMessage(),
+                    e);
         }
     }
 
@@ -126,25 +137,80 @@ public class EncryptingStorageConnector implements StorageConnector {
 
     // ========== Delegated methods ==========
 
-    @Override public String getType() { return delegate.getType(); }
-    @Override public String getName() { return delegate.getName(); }
-    @Override public String getVersion() { return delegate.getVersion(); }
-    @Override public void initialize(Map<String, String> config) throws ConnectorException { delegate.initialize(config); }
-    @Override public boolean testConnection() throws ConnectorException { return delegate.testConnection(); }
-    @Override public boolean exists(String path) throws ConnectorException { return delegate.exists(path); }
-    @Override public List<FileMetadata> list(String path) throws ConnectorException { return delegate.list(path); }
-    @Override public void delete(String path) throws ConnectorException { delegate.delete(path); }
-    @Override public void mkdir(String path) throws ConnectorException { delegate.mkdir(path); }
-    @Override public void rename(String s, String t) throws ConnectorException { delegate.rename(s, t); }
-    @Override public List<ConfigParameter> getRequiredParameters() { return delegate.getRequiredParameters(); }
-    @Override public List<ConfigParameter> getOptionalParameters() { return delegate.getOptionalParameters(); }
-    @Override public boolean supportsResume() { return false; } // Resume not supported with GCM
-    @Override public void close() { delegate.close(); }
+    @Override
+    public String getType() {
+        return delegate.getType();
+    }
+
+    @Override
+    public String getName() {
+        return delegate.getName();
+    }
+
+    @Override
+    public String getVersion() {
+        return delegate.getVersion();
+    }
+
+    @Override
+    public void initialize(Map<String, String> config) throws ConnectorException {
+        delegate.initialize(config);
+    }
+
+    @Override
+    public boolean testConnection() throws ConnectorException {
+        return delegate.testConnection();
+    }
+
+    @Override
+    public boolean exists(String path) throws ConnectorException {
+        return delegate.exists(path);
+    }
+
+    @Override
+    public List<FileMetadata> list(String path) throws ConnectorException {
+        return delegate.list(path);
+    }
+
+    @Override
+    public void delete(String path) throws ConnectorException {
+        delegate.delete(path);
+    }
+
+    @Override
+    public void mkdir(String path) throws ConnectorException {
+        delegate.mkdir(path);
+    }
+
+    @Override
+    public void rename(String s, String t) throws ConnectorException {
+        delegate.rename(s, t);
+    }
+
+    @Override
+    public List<ConfigParameter> getRequiredParameters() {
+        return delegate.getRequiredParameters();
+    }
+
+    @Override
+    public List<ConfigParameter> getOptionalParameters() {
+        return delegate.getOptionalParameters();
+    }
+
+    @Override
+    public boolean supportsResume() {
+        return false;
+    } // Resume not supported with GCM
+
+    @Override
+    public void close() {
+        delegate.close();
+    }
 
     /**
-     * CipherOutputStream wrapper that properly closes the underlying stream.
-     * Standard CipherOutputStream.close() calls doFinal() but may not flush
-     * the underlying stream before closing.
+     * CipherOutputStream wrapper that properly closes the underlying stream. Standard
+     * CipherOutputStream.close() calls doFinal() but may not flush the underlying stream before
+     * closing.
      */
     private static class FlushSafeCipherOutputStream extends FilterOutputStream {
         private final CipherOutputStream cos;

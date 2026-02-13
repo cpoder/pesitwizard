@@ -6,7 +6,7 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -16,23 +16,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Chaos engineering tests for database failure scenarios.
  *
- * These tests verify:
- * - Graceful degradation when database is unavailable
- * - Automatic reconnection when database returns
- * - No data loss during database failover
- * - Connection pool recovery
+ * <p>These tests verify: - Graceful degradation when database is unavailable - Automatic
+ * reconnection when database returns - No data loss during database failover - Connection pool
+ * recovery
  *
- * Requirements:
- * - PostgreSQL running
- * - Database manipulation capabilities
- * - Integration test profile
+ * <p>Requirements: - PostgreSQL running - Database manipulation capabilities - Integration test
+ * profile
  *
- * Run with: mvn test -Dtest=DatabaseFailureTest -Dchaos-test=true
+ * <p>Run with: mvn test -Dtest=DatabaseFailureTest -Dchaos-test=true
  */
 @Slf4j
 @SpringBootTest
@@ -70,14 +64,14 @@ class DatabaseFailureTest {
         dbController.killDatabase();
 
         // Assert - Application should handle gracefully
-        await()
-                .atMost(Duration.ofSeconds(10))
+        await().atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(() -> {
-                    assertThat(dbController.isDatabaseAvailable())
-                            .as("Database should be unavailable")
-                            .isFalse();
-                });
+                .untilAsserted(
+                        () -> {
+                            assertThat(dbController.isDatabaseAvailable())
+                                    .as("Database should be unavailable")
+                                    .isFalse();
+                        });
 
         // Application should report degraded status
         HealthStatus health = dbController.getApplicationHealth();
@@ -106,34 +100,30 @@ class DatabaseFailureTest {
     void testDatabaseRecovery() {
         // Arrange
         dbController.killDatabase();
-        await()
-                .atMost(Duration.ofSeconds(10))
-                .until(() -> !dbController.isDatabaseAvailable());
+        await().atMost(Duration.ofSeconds(10)).until(() -> !dbController.isDatabaseAvailable());
 
         // Act - Restore database
         log.info("Restoring database connection");
         dbController.restoreDatabase();
 
         // Assert - Application should reconnect
-        await()
-                .atMost(RECONNECTION_TIMEOUT)
+        await().atMost(RECONNECTION_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(dbController.isDatabaseAvailable())
-                            .as("Database should be available")
-                            .isTrue();
+                .untilAsserted(
+                        () -> {
+                            assertThat(dbController.isDatabaseAvailable())
+                                    .as("Database should be available")
+                                    .isTrue();
 
-                    HealthStatus health = dbController.getApplicationHealth();
-                    assertThat(health.getStatus())
-                            .as("Application should be healthy")
-                            .isEqualTo("UP");
-                });
+                            HealthStatus health = dbController.getApplicationHealth();
+                            assertThat(health.getStatus())
+                                    .as("Application should be healthy")
+                                    .isEqualTo("UP");
+                        });
 
         // Verify normal operation resumed
         ApiResponse response = dbController.makeApiRequest("/api/v1/transfers");
-        assertThat(response.getStatusCode())
-                .as("API should return 200 OK")
-                .isEqualTo(200);
+        assertThat(response.getStatusCode()).as("API should return 200 OK").isEqualTo(200);
     }
 
     @Test
@@ -148,23 +138,23 @@ class DatabaseFailureTest {
         dbController.triggerFailover();
 
         // Assert - Replica should become primary
-        await()
-                .atMost(FAILOVER_TIMEOUT)
+        await().atMost(FAILOVER_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(dbController.getReplicaStatus())
-                            .as("Replica should be promoted to primary")
-                            .isEqualTo("ACTIVE");
-                });
+                .untilAsserted(
+                        () -> {
+                            assertThat(dbController.getReplicaStatus())
+                                    .as("Replica should be promoted to primary")
+                                    .isEqualTo("ACTIVE");
+                        });
 
         // Application should reconnect to new primary
-        await()
-                .atMost(RECONNECTION_TIMEOUT)
+        await().atMost(RECONNECTION_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    HealthStatus health = dbController.getApplicationHealth();
-                    assertThat(health.getStatus()).isEqualTo("UP");
-                });
+                .untilAsserted(
+                        () -> {
+                            HealthStatus health = dbController.getApplicationHealth();
+                            assertThat(health.getStatus()).isEqualTo("UP");
+                        });
 
         // Verify no data loss
         assertThat(dbController.getDataIntegrityStatus())
@@ -180,14 +170,14 @@ class DatabaseFailureTest {
         dbController.exhaustConnectionPool();
 
         // Assert - Should detect exhaustion
-        await()
-                .atMost(Duration.ofSeconds(30))
+        await().atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(() -> {
-                    assertThat(dbController.isConnectionPoolExhausted())
-                            .as("Connection pool should be exhausted")
-                            .isTrue();
-                });
+                .untilAsserted(
+                        () -> {
+                            assertThat(dbController.isConnectionPoolExhausted())
+                                    .as("Connection pool should be exhausted")
+                                    .isTrue();
+                        });
 
         // New requests should timeout or be rejected
         ApiResponse response = dbController.makeApiRequest("/api/v1/transfers");
@@ -200,17 +190,18 @@ class DatabaseFailureTest {
         dbController.releaseConnections();
 
         // Assert - Pool should recover
-        await()
-                .atMost(Duration.ofSeconds(30))
+        await().atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(dbController.isConnectionPoolExhausted())
-                            .as("Connection pool should recover")
-                            .isFalse();
+                .untilAsserted(
+                        () -> {
+                            assertThat(dbController.isConnectionPoolExhausted())
+                                    .as("Connection pool should recover")
+                                    .isFalse();
 
-                    ApiResponse recoveredResponse = dbController.makeApiRequest("/api/v1/transfers");
-                    assertThat(recoveredResponse.getStatusCode()).isEqualTo(200);
-                });
+                            ApiResponse recoveredResponse =
+                                    dbController.makeApiRequest("/api/v1/transfers");
+                            assertThat(recoveredResponse.getStatusCode()).isEqualTo(200);
+                        });
     }
 
     @Test
@@ -226,9 +217,7 @@ class DatabaseFailureTest {
         long duration = System.currentTimeMillis() - startTime;
 
         // Assert - Should timeout rather than hang indefinitely
-        assertThat(duration)
-                .as("Request should timeout within reasonable time")
-                .isLessThan(60000);
+        assertThat(duration).as("Request should timeout within reasonable time").isLessThan(60000);
 
         // Should return timeout error, not hang
         assertThat(response.getStatusCode())
@@ -257,8 +246,11 @@ class DatabaseFailureTest {
         int finalConnections = dbController.getActiveConnectionCount();
         int leakedConnections = finalConnections - initialConnections;
 
-        log.info("Connections: initial={}, final={}, leaked={}",
-                initialConnections, finalConnections, leakedConnections);
+        log.info(
+                "Connections: initial={}, final={}, leaked={}",
+                initialConnections,
+                finalConnections,
+                leakedConnections);
 
         assertThat(leakedConnections)
                 .as("Should not leak connections")
@@ -291,9 +283,7 @@ class DatabaseFailureTest {
         double successRate = (double) successCount / totalRequests;
         log.info("Success rate with 30% failure injection: {}%", successRate * 100);
 
-        assertThat(successRate)
-                .as("Success rate should be high due to retries")
-                .isGreaterThan(0.6);
+        assertThat(successRate).as("Success rate should be high due to retries").isGreaterThan(0.6);
 
         // Reset
         dbController.setQueryFailureRate(0);
@@ -308,8 +298,8 @@ class DatabaseFailureTest {
     }
 
     /**
-     * Mock database controller for testing.
-     * In real implementation, this would control actual database.
+     * Mock database controller for testing. In real implementation, this would control actual
+     * database.
      */
     static class MockDatabaseController {
         private final AtomicBoolean databaseAvailable = new AtomicBoolean(true);
@@ -340,10 +330,7 @@ class DatabaseFailureTest {
         }
 
         HealthStatus getApplicationHealth() {
-            return new HealthStatus(
-                    databaseAvailable.get() ? "UP" : "DOWN",
-                    true
-            );
+            return new HealthStatus(databaseAvailable.get() ? "UP" : "DOWN", true);
         }
 
         ApiResponse makeApiRequest(String path) {

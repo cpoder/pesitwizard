@@ -2,24 +2,21 @@ package com.pesitwizard.connector.local;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.pesitwizard.connector.ConnectorException;
+import com.pesitwizard.connector.FileMetadata;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.pesitwizard.connector.ConnectorException;
-import com.pesitwizard.connector.FileMetadata;
-
 class LocalFileConnectorTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     private LocalFileConnector connector;
 
@@ -120,7 +117,8 @@ class LocalFileConnectorTest {
 
         List<FileMetadata> files = connector.list(".");
         assertThat(files).hasSize(3);
-        assertThat(files).extracting(FileMetadata::getName)
+        assertThat(files)
+                .extracting(FileMetadata::getName)
                 .containsExactlyInAnyOrder("subdir", "file1.txt", "file2.txt");
     }
 
@@ -185,8 +183,7 @@ class LocalFileConnectorTest {
     @Test
     void testNotInitialized() throws Exception {
         try (LocalFileConnector uninit = new LocalFileConnector()) {
-            assertThatThrownBy(() -> uninit.exists("test"))
-                    .isInstanceOf(ConnectorException.class);
+            assertThatThrownBy(() -> uninit.exists("test")).isInstanceOf(ConnectorException.class);
         }
     }
 }

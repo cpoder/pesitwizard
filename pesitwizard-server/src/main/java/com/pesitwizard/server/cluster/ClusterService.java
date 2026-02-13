@@ -1,5 +1,9 @@
 package com.pesitwizard.server.cluster;
 
+import com.pesitwizard.server.entity.ServerOwnershipRecord;
+import com.pesitwizard.server.repository.ServerOwnershipRepository;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -16,7 +20,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.MergeView;
@@ -30,21 +35,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pesitwizard.server.entity.ServerOwnershipRecord;
-import com.pesitwizard.server.repository.ServerOwnershipRepository;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * JGroups-based cluster service for High Availability.
- * Provides:
- * - Cluster membership management
- * - Leader election (coordinator is the leader)
- * - State replication across nodes
- * - Cluster-wide messaging
+ * JGroups-based cluster service for High Availability. Provides: - Cluster membership management -
+ * Leader election (coordinator is the leader) - State replication across nodes - Cluster-wide
+ * messaging
  */
 @Slf4j
 @Service
@@ -56,7 +50,8 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     @Value("${pesitwizard.cluster.enabled:true}")
     private boolean clusterEnabled;
 
-    @Value("${pesitwizard.cluster.node-name:#{T(java.util.UUID).randomUUID().toString().substring(0,8)}}")
+    @Value(
+            "${pesitwizard.cluster.node-name:#{T(java.util.UUID).randomUUID().toString().substring(0,8)}}")
     private String nodeName;
 
     @Value("${pesitwizard.cluster.config:tcp.xml}")
@@ -64,11 +59,9 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
     private JChannel channel;
 
-    @Getter
-    private volatile boolean leader = false;
+    @Getter private volatile boolean leader = false;
 
-    @Getter
-    private volatile boolean connected = false;
+    @Getter private volatile boolean connected = false;
 
     private final ServerOwnershipRepository ownershipRepository;
     private final List<ClusterEventListener> listeners = new CopyOnWriteArrayList<>();
@@ -121,14 +114,18 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
     private void scheduleReconnect() {
         if (reconnectScheduler == null) {
-            reconnectScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "cluster-reconnect");
-                t.setDaemon(true);
-                return t;
-            });
+            reconnectScheduler =
+                    Executors.newSingleThreadScheduledExecutor(
+                            r -> {
+                                Thread t = new Thread(r, "cluster-reconnect");
+                                t.setDaemon(true);
+                                return t;
+                            });
         }
         if (reconnectTask == null || reconnectTask.isDone()) {
-            reconnectTask = reconnectScheduler.scheduleWithFixedDelay(this::attemptReconnect, 30, 30, TimeUnit.SECONDS);
+            reconnectTask =
+                    reconnectScheduler.scheduleWithFixedDelay(
+                            this::attemptReconnect, 30, 30, TimeUnit.SECONDS);
             log.info("Scheduled cluster reconnection every 30 seconds");
         }
     }
@@ -184,9 +181,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         }
     }
 
-    /**
-     * Called when cluster view changes (member join/leave)
-     */
+    /** Called when cluster view changes (member join/leave) */
     @Override
     public void viewAccepted(View newView) {
         log.info("Cluster view changed: {}", newView);
@@ -207,42 +202,50 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
         // Detect merge view (split-brain recovery)
         if (newView instanceof MergeView mergeView && leader) {
-            log.warn("MERGE VIEW detected — resolving split-brain. Sub-groups: {}", mergeView.getSubgroups());
+            log.warn(
+                    "MERGE VIEW detected — resolving split-brain. Sub-groups: {}",
+                    mergeView.getSubgroups());
             resolveMergeConflicts();
         }
 
         // Clean up ownership for nodes that left (in-memory cache and DB)
         // Use logical names (set via channel.setName()) rather than Address.toString()
         // because ownership DB stores the logical node name, not the address representation
-        Set<String> currentMembers = newView.getMembers().stream()
-                .map(addr -> NameCache.get(addr))
-                .collect(Collectors.toSet());
+        Set<String> currentMembers =
+                newView.getMembers().stream()
+                        .map(addr -> NameCache.get(addr))
+                        .collect(Collectors.toSet());
 
-        serverOwnership.entrySet().removeIf(entry -> {
-            if (!currentMembers.contains(entry.getValue())) {
-                log.info("Releasing ownership of server '{}' (node '{}' left)",
-                        entry.getKey(), entry.getValue());
-                // Leader cleans up DB records for departed nodes
-                if (leader) {
-                    try {
-                        ownershipRepository.deleteByOwnerNode(entry.getValue());
-                    } catch (RuntimeException e) {
-                        log.warn("Failed to clean up DB ownership for departed node '{}': {}",
-                                entry.getValue(), e.getMessage());
-                    }
-                }
-                return true;
-            }
-            return false;
-        });
+        serverOwnership
+                .entrySet()
+                .removeIf(
+                        entry -> {
+                            if (!currentMembers.contains(entry.getValue())) {
+                                log.info(
+                                        "Releasing ownership of server '{}' (node '{}' left)",
+                                        entry.getKey(),
+                                        entry.getValue());
+                                // Leader cleans up DB records for departed nodes
+                                if (leader) {
+                                    try {
+                                        ownershipRepository.deleteByOwnerNode(entry.getValue());
+                                    } catch (RuntimeException e) {
+                                        log.warn(
+                                                "Failed to clean up DB ownership for departed node '{}': {}",
+                                                entry.getValue(),
+                                                e.getMessage());
+                                    }
+                                }
+                                return true;
+                            }
+                            return false;
+                        });
 
         notifyListeners(ClusterEvent.viewChanged(nodeName, newView.size(), leader));
         logClusterView();
     }
 
-    /**
-     * Called when a message is received from another node
-     */
+    /** Called when a message is received from another node */
     @Override
     public void receive(Message msg) {
         try {
@@ -256,9 +259,9 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Called to get state for new joining node.
-     * Uses manual serialization (DataOutputStream) instead of Java object serialization
-     * to prevent deserialization attacks via crafted JGroups state transfer payloads.
+     * Called to get state for new joining node. Uses manual serialization (DataOutputStream)
+     * instead of Java object serialization to prevent deserialization attacks via crafted JGroups
+     * state transfer payloads.
      */
     @Override
     public void getState(OutputStream output) throws Exception {
@@ -274,9 +277,9 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Called when this node receives state from existing member.
-     * Uses manual deserialization (DataInputStream) instead of Util.objectFromStream()
-     * to prevent Remote Code Execution via deserialization gadget chains.
+     * Called when this node receives state from existing member. Uses manual deserialization
+     * (DataInputStream) instead of Util.objectFromStream() to prevent Remote Code Execution via
+     * deserialization gadget chains.
      */
     @Override
     public void setState(InputStream input) throws Exception {
@@ -299,9 +302,9 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Try to acquire ownership of a server (for starting it).
-     * Uses database INSERT to serialize concurrent acquisition across cluster nodes.
-     * The unique constraint on serverId ensures only one node can own a server.
+     * Try to acquire ownership of a server (for starting it). Uses database INSERT to serialize
+     * concurrent acquisition across cluster nodes. The unique constraint on serverId ensures only
+     * one node can own a server.
      */
     @Transactional
     public boolean acquireServerOwnership(String serverId) {
@@ -337,8 +340,8 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Release ownership of a server (when stopping it).
-     * Deletes the database record to allow another node to acquire.
+     * Release ownership of a server (when stopping it). Deletes the database record to allow
+     * another node to acquire.
      */
     @Transactional
     public void releaseServerOwnership(String serverId) {
@@ -354,9 +357,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         }
     }
 
-    /**
-     * Check if this node owns a server
-     */
+    /** Check if this node owns a server */
     public boolean ownsServer(String serverId) {
         if (!clusterEnabled) {
             return true;
@@ -364,23 +365,17 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         return nodeName.equals(serverOwnership.get(serverId));
     }
 
-    /**
-     * Get the node that owns a server
-     */
+    /** Get the node that owns a server */
     public String getServerOwner(String serverId) {
         return serverOwnership.get(serverId);
     }
 
-    /**
-     * Get all server ownership mappings
-     */
+    /** Get all server ownership mappings */
     public Map<String, String> getAllServerOwnership() {
         return Map.copyOf(serverOwnership);
     }
 
-    /**
-     * Get cluster members
-     */
+    /** Get cluster members */
     public List<String> getClusterMembers() {
         if (!clusterEnabled || channel == null) {
             return List.of(nodeName);
@@ -390,9 +385,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get cluster size
-     */
+    /** Get cluster size */
     public int getClusterSize() {
         if (!clusterEnabled || channel == null) {
             return 1;
@@ -400,37 +393,27 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         return channel.getView().size();
     }
 
-    /**
-     * Get this node's name
-     */
+    /** Get this node's name */
     public String getNodeName() {
         return nodeName;
     }
 
-    /**
-     * Check if cluster mode is enabled
-     */
+    /** Check if cluster mode is enabled */
     public boolean isClusterEnabled() {
         return clusterEnabled;
     }
 
-    /**
-     * Add a cluster event listener
-     */
+    /** Add a cluster event listener */
     public void addListener(ClusterEventListener listener) {
         listeners.add(listener);
     }
 
-    /**
-     * Remove a cluster event listener
-     */
+    /** Remove a cluster event listener */
     public void removeListener(ClusterEventListener listener) {
         listeners.remove(listener);
     }
 
-    /**
-     * Broadcast a message to all cluster members
-     */
+    /** Broadcast a message to all cluster members */
     public void broadcast(ClusterMessage message) {
         if (!clusterEnabled || channel == null) {
             return;
@@ -443,39 +426,48 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /**
-     * Resolve ownership conflicts after a merge view (split-brain recovery).
-     * For each server, if multiple nodes claim ownership, the one with the oldest
-     * acquiredAt timestamp wins. Losers are force-released.
+     * Resolve ownership conflicts after a merge view (split-brain recovery). For each server, if
+     * multiple nodes claim ownership, the one with the oldest acquiredAt timestamp wins. Losers are
+     * force-released.
      */
     @Transactional
     private void resolveMergeConflicts() {
         try {
             // Query all ownership records from DB and group by serverId
             java.util.List<ServerOwnershipRecord> allRecords = ownershipRepository.findAll();
-            Map<String, java.util.List<ServerOwnershipRecord>> byServer = allRecords.stream()
-                    .collect(Collectors.groupingBy(ServerOwnershipRecord::getServerId));
+            Map<String, java.util.List<ServerOwnershipRecord>> byServer =
+                    allRecords.stream()
+                            .collect(Collectors.groupingBy(ServerOwnershipRecord::getServerId));
 
             for (var entry : byServer.entrySet()) {
                 java.util.List<ServerOwnershipRecord> records = entry.getValue();
                 if (records.size() > 1) {
-                    log.warn("MERGE CONFLICT: Server '{}' owned by {} nodes — resolving by oldest acquiredAt",
-                            entry.getKey(), records.size());
+                    log.warn(
+                            "MERGE CONFLICT: Server '{}' owned by {} nodes — resolving by oldest acquiredAt",
+                            entry.getKey(),
+                            records.size());
 
                     // Keep the one with the oldest acquiredAt
-                    records.sort(java.util.Comparator.comparing(ServerOwnershipRecord::getAcquiredAt));
+                    records.sort(
+                            java.util.Comparator.comparing(ServerOwnershipRecord::getAcquiredAt));
                     ServerOwnershipRecord winner = records.get(0);
 
                     for (int i = 1; i < records.size(); i++) {
                         ServerOwnershipRecord loser = records.get(i);
-                        log.warn("MERGE CONFLICT: Releasing server '{}' from node '{}' (winner: '{}')",
-                                entry.getKey(), loser.getOwnerNode(), winner.getOwnerNode());
-                        ownershipRepository.deleteByServerIdAndOwnerNode(entry.getKey(), loser.getOwnerNode());
+                        log.warn(
+                                "MERGE CONFLICT: Releasing server '{}' from node '{}' (winner: '{}')",
+                                entry.getKey(),
+                                loser.getOwnerNode(),
+                                winner.getOwnerNode());
+                        ownershipRepository.deleteByServerIdAndOwnerNode(
+                                entry.getKey(), loser.getOwnerNode());
 
                         // Notify the losing node
-                        broadcast(new ClusterMessage(
-                                ClusterMessage.Type.SERVER_RELEASED,
-                                entry.getKey(),
-                                loser.getOwnerNode()));
+                        broadcast(
+                                new ClusterMessage(
+                                        ClusterMessage.Type.SERVER_RELEASED,
+                                        entry.getKey(),
+                                        loser.getOwnerNode()));
                     }
 
                     // Ensure in-memory cache reflects the winner
@@ -488,10 +480,13 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     private void broadcastOwnershipChange(String serverId, String nodeId, boolean acquired) {
-        broadcast(new ClusterMessage(
-                acquired ? ClusterMessage.Type.SERVER_ACQUIRED : ClusterMessage.Type.SERVER_RELEASED,
-                serverId,
-                nodeId));
+        broadcast(
+                new ClusterMessage(
+                        acquired
+                                ? ClusterMessage.Type.SERVER_ACQUIRED
+                                : ClusterMessage.Type.SERVER_RELEASED,
+                        serverId,
+                        nodeId));
     }
 
     @Transactional
@@ -516,13 +511,22 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
                 notifyListeners(ClusterEvent.serverReleased(msg.getServerId(), msg.getNodeId()));
             }
             case SERVER_STATE_CHANGED -> {
-                notifyListeners(ClusterEvent.serverStateChanged(msg.getServerId(), msg.getNodeId()));
+                notifyListeners(
+                        ClusterEvent.serverStateChanged(msg.getServerId(), msg.getNodeId()));
             }
             case CONFIG_CHANGED -> {
-                log.info("Config change notification from node '{}': {} {} {}",
-                        msg.getNodeId(), msg.getOperation(), msg.getEntityType(), msg.getEntityId());
-                notifyListeners(ClusterEvent.configChanged(
-                        msg.getNodeId(), msg.getEntityType(), msg.getEntityId(), msg.getOperation()));
+                log.info(
+                        "Config change notification from node '{}': {} {} {}",
+                        msg.getNodeId(),
+                        msg.getOperation(),
+                        msg.getEntityType(),
+                        msg.getEntityId());
+                notifyListeners(
+                        ClusterEvent.configChanged(
+                                msg.getNodeId(),
+                                msg.getEntityType(),
+                                msg.getEntityId(),
+                                msg.getOperation()));
             }
         }
     }

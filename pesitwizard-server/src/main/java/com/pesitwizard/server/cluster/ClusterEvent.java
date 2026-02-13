@@ -4,9 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 
-/**
- * Event representing a cluster state change
- */
+/** Event representing a cluster state change */
 @Data
 @AllArgsConstructor
 public class ClusterEvent {
@@ -27,25 +25,17 @@ public class ClusterEvent {
     private final int clusterSize;
     private final boolean isLeader;
 
-    /**
-     * For CONFIG_CHANGED events: entity type (PARTNER or VIRTUAL_FILE)
-     */
-    @Getter
-    private final String entityType;
+    /** For CONFIG_CHANGED events: entity type (PARTNER or VIRTUAL_FILE) */
+    @Getter private final String entityType;
 
-    /**
-     * For CONFIG_CHANGED events: entity ID
-     */
-    @Getter
-    private final String entityId;
+    /** For CONFIG_CHANGED events: entity ID */
+    @Getter private final String entityId;
 
-    /**
-     * For CONFIG_CHANGED events: operation (CREATED, UPDATED, DELETED)
-     */
-    @Getter
-    private final String operation;
+    /** For CONFIG_CHANGED events: operation (CREATED, UPDATED, DELETED) */
+    @Getter private final String operation;
 
-    public ClusterEvent(Type type, String nodeId, String serverId, int clusterSize, boolean isLeader) {
+    public ClusterEvent(
+            Type type, String nodeId, String serverId, int clusterSize, boolean isLeader) {
         this(type, nodeId, serverId, clusterSize, isLeader, null, null, null);
     }
 
@@ -73,7 +63,9 @@ public class ClusterEvent {
         return new ClusterEvent(Type.SERVER_STATE_CHANGED, nodeId, serverId, 0, false);
     }
 
-    public static ClusterEvent configChanged(String nodeId, String entityType, String entityId, String operation) {
-        return new ClusterEvent(Type.CONFIG_CHANGED, nodeId, null, 0, false, entityType, entityId, operation);
+    public static ClusterEvent configChanged(
+            String nodeId, String entityType, String entityId, String operation) {
+        return new ClusterEvent(
+                Type.CONFIG_CHANGED, nodeId, null, 0, false, entityType, entityId, operation);
     }
 }

@@ -2,7 +2,6 @@ package com.pesitwizard.client.config;
 
 import java.util.Arrays;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,10 +12,10 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * CORS configuration for the REST API.
- * Allowed origins must be configured via the {@code pesitwizard.cors.allowed-origins}
- * property (comma-separated). Defaults to {@code http://localhost:5173} for development.
- * In production, set this to the actual origin(s) of your frontend application.
+ * CORS configuration for the REST API. Allowed origins must be configured via the {@code
+ * pesitwizard.cors.allowed-origins} property (comma-separated). Defaults to {@code
+ * http://localhost:5173} for development. In production, set this to the actual origin(s) of your
+ * frontend application.
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -38,7 +37,8 @@ public class CorsConfig implements WebMvcConfigurer {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedMethods(
+                Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

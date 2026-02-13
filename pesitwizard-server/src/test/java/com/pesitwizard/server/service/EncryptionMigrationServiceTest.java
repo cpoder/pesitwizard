@@ -4,8 +4,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.security.AbstractEncryptionMigrationService.MigrationResult;
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.entity.CertificateStore;
+import com.pesitwizard.server.entity.Partner;
+import com.pesitwizard.server.repository.CertificateStoreRepository;
+import com.pesitwizard.server.repository.PartnerRepository;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,33 +21,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import com.pesitwizard.security.AbstractEncryptionMigrationService.MigrationResult;
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.entity.CertificateStore;
-import com.pesitwizard.server.entity.Partner;
-import com.pesitwizard.server.repository.CertificateStoreRepository;
-import com.pesitwizard.server.repository.PartnerRepository;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("EncryptionMigrationService Tests")
 class EncryptionMigrationServiceTest {
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
-    @Mock
-    private PartnerRepository partnerRepository;
+    @Mock private PartnerRepository partnerRepository;
 
-    @Mock
-    private CertificateStoreRepository certificateStoreRepository;
+    @Mock private CertificateStoreRepository certificateStoreRepository;
 
     private EncryptionMigrationService migrationService;
 
     @BeforeEach
     void setUp() {
-        migrationService = new EncryptionMigrationService(
-                secretsService, partnerRepository, certificateStoreRepository);
+        migrationService =
+                new EncryptionMigrationService(
+                        secretsService, partnerRepository, certificateStoreRepository);
     }
 
     @Nested
@@ -60,7 +56,8 @@ class EncryptionMigrationServiceTest {
             when(certificateStoreRepository.findAll()).thenReturn(List.of());
             when(secretsService.isVaultAvailable()).thenReturn(true);
             when(secretsService.decrypt(anyString())).thenReturn("decrypted-password");
-            when(secretsService.encryptForStorage(anyString(), anyString(), anyString(), anyString()))
+            when(secretsService.encryptForStorage(
+                            anyString(), anyString(), anyString(), anyString()))
                     .thenReturn("vault:partner-1-password");
 
             MigrationResult result = migrationService.migrateAllToVault();
@@ -98,7 +95,8 @@ class EncryptionMigrationServiceTest {
             when(certificateStoreRepository.findAll()).thenReturn(List.of(certStore));
             when(secretsService.isVaultAvailable()).thenReturn(true);
             when(secretsService.decrypt(anyString())).thenReturn("decrypted");
-            when(secretsService.encryptForStorage(anyString(), anyString(), anyString(), anyString()))
+            when(secretsService.encryptForStorage(
+                            anyString(), anyString(), anyString(), anyString()))
                     .thenReturn("vault:migrated");
 
             MigrationResult result = migrationService.migrateAllToVault();
@@ -160,7 +158,8 @@ class EncryptionMigrationServiceTest {
             when(certificateStoreRepository.findAll()).thenReturn(List.of(certStore));
             when(secretsService.isVaultAvailable()).thenReturn(true);
             when(secretsService.decrypt(anyString())).thenReturn("decrypted");
-            when(secretsService.encryptForStorage(anyString(), anyString(), anyString(), anyString()))
+            when(secretsService.encryptForStorage(
+                            anyString(), anyString(), anyString(), anyString()))
                     .thenReturn("vault:migrated");
 
             MigrationResult result = migrationService.migrateAllToVault();
@@ -177,8 +176,8 @@ class EncryptionMigrationServiceTest {
         @Test
         @DisplayName("Should create migration result with all fields")
         void shouldCreateMigrationResultWithAllFields() {
-            MigrationResult result = new MigrationResult(
-                    true, "Success", 5, 2, List.of("Detail 1", "Detail 2"));
+            MigrationResult result =
+                    new MigrationResult(true, "Success", 5, 2, List.of("Detail 1", "Detail 2"));
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isEqualTo("Success");

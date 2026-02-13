@@ -2,7 +2,6 @@ package com.pesitwizard.fpdu;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Data;
 
 @Data
@@ -14,8 +13,7 @@ public class Fpdu {
     private int idDst = 0;
     private byte[] data; // Raw data for DTF FPDUs
 
-    public Fpdu() {
-    }
+    public Fpdu() {}
 
     public Fpdu(FpduType fpduType) {
         this.fpduType = fpduType;
@@ -58,10 +56,14 @@ public class Fpdu {
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Fpdu{fpduType=").append(fpduType)
-                .append(", idSrc=").append(idSrc)
-                .append(", idDst=").append(idDst)
-                .append(", parameters=").append(parameters)
+        sb.append("Fpdu{fpduType=")
+                .append(fpduType)
+                .append(", idSrc=")
+                .append(idSrc)
+                .append(", idDst=")
+                .append(idDst)
+                .append(", parameters=")
+                .append(parameters)
                 .append('}');
         return sb.toString();
     }

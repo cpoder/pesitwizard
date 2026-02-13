@@ -3,13 +3,11 @@ package com.pesitwizard.server.entity;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
 import java.time.Duration;
 import java.time.Instant;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.pesitwizard.server.entity.PesitServerConfig.ServerStatus;
 
 @DisplayName("PesitServerConfig Tests")
 class PesitServerConfigTest {
@@ -38,27 +36,28 @@ class PesitServerConfigTest {
     void shouldStoreAllConfigAttributes() {
         Instant now = Instant.now();
 
-        PesitServerConfig config = PesitServerConfig.builder()
-                .id(1L)
-                .serverId("TEST_SERVER")
-                .port(5000)
-                .bindAddress("127.0.0.1")
-                .protocolVersion(3)
-                .maxConnections(50)
-                .connectionTimeout(15000)
-                .readTimeout(30000)
-                .receiveDirectory("/custom/in")
-                .sendDirectory("/custom/out")
-                .maxEntitySize(8192)
-                .syncPointsEnabled(false)
-                .resyncEnabled(false)
-                .autoStart(true)
-                .status(ServerStatus.RUNNING)
-                .createdAt(now)
-                .updatedAt(now)
-                .lastStartedAt(now)
-                .lastStoppedAt(now)
-                .build();
+        PesitServerConfig config =
+                PesitServerConfig.builder()
+                        .id(1L)
+                        .serverId("TEST_SERVER")
+                        .port(5000)
+                        .bindAddress("127.0.0.1")
+                        .protocolVersion(3)
+                        .maxConnections(50)
+                        .connectionTimeout(15000)
+                        .readTimeout(30000)
+                        .receiveDirectory("/custom/in")
+                        .sendDirectory("/custom/out")
+                        .maxEntitySize(8192)
+                        .syncPointsEnabled(false)
+                        .resyncEnabled(false)
+                        .autoStart(true)
+                        .status(ServerStatus.RUNNING)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .lastStartedAt(now)
+                        .lastStoppedAt(now)
+                        .build();
 
         assertEquals(1L, config.getId());
         assertEquals("TEST_SERVER", config.getServerId());
@@ -118,7 +117,8 @@ class PesitServerConfigTest {
         config.onUpdate();
 
         assertNotNull(config.getUpdatedAt());
-        assertTrue(config.getUpdatedAt().isAfter(originalUpdated) ||
-                config.getUpdatedAt().equals(originalUpdated));
+        assertTrue(
+                config.getUpdatedAt().isAfter(originalUpdated)
+                        || config.getUpdatedAt().equals(originalUpdated));
     }
 }

@@ -5,9 +5,14 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pesitwizard.server.cluster.ClusterProvider;
+import com.pesitwizard.server.entity.Partner;
+import com.pesitwizard.server.entity.VirtualFile;
+import com.pesitwizard.server.service.AuditService;
+import com.pesitwizard.server.service.ConfigService;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,32 +24,20 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pesitwizard.server.cluster.ClusterProvider;
-import com.pesitwizard.server.entity.Partner;
-import com.pesitwizard.server.entity.VirtualFile;
-import com.pesitwizard.server.service.AuditService;
-import com.pesitwizard.server.service.ConfigService;
-
 @WebMvcTest(ConfigController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("ConfigController Tests")
 class ConfigControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private ConfigService configService;
+    @MockitoBean private ConfigService configService;
 
-    @MockitoBean
-    private AuditService auditService;
+    @MockitoBean private AuditService auditService;
 
-    @MockitoBean
-    private ClusterProvider clusterProvider;
+    @MockitoBean private ClusterProvider clusterProvider;
 
     @Nested
     @DisplayName("Partners")
@@ -95,8 +88,10 @@ class ConfigControllerTest {
             when(configService.partnerExists("PARTNER1")).thenReturn(false);
             when(configService.savePartner(any(Partner.class))).thenReturn(testPartner);
 
-            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(testPartner)))
+            mockMvc.perform(
+                            post("/api/v1/config/partners")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(testPartner)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id").value("PARTNER1"));
         }
@@ -106,8 +101,10 @@ class ConfigControllerTest {
         void shouldReturn409ForDuplicate() throws Exception {
             when(configService.partnerExists("PARTNER1")).thenReturn(true);
 
-            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(testPartner)))
+            mockMvc.perform(
+                            post("/api/v1/config/partners")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(testPartner)))
                     .andExpect(status().isConflict());
         }
 
@@ -117,8 +114,10 @@ class ConfigControllerTest {
             when(configService.partnerExists("PARTNER1")).thenReturn(true);
             when(configService.savePartner(any(Partner.class))).thenReturn(testPartner);
 
-            mockMvc.perform(put("/api/v1/config/partners/PARTNER1").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(testPartner)))
+            mockMvc.perform(
+                            put("/api/v1/config/partners/PARTNER1")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(testPartner)))
                     .andExpect(status().isOk());
         }
 
@@ -182,8 +181,10 @@ class ConfigControllerTest {
             when(configService.virtualFileExists("FILE1")).thenReturn(false);
             when(configService.saveVirtualFile(any(VirtualFile.class))).thenReturn(testFile);
 
-            mockMvc.perform(post("/api/v1/config/files").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(testFile)))
+            mockMvc.perform(
+                            post("/api/v1/config/files")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(testFile)))
                     .andExpect(status().isCreated());
         }
 
@@ -193,8 +194,10 @@ class ConfigControllerTest {
             when(configService.virtualFileExists("FILE1")).thenReturn(true);
             when(configService.saveVirtualFile(any(VirtualFile.class))).thenReturn(testFile);
 
-            mockMvc.perform(put("/api/v1/config/files/FILE1").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(testFile)))
+            mockMvc.perform(
+                            put("/api/v1/config/files/FILE1")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(testFile)))
                     .andExpect(status().isOk());
         }
 
@@ -204,8 +207,7 @@ class ConfigControllerTest {
             when(configService.virtualFileExists("FILE1")).thenReturn(true);
             doNothing().when(configService).deleteVirtualFile("FILE1");
 
-            mockMvc.perform(delete("/api/v1/config/files/FILE1"))
-                    .andExpect(status().isNoContent());
+            mockMvc.perform(delete("/api/v1/config/files/FILE1")).andExpect(status().isNoContent());
         }
     }
 
@@ -218,8 +220,10 @@ class ConfigControllerTest {
         void shouldRejectPartnerWithTooLongId() throws Exception {
             Partner invalidPartner = Partner.builder().id("TOOLONGID").description("Test").build();
 
-            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(invalidPartner)))
+            mockMvc.perform(
+                            post("/api/v1/config/partners")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(invalidPartner)))
                     .andExpect(status().isBadRequest());
         }
 
@@ -228,18 +232,23 @@ class ConfigControllerTest {
         void shouldRejectPartnerWithInvalidChars() throws Exception {
             Partner invalidPartner = Partner.builder().id("test-id").description("Test").build();
 
-            mockMvc.perform(post("/api/v1/config/partners").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(invalidPartner)))
+            mockMvc.perform(
+                            post("/api/v1/config/partners")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(invalidPartner)))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
         @DisplayName("should reject virtual file with invalid ID")
         void shouldRejectVirtualFileWithInvalidId() throws Exception {
-            VirtualFile invalidFile = VirtualFile.builder().id("toolongfileid").sendDirectory("/data").build();
+            VirtualFile invalidFile =
+                    VirtualFile.builder().id("toolongfileid").sendDirectory("/data").build();
 
-            mockMvc.perform(post("/api/v1/config/files").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(invalidFile)))
+            mockMvc.perform(
+                            post("/api/v1/config/files")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(invalidFile)))
                     .andExpect(status().isBadRequest());
         }
 
@@ -248,8 +257,10 @@ class ConfigControllerTest {
         void shouldRejectVirtualFileUpdateWithInvalidId() throws Exception {
             VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
 
-            mockMvc.perform(put("/api/v1/config/files/invalid-id").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(file)))
+            mockMvc.perform(
+                            put("/api/v1/config/files/invalid-id")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(file)))
                     .andExpect(status().isBadRequest());
         }
 
@@ -259,8 +270,10 @@ class ConfigControllerTest {
             when(configService.virtualFileExists("FILE1")).thenReturn(true);
             VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
 
-            mockMvc.perform(post("/api/v1/config/files").contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(file)))
+            mockMvc.perform(
+                            post("/api/v1/config/files")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(file)))
                     .andExpect(status().isConflict());
         }
     }

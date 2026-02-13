@@ -7,9 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for SelectMessageBuilder.
- */
+/** Unit tests for SelectMessageBuilder. */
 @DisplayName("SelectMessageBuilder Tests")
 class SelectMessageBuilderTest {
 
@@ -69,9 +67,7 @@ class SelectMessageBuilderTest {
         @Test
         @DisplayName("should build SELECT FPDU with custom filename")
         void shouldBuildSelectFpduWithCustomFilename() throws Exception {
-            Fpdu fpdu = builder
-                    .filename("my-file.txt")
-                    .build(1);
+            Fpdu fpdu = builder.filename("my-file.txt").build(1);
 
             assertThat(fpdu).isNotNull();
             assertThat(fpdu.getFpduType()).isEqualTo(FpduType.SELECT);
@@ -80,9 +76,7 @@ class SelectMessageBuilderTest {
         @Test
         @DisplayName("should build SELECT FPDU with transfer ID")
         void shouldBuildSelectFpduWithTransferId() throws Exception {
-            Fpdu fpdu = builder
-                    .transferId(123)
-                    .build(1);
+            Fpdu fpdu = builder.transferId(123).build(1);
 
             assertThat(fpdu).isNotNull();
         }
@@ -90,9 +84,7 @@ class SelectMessageBuilderTest {
         @Test
         @DisplayName("should build SELECT FPDU with restart flag")
         void shouldBuildSelectFpduWithRestartFlag() throws Exception {
-            Fpdu fpdu = builder
-                    .restart()
-                    .build(1);
+            Fpdu fpdu = builder.restart().build(1);
 
             assertThat(fpdu).isNotNull();
         }
@@ -100,9 +92,7 @@ class SelectMessageBuilderTest {
         @Test
         @DisplayName("should build SELECT FPDU with file type")
         void shouldBuildSelectFpduWithFileType() throws Exception {
-            Fpdu fpdu = builder
-                    .fileType(2)
-                    .build(1);
+            Fpdu fpdu = builder.fileType(2).build(1);
 
             assertThat(fpdu).isNotNull();
         }
@@ -110,12 +100,12 @@ class SelectMessageBuilderTest {
         @Test
         @DisplayName("should build SELECT FPDU with all options")
         void shouldBuildSelectFpduWithAllOptions() throws Exception {
-            Fpdu fpdu = builder
-                    .filename("complete-file.dat")
-                    .transferId(999)
-                    .fileType(1)
-                    .restart()
-                    .build(5);
+            Fpdu fpdu =
+                    builder.filename("complete-file.dat")
+                            .transferId(999)
+                            .fileType(1)
+                            .restart()
+                            .build(5);
 
             assertThat(fpdu).isNotNull();
             assertThat(fpdu.getFpduType()).isEqualTo(FpduType.SELECT);

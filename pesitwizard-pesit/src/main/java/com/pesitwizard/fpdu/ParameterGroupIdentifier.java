@@ -1,18 +1,22 @@
 package com.pesitwizard.fpdu;
 
 /**
- * PESIT Protocol Parameter Group Information (PGI)
- * Groups related Parameter Information (PI) elements
+ * PESIT Protocol Parameter Group Information (PGI) Groups related Parameter Information (PI)
+ * elements
  */
 public enum ParameterGroupIdentifier implements Parameter {
     // PGI identifiers from PESIT E specification
-    PGI_09_ID_FICHIER(9, "File Identifier",
+    PGI_09_ID_FICHIER(
+            9,
+            "File Identifier",
             new ParameterRequirement(ParameterIdentifier.PI_03_DEMANDEUR, false),
             new ParameterRequirement(ParameterIdentifier.PI_04_SERVEUR, false),
             new ParameterRequirement(ParameterIdentifier.PI_11_TYPE_FICHIER, true),
             new ParameterRequirement(ParameterIdentifier.PI_12_NOM_FICHIER, true)),
 
-    PGI_30_ATTR_LOGIQUES(30, "Logical Attributes",
+    PGI_30_ATTR_LOGIQUES(
+            30,
+            "Logical Attributes",
             new ParameterRequirement(ParameterIdentifier.PI_31_FORMAT_ARTICLE, false),
             new ParameterRequirement(ParameterIdentifier.PI_32_LONG_ARTICLE, true),
             new ParameterRequirement(ParameterIdentifier.PI_33_ORG_FICHIER, false),
@@ -22,11 +26,15 @@ public enum ParameterGroupIdentifier implements Parameter {
             new ParameterRequirement(ParameterIdentifier.PI_38_LONG_CLE, false),
             new ParameterRequirement(ParameterIdentifier.PI_39_DEPL_CLE, false)),
 
-    PGI_40_ATTR_PHYSIQUES(40, "Physical Attributes",
+    PGI_40_ATTR_PHYSIQUES(
+            40,
+            "Physical Attributes",
             new ParameterRequirement(ParameterIdentifier.PI_41_UNITE_RESERVATION, false),
             new ParameterRequirement(ParameterIdentifier.PI_42_MAX_RESERVATION, true)),
 
-    PGI_50_ATTR_HISTORIQUES(50, "Historical Attributes",
+    PGI_50_ATTR_HISTORIQUES(
+            50,
+            "Historical Attributes",
             new ParameterRequirement(ParameterIdentifier.PI_51_DATE_CREATION, true),
             new ParameterRequirement(ParameterIdentifier.PI_52_DATE_EXTRACTION, false));
 

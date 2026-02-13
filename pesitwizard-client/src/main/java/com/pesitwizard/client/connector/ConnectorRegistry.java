@@ -1,5 +1,10 @@
 package com.pesitwizard.client.connector;
 
+import com.pesitwizard.connector.ConnectorException;
+import com.pesitwizard.connector.ConnectorFactory;
+import com.pesitwizard.connector.StorageConnector;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -10,22 +15,13 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.pesitwizard.connector.ConnectorException;
-import com.pesitwizard.connector.ConnectorFactory;
-import com.pesitwizard.connector.StorageConnector;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Registry for storage connectors.
- * Discovers and manages connector plugins via Java ServiceLoader.
+ * Registry for storage connectors. Discovers and manages connector plugins via Java ServiceLoader.
  * Supports hot-reload of connectors from the connectors/ directory.
  */
 @Slf4j
@@ -47,13 +43,13 @@ public class ConnectorRegistry {
     public void init() {
         log.info("Initializing connector registry, directory: {}", connectorsDirectory);
         loadConnectors();
-        log.info("Connector registry initialized with {} type(s): {}",
-                factories.size(), factories.keySet());
+        log.info(
+                "Connector registry initialized with {} type(s): {}",
+                factories.size(),
+                factories.keySet());
     }
 
-    /**
-     * Load all connectors (built-in + external)
-     */
+    /** Load all connectors (built-in + external) */
     private void loadConnectors() {
         // Load built-in connectors from classpath
         ServiceLoader<ConnectorFactory> builtIn = ServiceLoader.load(ConnectorFactory.class);
@@ -65,9 +61,7 @@ public class ConnectorRegistry {
         loadExternalConnectors();
     }
 
-    /**
-     * Load external connectors from connectors/ directory
-     */
+    /** Load external connectors from connectors/ directory */
     private void loadExternalConnectors() {
         Path connectorsPath = Path.of(connectorsDirectory);
         if (!Files.exists(connectorsPath)) {
@@ -81,8 +75,8 @@ public class ConnectorRegistry {
             return;
         }
 
-        try (Stream<Path> jars = Files.list(connectorsPath)
-                .filter(p -> p.toString().endsWith(".jar"))) {
+        try (Stream<Path> jars =
+                Files.list(connectorsPath).filter(p -> p.toString().endsWith(".jar"))) {
 
             URL[] urls = jars.map(this::toUrl).filter(u -> u != null).toArray(URL[]::new);
 
@@ -97,8 +91,8 @@ public class ConnectorRegistry {
             closePluginClassLoader();
 
             pluginClassLoader = new URLClassLoader(urls, getClass().getClassLoader());
-            ServiceLoader<ConnectorFactory> loader = ServiceLoader.load(
-                    ConnectorFactory.class, pluginClassLoader);
+            ServiceLoader<ConnectorFactory> loader =
+                    ServiceLoader.load(ConnectorFactory.class, pluginClassLoader);
 
             for (ConnectorFactory factory : loader) {
                 registerFactory(factory);
@@ -120,33 +114,25 @@ public class ConnectorRegistry {
         }
     }
 
-    /**
-     * Register a connector factory
-     */
+    /** Register a connector factory */
     public void registerFactory(ConnectorFactory factory) {
         String type = factory.getType();
         factories.put(type, factory);
-        log.info("Registered connector: {} v{} ({})",
-                factory.getName(), factory.getVersion(), type);
+        log.info(
+                "Registered connector: {} v{} ({})", factory.getName(), factory.getVersion(), type);
     }
 
-    /**
-     * Get all available connector types
-     */
+    /** Get all available connector types */
     public Collection<String> getAvailableTypes() {
         return factories.keySet();
     }
 
-    /**
-     * Get connector factory by type
-     */
+    /** Get connector factory by type */
     public ConnectorFactory getFactory(String type) {
         return factories.get(type);
     }
 
-    /**
-     * Create a new connector instance
-     */
+    /** Create a new connector instance */
     public StorageConnector createConnector(String type, Map<String, String> config)
             throws ConnectorException {
 
@@ -162,9 +148,7 @@ public class ConnectorRegistry {
         return connector;
     }
 
-    /**
-     * Create and register a named connector instance
-     */
+    /** Create and register a named connector instance */
     public StorageConnector createAndRegister(String name, String type, Map<String, String> config)
             throws ConnectorException {
 
@@ -184,23 +168,17 @@ public class ConnectorRegistry {
         return connector;
     }
 
-    /**
-     * Get a registered connector instance by name
-     */
+    /** Get a registered connector instance by name */
     public StorageConnector getConnector(String name) {
         return instances.get(name);
     }
 
-    /**
-     * Get all registered connector instance names
-     */
+    /** Get all registered connector instance names */
     public Collection<String> getRegisteredConnectors() {
         return instances.keySet();
     }
 
-    /**
-     * Remove a connector instance
-     */
+    /** Remove a connector instance */
     public void removeConnector(String name) {
         StorageConnector connector = instances.remove(name);
         if (connector != null) {
@@ -213,17 +191,13 @@ public class ConnectorRegistry {
         }
     }
 
-    /**
-     * Manually reload all connectors from directory
-     */
+    /** Manually reload all connectors from directory */
     public void reloadConnectors() {
         log.info("Reloading connectors...");
         loadExternalConnectors();
     }
 
-    /**
-     * Hot-reload connectors from directory (scheduled task)
-     */
+    /** Hot-reload connectors from directory (scheduled task) */
     @Scheduled(fixedDelayString = "${pesitwizard.connectors.reload-interval:60000}")
     public void checkForNewConnectors() {
         if (!hotReloadEnabled) {
@@ -237,15 +211,18 @@ public class ConnectorRegistry {
 
         try {
             // Check if any JAR is newer than last scan
-            boolean hasNewJars = Files.list(connectorsPath)
-                    .filter(p -> p.toString().endsWith(".jar"))
-                    .anyMatch(p -> {
-                        try {
-                            return Files.getLastModifiedTime(p).toMillis() > lastScanTime;
-                        } catch (IOException e) {
-                            return false;
-                        }
-                    });
+            boolean hasNewJars =
+                    Files.list(connectorsPath)
+                            .filter(p -> p.toString().endsWith(".jar"))
+                            .anyMatch(
+                                    p -> {
+                                        try {
+                                            return Files.getLastModifiedTime(p).toMillis()
+                                                    > lastScanTime;
+                                        } catch (IOException e) {
+                                            return false;
+                                        }
+                                    });
 
             if (hasNewJars) {
                 log.info("New connector JARs detected, reloading...");

@@ -7,78 +7,24 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Low-level FPDU I/O operations for reading and writing FPDUs over streams.
- * Used by both client (PesitSession) and server (TcpConnectionHandler).
+ * Low-level FPDU I/O operations for reading and writing FPDUs over streams. Used by both client
+ * (PesitSession) and server (TcpConnectionHandler).
  */
 @Slf4j
 public class FpduIO {
 
-    /** Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length prefix. */
+    /**
+     * Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length
+     * prefix.
+     */
     public static final int DEFAULT_MAX_FPDU_LENGTH = 32768;
 
     /**
-     * Read a single FPDU from the input stream with EBCDIC-aware length handling.
-     * Uses {@link #DEFAULT_MAX_FPDU_LENGTH} as the maximum allowed length.
-     *
-     * @param in DataInputStream to read from
-     * @return Raw FPDU bytes (without the length prefix, still in original encoding)
-     * @throws IOException if read fails or connection closed
-     * @see #readRawFpduWithEbcdicDetection(DataInputStream, int)
-     */
-    public static byte[] readRawFpduWithEbcdicDetection(DataInputStream in) throws IOException {
-        return readRawFpduWithEbcdicDetection(in, DEFAULT_MAX_FPDU_LENGTH);
-    }
-
-    /**
-     * Read a single FPDU from the input stream with EBCDIC-aware length handling.
-     * IBM CX sends PURE EBCDIC where even the length prefix is EBCDIC-encoded.
-     * This method detects EBCDIC length prefix and handles it correctly.
-     *
-     * @param in DataInputStream to read from
-     * @param maxFpduLength maximum allowed FPDU length in bytes
-     * @return Raw FPDU bytes (without the length prefix, still in original encoding)
-     * @throws IOException if read fails, connection closed, or FPDU exceeds maxFpduLength
-     */
-    public static byte[] readRawFpduWithEbcdicDetection(DataInputStream in, int maxFpduLength) throws IOException {
-        // Read first 2 bytes (length prefix)
-        byte[] lengthBytes = new byte[2];
-        in.readFully(lengthBytes);
-
-        // Check if length bytes are EBCDIC (both bytes >= 0x80 suggests EBCDIC)
-        boolean lengthIsEbcdic = (lengthBytes[0] & 0xFF) >= 0x80 && (lengthBytes[1] & 0xFF) >= 0x80;
-
-        int length;
-        if (lengthIsEbcdic) {
-            // Convert EBCDIC length bytes to ASCII, then interpret as binary
-            byte[] asciiLengthBytes = EbcdicConverter.ebcdicToAscii(lengthBytes);
-            length = ((asciiLengthBytes[0] & 0xFF) << 8) | (asciiLengthBytes[1] & 0xFF);
-            log.debug("Detected EBCDIC length prefix: {:02X} {:02X} (EBCDIC) -> {:02X} {:02X} (ASCII) -> {} bytes",
-                lengthBytes[0] & 0xFF, lengthBytes[1] & 0xFF,
-                asciiLengthBytes[0] & 0xFF, asciiLengthBytes[1] & 0xFF, length);
-        } else {
-            // Standard binary length prefix
-            length = ((lengthBytes[0] & 0xFF) << 8) | (lengthBytes[1] & 0xFF);
-        }
-
-        if (length <= 0 || length > 65535) {
-            throw new IOException("Invalid FPDU length: " + length);
-        }
-        if (length > maxFpduLength) {
-            throw new IOException("FPDU length " + length + " exceeds maximum allowed length " + maxFpduLength + " bytes");
-        }
-
-        byte[] data = new byte[length];
-        in.readFully(data);
-        return data;
-    }
-
-    /**
-     * Read a single FPDU from the input stream.
-     * Uses {@link #DEFAULT_MAX_FPDU_LENGTH} as the maximum allowed length.
+     * Read a single FPDU from the input stream. Uses {@link #DEFAULT_MAX_FPDU_LENGTH} as the
+     * maximum allowed length.
      *
      * @param in DataInputStream to read from
      * @return Raw FPDU bytes (without the length prefix)
@@ -90,8 +36,7 @@ public class FpduIO {
     }
 
     /**
-     * Read a single FPDU from the input stream.
-     * Reads the 2-byte length prefix, then the FPDU data.
+     * Read a single FPDU from the input stream. Reads the 2-byte length prefix, then the FPDU data.
      *
      * @param in DataInputStream to read from
      * @param maxFpduLength maximum allowed FPDU length in bytes
@@ -104,7 +49,12 @@ public class FpduIO {
             throw new IOException("Invalid FPDU length: " + length);
         }
         if (length > maxFpduLength) {
-            throw new IOException("FPDU length " + length + " exceeds maximum allowed length " + maxFpduLength + " bytes");
+            throw new IOException(
+                    "FPDU length "
+                            + length
+                            + " exceeds maximum allowed length "
+                            + maxFpduLength
+                            + " bytes");
         }
         byte[] data = new byte[length];
         in.readFully(data);
@@ -113,7 +63,7 @@ public class FpduIO {
 
     /**
      * Read and parse a single FPDU from the input stream.
-     * 
+     *
      * @param in DataInputStream to read from
      * @return Parsed Fpdu object
      * @throws IOException if read or parse fails
@@ -125,10 +75,10 @@ public class FpduIO {
     }
 
     /**
-     * Write an FPDU to the output stream.
-     * Writes the 2-byte length prefix followed by the FPDU data.
-     * 
-     * @param out  DataOutputStream to write to
+     * Write an FPDU to the output stream. Writes the 2-byte length prefix followed by the FPDU
+     * data.
+     *
+     * @param out DataOutputStream to write to
      * @param fpdu Fpdu to send
      * @throws IOException if write fails
      */
@@ -141,16 +91,17 @@ public class FpduIO {
 
     /**
      * Write an FPDU with data payload (for DTF) to the output stream.
-     * 
-     * @param out      DataOutputStream to write to
+     *
+     * @param out DataOutputStream to write to
      * @param fpduType FPDU type
-     * @param idDst    Destination connection ID
-     * @param idSrc    Source connection ID
-     * @param payload  Data payload
+     * @param idDst Destination connection ID
+     * @param idSrc Source connection ID
+     * @param payload Data payload
      * @throws IOException if write fails
      */
-    public static void writeFpduWithData(DataOutputStream out, FpduType fpduType,
-            int idDst, int idSrc, byte[] payload) throws IOException {
+    public static void writeFpduWithData(
+            DataOutputStream out, FpduType fpduType, int idDst, int idSrc, byte[] payload)
+            throws IOException {
         byte[] data = FpduBuilder.buildFpdu(fpduType, idDst, idSrc, payload);
         out.writeShort(data.length);
         out.write(data);
@@ -159,8 +110,8 @@ public class FpduIO {
 
     /**
      * Write raw FPDU bytes to the output stream.
-     * 
-     * @param out     DataOutputStream to write to
+     *
+     * @param out DataOutputStream to write to
      * @param rawData Raw FPDU bytes (without length prefix)
      * @throws IOException if write fails
      */
@@ -171,9 +122,9 @@ public class FpduIO {
     }
 
     /**
-     * Check if raw FPDU bytes represent a DTF (data transfer) FPDU.
-     * DTF FPDUs have phase=0x00 and type=0x00, 0x40, 0x41, or 0x42.
-     * 
+     * Check if raw FPDU bytes represent a DTF (data transfer) FPDU. DTF FPDUs have phase=0x00 and
+     * type=0x00, 0x40, 0x41, or 0x42.
+     *
      * @param rawData Raw FPDU bytes
      * @return true if this is a DTF FPDU
      */
@@ -187,8 +138,7 @@ public class FpduIO {
     }
 
     /**
-     * Check if raw FPDU bytes represent a DTF.END FPDU.
-     * DTF.END has phase=0xC0 and type=0x04.
+     * Check if raw FPDU bytes represent a DTF.END FPDU. DTF.END has phase=0xC0 and type=0x04.
      *
      * @param rawData Raw FPDU bytes
      * @return true if this is a DTF.END FPDU
@@ -203,9 +153,9 @@ public class FpduIO {
     }
 
     /**
-     * Extract data payload from a DTF FPDU.
-     * DTF header is 6 bytes: len(2) + phase(1) + type(1) + idDst(1) + idSrc(1).
-     * 
+     * Extract data payload from a DTF FPDU. DTF header is 6 bytes: len(2) + phase(1) + type(1) +
+     * idDst(1) + idSrc(1).
+     *
      * @param rawData Raw DTF FPDU bytes (with length header)
      * @return Data payload, or empty array if no data
      */
@@ -228,21 +178,22 @@ public class FpduIO {
         if (rawData == null || rawData.length < 4) {
             return null;
         }
-        return new int[] { rawData[2] & 0xFF, rawData[3] & 0xFF };
+        return new int[] {rawData[2] & 0xFF, rawData[3] & 0xFF};
     }
 
     // ============= DTF Type Utilities =============
 
     /**
-     * Check if an FpduType is a DTF type (data transfer).
-     * DTF types: DTF, DTFDA, DTFMA, DTFFA
+     * Check if an FpduType is a DTF type (data transfer). DTF types: DTF, DTFDA, DTFMA, DTFFA
      *
      * @param type FpduType to check
      * @return true if this is a DTF type
      */
     public static boolean isDtfType(FpduType type) {
-        return type == FpduType.DTF || type == FpduType.DTFDA
-                || type == FpduType.DTFMA || type == FpduType.DTFFA;
+        return type == FpduType.DTF
+                || type == FpduType.DTFDA
+                || type == FpduType.DTFMA
+                || type == FpduType.DTFFA;
     }
 
     // ============= Byte Utilities =============
@@ -264,12 +215,25 @@ public class FpduIO {
         return sb.toString();
     }
 
+    /** Convert a range of bytes to a hex string with spaces between bytes. */
+    public static String bytesToHex(byte[] bytes, int offset, int length) {
+        if (bytes == null || length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(length * 3);
+        for (int i = offset; i < offset + length && i < bytes.length; i++) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(String.format("%02X", bytes[i] & 0xFF));
+        }
+        return sb.toString();
+    }
+
     // ============= Multi-Article DTF Support =============
 
     /**
-     * Check if a DTF FPDU contains multi-article format based on idSrc.
-     * Per PeSIT spec, idSrc in DTF indicates the number of articles.
-     * idSrc > 1 means multi-article format with 2-byte length prefixes per article.
+     * Check if a DTF FPDU contains multi-article format based on idSrc. Per PeSIT spec, idSrc in
+     * DTF indicates the number of articles. idSrc > 1 means multi-article format with 2-byte length
+     * prefixes per article.
      *
      * @param fpdu The DTF FPDU to check
      * @return true if multi-article format
@@ -284,9 +248,9 @@ public class FpduIO {
     }
 
     /**
-     * Extract articles from multi-article DTF data.
-     * Multi-article format: [len(2)][article_data][len(2)][article_data]...
-     * Each article is prefixed with a 2-byte big-endian length.
+     * Extract articles from multi-article DTF data. Multi-article format:
+     * [len(2)][article_data][len(2)][article_data]... Each article is prefixed with a 2-byte
+     * big-endian length.
      *
      * @param data Raw DTF data payload
      * @return List of article data (without length prefixes)
@@ -301,8 +265,10 @@ public class FpduIO {
         while (buffer.remaining() >= 2) {
             int articleLen = buffer.getShort() & 0xFFFF;
             if (articleLen == 0 || articleLen > buffer.remaining()) {
-                log.warn("Invalid article length {} with {} bytes remaining, stopping extraction",
-                        articleLen, buffer.remaining());
+                log.warn(
+                        "Invalid article length {} with {} bytes remaining, stopping extraction",
+                        articleLen,
+                        buffer.remaining());
                 break;
             }
             byte[] articleData = new byte[articleLen];
@@ -313,11 +279,11 @@ public class FpduIO {
     }
 
     /**
-     * Extract articles from multi-article DTF data and write directly to output stream.
-     * This avoids intermediate List allocation for better memory efficiency.
+     * Extract articles from multi-article DTF data and write directly to output stream. This avoids
+     * intermediate List allocation for better memory efficiency.
      *
      * @param data Raw DTF data payload
-     * @param out  OutputStream to write extracted articles to
+     * @param out OutputStream to write extracted articles to
      * @return Total bytes written (excluding length prefixes)
      * @throws IOException if write fails
      */
@@ -332,8 +298,10 @@ public class FpduIO {
         while (buffer.remaining() >= 2) {
             int articleLen = buffer.getShort() & 0xFFFF;
             if (articleLen == 0 || articleLen > buffer.remaining()) {
-                log.warn("Invalid article length {} with {} bytes remaining, stopping extraction",
-                        articleLen, buffer.remaining());
+                log.warn(
+                        "Invalid article length {} with {} bytes remaining, stopping extraction",
+                        articleLen,
+                        buffer.remaining());
                 break;
             }
             byte[] articleData = new byte[articleLen];

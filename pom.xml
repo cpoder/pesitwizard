@@ -70,6 +70,11 @@
         <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
         <awaitility.version>4.2.0</awaitility.version>
         <lombok.version>1.18.34</lombok.version>
+        <!-- Code quality plugin versions -->
+        <spotbugs-maven-plugin.version>4.8.6.6</spotbugs-maven-plugin.version>
+        <spotless-maven-plugin.version>2.44.4</spotless-maven-plugin.version>
+        <google-java-format.version>1.25.2</google-java-format.version>
+        <owasp-dependency-check.version>12.1.0</owasp-dependency-check.version>
     </properties>
 
     <!-- S4-10: Centralized dependency management -->
@@ -220,6 +225,41 @@
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>3.4.1</version>
                 </plugin>
+                <!-- SpotBugs: static analysis -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs-maven-plugin.version}</version>
+                    <configuration>
+                        <effort>Max</effort>
+                        <threshold>Medium</threshold>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
+                    </configuration>
+                </plugin>
+                <!-- Spotless: code formatting with google-java-format -->
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless-maven-plugin.version}</version>
+                    <configuration>
+                        <java>
+                            <googleJavaFormat>
+                                <version>${google-java-format.version}</version>
+                                <style>AOSP</style>
+                            </googleJavaFormat>
+                        </java>
+                    </configuration>
+                </plugin>
+                <!-- OWASP Dependency-Check: CVE vulnerability scanning (manual only) -->
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>${owasp-dependency-check.version}</version>
+                    <configuration>
+                        <failBuildOnCVSS>7</failBuildOnCVSS>
+                        <suppressionFile>.github/dependency-check-suppressions.xml</suppressionFile>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -270,6 +310,28 @@
                                 </rule>
                             </rules>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- SpotBugs: fail build on High/Medium bugs -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals><goal>check</goal></goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Spotless: fail build on unformatted code -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals><goal>check</goal></goals>
+                        <phase>verify</phase>
                     </execution>
                 </executions>
             </plugin>

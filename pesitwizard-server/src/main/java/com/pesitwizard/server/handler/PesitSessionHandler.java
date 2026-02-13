@@ -1,13 +1,5 @@
 package com.pesitwizard.server.handler;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
-
-import org.springframework.stereotype.Component;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
@@ -26,15 +18,18 @@ import com.pesitwizard.server.service.FpduResponseBuilder;
 import com.pesitwizard.server.service.FpduValidator;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
-
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
- * Handles PeSIT protocol session for a single client connection.
- * Implements the server-side state machine for Hors-SIT profile.
- * 
- * This is a refactored version that delegates to specialized handlers.
+ * Handles PeSIT protocol session for a single client connection. Implements the server-side state
+ * machine for Hors-SIT profile.
+ *
+ * <p>This is a refactored version that delegates to specialized handlers.
  */
 @Slf4j
 @Component
@@ -51,68 +46,67 @@ public class PesitSessionHandler {
     private final ClusterProvider clusterProvider;
     private final FpduValidator fpduValidator;
 
-    /**
-     * Create a new session context
-     */
+    /** Create a new session context */
     public SessionContext createSession(String remoteAddress) {
         return createSession(remoteAddress, properties.getServerId());
     }
 
-    /**
-     * Create a new session context with a specific server ID
-     */
+    /** Create a new session context with a specific server ID */
     public SessionContext createSession(String remoteAddress, String serverId) {
         SessionContext ctx = new SessionContext(UUID.randomUUID().toString());
         ctx.setRemoteAddress(remoteAddress);
         ctx.setServerConnectionId(generateConnectionId());
         ctx.setOurServerId(serverId);
-        log.info("[{}] New session created from {} (server: {})", ctx.getSessionId(), remoteAddress, serverId);
+        log.info(
+                "[{}] New session created from {} (server: {})",
+                ctx.getSessionId(),
+                remoteAddress,
+                serverId);
         return ctx;
     }
 
-    /**
-     * Process an incoming FPDU and return the response
-     */
-    public byte[] processIncomingFpdu(SessionContext ctx, byte[] rawData, DataInputStream in, DataOutputStream out)
-            throws IOException {
+    /** Process an incoming raw FPDU and return the response bytes. */
+    public byte[] processIncomingFpdu(SessionContext ctx, byte[] rawData) throws IOException {
         ctx.touch();
 
-        // Parse FPDU - DTF data is handled via fpdu.getData() like the client does
         FpduParser parser = new FpduParser(rawData);
         Fpdu fpdu = parser.parse();
 
-        return processIncomingFpdu(ctx, fpdu, in, out);
+        return processIncomingFpdu(ctx, fpdu);
     }
 
-    /**
-     * Process an already-parsed FPDU and return the response
-     */
-    public byte[] processIncomingFpdu(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
-            throws IOException {
+    /** Process an already-parsed FPDU and return the response bytes. */
+    public byte[] processIncomingFpdu(SessionContext ctx, Fpdu fpdu) throws IOException {
         ctx.touch();
 
-        log.info("[{}] Received {} in state {}", ctx.getSessionId(), fpdu.getFpduType(), ctx.getState());
+        log.info(
+                "[{}] Received {} in state {}",
+                ctx.getSessionId(),
+                fpdu.getFpduType(),
+                ctx.getState());
 
-        // Process based on current state and FPDU type
-        Fpdu response = processStateMachine(ctx, fpdu, in, out);
+        Fpdu response = processStateMachine(ctx, fpdu);
 
         if (response != null) {
-            log.info("[{}] Sending {} -> state {}", ctx.getSessionId(), response.getFpduType(), ctx.getState());
+            log.info(
+                    "[{}] Sending {} -> state {}",
+                    ctx.getSessionId(),
+                    response.getFpduType(),
+                    ctx.getState());
             return FpduBuilder.buildFpdu(response);
         }
 
         return null;
     }
 
-    /**
-     * Main state machine processing.
-     * Catches {@link InvalidStateTransitionException} from handlers and returns
-     * an ABORT FPDU with diagnostic code D3_311 (remote PeSIT protocol error).
-     */
-    private Fpdu processStateMachine(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
-            throws IOException {
+    /** Main state machine processing. */
+    private Fpdu processStateMachine(SessionContext ctx, Fpdu fpdu) throws IOException {
         FpduType type = fpdu.getFpduType();
-        log.info("[{}] processStateMachine: type={}, state={}", ctx.getSessionId(), type, ctx.getState());
+        log.info(
+                "[{}] processStateMachine: type={}, state={}",
+                ctx.getSessionId(),
+                type,
+                ctx.getState());
 
         // Handle ABORT from any state
         if (type == FpduType.ABORT) {
@@ -125,12 +119,16 @@ public class PesitSessionHandler {
                 case CN03_CONNECTED -> handleCN03(ctx, fpdu);
                 case MSG_RECEIVING -> messageHandler.handleMsgReceiving(ctx, fpdu);
                 case SF03_FILE_SELECTED -> handleSF03(ctx, fpdu);
-                case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu, in, out);
+                case OF02_TRANSFER_READY -> handleOF02(ctx, fpdu);
                 case TDE02B_RECEIVING_DATA -> dataTransferHandler.handleTDE02B(ctx, fpdu);
                 case TDE07_WRITE_END -> dataTransferHandler.handleTDE07(ctx, fpdu);
                 case TDL02B_SENDING_DATA -> dataTransferHandler.handleTDL02B(ctx, fpdu);
                 default -> {
-                    log.warn("[{}] Unexpected FPDU {} in state {}", ctx.getSessionId(), type, ctx.getState());
+                    log.warn(
+                            "[{}] Unexpected FPDU {} in state {}",
+                            ctx.getSessionId(),
+                            type,
+                            ctx.getState());
                     yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
                 }
             };
@@ -141,9 +139,7 @@ public class PesitSessionHandler {
         }
     }
 
-    /**
-     * CN01 - REPOS: Waiting for CONNECT
-     */
+    /** CN01 - REPOS: Waiting for CONNECT */
     private Fpdu handleCN01(SessionContext ctx, Fpdu fpdu) {
         if (fpdu.getFpduType() != FpduType.CONNECT) {
             log.warn("[{}] Expected CONNECT, got {}", ctx.getSessionId(), fpdu.getFpduType());
@@ -153,64 +149,83 @@ public class PesitSessionHandler {
         // D3-304: Validate PI order in CONNECT
         FpduValidator.ValidationResult piOrderValidation = fpduValidator.validatePiOrder(fpdu);
         if (!piOrderValidation.valid()) {
-            log.warn("[{}] PI order validation failed: {}", ctx.getSessionId(), piOrderValidation.message());
-            return FpduResponseBuilder.buildAbort(ctx, piOrderValidation.errorCode(), piOrderValidation.message());
+            log.warn(
+                    "[{}] PI order validation failed: {}",
+                    ctx.getSessionId(),
+                    piOrderValidation.message());
+            return FpduResponseBuilder.buildAbort(
+                    ctx, piOrderValidation.errorCode(), piOrderValidation.message());
         }
 
         // Extract connection parameters
         extractConnectionParameters(ctx, fpdu);
 
-        log.info("[{}] CONNECT from client '{}' to server '{}', version={}, accessType={}",
-                ctx.getSessionId(), ctx.getClientIdentifier(), ctx.getServerIdentifier(),
-                ctx.getProtocolVersion(), ctx.getAccessType());
+        log.info(
+                "[{}] CONNECT from client '{}' to server '{}', version={}, accessType={}",
+                ctx.getSessionId(),
+                ctx.getClientIdentifier(),
+                ctx.getServerIdentifier(),
+                ctx.getProtocolVersion(),
+                ctx.getAccessType());
 
         // Validate server name
         ValidationResult serverValidation = connectionValidator.validateServerName(ctx);
         if (!serverValidation.isValid()) {
-            log.warn("[{}] Server validation failed: {}", ctx.getSessionId(), serverValidation.getMessage());
-            return FpduResponseBuilder.buildRconnect(ctx, serverValidation.getDiagCode(),
+            log.warn(
+                    "[{}] Server validation failed: {}",
+                    ctx.getSessionId(),
                     serverValidation.getMessage());
+            return FpduResponseBuilder.buildRconnect(
+                    ctx, serverValidation.getDiagCode(), serverValidation.getMessage());
         }
 
         // Validate protocol version
         ValidationResult versionValidation = connectionValidator.validateProtocolVersion(ctx);
         if (!versionValidation.isValid()) {
-            log.warn("[{}] Version validation failed: {}", ctx.getSessionId(), versionValidation.getMessage());
-            return FpduResponseBuilder.buildRconnect(ctx, versionValidation.getDiagCode(),
+            log.warn(
+                    "[{}] Version validation failed: {}",
+                    ctx.getSessionId(),
                     versionValidation.getMessage());
+            return FpduResponseBuilder.buildRconnect(
+                    ctx, versionValidation.getDiagCode(), versionValidation.getMessage());
         }
 
         // Validate partner
         ValidationResult validation = connectionValidator.validatePartner(ctx, fpdu);
         if (!validation.isValid()) {
-            log.warn("[{}] Partner validation failed: {}", ctx.getSessionId(), validation.getMessage());
-            // Log authentication failure to audit
+            log.warn(
+                    "[{}] Partner validation failed: {}",
+                    ctx.getSessionId(),
+                    validation.getMessage());
             auditService.logAuthFailure(
                     ctx.getClientIdentifier(),
                     "PESIT",
                     ctx.getRemoteAddress(),
                     validation.getMessage());
-            // Track as failed transfer so it appears in transfer history
-            // Format DiagnosticCode as hex: (code << 16) | reason
-            int diagCodeValue = (validation.getDiagCode().getCode() << 16) | validation.getDiagCode().getReason();
+            int diagCodeValue =
+                    (validation.getDiagCode().getCode() << 16)
+                            | validation.getDiagCode().getReason();
             transferTracker.trackAuthenticationFailure(
                     ctx,
                     properties.getServerId(),
                     clusterProvider.getNodeName(),
                     String.format("0x%06X", diagCodeValue),
                     validation.getMessage());
-            return FpduResponseBuilder.buildRconnect(ctx, validation.getDiagCode(), validation.getMessage());
+            return FpduResponseBuilder.buildRconnect(
+                    ctx, validation.getDiagCode(), validation.getMessage());
         }
 
         // Transition to CONNECTED state
         ctx.transitionTo(ServerState.CN03_CONNECTED);
 
         // Negotiate sync interval: use client's value if sync points are enabled
-        int negotiatedSyncInterval = (properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled())
-                ? ctx.getClientSyncIntervalKb()
-                : 0;
+        int negotiatedSyncInterval =
+                (properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled())
+                        ? ctx.getClientSyncIntervalKb()
+                        : 0;
 
-        return FpduResponseBuilder.buildAconnect(ctx,
+        return FpduResponseBuilder.buildAconnect(
+                ctx,
                 properties.getProtocolVersion(),
                 properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled(),
                 properties.isResyncEnabled() && ctx.isResyncEnabled(),
@@ -218,9 +233,7 @@ public class PesitSessionHandler {
                 negotiatedSyncInterval);
     }
 
-    /**
-     * Extract connection parameters from CONNECT FPDU
-     */
+    /** Extract connection parameters from CONNECT FPDU */
     private void extractConnectionParameters(SessionContext ctx, Fpdu fpdu) {
         ctx.setClientConnectionId(fpdu.getIdSrc());
 
@@ -273,9 +286,7 @@ public class PesitSessionHandler {
         ctx.setCrcEnabled(fpdu.hasParameter(ParameterIdentifier.PI_01_CRC));
     }
 
-    /**
-     * CN03 - CONNECTED: Waiting for CREATE, SELECT, MSG, or RELEASE
-     */
+    /** CN03 - CONNECTED: Waiting for CREATE, SELECT, MSG, or RELEASE */
     private Fpdu handleCN03(SessionContext ctx, Fpdu fpdu) throws IOException {
         log.info("[{}] handleCN03: received {} fpdu", ctx.getSessionId(), fpdu.getFpduType());
         return switch (fpdu.getFpduType()) {
@@ -291,9 +302,7 @@ public class PesitSessionHandler {
         };
     }
 
-    /**
-     * SF03 - FILE SELECTED: Waiting for OPEN or DESELECT
-     */
+    /** SF03 - FILE SELECTED: Waiting for OPEN or DESELECT */
     private Fpdu handleSF03(SessionContext ctx, Fpdu fpdu) throws IOException {
         return switch (fpdu.getFpduType()) {
             case OPEN -> transferOperationHandler.handleOpen(ctx, fpdu);
@@ -305,14 +314,11 @@ public class PesitSessionHandler {
         };
     }
 
-    /**
-     * OF02 - TRANSFER READY: Waiting for WRITE, READ, or CLOSE
-     */
-    private Fpdu handleOF02(SessionContext ctx, Fpdu fpdu, DataInputStream in, DataOutputStream out)
-            throws IOException {
+    /** OF02 - TRANSFER READY: Waiting for WRITE, READ, or CLOSE */
+    private Fpdu handleOF02(SessionContext ctx, Fpdu fpdu) throws IOException {
         return switch (fpdu.getFpduType()) {
             case WRITE -> dataTransferHandler.handleWrite(ctx, fpdu);
-            case READ -> dataTransferHandler.handleRead(ctx, fpdu, in, out);
+            case READ -> dataTransferHandler.handleRead(ctx, fpdu);
             case CLOSE -> transferOperationHandler.handleClose(ctx, fpdu);
             default -> {
                 log.warn("[{}] Unexpected FPDU {} in OF02", ctx.getSessionId(), fpdu.getFpduType());
@@ -321,18 +327,14 @@ public class PesitSessionHandler {
         };
     }
 
-    /**
-     * Handle RELEASE FPDU
-     */
+    /** Handle RELEASE FPDU */
     private Fpdu handleRelease(SessionContext ctx, Fpdu fpdu) {
         log.info("[{}] RELEASE received, closing session", ctx.getSessionId());
         ctx.transitionTo(ServerState.CN01_REPOS);
         return FpduResponseBuilder.buildRelconf(ctx);
     }
 
-    /**
-     * Handle ABORT FPDU
-     */
+    /** Handle ABORT FPDU */
     private Fpdu handleAbort(SessionContext ctx, Fpdu fpdu) {
         log.warn("[{}] ABORT received", ctx.getSessionId());
 
@@ -344,14 +346,12 @@ public class PesitSessionHandler {
         }
 
         ctx.setAborted(true);
-        // ABORT is a protocol-level forced reset — bypass state machine validation
+        // ABORT is a protocol-level forced reset -- bypass state machine validation
         ctx.setState(ServerState.CN01_REPOS);
         return null; // No response for ABORT
     }
 
-    /**
-     * Generate a unique connection ID
-     */
+    /** Generate a unique connection ID */
     private int generateConnectionId() {
         return (int) (System.currentTimeMillis() % 255) + 1;
     }

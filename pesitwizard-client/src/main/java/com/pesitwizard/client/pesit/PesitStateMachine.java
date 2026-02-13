@@ -5,8 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class PesitStateMachine {
-    @Getter
-    private ClientState currentState = ClientState.CN01_REPOS;
+    @Getter private ClientState currentState = ClientState.CN01_REPOS;
 
     public void transition(ClientState newState) {
         if (!currentState.canTransitionTo(newState)) {

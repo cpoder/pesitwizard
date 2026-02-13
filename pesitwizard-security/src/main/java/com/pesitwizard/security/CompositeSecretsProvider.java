@@ -3,14 +3,11 @@ package com.pesitwizard.security;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Composite secrets provider that enables transparent migration from AES to
- * Vault.
- * 
- * - New data is always encrypted with the primary provider (Vault when
- * available)
- * - Can decrypt both AES: and vault: prefixed data transparently
- * - When AES-encrypted data is re-saved, it gets migrated to Vault
- * automatically
+ * Composite secrets provider that enables transparent migration from AES to Vault.
+ *
+ * <p>- New data is always encrypted with the primary provider (Vault when available) - Can decrypt
+ * both AES: and vault: prefixed data transparently - When AES-encrypted data is re-saved, it gets
+ * migrated to Vault automatically
  */
 @Slf4j
 public class CompositeSecretsProvider implements SecretsProvider {
@@ -18,10 +15,12 @@ public class CompositeSecretsProvider implements SecretsProvider {
     private final SecretsProvider primaryProvider;
     private final AesSecretsProvider aesProvider;
 
-    public CompositeSecretsProvider(SecretsProvider primaryProvider, AesSecretsProvider aesProvider) {
+    public CompositeSecretsProvider(
+            SecretsProvider primaryProvider, AesSecretsProvider aesProvider) {
         this.primaryProvider = primaryProvider;
         this.aesProvider = aesProvider;
-        log.info("Composite secrets provider initialized: primary={}, fallback=AES",
+        log.info(
+                "Composite secrets provider initialized: primary={}, fallback=AES",
                 primaryProvider.getProviderType());
     }
 
@@ -50,11 +49,13 @@ public class CompositeSecretsProvider implements SecretsProvider {
             return aesProvider.decrypt(ciphertext);
         } else if (ciphertext.startsWith("vault:")) {
             // Decrypt with primary (Vault) provider
-            log.debug("Decrypting Vault-stored value: {}",
+            log.debug(
+                    "Decrypting Vault-stored value: {}",
                     ciphertext.substring(0, Math.min(20, ciphertext.length())) + "...");
             String decrypted = primaryProvider.decrypt(ciphertext);
             if (decrypted != null && decrypted.equals(ciphertext)) {
-                log.warn("Vault decryption returned original reference - secret may not exist in Vault: {}",
+                log.warn(
+                        "Vault decryption returned original reference - secret may not exist in Vault: {}",
                         ciphertext.substring(0, Math.min(20, ciphertext.length())) + "...");
             }
             return decrypted;

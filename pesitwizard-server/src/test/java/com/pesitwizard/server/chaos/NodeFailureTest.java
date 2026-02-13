@@ -5,37 +5,28 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-
-import lombok.Builder;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Chaos engineering tests for node failure scenarios.
  *
- * These tests verify:
- * - Leader failover within acceptable time
- * - No data loss during failover
- * - In-flight transfers resume after failover
- * - Cluster recovery after node returns
+ * <p>These tests verify: - Leader failover within acceptable time - No data loss during failover -
+ * In-flight transfers resume after failover - Cluster recovery after node returns
  *
- * Requirements:
- * - 3-node cluster running
- * - Kubernetes environment with pod management permissions
- * - Integration test profile
+ * <p>Requirements: - 3-node cluster running - Kubernetes environment with pod management
+ * permissions - Integration test profile
  *
- * Run with: mvn test -Dtest=NodeFailureTest -Dchaos-test=true
+ * <p>Run with: mvn test -Dtest=NodeFailureTest -Dchaos-test=true
  */
 @Slf4j
 @SpringBootTest
@@ -75,17 +66,17 @@ class NodeFailureTest {
         clusterState.killNode(leaderId);
 
         // Assert - New leader elected within timeout
-        await()
-                .atMost(FAILOVER_TIMEOUT)
+        await().atMost(FAILOVER_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(() -> {
-                    String newLeader = clusterState.getLeaderId();
-                    assertThat(newLeader)
-                            .as("New leader should be elected")
-                            .isNotNull()
-                            .isNotEqualTo(leaderId);
-                    log.info("New leader elected: {}", newLeader);
-                });
+                .untilAsserted(
+                        () -> {
+                            String newLeader = clusterState.getLeaderId();
+                            assertThat(newLeader)
+                                    .as("New leader should be elected")
+                                    .isNotNull()
+                                    .isNotEqualTo(leaderId);
+                            log.info("New leader elected: {}", newLeader);
+                        });
 
         // Verify cluster is functional
         assertThat(clusterState.isClusterHealthy())
@@ -121,9 +112,7 @@ class NodeFailureTest {
                 .as("Cluster should remain healthy with one follower down")
                 .isTrue();
 
-        assertThat(clusterState.getActiveNodeCount())
-                .as("Should have 2 active nodes")
-                .isEqualTo(2);
+        assertThat(clusterState.getActiveNodeCount()).as("Should have 2 active nodes").isEqualTo(2);
     }
 
     @Test
@@ -140,9 +129,7 @@ class NodeFailureTest {
 
         // Assert - Service should degrade gracefully, not crash
         // With only 1 node, no quorum for writes
-        assertThat(clusterState.getActiveNodeCount())
-                .as("Only 1 node should remain")
-                .isEqualTo(1);
+        assertThat(clusterState.getActiveNodeCount()).as("Only 1 node should remain").isEqualTo(1);
 
         // Single node should still respond (degraded mode)
         assertThat(clusterState.isSingleNodeOperational())
@@ -150,9 +137,7 @@ class NodeFailureTest {
                 .isTrue();
 
         // Cannot elect new leader without quorum
-        assertThat(clusterState.getLeaderId())
-                .as("No leader possible without quorum")
-                .isNull();
+        assertThat(clusterState.getLeaderId()).as("No leader possible without quorum").isNull();
     }
 
     @Test
@@ -169,18 +154,18 @@ class NodeFailureTest {
         clusterState.restoreNode(nodeToKill);
 
         // Assert - Node rejoins and rebalances
-        await()
-                .atMost(RECOVERY_TIMEOUT)
+        await().atMost(RECOVERY_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(clusterState.getActiveNodeCount())
-                            .as("All 3 nodes should be active")
-                            .isEqualTo(3);
+                .untilAsserted(
+                        () -> {
+                            assertThat(clusterState.getActiveNodeCount())
+                                    .as("All 3 nodes should be active")
+                                    .isEqualTo(3);
 
-                    assertThat(clusterState.isNodeSynced(nodeToKill))
-                            .as("Recovered node should be synced")
-                            .isTrue();
-                });
+                            assertThat(clusterState.isNodeSynced(nodeToKill))
+                                    .as("Recovered node should be synced")
+                                    .isTrue();
+                        });
     }
 
     @Test
@@ -198,22 +183,22 @@ class NodeFailureTest {
         clusterState.killNode(originalLeader);
 
         // Assert - Transfer should resume on new leader
-        await()
-                .atMost(Duration.ofMinutes(2))
+        await().atMost(Duration.ofMinutes(2))
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    TransferStatus status = clusterState.getTransferStatus(transferId);
+                .untilAsserted(
+                        () -> {
+                            TransferStatus status = clusterState.getTransferStatus(transferId);
 
-                    assertThat(status.getState())
-                            .as("Transfer should complete or be resumable")
-                            .isIn("COMPLETED", "IN_PROGRESS", "RESUMABLE");
+                            assertThat(status.getState())
+                                    .as("Transfer should complete or be resumable")
+                                    .isIn("COMPLETED", "IN_PROGRESS", "RESUMABLE");
 
-                    if ("COMPLETED".equals(status.getState())) {
-                        assertThat(status.getRestartCount())
-                                .as("Transfer may have restarted")
-                                .isGreaterThanOrEqualTo(0);
-                    }
-                });
+                            if ("COMPLETED".equals(status.getState())) {
+                                assertThat(status.getRestartCount())
+                                        .as("Transfer may have restarted")
+                                        .isGreaterThanOrEqualTo(0);
+                            }
+                        });
     }
 
     @Test
@@ -238,13 +223,13 @@ class NodeFailureTest {
         }
 
         // Cluster should recover
-        await()
-                .atMost(RECOVERY_TIMEOUT)
+        await().atMost(RECOVERY_TIMEOUT)
                 .pollInterval(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThat(clusterState.getActiveNodeCount()).isEqualTo(3);
-                    assertThat(clusterState.isClusterHealthy()).isTrue();
-                });
+                .untilAsserted(
+                        () -> {
+                            assertThat(clusterState.getActiveNodeCount()).isEqualTo(3);
+                            assertThat(clusterState.isClusterHealthy()).isTrue();
+                        });
     }
 
     @Test
@@ -273,9 +258,7 @@ class NodeFailureTest {
         // Assert
         log.info("Failover completed in {} ms", failoverTime);
 
-        assertThat(failoverTime)
-                .as("Failover should complete within 30 seconds")
-                .isLessThan(30000);
+        assertThat(failoverTime).as("Failover should complete within 30 seconds").isLessThan(30000);
 
         // Record for baseline
         log.info("BASELINE: Leader failover time = {} ms", failoverTime);
@@ -290,11 +273,12 @@ class NodeFailureTest {
     }
 
     /**
-     * Mock cluster state for testing.
-     * In real implementation, this would connect to actual Kubernetes cluster.
+     * Mock cluster state for testing. In real implementation, this would connect to actual
+     * Kubernetes cluster.
      */
     static class MockClusterState {
-        private java.util.Map<String, Boolean> nodes = new java.util.concurrent.ConcurrentHashMap<>();
+        private java.util.Map<String, Boolean> nodes =
+                new java.util.concurrent.ConcurrentHashMap<>();
         private String leaderId;
 
         void initialize(int nodeCount) {

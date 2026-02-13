@@ -1,13 +1,6 @@
 package com.pesitwizard.server.handler;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.springframework.stereotype.Component;
-
+import com.pesitwizard.common.security.PathValidator;
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduIO;
@@ -15,7 +8,6 @@ import com.pesitwizard.fpdu.ParameterGroupIdentifier;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterParser;
 import com.pesitwizard.fpdu.ParameterValue;
-import com.pesitwizard.common.security.PathValidator;
 import com.pesitwizard.server.config.LogicalFileConfig;
 import com.pesitwizard.server.config.PesitServerProperties;
 import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
@@ -27,13 +19,16 @@ import com.pesitwizard.server.service.FpduResponseBuilder;
 import com.pesitwizard.server.service.PathPlaceholderService;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
-
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-/**
- * Handles file transfer operations: CREATE, SELECT, OPEN, CLOSE, DESELECT.
- */
+/** Handles file transfer operations: CREATE, SELECT, OPEN, CLOSE, DESELECT. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -45,9 +40,7 @@ public class TransferOperationHandler {
     private final PathPlaceholderService placeholderService;
     private final FileSystemService fileSystemService;
 
-    /**
-     * Handle CREATE FPDU
-     */
+    /** Handle CREATE FPDU */
     public Fpdu handleCreate(SessionContext ctx, Fpdu fpdu) throws IOException {
         log.debug("[{}] handleCreate: starting", ctx.getSessionId());
         TransferContext transfer = ctx.startTransfer();
@@ -61,39 +54,57 @@ public class TransferOperationHandler {
         // Validate logical file for CREATE (receive)
         ValidationResult fileValidation = fileValidator.validateForCreate(ctx, transfer);
         if (!fileValidation.isValid()) {
-            log.warn("[{}] Logical file validation failed for CREATE: {}",
-                    ctx.getSessionId(), fileValidation.getMessage());
+            log.warn(
+                    "[{}] Logical file validation failed for CREATE: {}",
+                    ctx.getSessionId(),
+                    fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAckCreate(ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
+            return FpduResponseBuilder.buildAckCreate(
+                    ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
         }
 
         // Prepare local file path
         Path localPath = prepareReceivePath(ctx, transfer);
         if (localPath == null) {
-            return FpduResponseBuilder.buildAckCreate(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
+            return FpduResponseBuilder.buildAckCreate(
+                    ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
         }
         transfer.setLocalPath(localPath);
 
-        log.info("[{}] CREATE: file='{}', transferId={}, priority={}, localPath={}",
-                ctx.getSessionId(), transfer.getFilename(), transfer.getTransferId(),
-                transfer.getPriority(), transfer.getLocalPath());
+        log.info(
+                "[{}] CREATE: file='{}', transferId={}, priority={}, localPath={}",
+                ctx.getSessionId(),
+                transfer.getFilename(),
+                transfer.getTransferId(),
+                transfer.getPriority(),
+                transfer.getLocalPath());
 
         // Track transfer start
-        transferTracker.trackTransferStart(ctx, properties.getServerId(), null,
-                TransferDirection.RECEIVE, transfer.getFilename(), null,
+        transferTracker.trackTransferStart(
+                ctx,
+                properties.getServerId(),
+                null,
+                TransferDirection.RECEIVE,
+                transfer.getFilename(),
+                null,
                 transfer.getLocalPath() != null ? transfer.getLocalPath().toString() : null);
 
         ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
 
-        int maxSize = Math.min(properties.getMaxEntitySize(),
-                transfer.getMaxEntitySize() > 0 ? transfer.getMaxEntitySize() : properties.getMaxEntitySize());
-        log.debug("[{}] handleCreate: building ACK(CREATE) with maxEntitySize={}", ctx.getSessionId(), maxSize);
+        int maxSize =
+                Math.min(
+                        properties.getMaxEntitySize(),
+                        transfer.getMaxEntitySize() > 0
+                                ? transfer.getMaxEntitySize()
+                                : properties.getMaxEntitySize());
+        log.debug(
+                "[{}] handleCreate: building ACK(CREATE) with maxEntitySize={}",
+                ctx.getSessionId(),
+                maxSize);
         return FpduResponseBuilder.buildAckCreate(ctx, maxSize, DiagnosticCode.D0_000);
     }
 
-    /**
-     * Handle SELECT FPDU
-     */
+    /** Handle SELECT FPDU */
     public Fpdu handleSelect(SessionContext ctx, Fpdu fpdu) {
         log.info("[{}] SELECT: entering handleSelect", ctx.getSessionId());
         TransferContext transfer = ctx.startTransfer();
@@ -110,10 +121,13 @@ public class TransferOperationHandler {
         // Validate logical file for SELECT (send)
         ValidationResult fileValidation = fileValidator.validateForSelect(ctx, transfer);
         if (!fileValidation.isValid()) {
-            log.warn("[{}] Logical file validation failed for SELECT: {}",
-                    ctx.getSessionId(), fileValidation.getMessage());
+            log.warn(
+                    "[{}] Logical file validation failed for SELECT: {}",
+                    ctx.getSessionId(),
+                    fileValidation.getMessage());
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
+            return FpduResponseBuilder.buildAckSelect(
+                    ctx, properties.getMaxEntitySize(), fileValidation.getDiagCode());
         }
 
         // Set file attributes from config (for ACK_SELECT)
@@ -130,50 +144,75 @@ public class TransferOperationHandler {
 
         // Check if file exists and is readable
         if (!Files.exists(filePath)) {
-            log.warn("[{}] SELECT: file '{}' not found at {}",
-                    ctx.getSessionId(), transfer.getFilename(), filePath);
+            log.warn(
+                    "[{}] SELECT: file '{}' not found at {}",
+                    ctx.getSessionId(),
+                    transfer.getFilename(),
+                    filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_205);
+            return FpduResponseBuilder.buildAckSelect(
+                    ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_205);
         }
         if (!Files.isReadable(filePath)) {
-            log.error("[{}] SELECT: access denied to file '{}' at {}",
-                    ctx.getSessionId(), transfer.getFilename(), filePath);
+            log.error(
+                    "[{}] SELECT: access denied to file '{}' at {}",
+                    ctx.getSessionId(),
+                    transfer.getFilename(),
+                    filePath);
             ctx.endTransfer();
-            return FpduResponseBuilder.buildAckSelect(ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
+            return FpduResponseBuilder.buildAckSelect(
+                    ctx, properties.getMaxEntitySize(), DiagnosticCode.D2_211);
         }
 
         transfer.setLocalPath(filePath);
 
-        log.info("[{}] SELECT: file='{}', transferId={}, localPath={}",
-                ctx.getSessionId(), transfer.getFilename(), transfer.getTransferId(), filePath);
+        log.info(
+                "[{}] SELECT: file='{}', transferId={}, localPath={}",
+                ctx.getSessionId(),
+                transfer.getFilename(),
+                transfer.getTransferId(),
+                filePath);
 
         // Track transfer start
         try {
             long fileSize = Files.size(filePath);
-            transferTracker.trackTransferStart(ctx, properties.getServerId(), null,
-                    TransferDirection.SEND, transfer.getFilename(), fileSize, filePath.toString());
+            transferTracker.trackTransferStart(
+                    ctx,
+                    properties.getServerId(),
+                    null,
+                    TransferDirection.SEND,
+                    transfer.getFilename(),
+                    fileSize,
+                    filePath.toString());
         } catch (IOException e) {
             log.warn("[{}] Could not get file size for tracking", ctx.getSessionId());
-            transferTracker.trackTransferStart(ctx, properties.getServerId(), null,
-                    TransferDirection.SEND, transfer.getFilename(), null, filePath.toString());
+            transferTracker.trackTransferStart(
+                    ctx,
+                    properties.getServerId(),
+                    null,
+                    TransferDirection.SEND,
+                    transfer.getFilename(),
+                    null,
+                    filePath.toString());
         }
 
         ctx.transitionTo(ServerState.SF03_FILE_SELECTED);
 
         // Use client's maxEntitySize if provided, otherwise server default
-        int maxEntitySize = transfer.getMaxEntitySize() > 0
-                ? transfer.getMaxEntitySize()
-                : properties.getMaxEntitySize();
+        int maxEntitySize =
+                transfer.getMaxEntitySize() > 0
+                        ? transfer.getMaxEntitySize()
+                        : properties.getMaxEntitySize();
         return FpduResponseBuilder.buildAckSelect(ctx, maxEntitySize, DiagnosticCode.D0_000);
     }
 
-    /**
-     * Handle OPEN (ORF) FPDU
-     */
+    /** Handle OPEN (ORF) FPDU */
     public Fpdu handleOpen(SessionContext ctx, Fpdu fpdu) throws IOException {
         // Extract PI 21 (Compression)
         ParameterValue pi21 = fpdu.getParameter(ParameterIdentifier.PI_21_COMPRESSION);
-        if (pi21 != null && pi21.getValue() != null && pi21.getValue().length > 0
+        if (pi21 != null
+                && pi21.getValue() != null
+                && pi21.getValue().length > 0
                 && ctx.getCurrentTransfer() != null) {
             ctx.getCurrentTransfer().setCompression(pi21.getValue()[0] & 0xFF);
         }
@@ -182,7 +221,10 @@ public class TransferOperationHandler {
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null && transfer.isWriteMode() && transfer.getLocalPath() != null) {
             transfer.openOutputStream();
-            log.info("[{}] OPEN: streaming output opened to {}", ctx.getSessionId(), transfer.getLocalPath());
+            log.info(
+                    "[{}] OPEN: streaming output opened to {}",
+                    ctx.getSessionId(),
+                    transfer.getLocalPath());
         } else {
             log.info("[{}] OPEN: file opened for transfer", ctx.getSessionId());
         }
@@ -192,15 +234,16 @@ public class TransferOperationHandler {
         return FpduResponseBuilder.buildAckOpen(ctx);
     }
 
-    /**
-     * Handle CLOSE (CRF) FPDU
-     */
+    /** Handle CLOSE (CRF) FPDU */
     public Fpdu handleClose(SessionContext ctx, Fpdu fpdu) {
         // Close the output stream to flush data to disk
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null) {
             transfer.closeOutputStream();
-            log.info("[{}] CLOSE: file closed, {} bytes written", ctx.getSessionId(), transfer.getBytesTransferred());
+            log.info(
+                    "[{}] CLOSE: file closed, {} bytes written",
+                    ctx.getSessionId(),
+                    transfer.getBytesTransferred());
         } else {
             log.info("[{}] CLOSE: file closed", ctx.getSessionId());
         }
@@ -208,9 +251,7 @@ public class TransferOperationHandler {
         return FpduResponseBuilder.buildAckClose(ctx);
     }
 
-    /**
-     * Handle DESELECT FPDU
-     */
+    /** Handle DESELECT FPDU */
     public Fpdu handleDeselect(SessionContext ctx, Fpdu fpdu) {
         // Log diagnostic code if present
         ParameterValue pi2 = fpdu.getParameter(ParameterIdentifier.PI_02_DIAG);
@@ -225,9 +266,7 @@ public class TransferOperationHandler {
         return FpduResponseBuilder.buildAckDeselect(ctx);
     }
 
-    /**
-     * Extract file identification from FPDU
-     */
+    /** Extract file identification from FPDU */
     private void extractFileIdentification(Fpdu fpdu, TransferContext transfer) {
         ParameterValue pgi9 = fpdu.getParameter(ParameterGroupIdentifier.PGI_09_ID_FICHIER);
         if (pgi9 != null) {
@@ -239,14 +278,13 @@ public class TransferOperationHandler {
             // PI 12 - Filename
             ParameterValue pi12 = pgi9.getParameter(ParameterIdentifier.PI_12_NOM_FICHIER);
             if (pi12 != null && pi12.getValue() != null) {
-                transfer.setFilename(new String(pi12.getValue(), StandardCharsets.ISO_8859_1).trim());
+                transfer.setFilename(
+                        new String(pi12.getValue(), StandardCharsets.ISO_8859_1).trim());
             }
         }
     }
 
-    /**
-     * Extract transfer attributes from FPDU
-     */
+    /** Extract transfer attributes from FPDU */
     private void extractTransferAttributes(Fpdu fpdu, TransferContext transfer) {
         // PI 13 (Transfer ID)
         ParameterValue pi13 = fpdu.getParameter(ParameterIdentifier.PI_13_ID_TRANSFERT);
@@ -273,9 +311,7 @@ public class TransferOperationHandler {
         }
     }
 
-    /**
-     * Extract logical attributes from FPDU
-     */
+    /** Extract logical attributes from FPDU */
     private void extractLogicalAttributes(Fpdu fpdu, TransferContext transfer) {
         ParameterValue pgi30 = fpdu.getParameter(ParameterGroupIdentifier.PGI_30_ATTR_LOGIQUES);
         if (pgi30 != null) {
@@ -297,9 +333,7 @@ public class TransferOperationHandler {
         }
     }
 
-    /**
-     * Prepare receive path for incoming file
-     */
+    /** Prepare receive path for incoming file */
     private Path prepareReceivePath(SessionContext ctx, TransferContext transfer) {
         Path receiveDir;
         String localFilename;
@@ -307,27 +341,34 @@ public class TransferOperationHandler {
         LogicalFileConfig fileConfig = ctx.getLogicalFileConfig();
         if (fileConfig != null && fileConfig.getReceiveDirectory() != null) {
             receiveDir = fileSystemService.normalizePath(fileConfig.getReceiveDirectory());
-            localFilename = placeholderService.resolvePath(
-                    fileConfig.getReceiveFilenamePattern(),
-                    PathPlaceholderService.PlaceholderContext.builder()
-                            .partnerId(ctx.getClientIdentifier())
-                            .virtualFile(transfer.getFilename())
-                            .transferId((long) transfer.getTransferId())
-                            .direction("RECEIVE")
-                            .build());
+            localFilename =
+                    placeholderService.resolvePath(
+                            fileConfig.getReceiveFilenamePattern(),
+                            PathPlaceholderService.PlaceholderContext.builder()
+                                    .partnerId(ctx.getClientIdentifier())
+                                    .virtualFile(transfer.getFilename())
+                                    .transferId((long) transfer.getTransferId())
+                                    .direction("RECEIVE")
+                                    .build());
         } else {
             receiveDir = fileSystemService.normalizePath(properties.getReceiveDirectory());
-            localFilename = (transfer.getFilename() != null ? transfer.getFilename()
-                    : "transfer_" + transfer.getTransferId())
-                    + "_" + System.currentTimeMillis();
+            localFilename =
+                    (transfer.getFilename() != null
+                                    ? transfer.getFilename()
+                                    : "transfer_" + transfer.getTransferId())
+                            + "_"
+                            + System.currentTimeMillis();
         }
 
         // Create receive directory
         var createResult = fileSystemService.createDirectories(receiveDir);
         if (!createResult.success()) {
-            String errorDetail = String.format("Cannot access receive directory '%s': %s (permissions: %s)",
-                    receiveDir, createResult.errorMessage(),
-                    fileSystemService.getPermissionString(receiveDir.getParent()));
+            String errorDetail =
+                    String.format(
+                            "Cannot access receive directory '%s': %s (permissions: %s)",
+                            receiveDir,
+                            createResult.errorMessage(),
+                            fileSystemService.getPermissionString(receiveDir.getParent()));
             log.error("[{}] {}", ctx.getSessionId(), errorDetail);
             return null;
         }
@@ -335,9 +376,7 @@ public class TransferOperationHandler {
         return receiveDir.resolve(localFilename);
     }
 
-    /**
-     * Prepare send path for outgoing file
-     */
+    /** Prepare send path for outgoing file */
     private Path prepareSendPath(SessionContext ctx, TransferContext transfer) {
         // S3-06: Sanitize FPDU filename to prevent path traversal
         String filename = PathValidator.validateFilename(transfer.getFilename());

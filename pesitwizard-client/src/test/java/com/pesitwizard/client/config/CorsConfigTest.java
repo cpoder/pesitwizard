@@ -3,7 +3,6 @@ package com.pesitwizard.client.config;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,7 +21,8 @@ class CorsConfigTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(corsConfig, "allowedOrigins", "http://localhost:5173,http://localhost:3000");
+        ReflectionTestUtils.setField(
+                corsConfig, "allowedOrigins", "http://localhost:5173,http://localhost:3000");
     }
 
     @Nested
@@ -55,11 +55,13 @@ class CorsConfigTest {
         @Test
         @DisplayName("should allow only configured origins")
         void shouldAllowOnlyConfiguredOrigins() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
-            CorsConfiguration config = source.getCorsConfiguration(
-                    new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
+            CorsConfiguration config =
+                    source.getCorsConfiguration(
+                            new org.springframework.mock.web.MockHttpServletRequest(
+                                    "GET", "/test"));
 
             assertThat(config).isNotNull();
             assertThat(config.getAllowedOrigins())
@@ -70,11 +72,13 @@ class CorsConfigTest {
         @Test
         @DisplayName("should allow standard HTTP methods")
         void shouldAllowStandardHttpMethods() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
-            CorsConfiguration config = source.getCorsConfiguration(
-                    new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
+            CorsConfiguration config =
+                    source.getCorsConfiguration(
+                            new org.springframework.mock.web.MockHttpServletRequest(
+                                    "GET", "/test"));
 
             assertThat(config).isNotNull();
             assertThat(config.getAllowedMethods())
@@ -84,11 +88,13 @@ class CorsConfigTest {
         @Test
         @DisplayName("should allow all headers")
         void shouldAllowAllHeaders() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
-            CorsConfiguration config = source.getCorsConfiguration(
-                    new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
+            CorsConfiguration config =
+                    source.getCorsConfiguration(
+                            new org.springframework.mock.web.MockHttpServletRequest(
+                                    "GET", "/test"));
 
             assertThat(config).isNotNull();
             assertThat(config.getAllowedHeaders()).contains("*");
@@ -97,11 +103,13 @@ class CorsConfigTest {
         @Test
         @DisplayName("should allow credentials")
         void shouldAllowCredentials() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
-            CorsConfiguration config = source.getCorsConfiguration(
-                    new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
+            CorsConfiguration config =
+                    source.getCorsConfiguration(
+                            new org.springframework.mock.web.MockHttpServletRequest(
+                                    "GET", "/test"));
 
             assertThat(config).isNotNull();
             assertThat(config.getAllowCredentials()).isTrue();
@@ -110,11 +118,13 @@ class CorsConfigTest {
         @Test
         @DisplayName("should set max age to 3600 seconds")
         void shouldSetMaxAge() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
-            CorsConfiguration config = source.getCorsConfiguration(
-                    new org.springframework.mock.web.MockHttpServletRequest("GET", "/test"));
+            CorsConfiguration config =
+                    source.getCorsConfiguration(
+                            new org.springframework.mock.web.MockHttpServletRequest(
+                                    "GET", "/test"));
 
             assertThat(config).isNotNull();
             assertThat(config.getMaxAge()).isEqualTo(3600L);
@@ -123,23 +133,23 @@ class CorsConfigTest {
         @Test
         @DisplayName("should apply configuration to all paths")
         void shouldApplyConfigurationToAllPaths() {
-            UrlBasedCorsConfigurationSource source = (UrlBasedCorsConfigurationSource) corsConfig
-                    .corsConfigurationSource();
+            UrlBasedCorsConfigurationSource source =
+                    (UrlBasedCorsConfigurationSource) corsConfig.corsConfigurationSource();
 
             // Test various paths
             List<String> paths = List.of("/", "/api/test", "/other/path", "/deeply/nested/path");
 
             for (String path : paths) {
-                CorsConfiguration config = source.getCorsConfiguration(
-                        new org.springframework.mock.web.MockHttpServletRequest("GET", path));
+                CorsConfiguration config =
+                        source.getCorsConfiguration(
+                                new org.springframework.mock.web.MockHttpServletRequest(
+                                        "GET", path));
                 assertThat(config).as("Config for path: %s", path).isNotNull();
             }
         }
     }
 
-    /**
-     * Test helper to capture CorsRegistry configuration
-     */
+    /** Test helper to capture CorsRegistry configuration */
     private static class TestCorsRegistry extends CorsRegistry {
         private String pathPattern;
 

@@ -9,7 +9,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,13 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * REST controller for browsing the server's file system.
- * Used by the admin UI to navigate and select files/directories.
+ * REST controller for browsing the server's file system. Used by the admin UI to navigate and
+ * select files/directories.
  */
 @Slf4j
 @RestController
@@ -33,17 +31,17 @@ public class FileSystemController {
     private final String basePath;
 
     public FileSystemController(
-            @Value("${pesit.server.filesystem.base-path:${java.io.tmpdir}/pesitwizard}") String basePath) {
+            @Value("${pesit.server.filesystem.base-path:${java.io.tmpdir}/pesitwizard}")
+                    String basePath) {
         this.basePath = basePath;
     }
 
     /**
-     * List files and directories at the given path.
-     * For security, only paths under the configured base path are allowed.
+     * List files and directories at the given path. For security, only paths under the configured
+     * base path are allowed.
      */
     @GetMapping("/browse")
-    public ResponseEntity<?> browse(
-            @RequestParam(required = false) String path) {
+    public ResponseEntity<?> browse(@RequestParam(required = false) String path) {
         // Use base path as default if no path specified
         String effectivePath = (path == null || path.isEmpty()) ? basePath : path;
         try {
@@ -64,7 +62,10 @@ public class FileSystemController {
                         log.info("Created directory: {}", targetPath);
                     } catch (IOException e) {
                         return ResponseEntity.badRequest()
-                                .body(new ErrorResponse("Directory does not exist and could not be created: " + path));
+                                .body(
+                                        new ErrorResponse(
+                                                "Directory does not exist and could not be created: "
+                                                        + path));
                     }
                 } else {
                     return ResponseEntity.badRequest()
@@ -81,44 +82,63 @@ public class FileSystemController {
 
             // Add parent directory entry if not at root
             if (!targetPath.equals(Paths.get(basePath))) {
-                entries.add(FileEntry.builder()
-                        .name("..")
-                        .path(targetPath.getParent().toString())
-                        .isDirectory(true)
-                        .build());
+                Path parentPath = targetPath.getParent();
+                if (parentPath != null) {
+                    entries.add(
+                            FileEntry.builder()
+                                    .name("..")
+                                    .path(parentPath.toString())
+                                    .isDirectory(true)
+                                    .build());
+                }
             }
 
             try (Stream<Path> stream = Files.list(targetPath)) {
-                stream.sorted((a, b) -> {
-                    // Directories first, then by name
-                    boolean aDir = Files.isDirectory(a);
-                    boolean bDir = Files.isDirectory(b);
-                    if (aDir != bDir)
-                        return aDir ? -1 : 1;
-                    return a.getFileName().toString().compareToIgnoreCase(b.getFileName().toString());
-                }).forEach(p -> {
-                    try {
-                        BasicFileAttributes attrs = Files.readAttributes(p, BasicFileAttributes.class);
-                        entries.add(FileEntry.builder()
-                                .name(p.getFileName().toString())
-                                .path(p.toString())
-                                .isDirectory(Files.isDirectory(p))
-                                .size(attrs.isDirectory() ? null : attrs.size())
-                                .lastModified(attrs.lastModifiedTime().toInstant())
-                                .readable(Files.isReadable(p))
-                                .writable(Files.isWritable(p))
-                                .build());
-                    } catch (IOException e) {
-                        log.warn("Could not read attributes for {}: {}", p, e.getMessage());
-                    }
-                });
+                stream.sorted(
+                                (a, b) -> {
+                                    // Directories first, then by name
+                                    boolean aDir = Files.isDirectory(a);
+                                    boolean bDir = Files.isDirectory(b);
+                                    if (aDir != bDir) return aDir ? -1 : 1;
+                                    return a.getFileName()
+                                            .toString()
+                                            .compareToIgnoreCase(b.getFileName().toString());
+                                })
+                        .forEach(
+                                p -> {
+                                    try {
+                                        BasicFileAttributes attrs =
+                                                Files.readAttributes(p, BasicFileAttributes.class);
+                                        entries.add(
+                                                FileEntry.builder()
+                                                        .name(p.getFileName().toString())
+                                                        .path(p.toString())
+                                                        .isDirectory(Files.isDirectory(p))
+                                                        .size(
+                                                                attrs.isDirectory()
+                                                                        ? null
+                                                                        : attrs.size())
+                                                        .lastModified(
+                                                                attrs.lastModifiedTime()
+                                                                        .toInstant())
+                                                        .readable(Files.isReadable(p))
+                                                        .writable(Files.isWritable(p))
+                                                        .build());
+                                    } catch (IOException e) {
+                                        log.warn(
+                                                "Could not read attributes for {}: {}",
+                                                p,
+                                                e.getMessage());
+                                    }
+                                });
             }
 
-            return ResponseEntity.ok(BrowseResponse.builder()
-                    .currentPath(targetPath.toString())
-                    .basePath(basePath)
-                    .entries(entries)
-                    .build());
+            return ResponseEntity.ok(
+                    BrowseResponse.builder()
+                            .currentPath(targetPath.toString())
+                            .basePath(basePath)
+                            .entries(entries)
+                            .build());
 
         } catch (IOException e) {
             log.error("Error browsing path {}: {}", path, e.getMessage());
@@ -127,9 +147,7 @@ public class FileSystemController {
         }
     }
 
-    /**
-     * Create a new directory.
-     */
+    /** Create a new directory. */
     @GetMapping("/mkdir")
     public ResponseEntity<?> mkdir(@RequestParam String path) {
         try {

@@ -4,9 +4,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pesitwizard.server.entity.AuditEvent;
+import com.pesitwizard.server.entity.AuditEvent.AuditCategory;
+import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
+import com.pesitwizard.server.entity.AuditEvent.AuditOutcome;
+import com.pesitwizard.server.repository.AuditEventRepository;
 import java.time.Instant;
 import java.util.List;
-
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,38 +26,29 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pesitwizard.server.entity.AuditEvent;
-import com.pesitwizard.server.entity.AuditEvent.AuditCategory;
-import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
-import com.pesitwizard.server.entity.AuditEvent.AuditOutcome;
-import com.pesitwizard.server.repository.AuditEventRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuditService Tests")
 class AuditServiceTest {
 
-    @Mock
-    private AuditEventRepository auditRepository;
+    @Mock private AuditEventRepository auditRepository;
 
-    @Mock
-    private ObjectMapper objectMapper;
+    @Mock private ObjectMapper objectMapper;
 
-    @InjectMocks
-    private AuditService auditService;
+    @InjectMocks private AuditService auditService;
 
     private AuditEvent testEvent;
 
     @BeforeEach
     void setUp() {
-        testEvent = AuditEvent.builder()
-                .id(1L)
-                .timestamp(Instant.now())
-                .category(AuditCategory.TRANSFER)
-                .eventType(AuditEventType.TRANSFER_STARTED)
-                .outcome(AuditOutcome.SUCCESS)
-                .username("testuser")
-                .build();
+        testEvent =
+                AuditEvent.builder()
+                        .id(1L)
+                        .timestamp(Instant.now())
+                        .category(AuditCategory.TRANSFER)
+                        .eventType(AuditEventType.TRANSFER_STARTED)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .username("testuser")
+                        .build();
     }
 
     @Nested
@@ -64,10 +60,12 @@ class AuditServiceTest {
         void shouldLogAuditEvent() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            AuditEvent result = auditService.log(AuditEvent.builder()
-                    .category(AuditCategory.TRANSFER)
-                    .eventType(AuditEventType.TRANSFER_STARTED)
-                    .outcome(AuditOutcome.SUCCESS));
+            AuditEvent result =
+                    auditService.log(
+                            AuditEvent.builder()
+                                    .category(AuditCategory.TRANSFER)
+                                    .eventType(AuditEventType.TRANSFER_STARTED)
+                                    .outcome(AuditOutcome.SUCCESS));
 
             assertNotNull(result);
             verify(auditRepository).save(any(AuditEvent.class));
@@ -121,7 +119,8 @@ class AuditServiceTest {
         void shouldLogTransferStarted() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            auditService.logTransferStarted("xfer-1", "partner-1", "file.txt", "RECEIVE", "user1", "192.168.1.1");
+            auditService.logTransferStarted(
+                    "xfer-1", "partner-1", "file.txt", "RECEIVE", "user1", "192.168.1.1");
 
             ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
             verify(auditRepository).save(captor.capture());
@@ -149,7 +148,8 @@ class AuditServiceTest {
         void shouldLogTransferFailed() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            auditService.logTransferFailed("xfer-1", "partner-1", "file.txt", "ERR_01", "Connection refused");
+            auditService.logTransferFailed(
+                    "xfer-1", "partner-1", "file.txt", "ERR_01", "Connection refused");
 
             ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
             verify(auditRepository).save(captor.capture());
@@ -163,7 +163,11 @@ class AuditServiceTest {
         void shouldLogConfigChange() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            auditService.logConfigChange(AuditEventType.PARTNER_CREATED, "Partner", "partner-1", "admin",
+            auditService.logConfigChange(
+                    AuditEventType.PARTNER_CREATED,
+                    "Partner",
+                    "partner-1",
+                    "admin",
                     "Created partner");
 
             ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
@@ -177,8 +181,11 @@ class AuditServiceTest {
         void shouldLogSecurityEvent() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            auditService.logSecurityEvent(AuditEventType.CERTIFICATE_VALIDATION_FAILED, AuditOutcome.FAILURE,
-                    "192.168.1.1", "Certificate expired");
+            auditService.logSecurityEvent(
+                    AuditEventType.CERTIFICATE_VALIDATION_FAILED,
+                    AuditOutcome.FAILURE,
+                    "192.168.1.1",
+                    "Certificate expired");
 
             ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
             verify(auditRepository).save(captor.capture());
@@ -204,7 +211,8 @@ class AuditServiceTest {
         void shouldLogApiRequestDenied() {
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(testEvent);
 
-            auditService.logApiRequest("user", "DELETE", "/api/partners/1", 403, "192.168.1.1", 10L);
+            auditService.logApiRequest(
+                    "user", "DELETE", "/api/partners/1", 403, "192.168.1.1", 10L);
 
             ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
             verify(auditRepository).save(captor.capture());
@@ -235,7 +243,8 @@ class AuditServiceTest {
             Page<AuditEvent> page = new PageImpl<>(List.of(testEvent));
             when(auditRepository.findByCategoryOrderByTimestampDesc(any(), any())).thenReturn(page);
 
-            Page<AuditEvent> result = auditService.getEventsByCategory(AuditCategory.TRANSFER, 0, 10);
+            Page<AuditEvent> result =
+                    auditService.getEventsByCategory(AuditCategory.TRANSFER, 0, 10);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
@@ -289,13 +298,22 @@ class AuditServiceTest {
         @DisplayName("Should search events")
         void shouldSearchEvents() {
             Page<AuditEvent> page = new PageImpl<>(List.of(testEvent));
-            when(auditRepository.search(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            when(auditRepository.search(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(page);
 
-            Page<AuditEvent> result = auditService.search(
-                    AuditCategory.TRANSFER, AuditEventType.TRANSFER_STARTED, AuditOutcome.SUCCESS,
-                    "testuser", "partner-1", "192.168.1.1",
-                    Instant.now().minusSeconds(3600), Instant.now(), 0, 10);
+            Page<AuditEvent> result =
+                    auditService.search(
+                            AuditCategory.TRANSFER,
+                            AuditEventType.TRANSFER_STARTED,
+                            AuditOutcome.SUCCESS,
+                            "testuser",
+                            "partner-1",
+                            "192.168.1.1",
+                            Instant.now().minusSeconds(3600),
+                            Instant.now(),
+                            0,
+                            10);
 
             assertNotNull(result);
         }
@@ -310,14 +328,14 @@ class AuditServiceTest {
         void shouldGetAuditStatistics() {
             when(auditRepository.count()).thenReturn(100L);
             when(auditRepository.countFailuresSince(any(Instant.class))).thenReturn(5L);
-            when(auditRepository.countByCategories(any(Instant.class))).thenReturn(List.of(
-                    new Object[]{"TRANSFER", 50L},
-                    new Object[]{"AUTHENTICATION", 30L}
-            ));
-            when(auditRepository.countByOutcomes(any(Instant.class))).thenReturn(List.of(
-                    new Object[]{"SUCCESS", 90L},
-                    new Object[]{"FAILURE", 10L}
-            ));
+            when(auditRepository.countByCategories(any(Instant.class)))
+                    .thenReturn(
+                            List.of(
+                                    new Object[] {"TRANSFER", 50L},
+                                    new Object[] {"AUTHENTICATION", 30L}));
+            when(auditRepository.countByOutcomes(any(Instant.class)))
+                    .thenReturn(
+                            List.of(new Object[] {"SUCCESS", 90L}, new Object[] {"FAILURE", 10L}));
 
             AuditService.AuditStatistics stats = auditService.getStatistics(24);
 
@@ -383,17 +401,21 @@ class AuditServiceTest {
         @Test
         @DisplayName("Should log async event")
         void shouldLogAsyncEvent() {
-            AuditEvent event = AuditEvent.builder()
-                    .category(AuditCategory.TRANSFER)
-                    .eventType(AuditEventType.TRANSFER_STARTED)
-                    .outcome(AuditOutcome.SUCCESS)
-                    .build();
+            AuditEvent event =
+                    AuditEvent.builder()
+                            .category(AuditCategory.TRANSFER)
+                            .eventType(AuditEventType.TRANSFER_STARTED)
+                            .outcome(AuditOutcome.SUCCESS)
+                            .build();
             when(auditRepository.save(any(AuditEvent.class))).thenReturn(event);
 
-            assertDoesNotThrow(() -> auditService.logAsync(AuditEvent.builder()
-                    .category(AuditCategory.TRANSFER)
-                    .eventType(AuditEventType.TRANSFER_STARTED)
-                    .outcome(AuditOutcome.SUCCESS)));
+            assertDoesNotThrow(
+                    () ->
+                            auditService.logAsync(
+                                    AuditEvent.builder()
+                                            .category(AuditCategory.TRANSFER)
+                                            .eventType(AuditEventType.TRANSFER_STARTED)
+                                            .outcome(AuditOutcome.SUCCESS)));
 
             verify(auditRepository).save(any(AuditEvent.class));
         }
@@ -407,19 +429,22 @@ class AuditServiceTest {
         @DisplayName("Should search events with criteria")
         void shouldSearchEventsWithCriteria() {
             Page<AuditEvent> mockPage = new PageImpl<>(List.of());
-            when(auditRepository.search(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            when(auditRepository.search(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(mockPage);
 
-            Page<AuditEvent> result = auditService.search(
-                    AuditCategory.TRANSFER,
-                    AuditEventType.TRANSFER_COMPLETED,
-                    AuditOutcome.SUCCESS,
-                    "user1",
-                    "partner1",
-                    "192.168.1.1",
-                    Instant.now().minusSeconds(3600),
-                    Instant.now(),
-                    0, 10);
+            Page<AuditEvent> result =
+                    auditService.search(
+                            AuditCategory.TRANSFER,
+                            AuditEventType.TRANSFER_COMPLETED,
+                            AuditOutcome.SUCCESS,
+                            "user1",
+                            "partner1",
+                            "192.168.1.1",
+                            Instant.now().minusSeconds(3600),
+                            Instant.now(),
+                            0,
+                            10);
 
             assertNotNull(result);
         }

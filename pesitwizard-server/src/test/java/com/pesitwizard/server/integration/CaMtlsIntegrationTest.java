@@ -2,6 +2,12 @@ package com.pesitwizard.server.integration;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.pesitwizard.server.entity.CertificateStore;
+import com.pesitwizard.server.service.CertificateAuthorityService;
+import com.pesitwizard.server.service.CertificateAuthorityService.CertificateRequest;
+import com.pesitwizard.server.service.CertificateAuthorityService.SignedCertificate;
+import com.pesitwizard.server.service.CertificateService;
+import com.pesitwizard.server.ssl.SslContextFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -11,15 +17,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import org.awaitility.Awaitility;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManagerFactory;
-
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,40 +33,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.pesitwizard.server.entity.CertificateStore;
-import com.pesitwizard.server.service.CertificateAuthorityService;
-import com.pesitwizard.server.service.CertificateAuthorityService.CertificateRequest;
-import com.pesitwizard.server.service.CertificateAuthorityService.SignedCertificate;
-import com.pesitwizard.server.service.CertificateService;
-import com.pesitwizard.server.ssl.SslContextFactory;
-
 /**
  * Integration tests for CA-based mTLS communication.
- * 
- * Tests the complete workflow:
- * 1. Initialize private CA
- * 2. Generate server certificate signed by CA
- * 3. Generate client certificate signed by CA
- * 4. Establish mTLS connection between client and server
- * 5. Verify untrusted certificates are rejected
+ *
+ * <p>Tests the complete workflow: 1. Initialize private CA 2. Generate server certificate signed by
+ * CA 3. Generate client certificate signed by CA 4. Establish mTLS connection between client and
+ * server 5. Verify untrusted certificates are rejected
  */
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("CA-based mTLS Integration Tests")
 public class CaMtlsIntegrationTest {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CaMtlsIntegrationTest.class);
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(CaMtlsIntegrationTest.class);
     private static final String PASSWORD = "changeit";
     private static final int SOCKET_TIMEOUT_MS = 10_000;
 
-    @Autowired
-    private CertificateAuthorityService caService;
+    @Autowired private CertificateAuthorityService caService;
 
-    @Autowired
-    private CertificateService certificateService;
+    @Autowired private CertificateService certificateService;
 
-    @Autowired
-    private SslContextFactory sslContextFactory;
+    @Autowired private SslContextFactory sslContextFactory;
 
     private ExecutorService executor;
     private SSLServerSocket serverSocket;
@@ -129,16 +120,18 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate server certificate
-            CertificateStore serverCert = caService.generatePartnerCertificate(
-                    "TEST_SERVER",
-                    "test-server.example.com",
-                    CertificateStore.CertificatePurpose.SERVER,
-                    365,
-                    "test");
+            CertificateStore serverCert =
+                    caService.generatePartnerCertificate(
+                            "TEST_SERVER",
+                            "test-server.example.com",
+                            CertificateStore.CertificatePurpose.SERVER,
+                            365,
+                            "test");
 
             assertThat(serverCert).isNotNull();
             assertThat(serverCert.getSubjectDn()).contains("test-server.example.com");
-            assertThat(serverCert.getPurpose()).isEqualTo(CertificateStore.CertificatePurpose.SERVER);
+            assertThat(serverCert.getPurpose())
+                    .isEqualTo(CertificateStore.CertificatePurpose.SERVER);
 
             log.info("Server certificate generated: subject={}", serverCert.getSubjectDn());
         }
@@ -150,16 +143,18 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate client certificate
-            CertificateStore clientCert = caService.generatePartnerCertificate(
-                    "TEST_CLIENT",
-                    "test-client.example.com",
-                    CertificateStore.CertificatePurpose.CLIENT,
-                    365,
-                    "test");
+            CertificateStore clientCert =
+                    caService.generatePartnerCertificate(
+                            "TEST_CLIENT",
+                            "test-client.example.com",
+                            CertificateStore.CertificatePurpose.CLIENT,
+                            365,
+                            "test");
 
             assertThat(clientCert).isNotNull();
             assertThat(clientCert.getSubjectDn()).contains("test-client.example.com");
-            assertThat(clientCert.getPurpose()).isEqualTo(CertificateStore.CertificatePurpose.CLIENT);
+            assertThat(clientCert.getPurpose())
+                    .isEqualTo(CertificateStore.CertificatePurpose.CLIENT);
 
             log.info("Client certificate generated: subject={}", clientCert.getSubjectDn());
         }
@@ -171,21 +166,23 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate a CSR
-            CertificateRequest request = caService.generateCertificateRequest(
-                    "external-client.example.com",
-                    "External Partners",
-                    "External Corp",
-                    CertificateStore.CertificatePurpose.CLIENT);
+            CertificateRequest request =
+                    caService.generateCertificateRequest(
+                            "external-client.example.com",
+                            "External Partners",
+                            "External Corp",
+                            CertificateStore.CertificatePurpose.CLIENT);
 
             assertThat(request.getCsrPem()).startsWith("-----BEGIN CERTIFICATE REQUEST-----");
 
             // Sign the CSR
-            SignedCertificate signed = caService.signCertificateRequest(
-                    request.getCsrPem(),
-                    CertificateStore.CertificatePurpose.CLIENT,
-                    365,
-                    "EXTERNAL_PARTNER",
-                    "test");
+            SignedCertificate signed =
+                    caService.signCertificateRequest(
+                            request.getCsrPem(),
+                            CertificateStore.CertificatePurpose.CLIENT,
+                            365,
+                            "EXTERNAL_PARTNER",
+                            "test");
 
             assertThat(signed).isNotNull();
             assertThat(signed.getCertificatePem()).startsWith("-----BEGIN CERTIFICATE-----");
@@ -207,34 +204,42 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate server certificate
-            CertificateStore serverCert = caService.generatePartnerCertificate(
-                    "MTLS_SERVER",
-                    "mtls-server.local",
-                    CertificateStore.CertificatePurpose.SERVER,
-                    365,
-                    "test");
+            CertificateStore serverCert =
+                    caService.generatePartnerCertificate(
+                            "MTLS_SERVER",
+                            "mtls-server.local",
+                            CertificateStore.CertificatePurpose.SERVER,
+                            365,
+                            "test");
 
             // Generate client certificate
-            CertificateStore clientCert = caService.generatePartnerCertificate(
-                    "MTLS_CLIENT",
-                    "mtls-client.local",
-                    CertificateStore.CertificatePurpose.CLIENT,
-                    365,
-                    "test");
+            CertificateStore clientCert =
+                    caService.generatePartnerCertificate(
+                            "MTLS_CLIENT",
+                            "mtls-client.local",
+                            CertificateStore.CertificatePurpose.CLIENT,
+                            365,
+                            "test");
 
             // Get CA truststore
-            CertificateStore caTruststore = certificateService.getCertificateStoreByName("pesit-ca-truststore")
-                    .orElseThrow(() -> new IllegalStateException("CA truststore not found"));
+            CertificateStore caTruststore =
+                    certificateService
+                            .getCertificateStoreByName("pesit-ca-truststore")
+                            .orElseThrow(
+                                    () -> new IllegalStateException("CA truststore not found"));
 
             // Create server SSL context
-            SSLContext serverSslContext = sslContextFactory.createSslContext(serverCert, caTruststore);
+            SSLContext serverSslContext =
+                    sslContextFactory.createSslContext(serverCert, caTruststore);
 
             // Create client SSL context
-            SSLContext clientSslContext = sslContextFactory.createSslContext(clientCert, caTruststore);
+            SSLContext clientSslContext =
+                    sslContextFactory.createSslContext(clientCert, caTruststore);
 
             // Start server on dynamic port
-            serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(0);
+            serverSocket =
+                    (SSLServerSocket)
+                            serverSslContext.getServerSocketFactory().createServerSocket(0);
             serverSocket.setNeedClientAuth(true); // Require client certificate
             serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
             int port = serverSocket.getLocalPort();
@@ -243,59 +248,76 @@ public class CaMtlsIntegrationTest {
             String expectedResponse = "Hello from mTLS server!";
 
             // Server task
-            CompletableFuture<String> serverFuture = CompletableFuture.supplyAsync(() -> {
-                try {
-                    log.info("Server waiting for connection on port {}", port);
-                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
-                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
-                    log.info("Server accepted connection from {}",
-                            clientConnection.getSession().getPeerPrincipal());
+            CompletableFuture<String> serverFuture =
+                    CompletableFuture.supplyAsync(
+                            () -> {
+                                try {
+                                    log.info("Server waiting for connection on port {}", port);
+                                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                    log.info(
+                                            "Server accepted connection from {}",
+                                            clientConnection.getSession().getPeerPrincipal());
 
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(clientConnection.getInputStream()));
-                    PrintWriter writer = new PrintWriter(clientConnection.getOutputStream(), true);
+                                    BufferedReader reader =
+                                            new BufferedReader(
+                                                    new InputStreamReader(
+                                                            clientConnection.getInputStream()));
+                                    PrintWriter writer =
+                                            new PrintWriter(
+                                                    clientConnection.getOutputStream(), true);
 
-                    String received = reader.readLine();
-                    log.info("Server received: {}", received);
+                                    String received = reader.readLine();
+                                    log.info("Server received: {}", received);
 
-                    writer.println(expectedResponse);
-                    clientConnection.close();
+                                    writer.println(expectedResponse);
+                                    clientConnection.close();
 
-                    return received;
-                } catch (Exception e) {
-                    log.error("Server error", e);
-                    throw new RuntimeException(e);
-                }
-            }, executor);
+                                    return received;
+                                } catch (Exception e) {
+                                    log.error("Server error", e);
+                                    throw new RuntimeException(e);
+                                }
+                            },
+                            executor);
 
             // Client task
-            CompletableFuture<String> clientFuture = CompletableFuture.supplyAsync(() -> {
-                try {
-                    Thread.sleep(500); // Give server time to start
+            CompletableFuture<String> clientFuture =
+                    CompletableFuture.supplyAsync(
+                            () -> {
+                                try {
+                                    Thread.sleep(500); // Give server time to start
 
-                    log.info("Client connecting to localhost:{}", port);
-                    SSLSocket socket = (SSLSocket) clientSslContext.getSocketFactory()
-                            .createSocket("localhost", port);
-                    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-                    socket.startHandshake();
-                    log.info("Client connected, server cert: {}",
-                            socket.getSession().getPeerPrincipal());
+                                    log.info("Client connecting to localhost:{}", port);
+                                    SSLSocket socket =
+                                            (SSLSocket)
+                                                    clientSslContext
+                                                            .getSocketFactory()
+                                                            .createSocket("localhost", port);
+                                    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                    socket.startHandshake();
+                                    log.info(
+                                            "Client connected, server cert: {}",
+                                            socket.getSession().getPeerPrincipal());
 
-                    PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(socket.getInputStream()));
+                                    PrintWriter writer =
+                                            new PrintWriter(socket.getOutputStream(), true);
+                                    BufferedReader reader =
+                                            new BufferedReader(
+                                                    new InputStreamReader(socket.getInputStream()));
 
-                    writer.println(testMessage);
-                    String response = reader.readLine();
-                    log.info("Client received: {}", response);
+                                    writer.println(testMessage);
+                                    String response = reader.readLine();
+                                    log.info("Client received: {}", response);
 
-                    socket.close();
-                    return response;
-                } catch (Exception e) {
-                    log.error("Client error", e);
-                    throw new RuntimeException(e);
-                }
-            }, executor);
+                                    socket.close();
+                                    return response;
+                                } catch (Exception e) {
+                                    log.error("Client error", e);
+                                    throw new RuntimeException(e);
+                                }
+                            },
+                            executor);
 
             // Wait for both to complete
             String serverReceived = serverFuture.get(10, TimeUnit.SECONDS);
@@ -314,35 +336,45 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate server certificate
-            CertificateStore serverCert = caService.generatePartnerCertificate(
-                    "MTLS_SERVER_REJECT",
-                    "mtls-server-reject.local",
-                    CertificateStore.CertificatePurpose.SERVER,
-                    365,
-                    "test");
+            CertificateStore serverCert =
+                    caService.generatePartnerCertificate(
+                            "MTLS_SERVER_REJECT",
+                            "mtls-server-reject.local",
+                            CertificateStore.CertificatePurpose.SERVER,
+                            365,
+                            "test");
 
-            CertificateStore caTruststore = certificateService.getCertificateStoreByName("pesit-ca-truststore")
-                    .orElseThrow();
+            CertificateStore caTruststore =
+                    certificateService
+                            .getCertificateStoreByName("pesit-ca-truststore")
+                            .orElseThrow();
 
             // Create server SSL context requiring client auth
-            SSLContext serverSslContext = sslContextFactory.createSslContext(serverCert, caTruststore);
+            SSLContext serverSslContext =
+                    sslContextFactory.createSslContext(serverCert, caTruststore);
 
-            serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(0);
+            serverSocket =
+                    (SSLServerSocket)
+                            serverSslContext.getServerSocketFactory().createServerSocket(0);
             serverSocket.setNeedClientAuth(true);
             serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
             int rejectPort = serverSocket.getLocalPort();
 
             // Start server
-            CompletableFuture<Void> serverFuture = CompletableFuture.runAsync(() -> {
-                try {
-                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
-                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
-                    clientConnection.getInputStream().read(); // This should fail
-                } catch (Exception e) {
-                    log.info("Server correctly rejected connection: {}", e.getMessage());
-                }
-            }, executor);
+            CompletableFuture<Void> serverFuture =
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                    clientConnection.getInputStream().read(); // This should fail
+                                } catch (Exception e) {
+                                    log.info(
+                                            "Server correctly rejected connection: {}",
+                                            e.getMessage());
+                                }
+                            },
+                            executor);
 
             // Client without client certificate (only trusts server)
             SSLContext clientNoAuthContext = SSLContext.getInstance("TLSv1.3");
@@ -350,30 +382,38 @@ public class CaMtlsIntegrationTest {
 
             // Load CA truststore for client
             KeyStore trustStore = KeyStore.getInstance("PKCS12");
-            trustStore.load(new java.io.ByteArrayInputStream(caTruststore.getStoreData()),
+            trustStore.load(
+                    new java.io.ByteArrayInputStream(caTruststore.getStoreData()),
                     PASSWORD.toCharArray());
             tmf.init(trustStore);
 
             clientNoAuthContext.init(null, tmf.getTrustManagers(), null);
 
-            Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
-                .until(() -> {
-                    try (Socket s = new Socket("localhost", rejectPort)) {
-                        return true;
-                    } catch (Exception e) {
-                        return false;
-                    }
-                });
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .pollInterval(100, TimeUnit.MILLISECONDS)
+                    .until(
+                            () -> {
+                                try (Socket s = new Socket("localhost", rejectPort)) {
+                                    return true;
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            });
 
             // Client should fail to connect
-            assertThatThrownBy(() -> {
-                SSLSocket socket = (SSLSocket) clientNoAuthContext.getSocketFactory()
-                        .createSocket("localhost", rejectPort);
-                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-                socket.startHandshake();
-                socket.getInputStream().read();
-            }).isInstanceOf(Exception.class);
+            assertThatThrownBy(
+                            () -> {
+                                SSLSocket socket =
+                                        (SSLSocket)
+                                                clientNoAuthContext
+                                                        .getSocketFactory()
+                                                        .createSocket("localhost", rejectPort);
+                                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                socket.startHandshake();
+                                socket.getInputStream().read();
+                            })
+                    .isInstanceOf(Exception.class);
 
             log.info("Client without certificate correctly rejected");
         }
@@ -385,56 +425,73 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate server certificate
-            CertificateStore serverCert = caService.generatePartnerCertificate(
-                    "MTLS_SERVER_UNTRUST",
-                    "mtls-server-untrust.local",
-                    CertificateStore.CertificatePurpose.SERVER,
-                    365,
-                    "test");
+            CertificateStore serverCert =
+                    caService.generatePartnerCertificate(
+                            "MTLS_SERVER_UNTRUST",
+                            "mtls-server-untrust.local",
+                            CertificateStore.CertificatePurpose.SERVER,
+                            365,
+                            "test");
 
-            CertificateStore caTruststore = certificateService.getCertificateStoreByName("pesit-ca-truststore")
-                    .orElseThrow();
+            CertificateStore caTruststore =
+                    certificateService
+                            .getCertificateStoreByName("pesit-ca-truststore")
+                            .orElseThrow();
 
-            SSLContext serverSslContext = sslContextFactory.createSslContext(serverCert, caTruststore);
+            SSLContext serverSslContext =
+                    sslContextFactory.createSslContext(serverCert, caTruststore);
 
-            serverSocket = (SSLServerSocket) serverSslContext.getServerSocketFactory()
-                    .createServerSocket(0);
+            serverSocket =
+                    (SSLServerSocket)
+                            serverSslContext.getServerSocketFactory().createServerSocket(0);
             serverSocket.setNeedClientAuth(true);
             serverSocket.setSoTimeout(SOCKET_TIMEOUT_MS);
             int untrustPort = serverSocket.getLocalPort();
 
             // Start server
-            CompletableFuture<Void> serverFuture = CompletableFuture.runAsync(() -> {
-                try {
-                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
-                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
-                    clientConnection.getInputStream().read();
-                } catch (Exception e) {
-                    log.info("Server correctly rejected untrusted client: {}", e.getMessage());
-                }
-            }, executor);
+            CompletableFuture<Void> serverFuture =
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    SSLSocket clientConnection = (SSLSocket) serverSocket.accept();
+                                    clientConnection.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                    clientConnection.getInputStream().read();
+                                } catch (Exception e) {
+                                    log.info(
+                                            "Server correctly rejected untrusted client: {}",
+                                            e.getMessage());
+                                }
+                            },
+                            executor);
 
             // Create self-signed (untrusted) client certificate
             SSLContext untrustedClientContext = createSelfSignedSslContext();
 
-            Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
-                .until(() -> {
-                    try (Socket s = new Socket("localhost", untrustPort)) {
-                        return true;
-                    } catch (Exception e) {
-                        return false;
-                    }
-                });
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .pollInterval(100, TimeUnit.MILLISECONDS)
+                    .until(
+                            () -> {
+                                try (Socket s = new Socket("localhost", untrustPort)) {
+                                    return true;
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            });
 
             // Client with untrusted cert should fail
-            assertThatThrownBy(() -> {
-                SSLSocket socket = (SSLSocket) untrustedClientContext.getSocketFactory()
-                        .createSocket("localhost", untrustPort);
-                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-                socket.startHandshake();
-                socket.getInputStream().read();
-            }).isInstanceOf(Exception.class);
+            assertThatThrownBy(
+                            () -> {
+                                SSLSocket socket =
+                                        (SSLSocket)
+                                                untrustedClientContext
+                                                        .getSocketFactory()
+                                                        .createSocket("localhost", untrustPort);
+                                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                                socket.startHandshake();
+                                socket.getInputStream().read();
+                            })
+                    .isInstanceOf(Exception.class);
 
             log.info("Untrusted client certificate correctly rejected");
         }
@@ -451,12 +508,13 @@ public class CaMtlsIntegrationTest {
             caService.initializeCa("test");
 
             // Generate certificate
-            CertificateStore cert = caService.generatePartnerCertificate(
-                    "VERIFY_TEST",
-                    "verify-test.local",
-                    CertificateStore.CertificatePurpose.CLIENT,
-                    365,
-                    "test");
+            CertificateStore cert =
+                    caService.generatePartnerCertificate(
+                            "VERIFY_TEST",
+                            "verify-test.local",
+                            CertificateStore.CertificatePurpose.CLIENT,
+                            365,
+                            "test");
 
             // Get certificate PEM
             // For this test, we'll use the CA's verify method
@@ -464,8 +522,10 @@ public class CaMtlsIntegrationTest {
             assertThat(cert.getSubjectDn()).contains("verify-test.local");
             assertThat(cert.getIssuerDn()).contains("CA");
 
-            log.info("Certificate verification: subject={}, issuer={}",
-                    cert.getSubjectDn(), cert.getIssuerDn());
+            log.info(
+                    "Certificate verification: subject={}, issuer={}",
+                    cert.getSubjectDn(),
+                    cert.getIssuerDn());
         }
 
         @Test
@@ -486,9 +546,7 @@ public class CaMtlsIntegrationTest {
         }
     }
 
-    /**
-     * Creates a self-signed SSL context for testing rejection scenarios.
-     */
+    /** Creates a self-signed SSL context for testing rejection scenarios. */
     private SSLContext createSelfSignedSslContext() throws Exception {
         // Generate self-signed key pair
         java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("RSA");
@@ -496,28 +554,34 @@ public class CaMtlsIntegrationTest {
         java.security.KeyPair keyPair = keyGen.generateKeyPair();
 
         // Create self-signed certificate
-        org.bouncycastle.asn1.x500.X500Name subject = new org.bouncycastle.asn1.x500.X500Name(
-                "CN=Untrusted Client, O=Untrusted, C=XX");
+        org.bouncycastle.asn1.x500.X500Name subject =
+                new org.bouncycastle.asn1.x500.X500Name("CN=Untrusted Client, O=Untrusted, C=XX");
 
         java.math.BigInteger serial = java.math.BigInteger.valueOf(System.currentTimeMillis());
         java.util.Date notBefore = new java.util.Date();
-        java.util.Date notAfter = new java.util.Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000);
+        java.util.Date notAfter =
+                new java.util.Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000);
 
-        org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder certBuilder = new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
-                subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
+        org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder certBuilder =
+                new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
+                        subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
 
-        org.bouncycastle.operator.ContentSigner signer = new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder(
-                "SHA256withRSA")
-                .build(keyPair.getPrivate());
+        org.bouncycastle.operator.ContentSigner signer =
+                new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder("SHA256withRSA")
+                        .build(keyPair.getPrivate());
 
-        java.security.cert.X509Certificate cert = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
-                .getCertificate(certBuilder.build(signer));
+        java.security.cert.X509Certificate cert =
+                new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
+                        .getCertificate(certBuilder.build(signer));
 
         // Create keystore with self-signed cert
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(null, PASSWORD.toCharArray());
-        ks.setKeyEntry("untrusted", keyPair.getPrivate(), PASSWORD.toCharArray(),
-                new java.security.cert.Certificate[] { cert });
+        ks.setKeyEntry(
+                "untrusted",
+                keyPair.getPrivate(),
+                PASSWORD.toCharArray(),
+                new java.security.cert.Certificate[] {cert});
 
         // Create truststore with self-signed cert (trusts itself)
         KeyStore ts = KeyStore.getInstance("PKCS12");
@@ -537,34 +601,36 @@ public class CaMtlsIntegrationTest {
         return sslContext;
     }
 
-    /**
-     * Generates a self-signed certificate PEM for testing.
-     */
+    /** Generates a self-signed certificate PEM for testing. */
     private String generateSelfSignedCertPem() throws Exception {
         java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("RSA");
         keyGen.initialize(2048);
         java.security.KeyPair keyPair = keyGen.generateKeyPair();
 
-        org.bouncycastle.asn1.x500.X500Name subject = new org.bouncycastle.asn1.x500.X500Name(
-                "CN=Self Signed, O=Test, C=XX");
+        org.bouncycastle.asn1.x500.X500Name subject =
+                new org.bouncycastle.asn1.x500.X500Name("CN=Self Signed, O=Test, C=XX");
 
         java.math.BigInteger serial = java.math.BigInteger.valueOf(System.currentTimeMillis());
         java.util.Date notBefore = new java.util.Date();
-        java.util.Date notAfter = new java.util.Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000);
+        java.util.Date notAfter =
+                new java.util.Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000);
 
-        org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder certBuilder = new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
-                subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
+        org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder certBuilder =
+                new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
+                        subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
 
-        org.bouncycastle.operator.ContentSigner signer = new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder(
-                "SHA256withRSA")
-                .build(keyPair.getPrivate());
+        org.bouncycastle.operator.ContentSigner signer =
+                new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder("SHA256withRSA")
+                        .build(keyPair.getPrivate());
 
-        java.security.cert.X509Certificate cert = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
-                .getCertificate(certBuilder.build(signer));
+        java.security.cert.X509Certificate cert =
+                new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
+                        .getCertificate(certBuilder.build(signer));
 
         // Convert to PEM
         java.io.StringWriter sw = new java.io.StringWriter();
-        org.bouncycastle.openssl.jcajce.JcaPEMWriter pemWriter = new org.bouncycastle.openssl.jcajce.JcaPEMWriter(sw);
+        org.bouncycastle.openssl.jcajce.JcaPEMWriter pemWriter =
+                new org.bouncycastle.openssl.jcajce.JcaPEMWriter(sw);
         pemWriter.writeObject(cert);
         pemWriter.close();
 

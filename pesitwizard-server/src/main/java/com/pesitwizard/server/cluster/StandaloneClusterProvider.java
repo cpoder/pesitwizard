@@ -1,24 +1,24 @@
 package com.pesitwizard.server.cluster;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Standalone implementation of ClusterProvider.
- * Used when clustering is disabled (default OSS mode).
- * This node is always the leader and owns all servers.
+ * Standalone implementation of ClusterProvider. Used when clustering is disabled (default OSS
+ * mode). This node is always the leader and owns all servers.
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "pesitwizard.cluster.enabled", havingValue = "false", matchIfMissing = true)
+@ConditionalOnProperty(
+        name = "pesitwizard.cluster.enabled",
+        havingValue = "false",
+        matchIfMissing = true)
 public class StandaloneClusterProvider implements ClusterProvider {
 
     @Value("${pesitwizard.cluster.node-name:standalone}")

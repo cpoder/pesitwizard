@@ -1,51 +1,36 @@
 package com.pesitwizard.server.config;
 
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import lombok.Data;
-
-/**
- * Configuration properties for observability (tracing and metrics).
- */
+/** Configuration properties for observability (tracing and metrics). */
 @Data
 @Component
 @ConfigurationProperties(prefix = "pesit.observability")
 public class ObservabilityProperties {
 
-    /**
-     * Service name for tracing and metrics
-     */
+    /** Service name for tracing and metrics */
     private String serviceName = "pesit-server";
 
-    /**
-     * Tracing configuration
-     */
+    /** Tracing configuration */
     private TracingConfig tracing = new TracingConfig();
 
-    /**
-     * Metrics configuration
-     */
+    /** Metrics configuration */
     private MetricsConfig metrics = new MetricsConfig();
 
     @Data
     public static class TracingConfig {
-        /**
-         * Enable OpenTelemetry tracing export
-         */
+        /** Enable OpenTelemetry tracing export */
         private boolean enabled = false;
 
-        /**
-         * OTLP endpoint URL (e.g., http://otel-collector:4318)
-         */
+        /** OTLP endpoint URL (e.g., http://otel-collector:4318) */
         private String endpoint;
     }
 
     @Data
     public static class MetricsConfig {
-        /**
-         * Enable metrics collection
-         */
+        /** Enable metrics collection */
         private boolean enabled = true;
     }
 }

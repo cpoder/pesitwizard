@@ -8,7 +8,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,15 +15,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for AbstractSocketTransportChannel and TcpTransportChannel.
- */
+/** Unit tests for AbstractSocketTransportChannel and TcpTransportChannel. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Socket Transport Channel Tests")
 class AbstractSocketTransportChannelTest {
 
-    @Mock
-    private Socket mockSocket;
+    @Mock private Socket mockSocket;
 
     private ByteArrayOutputStream outputBuffer;
     private ByteArrayInputStream inputBuffer;
@@ -50,7 +46,7 @@ class AbstractSocketTransportChannelTest {
         void shouldThrowWhenSendingOnClosedChannel() {
             TcpTransportChannel channel = new TcpTransportChannel("localhost", 5000);
 
-            assertThatThrownBy(() -> channel.send(new byte[] { 1, 2, 3 }))
+            assertThatThrownBy(() -> channel.send(new byte[] {1, 2, 3}))
                     .isInstanceOf(IOException.class)
                     .hasMessageContaining("Not connected");
         }
@@ -75,7 +71,7 @@ class AbstractSocketTransportChannelTest {
         void shouldWrite2ByteLengthPrefix() throws IOException {
             // Create a test channel that uses our mock streams
             outputBuffer = new ByteArrayOutputStream();
-            byte[] testData = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
+            byte[] testData = new byte[] {0x01, 0x02, 0x03, 0x04, 0x05};
 
             // Manually write what send() should write
             DataOutputStream dos = new DataOutputStream(outputBuffer);
@@ -99,7 +95,7 @@ class AbstractSocketTransportChannelTest {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
             dos.writeShort(5); // Length = 5
-            dos.write(new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 });
+            dos.write(new byte[] {0x01, 0x02, 0x03, 0x04, 0x05});
             dos.flush();
 
             inputBuffer = new ByteArrayInputStream(baos.toByteArray());
@@ -139,7 +135,7 @@ class AbstractSocketTransportChannelTest {
             DataOutputStream dos = new DataOutputStream(baos);
 
             dos.writeShort(1);
-            dos.write(new byte[] { 0x42 });
+            dos.write(new byte[] {0x42});
             dos.flush();
 
             inputBuffer = new ByteArrayInputStream(baos.toByteArray());

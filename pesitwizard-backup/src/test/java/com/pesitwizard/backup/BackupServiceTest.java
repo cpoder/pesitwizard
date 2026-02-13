@@ -6,28 +6,27 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class BackupServiceTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     private BackupConfig config;
     private BackupService service;
 
     @BeforeEach
     void setUp() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .backupPrefix("test")
-                .retentionDays(30)
-                .maxBackups(5)
-                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb").toString())
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .backupPrefix("test")
+                        .retentionDays(30)
+                        .maxBackups(5)
+                        .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb").toString())
+                        .build();
         service = new BackupService(config);
     }
 
@@ -40,30 +39,33 @@ class BackupServiceTest {
 
     @Test
     void detectDatabaseType_postgresql() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .datasourceUrl("jdbc:postgresql://localhost:5432/mydb")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .datasourceUrl("jdbc:postgresql://localhost:5432/mydb")
+                        .build();
         service = new BackupService(config);
         assertThat(service.detectDatabaseType()).isEqualTo(DatabaseType.POSTGRESQL);
     }
 
     @Test
     void detectDatabaseType_unknown() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .datasourceUrl("jdbc:mysql://localhost/mydb")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .datasourceUrl("jdbc:mysql://localhost/mydb")
+                        .build();
         service = new BackupService(config);
         assertThat(service.detectDatabaseType()).isEqualTo(DatabaseType.UNKNOWN);
     }
 
     @Test
     void detectDatabaseType_nullUrl() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .datasourceUrl(null)
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .datasourceUrl(null)
+                        .build();
         service = new BackupService(config);
         assertThat(service.detectDatabaseType()).isEqualTo(DatabaseType.UNKNOWN);
     }
@@ -99,13 +101,14 @@ class BackupServiceTest {
 
     @Test
     void createBackup_unknownDb_createsMetadata() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .backupPrefix("test")
-                .datasourceUrl("jdbc:mysql://localhost/mydb")
-                .maxBackups(5)
-                .retentionDays(30)
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .backupPrefix("test")
+                        .datasourceUrl("jdbc:mysql://localhost/mydb")
+                        .maxBackups(5)
+                        .retentionDays(30)
+                        .build();
         service = new BackupService(config);
 
         BackupResult result = service.createBackup("Metadata only");
@@ -133,14 +136,17 @@ class BackupServiceTest {
         List<BackupInfo> list = service.listBackups();
 
         assertThat(list).hasSize(2);
-        assertThat(list).extracting(BackupInfo::getType).containsExactlyInAnyOrder("H2", "POSTGRESQL");
+        assertThat(list)
+                .extracting(BackupInfo::getType)
+                .containsExactlyInAnyOrder("H2", "POSTGRESQL");
     }
 
     @Test
     void listBackups_nonexistentDirectory() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.resolve("nonexistent").toString())
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.resolve("nonexistent").toString())
+                        .build();
         service = new BackupService(config);
 
         List<BackupInfo> list = service.listBackups();
@@ -217,11 +223,12 @@ class BackupServiceTest {
 
     @Test
     void cleanupOldBackups_respectsMaxBackups() throws IOException {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .maxBackups(2)
-                .retentionDays(365)
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .maxBackups(2)
+                        .retentionDays(365)
+                        .build();
         service = new BackupService(config);
 
         for (int i = 0; i < 5; i++) {
@@ -241,11 +248,12 @@ class BackupServiceTest {
 
     @Test
     void cleanupOldBackups_nonexistentDirectory() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.resolve("nonexistent").toString())
-                .maxBackups(5)
-                .retentionDays(30)
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.resolve("nonexistent").toString())
+                        .maxBackups(5)
+                        .retentionDays(30)
+                        .build();
         service = new BackupService(config);
 
         int deleted = service.cleanupOldBackups();
@@ -303,14 +311,15 @@ class BackupServiceTest {
         Path dbFile = tempDir.resolve("testdb.mv.db");
         Files.writeString(dbFile, "fake-h2-data");
 
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .backupPrefix("enc")
-                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
-                .maxBackups(5)
-                .retentionDays(30)
-                .encryptionKey("my-secret-key-12345")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .backupPrefix("enc")
+                        .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                        .maxBackups(5)
+                        .retentionDays(30)
+                        .encryptionKey("my-secret-key-12345")
+                        .build();
         BackupService encService = new BackupService(config);
 
         BackupResult result = encService.createBackup("Encrypted backup");
@@ -329,14 +338,15 @@ class BackupServiceTest {
         Path dbFile = tempDir.resolve("testdb.mv.db");
         Files.writeString(dbFile, "original-data");
 
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .backupPrefix("enc")
-                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
-                .maxBackups(5)
-                .retentionDays(30)
-                .encryptionKey("my-secret-key-12345")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .backupPrefix("enc")
+                        .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                        .maxBackups(5)
+                        .retentionDays(30)
+                        .encryptionKey("my-secret-key-12345")
+                        .build();
         BackupService encService = new BackupService(config);
 
         // Create encrypted backup
@@ -360,24 +370,27 @@ class BackupServiceTest {
         Path dbFile = tempDir.resolve("testdb.mv.db");
         Files.writeString(dbFile, "data");
 
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .backupPrefix("enc")
-                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
-                .maxBackups(5)
-                .retentionDays(30)
-                .encryptionKey("my-secret-key-12345")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .backupPrefix("enc")
+                        .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                        .maxBackups(5)
+                        .retentionDays(30)
+                        .encryptionKey("my-secret-key-12345")
+                        .build();
         BackupService encService = new BackupService(config);
         BackupResult backup = encService.createBackup("Test");
 
         // Try restoring without key
-        BackupService noKeyService = new BackupService(BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
-                .maxBackups(5)
-                .retentionDays(30)
-                .build());
+        BackupService noKeyService =
+                new BackupService(
+                        BackupConfig.builder()
+                                .backupDirectory(tempDir.toString())
+                                .datasourceUrl("jdbc:h2:file:" + tempDir.resolve("testdb"))
+                                .maxBackups(5)
+                                .retentionDays(30)
+                                .build());
         String encFilename = Path.of(backup.getBackupPath()).getFileName().toString();
         RestoreResult result = noKeyService.restoreBackup(encFilename);
 
@@ -387,10 +400,11 @@ class BackupServiceTest {
 
     @Test
     void isEncryptionEnabled_withKey() {
-        config = BackupConfig.builder()
-                .backupDirectory(tempDir.toString())
-                .encryptionKey("test-key")
-                .build();
+        config =
+                BackupConfig.builder()
+                        .backupDirectory(tempDir.toString())
+                        .encryptionKey("test-key")
+                        .build();
         BackupService encService = new BackupService(config);
         assertThat(encService.isEncryptionEnabled()).isTrue();
     }
@@ -409,7 +423,8 @@ class BackupServiceTest {
 
         assertThat(list).hasSize(2);
         BackupInfo plain = list.stream().filter(i -> !i.isEncrypted()).findFirst().orElseThrow();
-        BackupInfo encrypted = list.stream().filter(BackupInfo::isEncrypted).findFirst().orElseThrow();
+        BackupInfo encrypted =
+                list.stream().filter(BackupInfo::isEncrypted).findFirst().orElseThrow();
         assertThat(plain.getFilename()).isEqualTo("backup_1.zip");
         assertThat(encrypted.getFilename()).isEqualTo("backup_2.zip.enc");
         assertThat(encrypted.getType()).isEqualTo("H2");

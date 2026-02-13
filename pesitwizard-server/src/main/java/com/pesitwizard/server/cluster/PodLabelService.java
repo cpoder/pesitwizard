@@ -1,9 +1,5 @@
 package com.pesitwizard.server.cluster;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
@@ -11,11 +7,13 @@ import io.fabric8.kubernetes.client.dsl.base.PatchType;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 /**
- * Service that updates pod labels based on leader status.
- * This allows the PeSIT LoadBalancer service to route traffic only to the
- * leader pod.
+ * Service that updates pod labels based on leader status. This allows the PeSIT LoadBalancer
+ * service to route traffic only to the leader pod.
  */
 @Slf4j
 @Service
@@ -30,8 +28,7 @@ public class PodLabelService implements ClusterEventListener {
     @Value("${POD_NAMESPACE:default}")
     private String namespace;
 
-    @Autowired
-    private ClusterProvider clusterProvider;
+    @Autowired private ClusterProvider clusterProvider;
 
     private KubernetesClient kubernetesClient;
     private boolean kubernetesAvailable = false;
@@ -52,7 +49,8 @@ public class PodLabelService implements ClusterEventListener {
             kubernetesClient = new KubernetesClientBuilder().build();
             kubernetesAvailable = true;
             clusterProvider.addListener(this);
-            log.info("Pod label service initialized for pod {} in namespace {}", podName, namespace);
+            log.info(
+                    "Pod label service initialized for pod {} in namespace {}", podName, namespace);
 
             // Clear stale leader label first, then set if we're actually leader
             // This prevents stale labels from previous runs where cluster mode wasn't
@@ -67,7 +65,9 @@ public class PodLabelService implements ClusterEventListener {
                 log.info("Not leader at init time, leader label cleared");
             }
         } catch (RuntimeException e) {
-            log.warn("Could not initialize Kubernetes client: {}. Pod label updates disabled.", e.getMessage());
+            log.warn(
+                    "Could not initialize Kubernetes client: {}. Pod label updates disabled.",
+                    e.getMessage());
         }
     }
 
@@ -98,8 +98,10 @@ public class PodLabelService implements ClusterEventListener {
         try {
             if (isLeader) {
                 // Add or update the leader label
-                String patchJson = "[{\"op\": \"add\", \"path\": \"/metadata/labels/pesitwizard-leader\", \"value\": \"true\"}]";
-                kubernetesClient.pods()
+                String patchJson =
+                        "[{\"op\": \"add\", \"path\": \"/metadata/labels/pesitwizard-leader\", \"value\": \"true\"}]";
+                kubernetesClient
+                        .pods()
                         .inNamespace(namespace)
                         .withName(podName)
                         .patch(PatchContext.of(PatchType.JSON), patchJson);
@@ -107,14 +109,14 @@ public class PodLabelService implements ClusterEventListener {
             } else {
                 // Remove the leader label - use strategic merge patch to avoid error if label
                 // doesn't exist
-                var pod = kubernetesClient.pods()
-                        .inNamespace(namespace)
-                        .withName(podName)
-                        .get();
-                if (pod != null && pod.getMetadata().getLabels() != null
+                var pod = kubernetesClient.pods().inNamespace(namespace).withName(podName).get();
+                if (pod != null
+                        && pod.getMetadata().getLabels() != null
                         && pod.getMetadata().getLabels().containsKey("pesitwizard-leader")) {
-                    String patchJson = "[{\"op\": \"remove\", \"path\": \"/metadata/labels/pesitwizard-leader\"}]";
-                    kubernetesClient.pods()
+                    String patchJson =
+                            "[{\"op\": \"remove\", \"path\": \"/metadata/labels/pesitwizard-leader\"}]";
+                    kubernetesClient
+                            .pods()
                             .inNamespace(namespace)
                             .withName(podName)
                             .patch(PatchContext.of(PatchType.JSON), patchJson);

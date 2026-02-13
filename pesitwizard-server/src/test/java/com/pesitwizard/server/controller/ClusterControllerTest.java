@@ -4,9 +4,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.pesitwizard.server.cluster.ClusterProvider;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,18 +15,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.pesitwizard.server.cluster.ClusterProvider;
-
 @WebMvcTest(ClusterController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("ClusterController Tests")
 class ClusterControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private ClusterProvider clusterProvider;
+    @MockitoBean private ClusterProvider clusterProvider;
 
     @Test
     @DisplayName("should get cluster status")
@@ -63,9 +59,11 @@ class ClusterControllerTest {
     @Test
     @DisplayName("should get server ownership")
     void shouldGetServerOwnership() throws Exception {
-        when(clusterProvider.getAllServerOwnership()).thenReturn(Map.of(
-                "server-1", "node-1",
-                "server-2", "node-2"));
+        when(clusterProvider.getAllServerOwnership())
+                .thenReturn(
+                        Map.of(
+                                "server-1", "node-1",
+                                "server-2", "node-2"));
 
         mockMvc.perform(get("/api/cluster/ownership"))
                 .andExpect(status().isOk())

@@ -7,9 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for ParameterParser.
- */
+/** Unit tests for ParameterParser. */
 @DisplayName("ParameterParser Tests")
 class ParameterParserTest {
 
@@ -32,26 +30,27 @@ class ParameterParserTest {
         @Test
         @DisplayName("should parse single byte")
         void shouldParseSingleByte() {
-            assertThat(ParameterParser.parseNumeric(new byte[] { (byte) 0xFF })).isEqualTo(255);
+            assertThat(ParameterParser.parseNumeric(new byte[] {(byte) 0xFF})).isEqualTo(255);
         }
 
         @Test
         @DisplayName("should parse two bytes big-endian")
         void shouldParseTwoBytesBigEndian() {
-            assertThat(ParameterParser.parseNumeric(new byte[] { 0x01, 0x00 })).isEqualTo(256);
-            assertThat(ParameterParser.parseNumeric(new byte[] { 0x00, 0x64 })).isEqualTo(100);
+            assertThat(ParameterParser.parseNumeric(new byte[] {0x01, 0x00})).isEqualTo(256);
+            assertThat(ParameterParser.parseNumeric(new byte[] {0x00, 0x64})).isEqualTo(100);
         }
 
         @Test
         @DisplayName("should parse three bytes")
         void shouldParseThreeBytes() {
-            assertThat(ParameterParser.parseNumeric(new byte[] { 0x01, 0x00, 0x00 })).isEqualTo(65536);
+            assertThat(ParameterParser.parseNumeric(new byte[] {0x01, 0x00, 0x00}))
+                    .isEqualTo(65536);
         }
 
         @Test
         @DisplayName("should handle unsigned bytes")
         void shouldHandleUnsignedBytes() {
-            assertThat(ParameterParser.parseNumeric(new byte[] { (byte) 0xFF, (byte) 0xFF }))
+            assertThat(ParameterParser.parseNumeric(new byte[] {(byte) 0xFF, (byte) 0xFF}))
                     .isEqualTo(65535);
         }
     }
@@ -70,7 +69,7 @@ class ParameterParserTest {
         @DisplayName("should parse large values")
         void shouldParseLargeValues() {
             // 1GB in bytes
-            byte[] bytes = new byte[] { 0x40, 0x00, 0x00, 0x00 };
+            byte[] bytes = new byte[] {0x40, 0x00, 0x00, 0x00};
             assertThat(ParameterParser.parseNumericLong(bytes)).isEqualTo(1073741824L);
         }
     }
@@ -89,16 +88,20 @@ class ParameterParserTest {
         @Test
         @DisplayName("should parse sync interval from PI_07")
         void shouldParseSyncInterval() {
-            Fpdu fpdu = new Fpdu(FpduType.ACONNECT)
-                    .withParameter(new ParameterValue(PI_07_SYNC_POINTS, new byte[] { 0x00, 0x64 }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACONNECT)
+                            .withParameter(
+                                    new ParameterValue(PI_07_SYNC_POINTS, new byte[] {0x00, 0x64}));
             assertThat(ParameterParser.parsePI07SyncInterval(fpdu)).isEqualTo(100);
         }
 
         @Test
         @DisplayName("should return 0 if value too short")
         void shouldReturn0IfValueTooShort() {
-            Fpdu fpdu = new Fpdu(FpduType.ACONNECT)
-                    .withParameter(new ParameterValue(PI_07_SYNC_POINTS, new byte[] { 0x64 }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACONNECT)
+                            .withParameter(
+                                    new ParameterValue(PI_07_SYNC_POINTS, new byte[] {0x64}));
             assertThat(ParameterParser.parsePI07SyncInterval(fpdu)).isEqualTo(0);
         }
     }
@@ -117,8 +120,11 @@ class ParameterParserTest {
         @Test
         @DisplayName("should parse restart point from PI_18")
         void shouldParseRestartPoint() {
-            Fpdu fpdu = new Fpdu(FpduType.READ)
-                    .withParameter(new ParameterValue(PI_18_POINT_RELANCE, new byte[] { 0x00, 0x05 }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.READ)
+                            .withParameter(
+                                    new ParameterValue(
+                                            PI_18_POINT_RELANCE, new byte[] {0x00, 0x05}));
             assertThat(ParameterParser.parsePI18RestartPoint(fpdu)).isEqualTo(5);
         }
     }
@@ -130,8 +136,10 @@ class ParameterParserTest {
         @Test
         @DisplayName("should parse sync number from PI_20")
         void shouldParseSyncNumber() {
-            Fpdu fpdu = new Fpdu(FpduType.SYN)
-                    .withParameter(new ParameterValue(PI_20_NUM_SYNC, new byte[] { 0x00, 0x0A }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.SYN)
+                            .withParameter(
+                                    new ParameterValue(PI_20_NUM_SYNC, new byte[] {0x00, 0x0A}));
             assertThat(ParameterParser.parsePI20SyncNumber(fpdu)).isEqualTo(10);
         }
     }
@@ -143,8 +151,12 @@ class ParameterParserTest {
         @Test
         @DisplayName("should parse max entity size from PI_25")
         void shouldParseMaxEntitySize() {
-            Fpdu fpdu = new Fpdu(FpduType.ACK_CREATE)
-                    .withParameter(new ParameterValue(PI_25_TAILLE_MAX_ENTITE, new byte[] { (byte) 0xFF, (byte) 0xFF }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACK_CREATE)
+                            .withParameter(
+                                    new ParameterValue(
+                                            PI_25_TAILLE_MAX_ENTITE,
+                                            new byte[] {(byte) 0xFF, (byte) 0xFF}));
             assertThat(ParameterParser.parsePI25MaxEntitySize(fpdu)).isEqualTo(65535);
         }
     }
@@ -163,9 +175,12 @@ class ParameterParserTest {
         @Test
         @DisplayName("should return diagnostic code")
         void shouldReturnDiagnosticCode() {
-            Fpdu fpdu = new Fpdu(FpduType.ACONNECT)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x02, 0x01, 0x00 }));
-            assertThat(ParameterParser.parsePI02DiagnosticCode(fpdu)).containsExactly(0x02, 0x01, 0x00);
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACONNECT)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x02, 0x01, 0x00}));
+            assertThat(ParameterParser.parsePI02DiagnosticCode(fpdu))
+                    .containsExactly(0x02, 0x01, 0x00);
         }
     }
 
@@ -183,16 +198,20 @@ class ParameterParserTest {
         @Test
         @DisplayName("should return false for zero diagnostic code")
         void shouldReturnFalseForZeroDiagCode() {
-            Fpdu fpdu = new Fpdu(FpduType.ACONNECT)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACONNECT)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
             assertThat(ParameterParser.hasError(fpdu)).isFalse();
         }
 
         @Test
         @DisplayName("should return true for non-zero diagnostic code")
         void shouldReturnTrueForNonZeroDiagCode() {
-            Fpdu fpdu = new Fpdu(FpduType.ACONNECT)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x02, 0x01, 0x05 }));
+            Fpdu fpdu =
+                    new Fpdu(FpduType.ACONNECT)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x02, 0x01, 0x05}));
             assertThat(ParameterParser.hasError(fpdu)).isTrue();
         }
     }

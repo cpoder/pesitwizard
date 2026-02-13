@@ -2,14 +2,12 @@ package com.pesitwizard.server.entity;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.server.entity.SecretEntry.SecretScope;
 import com.pesitwizard.server.entity.SecretEntry.SecretType;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("SecretEntry Entity Tests")
 class SecretEntryTest {
@@ -35,47 +33,45 @@ class SecretEntryTest {
     @Test
     @DisplayName("isExpired should return false when not expired")
     void isExpiredShouldReturnFalseWhenNotExpired() {
-        SecretEntry secret = SecretEntry.builder()
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder().expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build();
         assertFalse(secret.isExpired());
     }
 
     @Test
     @DisplayName("isExpired should return true when expired")
     void isExpiredShouldReturnTrueWhenExpired() {
-        SecretEntry secret = SecretEntry.builder()
-                .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder().expiresAt(Instant.now().minus(1, ChronoUnit.DAYS)).build();
         assertTrue(secret.isExpired());
     }
 
     @Test
     @DisplayName("isValid should return true when active and not expired")
     void isValidShouldReturnTrueWhenActiveAndNotExpired() {
-        SecretEntry secret = SecretEntry.builder()
-                .active(true)
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder()
+                        .active(true)
+                        .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
+                        .build();
         assertTrue(secret.isValid());
     }
 
     @Test
     @DisplayName("isValid should return false when inactive")
     void isValidShouldReturnFalseWhenInactive() {
-        SecretEntry secret = SecretEntry.builder()
-                .active(false)
-                .build();
+        SecretEntry secret = SecretEntry.builder().active(false).build();
         assertFalse(secret.isValid());
     }
 
     @Test
     @DisplayName("isValid should return false when expired")
     void isValidShouldReturnFalseWhenExpired() {
-        SecretEntry secret = SecretEntry.builder()
-                .active(true)
-                .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder()
+                        .active(true)
+                        .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
+                        .build();
         assertFalse(secret.isValid());
     }
 
@@ -107,25 +103,26 @@ class SecretEntryTest {
     void shouldStoreAllAttributes() {
         Instant now = Instant.now();
 
-        SecretEntry secret = SecretEntry.builder()
-                .id(1L)
-                .name("db-password")
-                .description("Database password")
-                .secretType(SecretType.PASSWORD)
-                .encryptedValue("encrypted_data")
-                .iv("initialization_vector")
-                .scope(SecretScope.SERVER)
-                .partnerId("PARTNER1")
-                .serverId("SERVER1")
-                .version(2L)
-                .active(true)
-                .expiresAt(now.plus(90, ChronoUnit.DAYS))
-                .lastRotatedAt(now)
-                .createdAt(now)
-                .updatedAt(now)
-                .createdBy("admin")
-                .updatedBy("admin")
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder()
+                        .id(1L)
+                        .name("db-password")
+                        .description("Database password")
+                        .secretType(SecretType.PASSWORD)
+                        .encryptedValue("encrypted_data")
+                        .iv("initialization_vector")
+                        .scope(SecretScope.SERVER)
+                        .partnerId("PARTNER1")
+                        .serverId("SERVER1")
+                        .version(2L)
+                        .active(true)
+                        .expiresAt(now.plus(90, ChronoUnit.DAYS))
+                        .lastRotatedAt(now)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .createdBy("admin")
+                        .updatedBy("admin")
+                        .build();
 
         assertEquals(1L, secret.getId());
         assertEquals("db-password", secret.getName());

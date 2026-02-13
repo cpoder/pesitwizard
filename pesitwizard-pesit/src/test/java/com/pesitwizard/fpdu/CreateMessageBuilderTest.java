@@ -5,13 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.Date;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for CreateMessageBuilder
- * Validates that CREATE FPDU messages are built correctly with all parameters
+ * Unit tests for CreateMessageBuilder Validates that CREATE FPDU messages are built correctly with
+ * all parameters
  */
 public class CreateMessageBuilderTest {
 
@@ -34,9 +33,14 @@ public class CreateMessageBuilderTest {
         assertEquals(FpduType.CREATE, fpduObj.getFpduType());
         assertNotNull(fpduObj.getParameters(), "FPDU should have parameters");
         assertTrue(fpduObj.getParameters().size() > 0, "FPDU should have at least one parameter");
-        assertEquals(SERVER_CONNECTION_ID, fpduObj.getIdDst(), "idDst should match server connection ID");
+        assertEquals(
+                SERVER_CONNECTION_ID,
+                fpduObj.getIdDst(),
+                "idDst should match server connection ID");
         assertEquals(0, fpduObj.getIdSrc(), "idSrc should be 0 for file-level FPDUs");
-        assertTrue(fpduObj.getParameter(PGI_09_ID_FICHIER).hasParameter(ParameterIdentifier.PI_11_TYPE_FICHIER));
+        assertTrue(
+                fpduObj.getParameter(PGI_09_ID_FICHIER)
+                        .hasParameter(ParameterIdentifier.PI_11_TYPE_FICHIER));
 
         // Verify length field
         int fpduLength = ((fpduBytes[0] & 0xFF) << 8) | (fpduBytes[1] & 0xFF);
@@ -47,8 +51,7 @@ public class CreateMessageBuilderTest {
     @DisplayName("Build CREATE FPDU with custom filename")
     void testBuildWithCustomFilename() throws IOException {
         String customFilename = "TEST_FILE.TXT";
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .filename(customFilename);
+        CreateMessageBuilder builder = new CreateMessageBuilder().filename(customFilename);
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -57,8 +60,7 @@ public class CreateMessageBuilderTest {
         // Verify FPDU contains the filename
         String fpduHex = bytesToHex(fpduBytes);
         String filenameHex = bytesToHex(customFilename.getBytes());
-        assertTrue(fpduHex.contains(filenameHex),
-                "FPDU should contain the custom filename");
+        assertTrue(fpduHex.contains(filenameHex), "FPDU should contain the custom filename");
     }
 
     @Test
@@ -71,13 +73,14 @@ public class CreateMessageBuilderTest {
         int recordLength = 2048;
         Date creationDate = new Date();
 
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .filename(filename)
-                .transferId(transferId)
-                .priority(priority)
-                .maxEntitySize(maxEntitySize)
-                .recordLength(recordLength)
-                .creationDate(creationDate);
+        CreateMessageBuilder builder =
+                new CreateMessageBuilder()
+                        .filename(filename)
+                        .transferId(transferId)
+                        .priority(priority)
+                        .maxEntitySize(maxEntitySize)
+                        .recordLength(recordLength)
+                        .creationDate(creationDate);
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -89,7 +92,10 @@ public class CreateMessageBuilderTest {
         FpduParser parser = new FpduParser(fpduBytes);
         Fpdu fpduObj = parser.parse();
         assertEquals(FpduType.CREATE, fpduObj.getFpduType(), "FPDU type should be CREATE");
-        assertEquals(SERVER_CONNECTION_ID, fpduObj.getIdDst(), "idDst should match server connection ID");
+        assertEquals(
+                SERVER_CONNECTION_ID,
+                fpduObj.getIdDst(),
+                "idDst should match server connection ID");
         assertEquals(0, fpduObj.getIdSrc(), "idSrc should be 0 for file-level FPDUs");
     }
 
@@ -137,8 +143,7 @@ public class CreateMessageBuilderTest {
     @Test
     @DisplayName("Verify CREATE FPDU with variable format")
     void testWithVariableFormat() throws IOException {
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .variableFormat();
+        CreateMessageBuilder builder = new CreateMessageBuilder().variableFormat();
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -151,8 +156,7 @@ public class CreateMessageBuilderTest {
     @Test
     @DisplayName("Verify CREATE FPDU with fixed format")
     void testWithFixedFormat() throws IOException {
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .fixedFormat();
+        CreateMessageBuilder builder = new CreateMessageBuilder().fixedFormat();
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -185,8 +189,7 @@ public class CreateMessageBuilderTest {
         // Create a specific date
         Date testDate = new Date(1234567890000L); // Fri Feb 13 23:31:30 UTC 2009
 
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .creationDate(testDate);
+        CreateMessageBuilder builder = new CreateMessageBuilder().creationDate(testDate);
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -199,8 +202,7 @@ public class CreateMessageBuilderTest {
     @DisplayName("Verify transfer ID parameter encoding")
     void testTransferIdEncoding() throws IOException {
         int transferId = 0x1234; // 4660 decimal
-        CreateMessageBuilder builder = new CreateMessageBuilder()
-                .transferId(transferId);
+        CreateMessageBuilder builder = new CreateMessageBuilder().transferId(transferId);
 
         Fpdu fpdu = builder.build(SERVER_CONNECTION_ID);
         byte[] fpduBytes = FpduBuilder.buildFpdu(fpdu);
@@ -214,13 +216,11 @@ public class CreateMessageBuilderTest {
     @Test
     @DisplayName("Build multiple CREATE FPDUs with different parameters")
     void testMultipleBuildCalls() throws IOException {
-        CreateMessageBuilder builder1 = new CreateMessageBuilder()
-                .filename("FILE1.TXT")
-                .transferId(1);
+        CreateMessageBuilder builder1 =
+                new CreateMessageBuilder().filename("FILE1.TXT").transferId(1);
 
-        CreateMessageBuilder builder2 = new CreateMessageBuilder()
-                .filename("FILE2.DAT")
-                .transferId(2);
+        CreateMessageBuilder builder2 =
+                new CreateMessageBuilder().filename("FILE2.DAT").transferId(2);
 
         Fpdu fpdu1 = builder1.build(SERVER_CONNECTION_ID);
         Fpdu fpdu2 = builder2.build(SERVER_CONNECTION_ID);
@@ -245,9 +245,7 @@ public class CreateMessageBuilderTest {
         assertTrue(different, "Different parameters should produce different FPDUs");
     }
 
-    /**
-     * Helper method to convert byte array to hex string for verification
-     */
+    /** Helper method to convert byte array to hex string for verification */
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {

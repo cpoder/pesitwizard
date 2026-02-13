@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,47 +31,43 @@ class ApiKeyTest {
     @Test
     @DisplayName("isExpired should return false when not expired")
     void isExpiredShouldReturnFalseWhenNotExpired() {
-        ApiKey key = ApiKey.builder()
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .build();
+        ApiKey key = ApiKey.builder().expiresAt(Instant.now().plus(1, ChronoUnit.DAYS)).build();
         assertFalse(key.isExpired());
     }
 
     @Test
     @DisplayName("isExpired should return true when expired")
     void isExpiredShouldReturnTrueWhenExpired() {
-        ApiKey key = ApiKey.builder()
-                .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
-                .build();
+        ApiKey key = ApiKey.builder().expiresAt(Instant.now().minus(1, ChronoUnit.DAYS)).build();
         assertTrue(key.isExpired());
     }
 
     @Test
     @DisplayName("isValid should return true when active and not expired")
     void isValidShouldReturnTrueWhenActiveAndNotExpired() {
-        ApiKey key = ApiKey.builder()
-                .active(true)
-                .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
-                .build();
+        ApiKey key =
+                ApiKey.builder()
+                        .active(true)
+                        .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
+                        .build();
         assertTrue(key.isValid());
     }
 
     @Test
     @DisplayName("isValid should return false when inactive")
     void isValidShouldReturnFalseWhenInactive() {
-        ApiKey key = ApiKey.builder()
-                .active(false)
-                .build();
+        ApiKey key = ApiKey.builder().active(false).build();
         assertFalse(key.isValid());
     }
 
     @Test
     @DisplayName("isValid should return false when expired")
     void isValidShouldReturnFalseWhenExpired() {
-        ApiKey key = ApiKey.builder()
-                .active(true)
-                .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
-                .build();
+        ApiKey key =
+                ApiKey.builder()
+                        .active(true)
+                        .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
+                        .build();
         assertFalse(key.isValid());
     }
 
@@ -93,9 +88,7 @@ class ApiKeyTest {
     @Test
     @DisplayName("isIpAllowed should return true for exact match")
     void isIpAllowedShouldReturnTrueForExactMatch() {
-        ApiKey key = ApiKey.builder()
-                .allowedIps("192.168.1.1,10.0.0.1")
-                .build();
+        ApiKey key = ApiKey.builder().allowedIps("192.168.1.1,10.0.0.1").build();
         assertTrue(key.isIpAllowed("192.168.1.1"));
         assertTrue(key.isIpAllowed("10.0.0.1"));
     }
@@ -103,27 +96,21 @@ class ApiKeyTest {
     @Test
     @DisplayName("isIpAllowed should return false for non-matching IP")
     void isIpAllowedShouldReturnFalseForNonMatchingIp() {
-        ApiKey key = ApiKey.builder()
-                .allowedIps("192.168.1.1")
-                .build();
+        ApiKey key = ApiKey.builder().allowedIps("192.168.1.1").build();
         assertFalse(key.isIpAllowed("192.168.1.2"));
     }
 
     @Test
     @DisplayName("isIpAllowed should return true for wildcard")
     void isIpAllowedShouldReturnTrueForWildcard() {
-        ApiKey key = ApiKey.builder()
-                .allowedIps("*")
-                .build();
+        ApiKey key = ApiKey.builder().allowedIps("*").build();
         assertTrue(key.isIpAllowed("192.168.1.1"));
     }
 
     @Test
     @DisplayName("isIpAllowed should support CIDR notation")
     void isIpAllowedShouldSupportCidrNotation() {
-        ApiKey key = ApiKey.builder()
-                .allowedIps("192.168.1.0/24")
-                .build();
+        ApiKey key = ApiKey.builder().allowedIps("192.168.1.0/24").build();
         assertTrue(key.isIpAllowed("192.168.1.100"));
         assertTrue(key.isIpAllowed("192.168.1.1"));
         assertFalse(key.isIpAllowed("192.168.2.1"));
@@ -132,9 +119,7 @@ class ApiKeyTest {
     @Test
     @DisplayName("isIpAllowed should handle invalid CIDR gracefully")
     void isIpAllowedShouldHandleInvalidCidrGracefully() {
-        ApiKey key = ApiKey.builder()
-                .allowedIps("invalid/cidr")
-                .build();
+        ApiKey key = ApiKey.builder().allowedIps("invalid/cidr").build();
         assertFalse(key.isIpAllowed("192.168.1.1"));
     }
 
@@ -144,23 +129,24 @@ class ApiKeyTest {
         Instant now = Instant.now();
         List<String> roles = List.of("ROLE_API", "ROLE_USER");
 
-        ApiKey key = ApiKey.builder()
-                .id(1L)
-                .name("test-key")
-                .description("Test API key")
-                .keyHash("abc123hash")
-                .keyPrefix("pk_test_")
-                .roles(roles)
-                .active(true)
-                .expiresAt(now.plus(30, ChronoUnit.DAYS))
-                .lastUsedAt(now)
-                .allowedIps("192.168.1.0/24")
-                .rateLimit(100)
-                .partnerId("PARTNER1")
-                .createdAt(now)
-                .updatedAt(now)
-                .createdBy("admin")
-                .build();
+        ApiKey key =
+                ApiKey.builder()
+                        .id(1L)
+                        .name("test-key")
+                        .description("Test API key")
+                        .keyHash("abc123hash")
+                        .keyPrefix("pk_test_")
+                        .roles(roles)
+                        .active(true)
+                        .expiresAt(now.plus(30, ChronoUnit.DAYS))
+                        .lastUsedAt(now)
+                        .allowedIps("192.168.1.0/24")
+                        .rateLimit(100)
+                        .partnerId("PARTNER1")
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .createdBy("admin")
+                        .build();
 
         assertEquals(1L, key.getId());
         assertEquals("test-key", key.getName());

@@ -1,15 +1,5 @@
 package com.pesitwizard.server.service;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.server.cluster.ClusterEvent;
 import com.pesitwizard.server.cluster.ClusterEventListener;
 import com.pesitwizard.server.cluster.ClusterProvider;
@@ -21,19 +11,25 @@ import com.pesitwizard.server.handler.PesitSessionHandler;
 import com.pesitwizard.server.repository.PesitServerConfigRepository;
 import com.pesitwizard.server.ssl.SslContextFactory;
 import com.pesitwizard.server.util.PesitIdValidator;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service for managing multiple PeSIT server instances.
- * Handles creation, starting, stopping, and configuration of server instances.
- * 
- * Listens for cluster events to handle leader election:
- * - When this node becomes leader, auto-start servers
- * - When this node loses leadership, stop servers (another node will take over)
+ * Service for managing multiple PeSIT server instances. Handles creation, starting, stopping, and
+ * configuration of server instances.
+ *
+ * <p>Listens for cluster events to handle leader election: - When this node becomes leader,
+ * auto-start servers - When this node loses leadership, stop servers (another node will take over)
  */
 @Slf4j
 @Service
@@ -99,7 +95,11 @@ public class PesitServerManager implements ClusterEventListener {
                 startServer(config.getServerId());
                 log.info("Auto-started server: {}", config.getServerId());
             } catch (RuntimeException e) {
-                log.error("Failed to auto-start server {}: {}", config.getServerId(), e.getMessage(), e);
+                log.error(
+                        "Failed to auto-start server {}: {}",
+                        config.getServerId(),
+                        e.getMessage(),
+                        e);
             }
         }
     }
@@ -143,9 +143,7 @@ public class PesitServerManager implements ClusterEventListener {
         }
     }
 
-    /**
-     * Create a new server configuration
-     */
+    /** Create a new server configuration */
     @Transactional
     public PesitServerConfig createServer(PesitServerConfig config) {
         // Validate server ID (max 8 chars, uppercase alphanumeric only)
@@ -164,13 +162,18 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     /**
-     * Update an existing server configuration.
-     * Uses a per-server lock to prevent races with concurrent start/stop operations.
+     * Update an existing server configuration. Uses a per-server lock to prevent races with
+     * concurrent start/stop operations.
      */
     @Transactional
     public PesitServerConfig updateServer(String serverId, PesitServerConfig updates) {
-        PesitServerConfig existing = configRepository.findByServerId(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        PesitServerConfig existing =
+                configRepository
+                        .findByServerId(serverId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Server not found: " + serverId));
 
         ReentrantLock lock = lockForServer(serverId);
         lock.lock();
@@ -207,13 +210,18 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     /**
-     * Delete a server configuration.
-     * Uses a per-server lock to prevent races with concurrent start/stop operations.
+     * Delete a server configuration. Uses a per-server lock to prevent races with concurrent
+     * start/stop operations.
      */
     @Transactional
     public void deleteServer(String serverId) {
-        PesitServerConfig config = configRepository.findByServerId(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        PesitServerConfig config =
+                configRepository
+                        .findByServerId(serverId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Server not found: " + serverId));
 
         ReentrantLock lock = lockForServer(serverId);
         lock.lock();
@@ -228,7 +236,11 @@ public class PesitServerManager implements ClusterEventListener {
                     runningServers.remove(serverId);
                     clusterProvider.releaseServerOwnership(serverId);
                 } catch (RuntimeException e) {
-                    log.error("Error stopping server {} during delete: {}", serverId, e.getMessage(), e);
+                    log.error(
+                            "Error stopping server {} during delete: {}",
+                            serverId,
+                            e.getMessage(),
+                            e);
                 }
             }
 
@@ -241,14 +253,18 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     /**
-     * Start a server instance.
-     * Uses a per-server lock to prevent TOCTOU races where concurrent REST API calls
-     * could both pass the "is running" check and compete for the same port.
+     * Start a server instance. Uses a per-server lock to prevent TOCTOU races where concurrent REST
+     * API calls could both pass the "is running" check and compete for the same port.
      */
     @Transactional
     public void startServer(String serverId) {
-        PesitServerConfig config = configRepository.findByServerId(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        PesitServerConfig config =
+                configRepository
+                        .findByServerId(serverId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Server not found: " + serverId));
 
         ReentrantLock lock = lockForServer(serverId);
         lock.lock();
@@ -276,8 +292,13 @@ public class PesitServerManager implements ClusterEventListener {
 
                 // Use injected session handler (Spring-managed with all dependencies)
                 // Create and start server instance with SSL/mTLS support
-                PesitServerInstance instance = new PesitServerInstance(
-                        config, properties, sessionHandler, sslProperties, sslContextFactory);
+                PesitServerInstance instance =
+                        new PesitServerInstance(
+                                config,
+                                properties,
+                                sessionHandler,
+                                sslProperties,
+                                sslContextFactory);
                 instance.start();
 
                 runningServers.put(serverId, instance);
@@ -299,14 +320,18 @@ public class PesitServerManager implements ClusterEventListener {
     }
 
     /**
-     * Stop a server instance.
-     * Uses a per-server lock to prevent TOCTOU races where concurrent REST API calls
-     * could both retrieve the instance and attempt to stop it simultaneously.
+     * Stop a server instance. Uses a per-server lock to prevent TOCTOU races where concurrent REST
+     * API calls could both retrieve the instance and attempt to stop it simultaneously.
      */
     @Transactional
     public void stopServer(String serverId) {
-        PesitServerConfig config = configRepository.findByServerId(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        PesitServerConfig config =
+                configRepository
+                        .findByServerId(serverId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Server not found: " + serverId));
 
         ReentrantLock lock = lockForServer(serverId);
         lock.lock();
@@ -342,61 +367,46 @@ public class PesitServerManager implements ClusterEventListener {
         }
     }
 
-    /**
-     * Get server configuration by ID
-     */
+    /** Get server configuration by ID */
     public Optional<PesitServerConfig> getServer(String serverId) {
         return configRepository.findByServerId(serverId);
     }
 
-    /**
-     * Get all server configurations
-     */
+    /** Get all server configurations */
     public List<PesitServerConfig> getAllServers() {
         return configRepository.findAll();
     }
 
-    /**
-     * Get server status
-     */
+    /** Get server status */
     public ServerStatus getServerStatus(String serverId) {
         PesitServerInstance instance = runningServers.get(serverId);
         if (instance != null && instance.isRunning()) {
             return ServerStatus.RUNNING;
         }
-        return configRepository.findByServerId(serverId)
+        return configRepository
+                .findByServerId(serverId)
                 .map(PesitServerConfig::getStatus)
                 .orElse(null);
     }
 
-    /**
-     * Get active connections for a server
-     */
+    /** Get active connections for a server */
     public int getActiveConnections(String serverId) {
         PesitServerInstance instance = runningServers.get(serverId);
         return instance != null ? instance.getActiveConnections() : 0;
     }
 
-    /**
-     * Check if a server is running
-     */
+    /** Check if a server is running */
     public boolean isServerRunning(String serverId) {
         PesitServerInstance instance = runningServers.get(serverId);
         return instance != null && instance.isRunning();
     }
 
-    /**
-     * Get all running server instances
-     */
+    /** Get all running server instances */
     public List<PesitServerInstance> getRunningServers() {
-        return runningServers.values().stream()
-                .filter(PesitServerInstance::isRunning)
-                .toList();
+        return runningServers.values().stream().filter(PesitServerInstance::isRunning).toList();
     }
 
-    /**
-     * Get total active connections across all servers
-     */
+    /** Get total active connections across all servers */
     public int getActiveConnectionCount() {
         return runningServers.values().stream()
                 .filter(PesitServerInstance::isRunning)
@@ -404,24 +414,23 @@ public class PesitServerManager implements ClusterEventListener {
                 .sum();
     }
 
-    /**
-     * Get or create a per-server lock to serialize start/stop/update/delete operations.
-     */
+    /** Get or create a per-server lock to serialize start/stop/update/delete operations. */
     private ReentrantLock lockForServer(String serverId) {
         return serverLocks.computeIfAbsent(serverId, k -> new ReentrantLock());
     }
 
     /**
-     * Validate server directories before starting.
-     * Checks that receive and send directories are accessible.
+     * Validate server directories before starting. Checks that receive and send directories are
+     * accessible.
      */
     private void validateServerDirectories(PesitServerConfig config) {
         String serverDesc = "Server '" + config.getServerId() + "'";
 
         // Validate receive directory
         if (config.getReceiveDirectory() != null && !config.getReceiveDirectory().isBlank()) {
-            var result = fileSystemService.validateReceiveDirectory(
-                    config.getReceiveDirectory(), serverDesc);
+            var result =
+                    fileSystemService.validateReceiveDirectory(
+                            config.getReceiveDirectory(), serverDesc);
             if (!result.success()) {
                 throw new IllegalStateException(result.errorMessage());
             }
@@ -429,10 +438,13 @@ public class PesitServerManager implements ClusterEventListener {
 
         // Validate send directory (only if configured)
         if (config.getSendDirectory() != null && !config.getSendDirectory().isBlank()) {
-            var result = fileSystemService.validateSendDirectory(
-                    config.getSendDirectory(), serverDesc);
+            var result =
+                    fileSystemService.validateSendDirectory(config.getSendDirectory(), serverDesc);
             if (!result.success()) {
-                log.warn("{}: send directory validation failed: {}", serverDesc, result.errorMessage());
+                log.warn(
+                        "{}: send directory validation failed: {}",
+                        serverDesc,
+                        result.errorMessage());
                 // Don't fail startup for send directory - it may not be needed
             }
         }
@@ -440,9 +452,7 @@ public class PesitServerManager implements ClusterEventListener {
         log.info("{}: directory validation completed", serverDesc);
     }
 
-    /**
-     * Create PesitServerProperties from database config
-     */
+    /** Create PesitServerProperties from database config */
     private PesitServerProperties createPropertiesFromConfig(PesitServerConfig config) {
         PesitServerProperties props = new PesitServerProperties();
         props.setServerId(config.getServerId());
@@ -456,8 +466,11 @@ public class PesitServerManager implements ClusterEventListener {
         props.setMaxEntitySize(config.getMaxEntitySize());
         props.setSyncPointsEnabled(config.isSyncPointsEnabled());
         props.setSyncIntervalKb(config.getSyncIntervalKb());
-        log.debug("Created properties from config: serverId={}, syncPointsEnabled={}, syncIntervalKb={}",
-                config.getServerId(), config.isSyncPointsEnabled(), config.getSyncIntervalKb());
+        log.debug(
+                "Created properties from config: serverId={}, syncPointsEnabled={}, syncIntervalKb={}",
+                config.getServerId(),
+                config.isSyncPointsEnabled(),
+                config.getSyncIntervalKb());
         props.setResyncEnabled(config.isResyncEnabled());
         // Copy session recording settings from global properties
         props.setSessionRecordingEnabled(globalProperties.isSessionRecordingEnabled());

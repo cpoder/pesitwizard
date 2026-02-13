@@ -1,28 +1,22 @@
 package com.pesitwizard.server.security;
 
+import com.pesitwizard.server.entity.ApiKey;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.pesitwizard.server.entity.ApiKey;
-
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * Filter for API key authentication.
- * Checks for API key in header or query parameter.
- */
+/** Filter for API key authentication. Checks for API key in header or query parameter. */
 @Slf4j
 @RequiredArgsConstructor
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
@@ -31,12 +25,15 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     private final SecurityProperties securityProperties;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
         // Skip if already authenticated
-        if (SecurityContextHolder.getContext().getAuthentication() != null &&
-                SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
+        if (SecurityContextHolder.getContext().getAuthentication() != null
+                && SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -63,15 +60,19 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             ApiKey key = validKey.get();
 
             // Create authentication token
-            List<SimpleGrantedAuthority> authorities = key.getRoles().stream()
-                    .map(role -> new SimpleGrantedAuthority(
-                            securityProperties.getRoleMapping().getRolePrefix() + role))
-                    .toList();
+            List<SimpleGrantedAuthority> authorities =
+                    key.getRoles().stream()
+                            .map(
+                                    role ->
+                                            new SimpleGrantedAuthority(
+                                                    securityProperties
+                                                                    .getRoleMapping()
+                                                                    .getRolePrefix()
+                                                            + role))
+                            .toList();
 
-            ApiKeyAuthenticationToken authentication = new ApiKeyAuthenticationToken(
-                    key.getName(),
-                    key,
-                    authorities);
+            ApiKeyAuthenticationToken authentication =
+                    new ApiKeyAuthenticationToken(key.getName(), key, authorities);
             authentication.setDetails(new ApiKeyAuthenticationDetails(request, key));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -83,9 +84,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Extract API key from request (header or query param)
-     */
+    /** Extract API key from request (header or query param) */
     private String extractApiKey(HttpServletRequest request) {
         // Try header first
         String headerName = securityProperties.getApiKey().getHeaderName();
@@ -110,9 +109,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    /**
-     * Get client IP address (considering proxies)
-     */
+    /** Get client IP address (considering proxies) */
     private String getClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
@@ -125,14 +122,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
-    /**
-     * Custom authentication token for API keys
-     */
+    /** Custom authentication token for API keys */
     public static class ApiKeyAuthenticationToken extends UsernamePasswordAuthenticationToken {
-        private final ApiKey apiKey;
+        private static final long serialVersionUID = 1L;
+        private final transient ApiKey apiKey;
 
-        public ApiKeyAuthenticationToken(String principal, ApiKey apiKey,
-                List<SimpleGrantedAuthority> authorities) {
+        public ApiKeyAuthenticationToken(
+                String principal, ApiKey apiKey, List<SimpleGrantedAuthority> authorities) {
             super(principal, null, authorities);
             this.apiKey = apiKey;
         }
@@ -142,9 +138,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * Authentication details for API key
-     */
+    /** Authentication details for API key */
     @lombok.Data
     public static class ApiKeyAuthenticationDetails {
         private final String remoteAddress;
@@ -154,7 +148,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
         public ApiKeyAuthenticationDetails(HttpServletRequest request, ApiKey apiKey) {
             this.remoteAddress = request.getRemoteAddr();
-            this.sessionId = request.getSession(false) != null ? request.getSession().getId() : null;
+            this.sessionId =
+                    request.getSession(false) != null ? request.getSession().getId() : null;
             this.apiKeyName = apiKey.getName();
             this.partnerId = apiKey.getPartnerId();
         }

@@ -2,15 +2,13 @@ package com.pesitwizard.common.crypto;
 
 import java.io.StringReader;
 import java.security.KeyPair;
-
+import lombok.experimental.UtilityClass;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
-
-import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class CsrUtils {
@@ -20,11 +18,11 @@ public class CsrUtils {
     public static String generateCsr(KeyPair keyPair, String subjectDn) throws CryptoException {
         try {
             X500Name subject = new X500Name(subjectDn);
-            JcaPKCS10CertificationRequestBuilder csrBuilder = 
-                new JcaPKCS10CertificationRequestBuilder(subject, keyPair.getPublic());
+            JcaPKCS10CertificationRequestBuilder csrBuilder =
+                    new JcaPKCS10CertificationRequestBuilder(subject, keyPair.getPublic());
 
-            ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
-                .build(keyPair.getPrivate());
+            ContentSigner signer =
+                    new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).build(keyPair.getPrivate());
 
             PKCS10CertificationRequest csr = csrBuilder.build(signer);
             return PemUtils.toPem(csr);

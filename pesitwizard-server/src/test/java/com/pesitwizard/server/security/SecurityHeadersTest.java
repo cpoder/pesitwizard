@@ -14,16 +14,15 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Tests for OWASP-recommended HTTP security headers.
- * Verifies that all required security headers are present in responses.
+ * Tests for OWASP-recommended HTTP security headers. Verifies that all required security headers
+ * are present in responses.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityHeadersTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
     @Test
     @DisplayName("X-Frame-Options header should be DENY to prevent clickjacking")
@@ -59,8 +58,11 @@ class SecurityHeadersTest {
         mockMvc.perform(get("/api/v1/apikeys"))
                 .andExpect(status().isOk())
                 .andExpect(header().exists("Content-Security-Policy"))
-                .andExpect(header().string("Content-Security-Policy",
-                        org.hamcrest.Matchers.containsString("default-src 'self'")));
+                .andExpect(
+                        header().string(
+                                        "Content-Security-Policy",
+                                        org.hamcrest.Matchers.containsString(
+                                                "default-src 'self'")));
     }
 
     @Test
@@ -84,8 +86,10 @@ class SecurityHeadersTest {
         mockMvc.perform(get("/api/v1/apikeys"))
                 .andExpect(status().isOk())
                 .andExpect(header().exists("Cache-Control"))
-                .andExpect(header().string("Cache-Control",
-                        org.hamcrest.Matchers.containsString("no-cache")));
+                .andExpect(
+                        header().string(
+                                        "Cache-Control",
+                                        org.hamcrest.Matchers.containsString("no-cache")));
     }
 
     @Test
@@ -101,8 +105,7 @@ class SecurityHeadersTest {
     @Test
     @DisplayName("Protected endpoint should return 401 without authentication")
     void protectedEndpointShouldRequireAuth() throws Exception {
-        mockMvc.perform(get("/api/v1/apikeys"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/apikeys")).andExpect(status().isUnauthorized());
     }
 
     @Test

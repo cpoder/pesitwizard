@@ -1,21 +1,19 @@
 package com.pesitwizard.integration;
 
-import java.io.IOException;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TransportChannel;
+import java.io.IOException;
 
-/**
- * PesitSession wrapper that records all FPDU exchanges.
- */
+/** PesitSession wrapper that records all FPDU exchanges. */
 public class RecordingPesitSession extends PesitSession {
 
     private final PesitSessionRecorder recorder;
 
-    public RecordingPesitSession(TransportChannel channel, PesitSessionRecorder recorder) throws IOException {
+    public RecordingPesitSession(TransportChannel channel, PesitSessionRecorder recorder)
+            throws IOException {
         super(channel);
         this.recorder = recorder;
     }

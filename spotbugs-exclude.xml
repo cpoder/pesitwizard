@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Lombok-generated code (getters/setters returning mutable fields) -->
+    <Match>
+        <Source name="~.*\.lombok"/>
+    </Match>
+
+    <!-- EI_EXPOSE_REP: Returning references to mutable objects - extremely noisy with
+         Lombok @Data/@Getter on DTOs and Spring config classes -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- MS_EXPOSE_REP: Similar for static mutable fields -->
+    <Match>
+        <Bug pattern="MS_EXPOSE_REP"/>
+    </Match>
+
+    <!-- CT_CONSTRUCTOR_THROW: Flags any constructor that can throw. Extremely noisy for
+         value objects and protocol classes that validate parameters in constructors. -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
+    <!-- VA_FORMAT_STRING_USES_NEWLINE: Prefers %n over \n in format strings.
+         We use \n intentionally for consistent output across platforms in toString(). -->
+    <Match>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+    </Match>
+</FindBugsFilter>

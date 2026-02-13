@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -109,23 +108,22 @@ class StandaloneClusterProviderTest {
     @Test
     @DisplayName("should accept listener without error")
     void shouldAcceptListener() {
-        ClusterEventListener listener = event -> {
-        };
+        ClusterEventListener listener = event -> {};
         assertDoesNotThrow(() -> provider.addListener(listener));
     }
 
     @Test
     @DisplayName("should accept remove listener without error")
     void shouldAcceptRemoveListener() {
-        ClusterEventListener listener = event -> {
-        };
+        ClusterEventListener listener = event -> {};
         assertDoesNotThrow(() -> provider.removeListener(listener));
     }
 
     @Test
     @DisplayName("should accept broadcast without error")
     void shouldAcceptBroadcast() {
-        ClusterMessage message = new ClusterMessage(ClusterMessage.Type.SERVER_ACQUIRED, "server-1", "test-node");
+        ClusterMessage message =
+                new ClusterMessage(ClusterMessage.Type.SERVER_ACQUIRED, "server-1", "test-node");
         assertDoesNotThrow(() -> provider.broadcast(message));
     }
 }

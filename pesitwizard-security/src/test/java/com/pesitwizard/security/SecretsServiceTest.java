@@ -12,15 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for SecretsService.
- */
+/** Unit tests for SecretsService. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SecretsService Tests")
 class SecretsServiceTest {
 
-    @Mock
-    private SecretsProvider secretsProvider;
+    @Mock private SecretsProvider secretsProvider;
 
     private SecretsService secretsService;
 
@@ -268,7 +265,9 @@ class SecretsServiceTest {
             when(secretsProvider.encrypt(eq("password123"), eq("registry/github/password")))
                     .thenReturn("vault:registry/github/password");
 
-            String result = secretsService.encryptForStorage("password123", "registry", "github", "password");
+            String result =
+                    secretsService.encryptForStorage(
+                            "password123", "registry", "github", "password");
 
             assertThat(result).isEqualTo("vault:registry/github/password");
             verify(secretsProvider).encrypt("password123", "registry/github/password");
@@ -277,7 +276,8 @@ class SecretsServiceTest {
         @Test
         @DisplayName("should return null for null plaintext with context")
         void shouldReturnNullForNullPlaintextWithContext() {
-            String result = secretsService.encryptForStorage(null, "registry", "github", "password");
+            String result =
+                    secretsService.encryptForStorage(null, "registry", "github", "password");
 
             assertThat(result).isNull();
             verify(secretsProvider, never()).encrypt(any(), any());
@@ -286,7 +286,8 @@ class SecretsServiceTest {
         @Test
         @DisplayName("should return blank for blank plaintext with context")
         void shouldReturnBlankForBlankPlaintextWithContext() {
-            String result = secretsService.encryptForStorage("  ", "registry", "github", "password");
+            String result =
+                    secretsService.encryptForStorage("  ", "registry", "github", "password");
 
             assertThat(result).isEqualTo("  ");
             verify(secretsProvider, never()).encrypt(any(), any());

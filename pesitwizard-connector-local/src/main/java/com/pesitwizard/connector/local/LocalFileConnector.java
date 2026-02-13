@@ -1,5 +1,9 @@
 package com.pesitwizard.connector.local;
 
+import com.pesitwizard.connector.ConfigParameter;
+import com.pesitwizard.connector.ConnectorException;
+import com.pesitwizard.connector.FileMetadata;
+import com.pesitwizard.connector.StorageConnector;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,18 +15,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.pesitwizard.connector.ConfigParameter;
-import com.pesitwizard.connector.ConnectorException;
-import com.pesitwizard.connector.FileMetadata;
-import com.pesitwizard.connector.StorageConnector;
-
-/**
- * Local filesystem storage connector.
- */
+/** Local filesystem storage connector. */
 public class LocalFileConnector implements StorageConnector {
 
     private static final Logger log = LoggerFactory.getLogger(LocalFileConnector.class);
@@ -57,7 +53,8 @@ public class LocalFileConnector implements StorageConnector {
             } catch (IOException e) {
                 throw new ConnectorException(
                         ConnectorException.ErrorCode.INVALID_PATH,
-                        "Cannot create base directory: " + basePath, e);
+                        "Cannot create base directory: " + basePath,
+                        e);
             }
         }
 
@@ -90,14 +87,14 @@ public class LocalFileConnector implements StorageConnector {
 
         if (!Files.exists(resolved)) {
             throw new ConnectorException(
-                    ConnectorException.ErrorCode.FILE_NOT_FOUND,
-                    "File not found: " + path);
+                    ConnectorException.ErrorCode.FILE_NOT_FOUND, "File not found: " + path);
         }
 
         try {
             BasicFileAttributes attrs = Files.readAttributes(resolved, BasicFileAttributes.class);
+            Path fileName = resolved.getFileName();
             return FileMetadata.builder()
-                    .name(resolved.getFileName().toString())
+                    .name(fileName != null ? fileName.toString() : path)
                     .path(path)
                     .size(attrs.size())
                     .lastModified(attrs.lastModifiedTime().toInstant())
@@ -116,30 +113,32 @@ public class LocalFileConnector implements StorageConnector {
 
         if (!Files.isDirectory(resolved)) {
             throw new ConnectorException(
-                    ConnectorException.ErrorCode.INVALID_PATH,
-                    "Not a directory: " + path);
+                    ConnectorException.ErrorCode.INVALID_PATH, "Not a directory: " + path);
         }
 
         try (Stream<Path> files = Files.list(resolved)) {
-            return files.map(p -> {
-                try {
-                    BasicFileAttributes attrs = Files.readAttributes(p, BasicFileAttributes.class);
-                    // Use absolute path to preserve leading /
-                    String filePath = p.toAbsolutePath().toString();
-                    return FileMetadata.builder()
-                            .name(p.getFileName().toString())
-                            .path(filePath)
-                            .size(attrs.size())
-                            .lastModified(attrs.lastModifiedTime().toInstant())
-                            .directory(attrs.isDirectory())
-                            .build();
-                } catch (IOException e) {
-                    return FileMetadata.builder()
-                            .name(p.getFileName().toString())
-                            .path(p.toAbsolutePath().toString())
-                            .build();
-                }
-            }).toList();
+            return files.map(
+                            p -> {
+                                try {
+                                    BasicFileAttributes attrs =
+                                            Files.readAttributes(p, BasicFileAttributes.class);
+                                    // Use absolute path to preserve leading /
+                                    String filePath = p.toAbsolutePath().toString();
+                                    return FileMetadata.builder()
+                                            .name(p.getFileName().toString())
+                                            .path(filePath)
+                                            .size(attrs.size())
+                                            .lastModified(attrs.lastModifiedTime().toInstant())
+                                            .directory(attrs.isDirectory())
+                                            .build();
+                                } catch (IOException e) {
+                                    return FileMetadata.builder()
+                                            .name(p.getFileName().toString())
+                                            .path(p.toAbsolutePath().toString())
+                                            .build();
+                                }
+                            })
+                    .toList();
         } catch (IOException e) {
             throw new ConnectorException("Failed to list directory: " + path, e);
         }
@@ -152,8 +151,7 @@ public class LocalFileConnector implements StorageConnector {
 
         if (!Files.exists(resolved)) {
             throw new ConnectorException(
-                    ConnectorException.ErrorCode.FILE_NOT_FOUND,
-                    "File not found: " + path);
+                    ConnectorException.ErrorCode.FILE_NOT_FOUND, "File not found: " + path);
         }
 
         try {
@@ -170,8 +168,7 @@ public class LocalFileConnector implements StorageConnector {
 
         if (!Files.exists(resolved)) {
             throw new ConnectorException(
-                    ConnectorException.ErrorCode.FILE_NOT_FOUND,
-                    "File not found: " + path);
+                    ConnectorException.ErrorCode.FILE_NOT_FOUND, "File not found: " + path);
         }
 
         try {
@@ -200,11 +197,11 @@ public class LocalFileConnector implements StorageConnector {
             }
 
             if (append) {
-                return Files.newOutputStream(resolved,
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                return Files.newOutputStream(
+                        resolved, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } else {
-                return Files.newOutputStream(resolved,
-                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                return Files.newOutputStream(
+                        resolved, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             }
         } catch (IOException e) {
             throw new ConnectorException("Failed to write file: " + path, e);
@@ -264,8 +261,7 @@ public class LocalFileConnector implements StorageConnector {
     private void checkInitialized() throws ConnectorException {
         if (!initialized) {
             throw new ConnectorException(
-                    ConnectorException.ErrorCode.INVALID_CONFIG,
-                    "Connector not initialized");
+                    ConnectorException.ErrorCode.INVALID_CONFIG, "Connector not initialized");
         }
     }
 
@@ -279,7 +275,10 @@ public class LocalFileConnector implements StorageConnector {
         // Treat absolute paths as relative to basePath by stripping the root
         // This prevents bypassing basePath containment via absolute paths
         if (pathObj.isAbsolute()) {
-            pathObj = pathObj.getRoot().relativize(pathObj);
+            Path root = pathObj.getRoot();
+            if (root != null) {
+                pathObj = root.relativize(pathObj);
+            }
         }
 
         // Resolve against basePath and normalize to eliminate ".." components
@@ -305,7 +304,8 @@ public class LocalFileConnector implements StorageConnector {
             } catch (IOException e) {
                 throw new ConnectorException(
                         ConnectorException.ErrorCode.INVALID_PATH,
-                        "Cannot resolve real path: " + path, e);
+                        "Cannot resolve real path: " + path,
+                        e);
             }
         }
 

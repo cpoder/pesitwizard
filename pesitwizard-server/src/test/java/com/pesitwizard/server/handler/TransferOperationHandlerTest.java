@@ -4,16 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
@@ -27,35 +17,42 @@ import com.pesitwizard.server.service.FileSystemService;
 import com.pesitwizard.server.service.PathPlaceholderService;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
+import java.nio.file.Path;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferOperationHandler Tests")
 class TransferOperationHandlerTest {
 
-    @Mock
-    private PesitServerProperties properties;
+    @Mock private PesitServerProperties properties;
 
-    @Mock
-    private FileValidator fileValidator;
+    @Mock private FileValidator fileValidator;
 
-    @Mock
-    private TransferTracker transferTracker;
+    @Mock private TransferTracker transferTracker;
 
-    @Mock
-    private PathPlaceholderService placeholderService;
+    @Mock private PathPlaceholderService placeholderService;
 
-    @Mock
-    private FileSystemService fileSystemService;
+    @Mock private FileSystemService fileSystemService;
 
     private TransferOperationHandler handler;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {
-        handler = new TransferOperationHandler(properties, fileValidator, transferTracker,
-                placeholderService, fileSystemService);
+        handler =
+                new TransferOperationHandler(
+                        properties,
+                        fileValidator,
+                        transferTracker,
+                        placeholderService,
+                        fileSystemService);
     }
 
     @Test
@@ -131,7 +128,9 @@ class TransferOperationHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
+                .thenReturn(
+                        ValidationResult.error(
+                                com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
 
         Fpdu response = handler.handleCreate(ctx, fpdu);
 
@@ -148,7 +147,9 @@ class TransferOperationHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
 
         when(fileValidator.validateForSelect(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
+                .thenReturn(
+                        ValidationResult.error(
+                                com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
 
         Fpdu response = handler.handleSelect(ctx, fpdu);
 
@@ -231,7 +232,9 @@ class TransferOperationHandlerTest {
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, 8192));
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
+                .thenReturn(
+                        ValidationResult.error(
+                                com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
 
         handler.handleCreate(ctx, fpdu);
 
@@ -249,7 +252,9 @@ class TransferOperationHandlerTest {
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_17_PRIORITE, 3));
 
         when(fileValidator.validateForSelect(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
+                .thenReturn(
+                        ValidationResult.error(
+                                com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
 
         handler.handleSelect(ctx, fpdu);
 
@@ -296,7 +301,8 @@ class TransferOperationHandlerTest {
         ctx.startTransfer();
 
         Fpdu fpdu = new Fpdu(FpduType.OPEN);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_21_COMPRESSION, new byte[] {}));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_21_COMPRESSION, new byte[] {}));
 
         Fpdu response = handler.handleOpen(ctx, fpdu);
 
@@ -311,10 +317,13 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] { 0x01 }));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] {0x01}));
 
         when(fileValidator.validateForSelect(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
+                .thenReturn(
+                        ValidationResult.error(
+                                com.pesitwizard.fpdu.DiagnosticCode.D2_205, "File not found"));
 
         handler.handleSelect(ctx, fpdu);
 
@@ -330,14 +339,20 @@ class TransferOperationHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
         // Add PGI_30 with PI_31, PI_32, PI_33
-        ParameterValue pgi30 = new ParameterValue(ParameterGroupIdentifier.PGI_30_ATTR_LOGIQUES,
-                new ParameterValue(ParameterIdentifier.PI_31_FORMAT_ARTICLE, new byte[] { 0x01 }),
-                new ParameterValue(ParameterIdentifier.PI_32_LONG_ARTICLE, new byte[] { 0x00, 0x50 }),
-                new ParameterValue(ParameterIdentifier.PI_33_ORG_FICHIER, new byte[] { 0x02 }));
+        ParameterValue pgi30 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_30_ATTR_LOGIQUES,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_31_FORMAT_ARTICLE, new byte[] {0x01}),
+                        new ParameterValue(
+                                ParameterIdentifier.PI_32_LONG_ARTICLE, new byte[] {0x00, 0x50}),
+                        new ParameterValue(
+                                ParameterIdentifier.PI_33_ORG_FICHIER, new byte[] {0x02}));
         fpdu.withParameter(pgi30);
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
+                .thenReturn(
+                        ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
 
         handler.handleCreate(ctx, fpdu);
 
@@ -353,13 +368,18 @@ class TransferOperationHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
 
         // Add PGI_09 with PI_11 and PI_12
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_11_TYPE_FICHIER, new byte[] { 0x01 }),
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_11_TYPE_FICHIER, new byte[] {0x01}),
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
         fpdu.withParameter(pgi09);
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
+                .thenReturn(
+                        ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
 
         handler.handleCreate(ctx, fpdu);
     }
@@ -372,13 +392,18 @@ class TransferOperationHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
 
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_11_TYPE_FICHIER, new byte[] { 0x02 }),
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "SELECTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_11_TYPE_FICHIER, new byte[] {0x02}),
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "SELECTFILE".getBytes()));
         fpdu.withParameter(pgi09);
 
         when(fileValidator.validateForSelect(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
+                .thenReturn(
+                        ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
 
         handler.handleSelect(ctx, fpdu);
     }
@@ -393,7 +418,8 @@ class TransferOperationHandlerTest {
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_13_ID_TRANSFERT, 12345));
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
+                .thenReturn(
+                        ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
 
         handler.handleCreate(ctx, fpdu);
     }
@@ -405,10 +431,13 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, new byte[] { 0x00, 0x10 }));
+        fpdu.withParameter(
+                new ParameterValue(
+                        ParameterIdentifier.PI_25_TAILLE_MAX_ENTITE, new byte[] {0x00, 0x10}));
 
         when(fileValidator.validateForCreate(any(), any()))
-                .thenReturn(ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
+                .thenReturn(
+                        ValidationResult.error(com.pesitwizard.fpdu.DiagnosticCode.D2_205, "Test"));
 
         handler.handleCreate(ctx, fpdu);
     }
@@ -420,8 +449,11 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.CREATE);
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
         fpdu.withParameter(pgi09);
 
         when(fileValidator.validateForCreate(any(), any())).thenReturn(ValidationResult.ok());
@@ -429,8 +461,10 @@ class TransferOperationHandlerTest {
         when(properties.getMaxEntitySize()).thenReturn(4096);
         when(properties.getServerId()).thenReturn("TEST_SERVER");
         when(fileSystemService.normalizePath(anyString())).thenReturn(tempDir);
-        when(fileSystemService.createDirectories(any())).thenReturn(
-                com.pesitwizard.server.service.FileSystemService.FileOperationResult.success(tempDir));
+        when(fileSystemService.createDirectories(any()))
+                .thenReturn(
+                        com.pesitwizard.server.service.FileSystemService.FileOperationResult
+                                .success(tempDir));
 
         Fpdu response = handler.handleCreate(ctx, fpdu);
 
@@ -451,10 +485,13 @@ class TransferOperationHandlerTest {
         when(fileValidator.validateForCreate(any(), any())).thenReturn(ValidationResult.ok());
         when(properties.getReceiveDirectory()).thenReturn(tempDir.toString());
         when(fileSystemService.normalizePath(anyString())).thenReturn(tempDir);
-        when(fileSystemService.createDirectories(any())).thenReturn(
-                com.pesitwizard.server.service.FileSystemService.FileOperationResult.error(
-                        com.pesitwizard.server.service.FileSystemService.FileErrorType.ACCESS_DENIED,
-                        "Permission denied", tempDir));
+        when(fileSystemService.createDirectories(any()))
+                .thenReturn(
+                        com.pesitwizard.server.service.FileSystemService.FileOperationResult.error(
+                                com.pesitwizard.server.service.FileSystemService.FileErrorType
+                                        .ACCESS_DENIED,
+                                "Permission denied",
+                                tempDir));
         when(fileSystemService.getPermissionString(any())).thenReturn("rwxr-xr-x");
 
         Fpdu response = handler.handleCreate(ctx, fpdu);
@@ -474,8 +511,11 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
         fpdu.withParameter(pgi09);
 
         when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
@@ -498,8 +538,11 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "NONEXISTENT".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "NONEXISTENT".getBytes()));
         fpdu.withParameter(pgi09);
 
         when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
@@ -521,10 +564,14 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.SELECT);
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "RESTARTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "RESTARTFILE".getBytes()));
         fpdu.withParameter(pgi09);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] { 0x01 }));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_15_TRANSFERT_RELANCE, new byte[] {0x01}));
 
         when(fileValidator.validateForSelect(any(), any())).thenReturn(ValidationResult.ok());
         when(properties.getSendDirectory()).thenReturn(tempDir.toString());

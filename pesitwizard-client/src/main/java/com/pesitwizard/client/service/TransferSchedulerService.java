@@ -1,19 +1,5 @@
 package com.pesitwizard.client.service;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.scheduling.support.CronExpression;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.client.dto.TransferRequest;
 import com.pesitwizard.client.entity.ScheduledTransfer;
 import com.pesitwizard.client.entity.ScheduledTransfer.RunStatus;
@@ -23,13 +9,22 @@ import com.pesitwizard.client.repository.BusinessCalendarRepository;
 import com.pesitwizard.client.repository.FavoriteTransferRepository;
 import com.pesitwizard.client.repository.ScheduledTransferRepository;
 import com.pesitwizard.security.SecretsService;
-
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.support.CronExpression;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for managing and executing scheduled transfers
- */
+/** Service for managing and executing scheduled transfers */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,9 +39,7 @@ public class TransferSchedulerService {
 
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Europe/Paris");
 
-    /**
-     * Check for due schedules every minute
-     */
+    /** Check for due schedules every minute */
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void processDueSchedules() {
@@ -69,9 +62,7 @@ public class TransferSchedulerService {
         }
     }
 
-    /**
-     * Check if today is a working day for this schedule
-     */
+    /** Check if today is a working day for this schedule */
     private boolean isWorkingDay(ScheduledTransfer schedule) {
         if (schedule.getCalendarId() == null) {
             // Default: Mon-Fri are working days
@@ -79,22 +70,19 @@ public class TransferSchedulerService {
             return dayOfWeek >= 1 && dayOfWeek <= 5;
         }
 
-        return calendarRepository.findById(schedule.getCalendarId())
+        return calendarRepository
+                .findById(schedule.getCalendarId())
                 .map(cal -> cal.isWorkingDay(LocalDate.now(ZoneId.of(cal.getTimezone()))))
                 .orElse(true);
     }
 
-    /**
-     * Skip to next working day
-     */
+    /** Skip to next working day */
     private void skipToNextWorkingDay(ScheduledTransfer schedule) {
         calculateNextRunTime(schedule);
         scheduleRepository.save(schedule);
     }
 
-    /**
-     * Execute a scheduled transfer
-     */
+    /** Execute a scheduled transfer */
     @Transactional
     public void executeSchedule(ScheduledTransfer schedule) {
         schedule.setLastRunStatus(RunStatus.RUNNING);
@@ -102,7 +90,10 @@ public class TransferSchedulerService {
 
         try {
             // Use filename if available, fallback to deprecated localPath
-            String filename = schedule.getFilename() != null ? schedule.getFilename() : schedule.getLocalPath();
+            String filename =
+                    schedule.getFilename() != null
+                            ? schedule.getFilename()
+                            : schedule.getLocalPath();
 
             // Resolve password: schedule-level first, then Partner entity fallback
             String password = null;
@@ -112,17 +103,18 @@ public class TransferSchedulerService {
                 password = partnerService.resolvePassword(schedule.getPartnerId());
             }
 
-            TransferRequest request = TransferRequest.builder()
-                    .server(schedule.getServerId())
-                    .partnerId(schedule.getPartnerId())
-                    .password(password)
-                    .filename(filename)
-                    .sourceConnectionId(schedule.getSourceConnectionId())
-                    .destinationConnectionId(schedule.getDestinationConnectionId())
-                    .remoteFilename(schedule.getRemoteFilename())
-                    .virtualFile(schedule.getVirtualFile())
-                    .transferConfig(schedule.getTransferConfigId())
-                    .build();
+            TransferRequest request =
+                    TransferRequest.builder()
+                            .server(schedule.getServerId())
+                            .partnerId(schedule.getPartnerId())
+                            .password(password)
+                            .filename(filename)
+                            .sourceConnectionId(schedule.getSourceConnectionId())
+                            .destinationConnectionId(schedule.getDestinationConnectionId())
+                            .remoteFilename(schedule.getRemoteFilename())
+                            .virtualFile(schedule.getVirtualFile())
+                            .transferConfig(schedule.getTransferConfigId())
+                            .build();
 
             if (schedule.getDirection() == TransferDirection.SEND) {
                 transferService.sendFile(request);
@@ -143,9 +135,7 @@ public class TransferSchedulerService {
         scheduleRepository.save(schedule);
     }
 
-    /**
-     * Calculate the next run time based on schedule type
-     */
+    /** Calculate the next run time based on schedule type */
     private void calculateNextRunTime(ScheduledTransfer schedule) {
         ZonedDateTime now = ZonedDateTime.now(DEFAULT_ZONE);
 
@@ -157,7 +147,8 @@ public class TransferSchedulerService {
             }
             case INTERVAL -> {
                 if (schedule.getIntervalMinutes() != null && schedule.getIntervalMinutes() > 0) {
-                    Instant next = now.toInstant().plus(schedule.getIntervalMinutes(), ChronoUnit.MINUTES);
+                    Instant next =
+                            now.toInstant().plus(schedule.getIntervalMinutes(), ChronoUnit.MINUTES);
                     schedule.setNextRunAt(adjustForWorkingDays(schedule, next));
                 }
             }
@@ -167,20 +158,24 @@ public class TransferSchedulerService {
             }
             case DAILY -> {
                 // Use dailyTime if set, otherwise same time tomorrow
-                LocalTime time = schedule.getDailyTime() != null ? schedule.getDailyTime() : now.toLocalTime();
+                LocalTime time =
+                        schedule.getDailyTime() != null
+                                ? schedule.getDailyTime()
+                                : now.toLocalTime();
                 ZonedDateTime nextRun = now.plusDays(1).with(time);
                 schedule.setNextRunAt(adjustForWorkingDays(schedule, nextRun.toInstant()));
             }
             case WEEKLY -> {
                 // Find next occurrence of the specified day of week
-                int targetDay = schedule.getDayOfWeek() != null ? schedule.getDayOfWeek()
-                        : now.getDayOfWeek().getValue();
+                int targetDay =
+                        schedule.getDayOfWeek() != null
+                                ? schedule.getDayOfWeek()
+                                : now.getDayOfWeek().getValue();
                 ZonedDateTime nextRun = now.plusWeeks(1);
                 // Adjust to target day of week
                 int currentDay = nextRun.getDayOfWeek().getValue();
                 int daysToAdd = (targetDay - currentDay + 7) % 7;
-                if (daysToAdd == 0)
-                    daysToAdd = 7; // If same day, go to next week
+                if (daysToAdd == 0) daysToAdd = 7; // If same day, go to next week
                 nextRun = now.plusDays(daysToAdd);
                 if (schedule.getDailyTime() != null) {
                     nextRun = nextRun.with(schedule.getDailyTime());
@@ -189,10 +184,16 @@ public class TransferSchedulerService {
             }
             case MONTHLY -> {
                 // Find next occurrence of the specified day of month
-                int targetDayOfMonth = schedule.getDayOfMonth() != null ? schedule.getDayOfMonth()
-                        : now.getDayOfMonth();
-                ZonedDateTime nextRun = now.plusMonths(1)
-                        .withDayOfMonth(Math.min(targetDayOfMonth, now.plusMonths(1).toLocalDate().lengthOfMonth()));
+                int targetDayOfMonth =
+                        schedule.getDayOfMonth() != null
+                                ? schedule.getDayOfMonth()
+                                : now.getDayOfMonth();
+                ZonedDateTime nextRun =
+                        now.plusMonths(1)
+                                .withDayOfMonth(
+                                        Math.min(
+                                                targetDayOfMonth,
+                                                now.plusMonths(1).toLocalDate().lengthOfMonth()));
                 if (schedule.getDailyTime() != null) {
                     nextRun = nextRun.with(schedule.getDailyTime());
                 }
@@ -218,9 +219,7 @@ public class TransferSchedulerService {
         }
     }
 
-    /**
-     * Adjust next run time to skip non-working days if required
-     */
+    /** Adjust next run time to skip non-working days if required */
     private Instant adjustForWorkingDays(ScheduledTransfer schedule, Instant proposedTime) {
         if (!schedule.isWorkingDaysOnly()) {
             return proposedTime;
@@ -228,9 +227,11 @@ public class TransferSchedulerService {
 
         ZoneId zone = DEFAULT_ZONE;
         if (schedule.getCalendarId() != null) {
-            zone = calendarRepository.findById(schedule.getCalendarId())
-                    .map(cal -> ZoneId.of(cal.getTimezone()))
-                    .orElse(DEFAULT_ZONE);
+            zone =
+                    calendarRepository
+                            .findById(schedule.getCalendarId())
+                            .map(cal -> ZoneId.of(cal.getTimezone()))
+                            .orElse(DEFAULT_ZONE);
         }
 
         LocalDate date = proposedTime.atZone(zone).toLocalDate();
@@ -247,37 +248,30 @@ public class TransferSchedulerService {
         return proposedTime; // Fallback
     }
 
-    /**
-     * Check if a specific date is a working day
-     */
+    /** Check if a specific date is a working day */
     private boolean isWorkingDayForDate(ScheduledTransfer schedule, LocalDate date) {
         if (schedule.getCalendarId() == null) {
             int dayOfWeek = date.getDayOfWeek().getValue();
             return dayOfWeek >= 1 && dayOfWeek <= 5;
         }
 
-        return calendarRepository.findById(schedule.getCalendarId())
+        return calendarRepository
+                .findById(schedule.getCalendarId())
                 .map(cal -> cal.isWorkingDay(date))
                 .orElse(true);
     }
 
-    /**
-     * Get all schedules
-     */
+    /** Get all schedules */
     public List<ScheduledTransfer> getAllSchedules() {
         return scheduleRepository.findAllByOrderByNextRunAtAsc();
     }
 
-    /**
-     * Get a schedule by ID
-     */
+    /** Get a schedule by ID */
     public Optional<ScheduledTransfer> getSchedule(String id) {
         return scheduleRepository.findById(id);
     }
 
-    /**
-     * Create a new schedule
-     */
+    /** Create a new schedule */
     @Transactional
     public ScheduledTransfer createSchedule(ScheduledTransfer schedule) {
         encryptPassword(schedule);
@@ -286,13 +280,16 @@ public class TransferSchedulerService {
             Instant initialRunTime = calculateInitialNextRunTime(schedule);
             schedule.setNextRunAt(initialRunTime);
         }
-        log.info("Creating schedule: {} - next run at {}", schedule.getName(), schedule.getNextRunAt());
+        log.info(
+                "Creating schedule: {} - next run at {}",
+                schedule.getName(),
+                schedule.getNextRunAt());
         return scheduleRepository.save(schedule);
     }
 
     /**
-     * Calculate the initial next run time when creating a new schedule.
-     * For DAILY, WEEKLY, MONTHLY: uses the configured time (dailyTime) instead of NOW.
+     * Calculate the initial next run time when creating a new schedule. For DAILY, WEEKLY, MONTHLY:
+     * uses the configured time (dailyTime) instead of NOW.
      */
     private Instant calculateInitialNextRunTime(ScheduledTransfer schedule) {
         ZonedDateTime now = ZonedDateTime.now(DEFAULT_ZONE);
@@ -300,7 +297,9 @@ public class TransferSchedulerService {
         switch (schedule.getScheduleType()) {
             case ONCE -> {
                 // Use the explicitly scheduled time
-                return schedule.getScheduledAt() != null ? schedule.getScheduledAt() : now.toInstant();
+                return schedule.getScheduledAt() != null
+                        ? schedule.getScheduledAt()
+                        : now.toInstant();
             }
             case INTERVAL -> {
                 // Start after the interval duration
@@ -315,8 +314,12 @@ public class TransferSchedulerService {
             }
             case DAILY -> {
                 // Use dailyTime - if the time has passed today, schedule for tomorrow
-                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
-                ZonedDateTime targetDateTime = now.toLocalDate().atTime(targetTime).atZone(DEFAULT_ZONE);
+                LocalTime targetTime =
+                        schedule.getDailyTime() != null
+                                ? schedule.getDailyTime()
+                                : LocalTime.of(9, 0);
+                ZonedDateTime targetDateTime =
+                        now.toLocalDate().atTime(targetTime).atZone(DEFAULT_ZONE);
                 if (targetDateTime.isBefore(now) || targetDateTime.equals(now)) {
                     // Time already passed today, schedule for tomorrow
                     targetDateTime = targetDateTime.plusDays(1);
@@ -325,32 +328,53 @@ public class TransferSchedulerService {
             }
             case WEEKLY -> {
                 // Use dayOfWeek and dailyTime
-                int targetDay = schedule.getDayOfWeek() != null ? schedule.getDayOfWeek() : 1; // Default Monday
-                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
+                int targetDay =
+                        schedule.getDayOfWeek() != null
+                                ? schedule.getDayOfWeek()
+                                : 1; // Default Monday
+                LocalTime targetTime =
+                        schedule.getDailyTime() != null
+                                ? schedule.getDailyTime()
+                                : LocalTime.of(9, 0);
 
                 int currentDay = now.getDayOfWeek().getValue();
                 int daysToAdd = (targetDay - currentDay + 7) % 7;
-                ZonedDateTime targetDateTime = now.toLocalDate().plusDays(daysToAdd).atTime(targetTime).atZone(DEFAULT_ZONE);
+                ZonedDateTime targetDateTime =
+                        now.toLocalDate()
+                                .plusDays(daysToAdd)
+                                .atTime(targetTime)
+                                .atZone(DEFAULT_ZONE);
 
                 // If same day but time has passed, go to next week
-                if (daysToAdd == 0 && (targetDateTime.isBefore(now) || targetDateTime.equals(now))) {
+                if (daysToAdd == 0
+                        && (targetDateTime.isBefore(now) || targetDateTime.equals(now))) {
                     targetDateTime = targetDateTime.plusWeeks(1);
                 }
                 return adjustForWorkingDays(schedule, targetDateTime.toInstant());
             }
             case MONTHLY -> {
                 // Use dayOfMonth and dailyTime
-                int targetDayOfMonth = schedule.getDayOfMonth() != null ? schedule.getDayOfMonth() : 1;
-                LocalTime targetTime = schedule.getDailyTime() != null ? schedule.getDailyTime() : LocalTime.of(9, 0);
+                int targetDayOfMonth =
+                        schedule.getDayOfMonth() != null ? schedule.getDayOfMonth() : 1;
+                LocalTime targetTime =
+                        schedule.getDailyTime() != null
+                                ? schedule.getDailyTime()
+                                : LocalTime.of(9, 0);
 
-                LocalDate targetDate = now.toLocalDate().withDayOfMonth(
-                    Math.min(targetDayOfMonth, now.toLocalDate().lengthOfMonth()));
+                LocalDate targetDate =
+                        now.toLocalDate()
+                                .withDayOfMonth(
+                                        Math.min(
+                                                targetDayOfMonth,
+                                                now.toLocalDate().lengthOfMonth()));
                 ZonedDateTime targetDateTime = targetDate.atTime(targetTime).atZone(DEFAULT_ZONE);
 
                 // If the day has passed this month, go to next month
                 if (targetDateTime.isBefore(now) || targetDateTime.equals(now)) {
                     LocalDate nextMonth = now.toLocalDate().plusMonths(1);
-                    targetDate = nextMonth.withDayOfMonth(Math.min(targetDayOfMonth, nextMonth.lengthOfMonth()));
+                    targetDate =
+                            nextMonth.withDayOfMonth(
+                                    Math.min(targetDayOfMonth, nextMonth.lengthOfMonth()));
                     targetDateTime = targetDate.atTime(targetTime).atZone(DEFAULT_ZONE);
                 }
                 return adjustForWorkingDays(schedule, targetDateTime.toInstant());
@@ -376,122 +400,128 @@ public class TransferSchedulerService {
         }
     }
 
-    /**
-     * Create a schedule from a favorite
-     */
+    /** Create a schedule from a favorite */
     @Transactional
-    public Optional<ScheduledTransfer> createFromFavorite(String favoriteId, ScheduleType type,
-            Instant scheduledAt, Integer intervalMinutes) {
-        return favoriteRepository.findById(favoriteId)
-                .map(favorite -> {
-                    String filename = favorite.getFilename() != null ? favorite.getFilename() : favorite.getLocalPath();
-                    ScheduledTransfer schedule = ScheduledTransfer.builder()
-                            .name("Schedule: " + favorite.getName())
-                            .favoriteId(favoriteId)
-                            .serverId(favorite.getServerId())
-                            .serverName(favorite.getServerName())
-                            .partnerId(favorite.getPartnerId())
-                            .direction(favorite.getDirection())
-                            .filename(filename)
-                            .sourceConnectionId(favorite.getSourceConnectionId())
-                            .destinationConnectionId(favorite.getDestinationConnectionId())
-                            .remoteFilename(favorite.getRemoteFilename())
-                            .virtualFile(favorite.getVirtualFile())
-                            .transferConfigId(favorite.getTransferConfigId())
-                            .password(favorite.getPassword())
-                            .scheduleType(type)
-                            .scheduledAt(scheduledAt)
-                            .intervalMinutes(intervalMinutes)
-                            .build();
+    public Optional<ScheduledTransfer> createFromFavorite(
+            String favoriteId, ScheduleType type, Instant scheduledAt, Integer intervalMinutes) {
+        return favoriteRepository
+                .findById(favoriteId)
+                .map(
+                        favorite -> {
+                            String filename =
+                                    favorite.getFilename() != null
+                                            ? favorite.getFilename()
+                                            : favorite.getLocalPath();
+                            ScheduledTransfer schedule =
+                                    ScheduledTransfer.builder()
+                                            .name("Schedule: " + favorite.getName())
+                                            .favoriteId(favoriteId)
+                                            .serverId(favorite.getServerId())
+                                            .serverName(favorite.getServerName())
+                                            .partnerId(favorite.getPartnerId())
+                                            .direction(favorite.getDirection())
+                                            .filename(filename)
+                                            .sourceConnectionId(favorite.getSourceConnectionId())
+                                            .destinationConnectionId(
+                                                    favorite.getDestinationConnectionId())
+                                            .remoteFilename(favorite.getRemoteFilename())
+                                            .virtualFile(favorite.getVirtualFile())
+                                            .transferConfigId(favorite.getTransferConfigId())
+                                            .password(favorite.getPassword())
+                                            .scheduleType(type)
+                                            .scheduledAt(scheduledAt)
+                                            .intervalMinutes(intervalMinutes)
+                                            .build();
 
-                    // Set next run time
-                    if (type == ScheduleType.ONCE && scheduledAt != null) {
-                        schedule.setNextRunAt(scheduledAt);
-                    } else if (type == ScheduleType.INTERVAL && intervalMinutes != null) {
-                        schedule.setNextRunAt(Instant.now().plus(intervalMinutes, ChronoUnit.MINUTES));
-                    } else {
-                        schedule.setNextRunAt(Instant.now());
-                    }
+                            // Set next run time
+                            if (type == ScheduleType.ONCE && scheduledAt != null) {
+                                schedule.setNextRunAt(scheduledAt);
+                            } else if (type == ScheduleType.INTERVAL && intervalMinutes != null) {
+                                schedule.setNextRunAt(
+                                        Instant.now().plus(intervalMinutes, ChronoUnit.MINUTES));
+                            } else {
+                                schedule.setNextRunAt(Instant.now());
+                            }
 
-                    log.info("Creating schedule from favorite: {}", favorite.getName());
-                    return scheduleRepository.save(schedule);
-                });
+                            log.info("Creating schedule from favorite: {}", favorite.getName());
+                            return scheduleRepository.save(schedule);
+                        });
     }
 
-    /**
-     * Update a schedule
-     */
+    /** Update a schedule */
     @Transactional
     public Optional<ScheduledTransfer> updateSchedule(String id, ScheduledTransfer updated) {
-        return scheduleRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(updated.getName());
-                    existing.setDescription(updated.getDescription());
-                    existing.setScheduleType(updated.getScheduleType());
-                    existing.setScheduledAt(updated.getScheduledAt());
-                    existing.setIntervalMinutes(updated.getIntervalMinutes());
-                    existing.setCronExpression(updated.getCronExpression());
-                    existing.setEnabled(updated.isEnabled());
-                    if (updated.getPassword() != null) {
-                        existing.setPassword(updated.getPassword());
-                        encryptPassword(existing);
-                    }
+        return scheduleRepository
+                .findById(id)
+                .map(
+                        existing -> {
+                            existing.setName(updated.getName());
+                            existing.setDescription(updated.getDescription());
+                            existing.setScheduleType(updated.getScheduleType());
+                            existing.setScheduledAt(updated.getScheduledAt());
+                            existing.setIntervalMinutes(updated.getIntervalMinutes());
+                            existing.setCronExpression(updated.getCronExpression());
+                            existing.setEnabled(updated.isEnabled());
+                            if (updated.getPassword() != null) {
+                                existing.setPassword(updated.getPassword());
+                                encryptPassword(existing);
+                            }
 
-                    // Recalculate next run if needed
-                    if (updated.isEnabled() && existing.getNextRunAt() == null) {
-                        calculateNextRunTime(existing);
-                    }
+                            // Recalculate next run if needed
+                            if (updated.isEnabled() && existing.getNextRunAt() == null) {
+                                calculateNextRunTime(existing);
+                            }
 
-                    log.info("Updated schedule: {}", existing.getName());
-                    return scheduleRepository.save(existing);
-                });
+                            log.info("Updated schedule: {}", existing.getName());
+                            return scheduleRepository.save(existing);
+                        });
     }
 
-    /**
-     * Delete a schedule
-     */
+    /** Delete a schedule */
     @Transactional
     public void deleteSchedule(String id) {
         log.info("Deleting schedule: {}", id);
         scheduleRepository.deleteById(id);
     }
 
-    /**
-     * Toggle schedule enabled/disabled
-     */
+    /** Toggle schedule enabled/disabled */
     @Transactional
     public Optional<ScheduledTransfer> toggleEnabled(String id) {
-        return scheduleRepository.findById(id)
-                .map(schedule -> {
-                    schedule.setEnabled(!schedule.isEnabled());
-                    if (schedule.isEnabled() && schedule.getNextRunAt() == null) {
-                        calculateNextRunTime(schedule);
-                    }
-                    log.info("Schedule {} {}", schedule.getName(),
-                            schedule.isEnabled() ? "enabled" : "disabled");
-                    return scheduleRepository.save(schedule);
-                });
+        return scheduleRepository
+                .findById(id)
+                .map(
+                        schedule -> {
+                            schedule.setEnabled(!schedule.isEnabled());
+                            if (schedule.isEnabled() && schedule.getNextRunAt() == null) {
+                                calculateNextRunTime(schedule);
+                            }
+                            log.info(
+                                    "Schedule {} {}",
+                                    schedule.getName(),
+                                    schedule.isEnabled() ? "enabled" : "disabled");
+                            return scheduleRepository.save(schedule);
+                        });
     }
 
-    /**
-     * Run a schedule immediately
-     */
+    /** Run a schedule immediately */
     @Transactional
     public Optional<ScheduledTransfer> runNow(String id) {
-        return scheduleRepository.findById(id)
-                .map(schedule -> {
-                    executeSchedule(schedule);
-                    return schedule;
-                });
+        return scheduleRepository
+                .findById(id)
+                .map(
+                        schedule -> {
+                            executeSchedule(schedule);
+                            return schedule;
+                        });
     }
 
-    /**
-     * Encrypt the password field if present and not already encrypted.
-     */
+    /** Encrypt the password field if present and not already encrypted. */
     private void encryptPassword(ScheduledTransfer schedule) {
         String password = schedule.getPassword();
         if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
-            String encrypted = secretsService.encryptForStorage(password, "schedule", schedule.getName(), "password");
+            String encrypted =
+                    secretsService.encryptForStorage(
+                            password, "schedule", schedule.getName(), "password");
             schedule.setPassword(encrypted);
         }
     }

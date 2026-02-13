@@ -1,5 +1,10 @@
 package com.pesitwizard.integration;
 
+import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduParser;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -10,21 +15,14 @@ import java.net.SocketTimeoutException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.fpdu.FpduParser;
-import com.pesitwizard.fpdu.PesitSessionRecorder;
-import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
-import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Mock PeSIT server that replays recorded sessions from golden files.
- * 
- * Usage:
- * 
+ *
+ * <p>Usage:
+ *
  * <pre>
  * try (MockPesitServer server = MockPesitServer.fromGoldenFile(path)) {
  *     server.start();
@@ -40,20 +38,18 @@ public class MockPesitServer implements Closeable {
     private ServerSocket serverSocket;
     private Thread serverThread;
 
-    @Getter
-    private int port;
+    @Getter private int port;
 
-    @Getter
-    private int frameIndex = 0;
+    @Getter private int frameIndex = 0;
 
-    @Getter
-    private Throwable lastError;
+    @Getter private Throwable lastError;
 
     public MockPesitServer(List<RecordedFrame> frames) {
         this.frames = frames;
     }
 
-    public static MockPesitServer fromGoldenFile(Path path) throws IOException, ClassNotFoundException {
+    public static MockPesitServer fromGoldenFile(Path path)
+            throws IOException, ClassNotFoundException {
         PesitSessionRecorder recorder = PesitSessionRecorder.loadFromFile(path);
         return new MockPesitServer(recorder.getFrames());
     }
@@ -121,18 +117,24 @@ public class MockPesitServer implements Closeable {
 
                     // Parse and validate
                     Fpdu receivedFpdu = new FpduParser(received).parse();
-                    log.debug("Received {} (expected {})", receivedFpdu.getFpduType(), expected.type());
+                    log.debug(
+                            "Received {} (expected {})",
+                            receivedFpdu.getFpduType(),
+                            expected.type());
 
                     if (receivedFpdu.getFpduType() != expected.type()) {
-                        log.warn("Frame mismatch at index {}: expected {} but got {}",
-                                frameIndex, expected.type(), receivedFpdu.getFpduType());
+                        log.warn(
+                                "Frame mismatch at index {}: expected {} but got {}",
+                                frameIndex,
+                                expected.type(),
+                                receivedFpdu.getFpduType());
                     }
 
                     frameIndex++;
 
                     // Send all consecutive RECEIVED frames with transport framing
-                    while (frameIndex < frames.size() &&
-                            frames.get(frameIndex).direction() == Direction.RECEIVED) {
+                    while (frameIndex < frames.size()
+                            && frames.get(frameIndex).direction() == Direction.RECEIVED) {
                         RecordedFrame response = frames.get(frameIndex);
                         out.writeShort(response.data().length);
                         out.write(response.data());

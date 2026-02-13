@@ -4,8 +4,8 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 /**
- * Validator for the @SafePath annotation.
- * Checks that paths don't contain traversal sequences or other security issues.
+ * Validator for the @SafePath annotation. Checks that paths don't contain traversal sequences or
+ * other security issues.
  */
 public class SafePathValidator implements ConstraintValidator<SafePath, String> {
 
@@ -56,7 +56,8 @@ public class SafePathValidator implements ConstraintValidator<SafePath, String> 
         if (!allowDirectoryPath) {
             if (value.contains("/") || value.contains("\\")) {
                 context.disableDefaultConstraintViolation();
-                context.buildConstraintViolationWithTemplate("Directory paths not allowed, expected filename only")
+                context.buildConstraintViolationWithTemplate(
+                                "Directory paths not allowed, expected filename only")
                         .addConstraintViolation();
                 return false;
             }

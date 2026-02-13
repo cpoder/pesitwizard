@@ -1,7 +1,6 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,21 +12,21 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-/**
- * Favorite transfer configuration for quick replay
- */
+/** Favorite transfer configuration for quick replay */
 @Entity
-@Table(name = "favorite_transfers", indexes = {
-        @Index(name = "idx_favorite_name", columnList = "name"),
-        @Index(name = "idx_favorite_server", columnList = "serverId")
-})
+@Table(
+        name = "favorite_transfers",
+        indexes = {
+            @Index(name = "idx_favorite_name", columnList = "name"),
+            @Index(name = "idx_favorite_server", columnList = "serverId")
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -69,9 +68,10 @@ public class FavoriteTransfer {
     /** Filename (relative path on connector, or local path if no connector) */
     private String filename;
 
-    /** @deprecated Use filename instead */
-    @Deprecated
-    private String localPath;
+    /**
+     * @deprecated Use filename instead
+     */
+    @Deprecated private String localPath;
 
     /** Remote filename (virtual file ID) */
     private String remoteFilename;
@@ -94,8 +94,7 @@ public class FavoriteTransfer {
     private String transferConfigId;
 
     /** Number of times this favorite has been used */
-    @Builder.Default
-    private int usageCount = 0;
+    @Builder.Default private int usageCount = 0;
 
     /** Last time this favorite was used */
     private Instant lastUsedAt;
@@ -116,9 +115,7 @@ public class FavoriteTransfer {
         updatedAt = Instant.now();
     }
 
-    /**
-     * Increment usage count and update last used timestamp
-     */
+    /** Increment usage count and update last used timestamp */
     public void markUsed() {
         this.usageCount++;
         this.lastUsedAt = Instant.now();

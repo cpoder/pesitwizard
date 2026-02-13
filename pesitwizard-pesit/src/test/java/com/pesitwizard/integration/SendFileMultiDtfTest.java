@@ -3,17 +3,6 @@ package com.pesitwizard.integration;
 import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.util.HexFormat;
-import java.util.Random;
-
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.CreateMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
@@ -21,29 +10,38 @@ import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TcpTransportChannel;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.Random;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 /**
- * Integration tests for sending files with automatic multi-DTF chunking.
- * Tests that large files are correctly split into multiple DTF FPDUs
- * respecting the negotiated PI_25 (max entity size).
- * 
- * Requires Connect:Express running on localhost:5000
- * 
- * Run with: mvn test -Dtest=SendFileMultiDtfTest
- * -Dpesit.integration.enabled=true
+ * Integration tests for sending files with automatic multi-DTF chunking. Tests that large files are
+ * correctly split into multiple DTF FPDUs respecting the negotiated PI_25 (max entity size).
+ *
+ * <p>Requires Connect:Express running on localhost:5000
+ *
+ * <p>Run with: mvn test -Dtest=SendFileMultiDtfTest -Dpesit.integration.enabled=true
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class SendFileMultiDtfTest {
 
     private static final String TEST_HOST = System.getProperty("pesit.test.host", "localhost");
-    private static final int TEST_PORT = Integer.parseInt(System.getProperty("pesit.test.port", "5000"));
-    private static final boolean INTEGRATION_ENABLED = Boolean.parseBoolean(
-            System.getProperty("pesit.integration.enabled", "false"));
+    private static final int TEST_PORT =
+            Integer.parseInt(System.getProperty("pesit.test.port", "5000"));
+    private static final boolean INTEGRATION_ENABLED =
+            Boolean.parseBoolean(System.getProperty("pesit.integration.enabled", "false"));
     private static final String SERVER_ID = System.getProperty("pesit.test.server", "PESIT_SERVER");
 
     @BeforeAll
     void setUp() {
-        Assumptions.assumeTrue(INTEGRATION_ENABLED,
+        Assumptions.assumeTrue(
+                INTEGRATION_ENABLED,
                 "Integration tests disabled. Enable with -Dpesit.integration.enabled=true");
     }
 
@@ -56,7 +54,8 @@ public class SendFileMultiDtfTest {
         String md5Before = calculateMd5(testData);
         System.out.println("Test data: " + testData.length + " bytes, MD5: " + md5Before);
 
-        try (PesitSession session = new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
+        try (PesitSession session =
+                new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
             int serverConnId = performHandshake(session, "FILE", 4096, 506, testData.length);
             sendDataWithDtf(session, serverConnId, testData, 506);
             performCleanup(session, serverConnId);
@@ -75,7 +74,8 @@ public class SendFileMultiDtfTest {
         String md5Before = calculateMd5(testData);
         System.out.println("Test data: " + testData.length + " bytes, MD5: " + md5Before);
 
-        try (PesitSession session = new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
+        try (PesitSession session =
+                new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
             int serverConnId = performHandshake(session, "FILE", 4096, 506, testData.length);
             int dtfCount = sendDataWithDtf(session, serverConnId, testData, 506);
             performCleanup(session, serverConnId);
@@ -97,7 +97,8 @@ public class SendFileMultiDtfTest {
         String md5Before = calculateMd5(testData);
         System.out.println("Test data: " + testData.length + " bytes, MD5: " + md5Before);
 
-        try (PesitSession session = new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
+        try (PesitSession session =
+                new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
             // Request small entity size
             int serverConnId = performHandshake(session, "FILE", 512, 256, testData.length);
             int dtfCount = sendDataWithDtf(session, serverConnId, testData, 256);
@@ -119,7 +120,8 @@ public class SendFileMultiDtfTest {
         String md5Before = calculateMd5(testData);
         System.out.println("Test data: " + testData.length + " bytes, MD5: " + md5Before);
 
-        try (PesitSession session = new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
+        try (PesitSession session =
+                new PesitSession(new TcpTransportChannel(TEST_HOST, TEST_PORT))) {
             int serverConnId = performHandshake(session, "FILE", 4096, 1024, testData.length);
             int dtfCount = sendDataWithDtf(session, serverConnId, testData, 1024);
             performCleanup(session, serverConnId);
@@ -133,21 +135,23 @@ public class SendFileMultiDtfTest {
 
     /**
      * Perform PeSIT handshake: CONNECT -> CREATE -> OPEN -> WRITE
-     * 
+     *
      * @return serverConnectionId
      */
     private static final int CLIENT_CONNECTION_ID = 0x05;
 
-    private int performHandshake(PesitSession session, String filename, int maxEntitySize, int recordLength,
+    private int performHandshake(
+            PesitSession session,
+            String filename,
+            int maxEntitySize,
+            int recordLength,
             int fileSize)
             throws IOException, InterruptedException {
 
         // CONNECT
         System.out.println("Step 1: CONNECT");
-        ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
-                .demandeur("LOOP")
-                .serveur(SERVER_ID)
-                .writeAccess();
+        ConnectMessageBuilder connectBuilder =
+                new ConnectMessageBuilder().demandeur("LOOP").serveur(SERVER_ID).writeAccess();
         Fpdu aconnect = session.sendFpduWithAck(connectBuilder.build(CLIENT_CONNECTION_ID));
         assertEquals(FpduType.ACONNECT, aconnect.getFpduType());
         int serverConnectionId = aconnect.getIdSrc();
@@ -164,15 +168,24 @@ public class SendFileMultiDtfTest {
 
         // CREATE - must declare file size per PeSIT spec
         long fileSizeKB = (fileSize + 1023) / 1024; // Round up to KB
-        System.out.println("Step 2: CREATE (PI_25=" + maxEntitySize + ", PI_32=" + recordLength + ", fileSize="
-                + fileSize + " bytes / " + fileSizeKB + " KB)");
-        CreateMessageBuilder createBuilder = new CreateMessageBuilder()
-                .filename(filename)
-                .transferId(1)
-                .variableFormat()
-                .recordLength(recordLength)
-                .maxEntitySize(maxEntitySize)
-                .fileSizeKB(fileSizeKB);
+        System.out.println(
+                "Step 2: CREATE (PI_25="
+                        + maxEntitySize
+                        + ", PI_32="
+                        + recordLength
+                        + ", fileSize="
+                        + fileSize
+                        + " bytes / "
+                        + fileSizeKB
+                        + " KB)");
+        CreateMessageBuilder createBuilder =
+                new CreateMessageBuilder()
+                        .filename(filename)
+                        .transferId(1)
+                        .variableFormat()
+                        .recordLength(recordLength)
+                        .maxEntitySize(maxEntitySize)
+                        .fileSizeKB(fileSizeKB);
         Fpdu ackCreate = session.sendFpduWithAck(createBuilder.build(serverConnectionId));
         assertEquals(FpduType.ACK_CREATE, ackCreate.getFpduType());
 
@@ -201,15 +214,20 @@ public class SendFileMultiDtfTest {
     }
 
     /**
-     * Send data as DTF FPDUs, respecting record length (PI_32).
-     * Per PeSIT spec: article size must not exceed PI_32 (recordLength).
-     * 
+     * Send data as DTF FPDUs, respecting record length (PI_32). Per PeSIT spec: article size must
+     * not exceed PI_32 (recordLength).
+     *
      * @return number of DTF FPDUs sent
      */
-    private int sendDataWithDtf(PesitSession session, int serverConnectionId, byte[] data, int recordLength)
+    private int sendDataWithDtf(
+            PesitSession session, int serverConnectionId, byte[] data, int recordLength)
             throws IOException, InterruptedException {
-        System.out
-                .println("Step 5: Sending " + data.length + " bytes as DTF chunks (recordLength=" + recordLength + ")");
+        System.out.println(
+                "Step 5: Sending "
+                        + data.length
+                        + " bytes as DTF chunks (recordLength="
+                        + recordLength
+                        + ")");
 
         int chunkSize = recordLength; // PI_32 = max article size
         int dtfCount = 0;
@@ -227,16 +245,26 @@ public class SendFileMultiDtfTest {
             offset += currentChunkSize;
 
             if (dtfCount % 10 == 0 || offset == data.length) {
-                System.out.println("  Sent DTF #" + dtfCount + ": " + currentChunkSize + " bytes (total: " + offset
-                        + "/" + data.length + ")");
+                System.out.println(
+                        "  Sent DTF #"
+                                + dtfCount
+                                + ": "
+                                + currentChunkSize
+                                + " bytes (total: "
+                                + offset
+                                + "/"
+                                + data.length
+                                + ")");
             }
         }
 
         // DTF_END
         System.out.println("Step 6: DTF_END");
-        Fpdu dtfEndFpdu = new Fpdu(FpduType.DTF_END)
-                .withIdDst(serverConnectionId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+        Fpdu dtfEndFpdu =
+                new Fpdu(FpduType.DTF_END)
+                        .withIdDst(serverConnectionId)
+                        .withParameter(
+                                new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
         session.sendFpdu(dtfEndFpdu);
         System.out.println("  ✓ DTF_END sent");
 
@@ -251,35 +279,41 @@ public class SendFileMultiDtfTest {
     }
 
     /**
-     * Perform cleanup: CLOSE -> DESELECT -> RELEASE
-     * Per PeSIT spec 4.4.26: RELEASE requires both ID.DST and ID.SRC
+     * Perform cleanup: CLOSE -> DESELECT -> RELEASE Per PeSIT spec 4.4.26: RELEASE requires both
+     * ID.DST and ID.SRC
      */
     private void performCleanup(PesitSession session, int serverConnectionId)
             throws IOException, InterruptedException {
         // CLOSE - Per PeSIT spec 4.4.12: only ID.DST required
         System.out.println("Step 8: CLOSE");
-        Fpdu closeFpdu = new Fpdu(FpduType.CLOSE)
-                .withIdDst(serverConnectionId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+        Fpdu closeFpdu =
+                new Fpdu(FpduType.CLOSE)
+                        .withIdDst(serverConnectionId)
+                        .withParameter(
+                                new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
         Fpdu ackClose = session.sendFpduWithAck(closeFpdu);
         assertEquals(FpduType.ACK_CLOSE, ackClose.getFpduType());
         System.out.println("  ✓ File closed");
 
         // DESELECT - Per PeSIT spec 4.4.8: only ID.DST required
         System.out.println("Step 9: DESELECT");
-        Fpdu deselectFpdu = new Fpdu(FpduType.DESELECT)
-                .withIdDst(serverConnectionId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+        Fpdu deselectFpdu =
+                new Fpdu(FpduType.DESELECT)
+                        .withIdDst(serverConnectionId)
+                        .withParameter(
+                                new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
         Fpdu ackDeselect = session.sendFpduWithAck(deselectFpdu);
         assertEquals(FpduType.ACK_DESELECT, ackDeselect.getFpduType());
         System.out.println("  ✓ File deselected");
 
         // RELEASE - Per PeSIT spec 4.4.26: requires ID.DST and ID.SRC
         System.out.println("Step 10: RELEASE");
-        Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
-                .withIdDst(serverConnectionId)
-                .withIdSrc(CLIENT_CONNECTION_ID)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+        Fpdu releaseFpdu =
+                new Fpdu(FpduType.RELEASE)
+                        .withIdDst(serverConnectionId)
+                        .withIdSrc(CLIENT_CONNECTION_ID)
+                        .withParameter(
+                                new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
         Fpdu relconf = session.sendFpduWithAck(releaseFpdu);
         assertEquals(FpduType.RELCONF, relconf.getFpduType());
         System.out.println("  ✓ Session released");
@@ -298,8 +332,7 @@ public class SendFileMultiDtfTest {
     }
 
     private int parseNumeric(byte[] value) {
-        if (value == null || value.length == 0)
-            return 0;
+        if (value == null || value.length == 0) return 0;
         int result = 0;
         for (byte b : value) {
             result = (result << 8) | (b & 0xFF);

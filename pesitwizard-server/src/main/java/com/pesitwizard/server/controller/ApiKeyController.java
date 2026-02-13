@@ -1,9 +1,19 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.server.entity.ApiKey;
+import com.pesitwizard.server.security.ApiKeyService;
+import com.pesitwizard.server.security.ApiKeyService.ApiKeyResult;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,24 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-
-import com.pesitwizard.server.entity.ApiKey;
-import com.pesitwizard.server.security.ApiKeyService;
-import com.pesitwizard.server.security.ApiKeyService.ApiKeyResult;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * REST API for API key management.
- * All endpoints require ADMIN role.
- */
+/** REST API for API key management. All endpoints require ADMIN role. */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/apikeys")
@@ -43,89 +36,80 @@ public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;
 
-    /**
-     * List all API keys
-     */
+    /** List all API keys */
     @GetMapping
     public ResponseEntity<List<ApiKeyResponse>> listApiKeys() {
-        List<ApiKeyResponse> keys = apiKeyService.getAllApiKeys().stream()
-                .map(ApiKeyResponse::from)
-                .toList();
+        List<ApiKeyResponse> keys =
+                apiKeyService.getAllApiKeys().stream().map(ApiKeyResponse::from).toList();
         return ResponseEntity.ok(keys);
     }
 
-    /**
-     * List active API keys
-     */
+    /** List active API keys */
     @GetMapping("/active")
     public ResponseEntity<List<ApiKeyResponse>> listActiveApiKeys() {
-        List<ApiKeyResponse> keys = apiKeyService.getActiveApiKeys().stream()
-                .map(ApiKeyResponse::from)
-                .toList();
+        List<ApiKeyResponse> keys =
+                apiKeyService.getActiveApiKeys().stream().map(ApiKeyResponse::from).toList();
         return ResponseEntity.ok(keys);
     }
 
-    /**
-     * Get API key by ID
-     */
+    /** Get API key by ID */
     @GetMapping("/{id}")
     public ResponseEntity<ApiKeyResponse> getApiKey(@PathVariable Long id) {
-        return apiKeyService.getApiKey(id)
+        return apiKeyService
+                .getApiKey(id)
                 .map(key -> ResponseEntity.ok(ApiKeyResponse.from(key)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Create a new API key
-     */
+    /** Create a new API key */
     @PostMapping
-    public ResponseEntity<?> createApiKey(@Valid @RequestBody CreateApiKeyRequest request, Principal principal) {
+    public ResponseEntity<?> createApiKey(
+            @Valid @RequestBody CreateApiKeyRequest request, Principal principal) {
         try {
-            ApiKeyResult result = apiKeyService.createApiKey(
-                    request.getName(),
-                    request.getDescription(),
-                    request.getRoles(),
-                    request.getExpiresAt(),
-                    request.getAllowedIps(),
-                    request.getRateLimit(),
-                    request.getPartnerId(),
-                    principal.getName());
+            ApiKeyResult result =
+                    apiKeyService.createApiKey(
+                            request.getName(),
+                            request.getDescription(),
+                            request.getRoles(),
+                            request.getExpiresAt(),
+                            request.getAllowedIps(),
+                            request.getRateLimit(),
+                            request.getPartnerId(),
+                            principal.getName());
 
             log.info("Created API key: {}", request.getName());
 
             // Return the plain key only once
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    new CreateApiKeyResponse(
-                            ApiKeyResponse.from(result.getApiKey()),
-                            result.getPlainKey()));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(
+                            new CreateApiKeyResponse(
+                                    ApiKeyResponse.from(result.getApiKey()), result.getPlainKey()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 
-    /**
-     * Update an API key
-     */
+    /** Update an API key */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateApiKey(@PathVariable Long id, @Valid @RequestBody UpdateApiKeyRequest request) {
+    public ResponseEntity<?> updateApiKey(
+            @PathVariable Long id, @Valid @RequestBody UpdateApiKeyRequest request) {
         try {
-            ApiKey key = apiKeyService.updateApiKey(
-                    id,
-                    request.getDescription(),
-                    request.getRoles(),
-                    request.getActive(),
-                    request.getExpiresAt(),
-                    request.getAllowedIps(),
-                    request.getRateLimit());
+            ApiKey key =
+                    apiKeyService.updateApiKey(
+                            id,
+                            request.getDescription(),
+                            request.getRoles(),
+                            request.getActive(),
+                            request.getExpiresAt(),
+                            request.getAllowedIps(),
+                            request.getRateLimit());
             return ResponseEntity.ok(ApiKeyResponse.from(key));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Revoke (deactivate) an API key
-     */
+    /** Revoke (deactivate) an API key */
     @PostMapping("/{id}/revoke")
     public ResponseEntity<Void> revokeApiKey(@PathVariable Long id) {
         try {
@@ -137,26 +121,22 @@ public class ApiKeyController {
         }
     }
 
-    /**
-     * Regenerate an API key
-     */
+    /** Regenerate an API key */
     @PostMapping("/{id}/regenerate")
     public ResponseEntity<?> regenerateApiKey(@PathVariable Long id) {
         try {
             ApiKeyResult result = apiKeyService.regenerateApiKey(id);
             log.info("Regenerated API key: {}", result.getApiKey().getName());
 
-            return ResponseEntity.ok(new CreateApiKeyResponse(
-                    ApiKeyResponse.from(result.getApiKey()),
-                    result.getPlainKey()));
+            return ResponseEntity.ok(
+                    new CreateApiKeyResponse(
+                            ApiKeyResponse.from(result.getApiKey()), result.getPlainKey()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Delete an API key
-     */
+    /** Delete an API key */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteApiKey(@PathVariable Long id) {
         try {
@@ -174,14 +154,21 @@ public class ApiKeyController {
     public static class CreateApiKeyRequest {
         @NotBlank(message = "Name is required")
         @Size(min = 1, max = 100, message = "Name must be between 1 and 100 characters")
-        @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Name can only contain alphanumeric characters, underscores, and hyphens")
+        @Pattern(
+                regexp = "^[a-zA-Z0-9_-]+$",
+                message = "Name can only contain alphanumeric characters, underscores, and hyphens")
         private String name;
 
         @Size(max = 500, message = "Description must not exceed 500 characters")
         private String description;
 
         @Size(max = 10, message = "Maximum 10 roles allowed")
-        private List<@Pattern(regexp = "^(USER|OPERATOR|ADMIN)$", message = "Invalid role. Must be USER, OPERATOR, or ADMIN") String> roles;
+        private List<
+                        @Pattern(
+                                regexp = "^(USER|OPERATOR|ADMIN)$",
+                                message = "Invalid role. Must be USER, OPERATOR, or ADMIN")
+                        String>
+                roles;
 
         private Instant expiresAt;
 
@@ -202,7 +189,12 @@ public class ApiKeyController {
         private String description;
 
         @Size(max = 10, message = "Maximum 10 roles allowed")
-        private List<@Pattern(regexp = "^(USER|OPERATOR|ADMIN)$", message = "Invalid role. Must be USER, OPERATOR, or ADMIN") String> roles;
+        private List<
+                        @Pattern(
+                                regexp = "^(USER|OPERATOR|ADMIN)$",
+                                message = "Invalid role. Must be USER, OPERATOR, or ADMIN")
+                        String>
+                roles;
 
         private Boolean active;
 

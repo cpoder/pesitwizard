@@ -1,21 +1,16 @@
 package com.pesitwizard.client.service;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.client.entity.VirtualFile;
 import com.pesitwizard.client.entity.VirtualFile.Direction;
 import com.pesitwizard.client.repository.VirtualFileRepository;
-
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for managing virtual file definitions.
- */
+/** Service for managing virtual file definitions. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -47,15 +42,17 @@ public class VirtualFileService {
 
     @Transactional
     public Optional<VirtualFile> updateVirtualFile(String id, VirtualFile updated) {
-        return virtualFileRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(updated.getName());
-                    existing.setDescription(updated.getDescription());
-                    existing.setDirection(updated.getDirection());
-                    existing.setRecordLength(updated.getRecordLength());
-                    log.info("Updated virtual file: {}", existing.getName());
-                    return virtualFileRepository.save(existing);
-                });
+        return virtualFileRepository
+                .findById(id)
+                .map(
+                        existing -> {
+                            existing.setName(updated.getName());
+                            existing.setDescription(updated.getDescription());
+                            existing.setDirection(updated.getDirection());
+                            existing.setRecordLength(updated.getRecordLength());
+                            log.info("Updated virtual file: {}", existing.getName());
+                            return virtualFileRepository.save(existing);
+                        });
     }
 
     @Transactional

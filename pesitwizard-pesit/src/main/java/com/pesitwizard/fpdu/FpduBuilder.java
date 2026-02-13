@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FPDU (File Transfer Protocol Data Unit) Builder
- * Constructs binary PESIT protocol messages according to PESIT E specification
+ * FPDU (File Transfer Protocol Data Unit) Builder Constructs binary PESIT protocol messages
+ * according to PESIT E specification
  */
 public class FpduBuilder {
     public static byte[] buildFpdu(FpduType fpduType, int idDest, int idSrc, byte[] data) {
@@ -28,15 +28,16 @@ public class FpduBuilder {
 
     /**
      * Build complete FPDU message with PI and PGI builders
-     * 
+     *
      * @param fpduType FPDU type
-     * @param idDest   Destination connection ID
-     * @param idSrc    Source connection ID (or 0 for file-level FPDUs)
-     * @param pis      Parameter Identifier builders
-     * @param pgis     Parameter Group Identifier builders
+     * @param idDest Destination connection ID
+     * @param idSrc Source connection ID (or 0 for file-level FPDUs)
+     * @param pis Parameter Identifier builders
+     * @param pgis Parameter Group Identifier builders
      * @return Complete FPDU byte array
      */
-    public static byte[] buildFpdu(FpduType fpduType, int idDest, int idSrc, ParameterValue... pis) {
+    public static byte[] buildFpdu(
+            FpduType fpduType, int idDest, int idSrc, ParameterValue... pis) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         List<Parameter> parameters = new ArrayList<>();
         for (ParameterValue pi : pis) {
@@ -51,7 +52,8 @@ public class FpduBuilder {
         // Validate mandatory parameters after building
         for (ParameterRequirement req : fpduType.getParameterRequirements()) {
             if (req.isMandatory() && !parameters.contains(req.getParameter())) {
-                throw new IllegalArgumentException("Missing mandatory PI: " + req.getParameter().toString());
+                throw new IllegalArgumentException(
+                        "Missing mandatory PI: " + req.getParameter().toString());
             }
         }
 
@@ -59,22 +61,25 @@ public class FpduBuilder {
     }
 
     public static byte[] buildFpdu(Fpdu fpdu) {
-        return buildFpdu(fpdu.getFpduType(), fpdu.getIdDst(), fpdu.getIdSrc(),
+        return buildFpdu(
+                fpdu.getFpduType(),
+                fpdu.getIdDst(),
+                fpdu.getIdSrc(),
                 fpdu.getParameters().toArray(new ParameterValue[0]));
     }
 
     /**
-     * Build a multi-article DTF FPDU for variable-length records.
-     * Format: [total_length][phase][type][idDst][idSrc][len1][art1][len2][art2]...
-     * Each article is prefixed with a 2-byte length.
-     * 
-     * @param idDest        Destination connection ID
-     * @param articles      List of article data (each article is a byte array)
-     * @param maxEntitySize Maximum entity size (PI 25) - total FPDU must not exceed
-     *                      this
+     * Build a multi-article DTF FPDU for variable-length records. Format:
+     * [total_length][phase][type][idDst][idSrc][len1][art1][len2][art2]... Each article is prefixed
+     * with a 2-byte length.
+     *
+     * @param idDest Destination connection ID
+     * @param articles List of article data (each article is a byte array)
+     * @param maxEntitySize Maximum entity size (PI 25) - total FPDU must not exceed this
      * @return DTF FPDU bytes, or null if articles don't fit
      */
-    public static byte[] buildMultiArticleDtf(int idDest, List<byte[]> articles, int maxEntitySize) {
+    public static byte[] buildMultiArticleDtf(
+            int idDest, List<byte[]> articles, int maxEntitySize) {
         // Calculate total size: 6 (header) + sum of (2 + article.length) for each
         // article
         int dataSize = 0;
@@ -105,8 +110,8 @@ public class FpduBuilder {
 
     /**
      * Calculate how many articles can fit in one entity.
-     * 
-     * @param articleSize   Size of each article
+     *
+     * @param articleSize Size of each article
      * @param maxEntitySize Maximum entity size (PI 25)
      * @return Number of articles that fit (minimum 1)
      */

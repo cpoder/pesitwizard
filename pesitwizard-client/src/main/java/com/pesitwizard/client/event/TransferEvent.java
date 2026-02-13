@@ -1,9 +1,7 @@
 package com.pesitwizard.client.event;
 
-import java.time.Instant;
-
 import com.pesitwizard.client.pesit.ClientState;
-
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
 

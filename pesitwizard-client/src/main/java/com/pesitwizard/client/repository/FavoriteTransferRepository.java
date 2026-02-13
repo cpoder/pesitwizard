@@ -1,11 +1,9 @@
 package com.pesitwizard.client.repository;
 
-import java.util.List;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.pesitwizard.client.entity.FavoriteTransfer;
 import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FavoriteTransferRepository extends JpaRepository<FavoriteTransfer, String> {
 

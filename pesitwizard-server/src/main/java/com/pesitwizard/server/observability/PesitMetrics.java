@@ -1,22 +1,17 @@
 package com.pesitwizard.server.observability;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.springframework.stereotype.Component;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-/**
- * Custom metrics for PeSIT server monitoring.
- * Exposes metrics for Prometheus scraping.
- */
+/** Custom metrics for PeSIT server monitoring. Exposes metrics for Prometheus scraping. */
 @Slf4j
 @Component
 public class PesitMetrics {
@@ -70,70 +65,84 @@ public class PesitMetrics {
                 .register(registry);
 
         // Connection counters
-        totalConnections = Counter.builder("pesit.connections.total")
-                .description("Total number of PeSIT connections")
-                .register(registry);
+        totalConnections =
+                Counter.builder("pesit.connections.total")
+                        .description("Total number of PeSIT connections")
+                        .register(registry);
 
-        connectionErrors = Counter.builder("pesit.connections.errors")
-                .description("Total number of connection errors")
-                .register(registry);
+        connectionErrors =
+                Counter.builder("pesit.connections.errors")
+                        .description("Total number of connection errors")
+                        .register(registry);
 
         // Transfer counters
-        transfersStarted = Counter.builder("pesit.transfers.started")
-                .description("Total number of transfers started")
-                .register(registry);
+        transfersStarted =
+                Counter.builder("pesit.transfers.started")
+                        .description("Total number of transfers started")
+                        .register(registry);
 
-        transfersCompleted = Counter.builder("pesit.transfers.completed")
-                .description("Total number of transfers completed successfully")
-                .register(registry);
+        transfersCompleted =
+                Counter.builder("pesit.transfers.completed")
+                        .description("Total number of transfers completed successfully")
+                        .register(registry);
 
-        transfersFailed = Counter.builder("pesit.transfers.failed")
-                .description("Total number of failed transfers")
-                .register(registry);
+        transfersFailed =
+                Counter.builder("pesit.transfers.failed")
+                        .description("Total number of failed transfers")
+                        .register(registry);
 
         // Transfer size distribution
-        transferBytes = DistributionSummary.builder("pesit.transfers.bytes")
-                .description("Distribution of transfer sizes in bytes")
-                .baseUnit("bytes")
-                .publishPercentiles(0.5, 0.75, 0.95, 0.99)
-                .register(registry);
+        transferBytes =
+                DistributionSummary.builder("pesit.transfers.bytes")
+                        .description("Distribution of transfer sizes in bytes")
+                        .baseUnit("bytes")
+                        .publishPercentiles(0.5, 0.75, 0.95, 0.99)
+                        .register(registry);
 
         // Transfer duration timer
-        transferDuration = Timer.builder("pesit.transfers.duration")
-                .description("Transfer duration")
-                .publishPercentiles(0.5, 0.75, 0.95, 0.99)
-                .register(registry);
+        transferDuration =
+                Timer.builder("pesit.transfers.duration")
+                        .description("Transfer duration")
+                        .publishPercentiles(0.5, 0.75, 0.95, 0.99)
+                        .register(registry);
 
         // Protocol counters
-        fpduReceived = Counter.builder("pesit.fpdu.received")
-                .description("Total FPDUs received")
-                .register(registry);
+        fpduReceived =
+                Counter.builder("pesit.fpdu.received")
+                        .description("Total FPDUs received")
+                        .register(registry);
 
-        fpduSent = Counter.builder("pesit.fpdu.sent")
-                .description("Total FPDUs sent")
-                .register(registry);
+        fpduSent =
+                Counter.builder("pesit.fpdu.sent")
+                        .description("Total FPDUs sent")
+                        .register(registry);
 
-        protocolErrors = Counter.builder("pesit.protocol.errors")
-                .description("Total protocol errors")
-                .register(registry);
+        protocolErrors =
+                Counter.builder("pesit.protocol.errors")
+                        .description("Total protocol errors")
+                        .register(registry);
 
         // S3-11: Sync point counters (consolidated from ProtocolMetrics)
-        syncPointsSent = Counter.builder("pesit.syncpoints.sent")
-                .description("Total sync points sent")
-                .register(registry);
+        syncPointsSent =
+                Counter.builder("pesit.syncpoints.sent")
+                        .description("Total sync points sent")
+                        .register(registry);
 
-        syncPointsReceived = Counter.builder("pesit.syncpoints.received")
-                .description("Total sync points received")
-                .register(registry);
+        syncPointsReceived =
+                Counter.builder("pesit.syncpoints.received")
+                        .description("Total sync points received")
+                        .register(registry);
 
         // S3-11: Restart counters (consolidated from ProtocolMetrics)
-        restartRequests = Counter.builder("pesit.restarts.requested")
-                .description("Total restart requests")
-                .register(registry);
+        restartRequests =
+                Counter.builder("pesit.restarts.requested")
+                        .description("Total restart requests")
+                        .register(registry);
 
-        restartSuccesses = Counter.builder("pesit.restarts.succeeded")
-                .description("Total successful restarts")
-                .register(registry);
+        restartSuccesses =
+                Counter.builder("pesit.restarts.succeeded")
+                        .description("Total successful restarts")
+                        .register(registry);
 
         log.info("PeSIT metrics initialized");
     }
@@ -282,9 +291,7 @@ public class PesitMetrics {
     }
 
     public void recordTimer(Timer.Sample sample, String name, String... tags) {
-        sample.stop(Timer.builder(name)
-                .tags(tags)
-                .register(registry));
+        sample.stop(Timer.builder(name).tags(tags).register(registry));
     }
 
     // ========== Health Indicators ==========

@@ -5,15 +5,11 @@ import java.util.regex.Pattern;
 /**
  * Validator for PeSIT protocol identifiers.
  *
- * PeSIT is a legacy protocol with strict identifier requirements:
- * - Maximum 8 characters
- * - Uppercase letters A-Z and digits 0-9 only
- * - No special characters, spaces, or underscores
+ * <p>PeSIT is a legacy protocol with strict identifier requirements: - Maximum 8 characters -
+ * Uppercase letters A-Z and digits 0-9 only - No special characters, spaces, or underscores
  *
- * These rules apply to:
- * - Server identifiers (PI_04_SERVEUR)
- * - Partner identifiers (PI_03_DEMANDEUR)
- * - File identifiers (PI_12_NOM_FICHIER)
+ * <p>These rules apply to: - Server identifiers (PI_04_SERVEUR) - Partner identifiers
+ * (PI_03_DEMANDEUR) - File identifiers (PI_12_NOM_FICHIER)
  */
 public class PesitIdValidator {
 
@@ -33,11 +29,19 @@ public class PesitIdValidator {
         }
 
         if (id.length() > MAX_LENGTH) {
-            return type + " ID must be " + MAX_LENGTH + " characters or less (got " + id.length() + " chars): " + id;
+            return type
+                    + " ID must be "
+                    + MAX_LENGTH
+                    + " characters or less (got "
+                    + id.length()
+                    + " chars): "
+                    + id;
         }
 
         if (!VALID_PATTERN.matcher(id).matches()) {
-            return type + " ID must contain only uppercase letters (A-Z) and digits (0-9), no special characters or underscores: " + id;
+            return type
+                    + " ID must contain only uppercase letters (A-Z) and digits (0-9), no special characters or underscores: "
+                    + id;
         }
 
         return null;

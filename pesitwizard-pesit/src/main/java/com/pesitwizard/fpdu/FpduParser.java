@@ -1,20 +1,17 @@
 package com.pesitwizard.fpdu;
 
 import java.nio.ByteBuffer;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Parser for a single PeSIT FPDU.
- * FPDU structure: [size (2 bytes, binary)][phase][type][idDst][idSrc][params or
- * data]
+ * Parser for a single PeSIT FPDU. FPDU structure: [size (2 bytes,
+ * binary)][phase][type][idDst][idSrc][params or data]
  *
- * Note on IBM CX encoding:
- * - Pre-connection message (24 bytes): PURE EBCDIC
- * - FPDU messages: ALL fields are in ASCII/binary (no EBCDIC conversion needed)
+ * <p>Note on EBCDIC encoding: - Pre-connection message (24 bytes): PURE EBCDIC (standard PeSIT on
+ * IBM systems) - FPDU messages: ALL fields are in ASCII/binary (no EBCDIC conversion needed)
  *
- * Note: The global frame length has been consumed by FpduIO.readRawFpdu(),
- * but each FPDU inside the frame has its own 2-byte length prefix.
+ * <p>Note: The global frame length has been consumed by FpduIO.readRawFpdu(), but each FPDU inside
+ * the frame has its own 2-byte length prefix.
  */
 @Slf4j
 public class FpduParser {
@@ -22,10 +19,9 @@ public class FpduParser {
     private final int fpduLength;
 
     /**
-     * Create parser from ByteBuffer positioned at start of FPDU (including length
-     * prefix).
-     * This is the preferred constructor. The buffer position will be advanced by
-     * fpduLength bytes after parsing.
+     * Create parser from ByteBuffer positioned at start of FPDU (including length prefix). This is
+     * the preferred constructor. The buffer position will be advanced by fpduLength bytes after
+     * parsing.
      */
     public FpduParser(ByteBuffer buffer) {
         this.fpduLength = buffer.getShort() & 0xFFFF;
@@ -33,8 +29,12 @@ public class FpduParser {
         // read)
         int dataLen = fpduLength - 2;
         if (dataLen < 0 || dataLen > buffer.remaining()) {
-            throw new FpduException("Invalid FPDU length: " + fpduLength
-                    + " (available: " + (buffer.remaining() + 2) + " bytes)");
+            throw new FpduException(
+                    "Invalid FPDU length: "
+                            + fpduLength
+                            + " (available: "
+                            + (buffer.remaining() + 2)
+                            + " bytes)");
         }
         ByteBuffer slice = buffer.slice();
         slice.limit(dataLen);
@@ -43,13 +43,14 @@ public class FpduParser {
         buffer.position(buffer.position() + dataLen);
     }
 
-    /**
-     * Create parser from byte array containing complete FPDU (with length prefix).
-     */
+    /** Create parser from byte array containing complete FPDU (with length prefix). */
     public FpduParser(byte[] data) {
         this(ByteBuffer.wrap(data));
         if (fpduLength != data.length) {
-            log.warn("FPDU length mismatch: FPDU header says {}, actual data is {} bytes", fpduLength, data.length);
+            log.warn(
+                    "FPDU length mismatch: FPDU header says {}, actual data is {} bytes",
+                    fpduLength,
+                    data.length);
         }
     }
 
@@ -75,8 +76,10 @@ public class FpduParser {
 
         // DTF FPDUs contain raw data, not parameters
         // Data length = fpduLength - 6 (2 len + 1 phase + 1 type + 1 idDst + 1 idSrc)
-        if (fpdu.getFpduType() == FpduType.DTF || fpdu.getFpduType() == FpduType.DTFDA
-                || fpdu.getFpduType() == FpduType.DTFMA || fpdu.getFpduType() == FpduType.DTFFA) {
+        if (fpdu.getFpduType() == FpduType.DTF
+                || fpdu.getFpduType() == FpduType.DTFDA
+                || fpdu.getFpduType() == FpduType.DTFMA
+                || fpdu.getFpduType() == FpduType.DTFFA) {
             int dataLen = buffer.remaining(); // Already limited by slice
             if (dataLen > 0) {
                 byte[] rawData = new byte[dataLen];
@@ -96,7 +99,9 @@ public class FpduParser {
             int paramLength = buffer.get() & 0xFF;
             if (paramLength == 0xFF) {
                 if (!buffer.hasRemaining()) {
-                    log.warn("Incomplete parameter: ID={} with length byte 0xFF without short length", paramId);
+                    log.warn(
+                            "Incomplete parameter: ID={} with length byte 0xFF without short length",
+                            paramId);
                     break;
                 }
                 paramLength = buffer.getShort() & 0xFFFF;
@@ -104,14 +109,19 @@ public class FpduParser {
             // S3-08: Reject LI=0 for PI parameters (empty values are protocol violations).
             // PGI groups (e.g., PGI_09) with LI=0 are allowed — they represent empty groups.
             if (paramLength == 0 && ParameterGroupIdentifier.fromId(paramId) == null) {
-                throw new FpduParseException(String.format(
-                        "Invalid parameter PI_%d: LI=0 (zero-length value not allowed)", paramId));
+                throw new FpduParseException(
+                        String.format(
+                                "Invalid parameter PI_%d: LI=0 (zero-length value not allowed)",
+                                paramId));
             }
             byte[] paramData = new byte[paramLength];
             if (paramLength > 0) {
                 if (paramLength > buffer.remaining()) {
-                    log.warn("Incomplete parameter: ID={} with length {} exceeds remaining buffer size {}", paramId,
-                            paramLength, buffer.remaining());
+                    log.warn(
+                            "Incomplete parameter: ID={} with length {} exceeds remaining buffer size {}",
+                            paramId,
+                            paramLength,
+                            buffer.remaining());
                     break;
                 }
                 buffer.get(paramData);
@@ -119,42 +129,59 @@ public class FpduParser {
             if (ParameterIdentifier.fromId(paramId) != null) {
                 ParameterIdentifier paramIdEnum = ParameterIdentifier.fromId(paramId);
                 ParameterValue paramValue = new ParameterValue(paramIdEnum, paramData);
-                log.info("PI {} found which is {} and has a size of {} bytes with value {}", paramId, paramIdEnum,
-                        paramLength, paramValue.toString());
+                log.info(
+                        "PI {} found which is {} and has a size of {} bytes with value {}",
+                        paramId,
+                        paramIdEnum,
+                        paramLength,
+                        paramValue.toString());
                 fpdu.getParameters().add(paramValue);
             } else if (ParameterGroupIdentifier.fromId(paramId) != null) {
                 ParameterGroupIdentifier groupId = ParameterGroupIdentifier.fromId(paramId);
                 log.info("PGI {} found which is {}", paramId, groupId);
-                ParameterValue groupParameterValue = new ParameterValue(groupId, new ParameterValue[0]);
+                ParameterValue groupParameterValue =
+                        new ParameterValue(groupId, new ParameterValue[0]);
                 fpdu.getParameters().add(groupParameterValue);
                 ByteBuffer groupBuffer = ByteBuffer.wrap(paramData);
                 while (groupBuffer.hasRemaining()) {
                     int groupParamId = groupBuffer.get() & 0xFF;
                     if (!groupBuffer.hasRemaining()) {
-                        throw new FpduParseException(String.format(
-                                "Malformed PGI %s: sub-parameter PI_%d has no length byte",
-                                groupId.name(), groupParamId));
+                        throw new FpduParseException(
+                                String.format(
+                                        "Malformed PGI %s: sub-parameter PI_%d has no length byte",
+                                        groupId.name(), groupParamId));
                     }
                     int groupParamLength = groupBuffer.get() & 0xFF;
                     if (groupParamLength > groupBuffer.remaining()) {
-                        throw new FpduParseException(String.format(
-                                "Malformed PGI %s: sub-parameter PI_%d length %d exceeds remaining PGI data (%d bytes)",
-                                groupId.name(), groupParamId, groupParamLength, groupBuffer.remaining()));
+                        throw new FpduParseException(
+                                String.format(
+                                        "Malformed PGI %s: sub-parameter PI_%d length %d exceeds remaining PGI data (%d bytes)",
+                                        groupId.name(),
+                                        groupParamId,
+                                        groupParamLength,
+                                        groupBuffer.remaining()));
                     }
                     byte[] groupParamData = new byte[groupParamLength];
                     groupBuffer.get(groupParamData);
                     ParameterIdentifier groupParamIdEnum = ParameterIdentifier.fromId(groupParamId);
                     if (groupParamIdEnum != null) {
-                        ParameterValue groupParamValue = new ParameterValue(groupParamIdEnum, groupParamData);
-                        log.info("PI {} found which is {} and has a size of {} bytes with value {}", groupParamId,
-                                groupParamIdEnum, groupParamLength, groupParamValue.toString());
+                        ParameterValue groupParamValue =
+                                new ParameterValue(groupParamIdEnum, groupParamData);
+                        log.info(
+                                "PI {} found which is {} and has a size of {} bytes with value {}",
+                                groupParamId,
+                                groupParamIdEnum,
+                                groupParamLength,
+                                groupParamValue.toString());
                         groupParameterValue.getValues().add(groupParamValue);
                     } else {
-                        throw new UnknownParameterException(groupParamId, groupParamLength, "PGI " + groupId.name());
+                        throw new UnknownParameterException(
+                                groupParamId, groupParamLength, "PGI " + groupId.name());
                     }
                 }
             } else {
-                throw new UnknownParameterException(paramId, paramLength, "FPDU " + fpdu.getFpduType().name());
+                throw new UnknownParameterException(
+                        paramId, paramLength, "FPDU " + fpdu.getFpduType().name());
             }
         }
 

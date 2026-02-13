@@ -5,14 +5,11 @@ import static org.assertj.core.api.Assertions.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for FpduIO.
- */
+/** Unit tests for FpduIO. */
 @DisplayName("FpduIO Tests")
 class FpduIOTest {
 
@@ -29,48 +26,48 @@ class FpduIOTest {
         @Test
         @DisplayName("should return false for short data")
         void shouldReturnFalseForShortData() {
-            assertThat(FpduIO.isDtf(new byte[] { 1, 2, 3 })).isFalse();
+            assertThat(FpduIO.isDtf(new byte[] {1, 2, 3})).isFalse();
         }
 
         @Test
         @DisplayName("should return true for DTF type 0x00")
         void shouldReturnTrueForDtfType00() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x00, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x00, 1, 1};
             assertThat(FpduIO.isDtf(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return true for DTF type 0x40")
         void shouldReturnTrueForDtfType40() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x40, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x40, 1, 1};
             assertThat(FpduIO.isDtf(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return true for DTF type 0x41")
         void shouldReturnTrueForDtfType41() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x41, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x41, 1, 1};
             assertThat(FpduIO.isDtf(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return true for DTF type 0x42")
         void shouldReturnTrueForDtfType42() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x42, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x42, 1, 1};
             assertThat(FpduIO.isDtf(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return false for non-DTF phase")
         void shouldReturnFalseForNonDtfPhase() {
-            byte[] data = new byte[] { 0, 0, 0x40, 0x00, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x40, 0x00, 1, 1};
             assertThat(FpduIO.isDtf(data)).isFalse();
         }
 
         @Test
         @DisplayName("should return false for non-DTF type")
         void shouldReturnFalseForNonDtfType() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x10, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x10, 1, 1};
             assertThat(FpduIO.isDtf(data)).isFalse();
         }
     }
@@ -88,27 +85,27 @@ class FpduIOTest {
         @Test
         @DisplayName("should return false for short data")
         void shouldReturnFalseForShortData() {
-            assertThat(FpduIO.isDtfEnd(new byte[] { 1, 2, 3 })).isFalse();
+            assertThat(FpduIO.isDtfEnd(new byte[] {1, 2, 3})).isFalse();
         }
 
         @Test
         @DisplayName("should return true for DTF.END")
         void shouldReturnTrueForDtfEnd() {
-            byte[] data = new byte[] { 0, 0, (byte) 0xC0, 0x04, 1, 1 };
+            byte[] data = new byte[] {0, 0, (byte) 0xC0, 0x04, 1, 1};
             assertThat(FpduIO.isDtfEnd(data)).isTrue();
         }
 
         @Test
         @DisplayName("should return false for non-DTF.END phase")
         void shouldReturnFalseForNonDtfEndPhase() {
-            byte[] data = new byte[] { 0, 0, 0x00, 0x04, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x00, 0x04, 1, 1};
             assertThat(FpduIO.isDtfEnd(data)).isFalse();
         }
 
         @Test
         @DisplayName("should return false for non-DTF.END type")
         void shouldReturnFalseForNonDtfEndType() {
-            byte[] data = new byte[] { 0, 0, (byte) 0xC0, 0x10, 1, 1 };
+            byte[] data = new byte[] {0, 0, (byte) 0xC0, 0x10, 1, 1};
             assertThat(FpduIO.isDtfEnd(data)).isFalse();
         }
     }
@@ -126,13 +123,13 @@ class FpduIOTest {
         @Test
         @DisplayName("should return empty array for short data")
         void shouldReturnEmptyArrayForShortData() {
-            assertThat(FpduIO.extractDtfData(new byte[] { 1, 2, 3, 4, 5, 6 })).isEmpty();
+            assertThat(FpduIO.extractDtfData(new byte[] {1, 2, 3, 4, 5, 6})).isEmpty();
         }
 
         @Test
         @DisplayName("should extract data payload")
         void shouldExtractDataPayload() {
-            byte[] rawData = new byte[] { 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5 };
+            byte[] rawData = new byte[] {0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5};
             byte[] data = FpduIO.extractDtfData(rawData);
             assertThat(data).containsExactly(1, 2, 3, 4, 5);
         }
@@ -140,7 +137,7 @@ class FpduIOTest {
         @Test
         @DisplayName("should handle exactly 7 byte data")
         void shouldHandleExactly7ByteData() {
-            byte[] rawData = new byte[] { 0, 0, 0, 0, 0, 0, 42 };
+            byte[] rawData = new byte[] {0, 0, 0, 0, 0, 0, 42};
             byte[] data = FpduIO.extractDtfData(rawData);
             assertThat(data).containsExactly(42);
         }
@@ -159,13 +156,13 @@ class FpduIOTest {
         @Test
         @DisplayName("should return null for short data")
         void shouldReturnNullForShortData() {
-            assertThat(FpduIO.getPhaseAndType(new byte[] { 1, 2, 3 })).isNull();
+            assertThat(FpduIO.getPhaseAndType(new byte[] {1, 2, 3})).isNull();
         }
 
         @Test
         @DisplayName("should extract phase and type")
         void shouldExtractPhaseAndType() {
-            byte[] data = new byte[] { 0, 0, 0x40, 0x21, 1, 1 };
+            byte[] data = new byte[] {0, 0, 0x40, 0x21, 1, 1};
             int[] result = FpduIO.getPhaseAndType(data);
             assertThat(result).containsExactly(0x40, 0x21);
         }
@@ -173,7 +170,7 @@ class FpduIOTest {
         @Test
         @DisplayName("should handle unsigned bytes")
         void shouldHandleUnsignedBytes() {
-            byte[] data = new byte[] { 0, 0, (byte) 0xC0, (byte) 0xFF, 1, 1 };
+            byte[] data = new byte[] {0, 0, (byte) 0xC0, (byte) 0xFF, 1, 1};
             int[] result = FpduIO.getPhaseAndType(data);
             assertThat(result).containsExactly(0xC0, 0xFF);
         }
@@ -239,20 +236,20 @@ class FpduIOTest {
         @Test
         @DisplayName("should convert single byte")
         void shouldConvertSingleByte() {
-            assertThat(FpduIO.bytesToHex(new byte[] { (byte) 0xAB })).isEqualTo("AB");
+            assertThat(FpduIO.bytesToHex(new byte[] {(byte) 0xAB})).isEqualTo("AB");
         }
 
         @Test
         @DisplayName("should convert multiple bytes")
         void shouldConvertMultipleBytes() {
-            assertThat(FpduIO.bytesToHex(new byte[] { 0x01, 0x23, (byte) 0xAB, (byte) 0xCD }))
+            assertThat(FpduIO.bytesToHex(new byte[] {0x01, 0x23, (byte) 0xAB, (byte) 0xCD}))
                     .isEqualTo("0123ABCD");
         }
 
         @Test
         @DisplayName("should pad single digit with zero")
         void shouldPadSingleDigitWithZero() {
-            assertThat(FpduIO.bytesToHex(new byte[] { 0x0F })).isEqualTo("0F");
+            assertThat(FpduIO.bytesToHex(new byte[] {0x0F})).isEqualTo("0F");
         }
     }
 
@@ -296,7 +293,7 @@ class FpduIOTest {
         @Test
         @DisplayName("extractArticles should return empty list for short data")
         void extractArticles_shouldReturnEmptyForShortData() {
-            assertThat(FpduIO.extractArticles(new byte[] { 1 })).isEmpty();
+            assertThat(FpduIO.extractArticles(new byte[] {1})).isEmpty();
         }
 
         @Test
@@ -304,7 +301,7 @@ class FpduIOTest {
         void extractArticles_shouldExtractSingleArticle() {
             // Multi-article format: [len(2)][article_data]
             // Article length: 3, Article data: "ABC"
-            byte[] data = new byte[] { 0, 3, 'A', 'B', 'C' };
+            byte[] data = new byte[] {0, 3, 'A', 'B', 'C'};
             List<byte[]> articles = FpduIO.extractArticles(data);
 
             assertThat(articles).hasSize(1);
@@ -315,7 +312,7 @@ class FpduIOTest {
         @DisplayName("extractArticles should extract multiple articles")
         void extractArticles_shouldExtractMultipleArticles() {
             // Two articles: "ABC" (len=3) and "DE" (len=2)
-            byte[] data = new byte[] { 0, 3, 'A', 'B', 'C', 0, 2, 'D', 'E' };
+            byte[] data = new byte[] {0, 3, 'A', 'B', 'C', 0, 2, 'D', 'E'};
             List<byte[]> articles = FpduIO.extractArticles(data);
 
             assertThat(articles).hasSize(2);
@@ -327,7 +324,7 @@ class FpduIOTest {
         @DisplayName("extractArticles should stop on invalid article length")
         void extractArticles_shouldStopOnInvalidLength() {
             // First article is valid, second has invalid length
-            byte[] data = new byte[] { 0, 2, 'A', 'B', 0, 99 }; // 99 bytes not available
+            byte[] data = new byte[] {0, 2, 'A', 'B', 0, 99}; // 99 bytes not available
             List<byte[]> articles = FpduIO.extractArticles(data);
 
             assertThat(articles).hasSize(1);
@@ -337,7 +334,7 @@ class FpduIOTest {
         @Test
         @DisplayName("extractArticles should stop on zero length")
         void extractArticles_shouldStopOnZeroLength() {
-            byte[] data = new byte[] { 0, 2, 'A', 'B', 0, 0, 'X', 'Y' };
+            byte[] data = new byte[] {0, 2, 'A', 'B', 0, 0, 'X', 'Y'};
             List<byte[]> articles = FpduIO.extractArticles(data);
 
             assertThat(articles).hasSize(1);
@@ -347,7 +344,7 @@ class FpduIOTest {
         @Test
         @DisplayName("extractArticlesToStream should write articles to stream")
         void extractArticlesToStream_shouldWriteToStream() throws IOException {
-            byte[] data = new byte[] { 0, 3, 'A', 'B', 'C', 0, 2, 'D', 'E' };
+            byte[] data = new byte[] {0, 3, 'A', 'B', 'C', 0, 2, 'D', 'E'};
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             long bytesWritten = FpduIO.extractArticlesToStream(data, out);
@@ -366,14 +363,14 @@ class FpduIOTest {
         @Test
         @DisplayName("extractArticlesToStream should return 0 for null output")
         void extractArticlesToStream_shouldReturn0ForNullOutput() throws IOException {
-            byte[] data = new byte[] { 0, 2, 'A', 'B' };
+            byte[] data = new byte[] {0, 2, 'A', 'B'};
             assertThat(FpduIO.extractArticlesToStream(data, null)).isEqualTo(0);
         }
 
         @Test
         @DisplayName("processDtfData should return raw data for single-article DTF")
         void processDtfData_shouldReturnRawDataForSingleArticle() {
-            byte[] rawData = new byte[] { 'A', 'B', 'C' };
+            byte[] rawData = new byte[] {'A', 'B', 'C'};
             Fpdu fpdu = new Fpdu(FpduType.DTF).withIdSrc(1).withData(rawData);
 
             byte[] result = FpduIO.processDtfData(fpdu);
@@ -384,7 +381,7 @@ class FpduIOTest {
         @Test
         @DisplayName("processDtfData should extract articles for multi-article DTF")
         void processDtfData_shouldExtractArticlesForMultiArticle() {
-            byte[] multiArticleData = new byte[] { 0, 2, 'A', 'B', 0, 3, 'C', 'D', 'E' };
+            byte[] multiArticleData = new byte[] {0, 2, 'A', 'B', 0, 3, 'C', 'D', 'E'};
             Fpdu fpdu = new Fpdu(FpduType.DTF).withIdSrc(2).withData(multiArticleData);
 
             byte[] result = FpduIO.processDtfData(fpdu);

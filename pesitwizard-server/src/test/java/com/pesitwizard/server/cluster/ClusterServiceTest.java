@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * Tests for ClusterService when running in standalone/disabled mode.
- * Full cluster testing requires JGroups integration tests.
+ * Tests for ClusterService when running in standalone/disabled mode. Full cluster testing requires
+ * JGroups integration tests.
  */
 @DisplayName("ClusterService Tests (Standalone Mode)")
 class ClusterServiceTest {
@@ -92,8 +92,7 @@ class ClusterServiceTest {
     @Test
     @DisplayName("addListener should not throw")
     void addListenerShouldNotThrow() {
-        ClusterEventListener listener = event -> {
-        };
+        ClusterEventListener listener = event -> {};
 
         assertDoesNotThrow(() -> service.addListener(listener));
     }
@@ -101,8 +100,7 @@ class ClusterServiceTest {
     @Test
     @DisplayName("removeListener should not throw")
     void removeListenerShouldNotThrow() {
-        ClusterEventListener listener = event -> {
-        };
+        ClusterEventListener listener = event -> {};
         service.addListener(listener);
 
         assertDoesNotThrow(() -> service.removeListener(listener));
@@ -112,7 +110,8 @@ class ClusterServiceTest {
     @DisplayName("broadcast should not throw when cluster disabled")
     void broadcastShouldNotThrowWhenDisabled() {
         service.init();
-        ClusterMessage message = new ClusterMessage(ClusterMessage.Type.SERVER_ACQUIRED, "server1", "test-node");
+        ClusterMessage message =
+                new ClusterMessage(ClusterMessage.Type.SERVER_ACQUIRED, "server1", "test-node");
 
         assertDoesNotThrow(() -> service.broadcast(message));
     }

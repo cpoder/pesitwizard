@@ -1,32 +1,30 @@
 package com.pesitwizard.client.event;
 
+import com.pesitwizard.client.pesit.ClientState;
 import java.util.concurrent.Executor;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-import com.pesitwizard.client.pesit.ClientState;
-
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Central event bus for PeSIT transfer events.
  *
  * <p>This class publishes events to two channels:
+ *
  * <ul>
- *   <li><b>Spring ApplicationEventPublisher</b> - For pluggable integrations
- *       (Kafka, monitoring systems, metrics collectors, etc.). Plugins should
- *       implement {@code @EventListener} for {@link TransferEvent}. Published
- *       synchronously to maintain order.</li>
- *   <li><b>WebSocket topics</b> - For real-time UI updates. Published
- *       asynchronously to prevent blocking transfer threads if WebSocket
- *       encounters issues.</li>
+ *   <li><b>Spring ApplicationEventPublisher</b> - For pluggable integrations (Kafka, monitoring
+ *       systems, metrics collectors, etc.). Plugins should implement {@code @EventListener} for
+ *       {@link TransferEvent}. Published synchronously to maintain order.
+ *   <li><b>WebSocket topics</b> - For real-time UI updates. Published asynchronously to prevent
+ *       blocking transfer threads if WebSocket encounters issues.
  * </ul>
  *
  * <h3>Creating a Plugin</h3>
+ *
  * <p>To monitor transfer events, create a Spring bean with {@code @EventListener}:
+ *
  * <pre>{@code
  * @Component
  * public class KafkaTransferPlugin {
@@ -44,15 +42,15 @@ import lombok.extern.slf4j.Slf4j;
  * }
  * }</pre>
  *
- * <p><b>Important:</b> Synchronous event listeners should be fast (< 50ms). For
- * long-running operations, use {@code @Async("pluginExecutor")} or
- * {@code @TransactionalEventListener(phase = AFTER_COMMIT)} to process events
- * after database transactions complete.
+ * <p><b>Important:</b> Synchronous event listeners should be fast (< 50ms). For long-running
+ * operations, use {@code @Async("pluginExecutor")} or {@code @TransactionalEventListener(phase =
+ * AFTER_COMMIT)} to process events after database transactions complete.
  *
  * <h3>WebSocket Topics</h3>
+ *
  * <ul>
- *   <li>{@code /topic/transfer/{transferId}/progress} - Individual transfer events</li>
- *   <li>{@code /topic/transfers} - All transfer events (broadcast)</li>
+ *   <li>{@code /topic/transfer/{transferId}/progress} - Individual transfer events
+ *   <li>{@code /topic/transfers} - All transfer events (broadcast)
  * </ul>
  *
  * @see TransferEvent
@@ -68,9 +66,10 @@ public class TransferEventBus {
     private final ApplicationEventPublisher eventPublisher;
     private final Executor websocketExecutor;
 
-    public TransferEventBus(SimpMessagingTemplate messagingTemplate,
-                            ApplicationEventPublisher eventPublisher,
-                            @Qualifier("websocketExecutor") Executor websocketExecutor) {
+    public TransferEventBus(
+            SimpMessagingTemplate messagingTemplate,
+            ApplicationEventPublisher eventPublisher,
+            @Qualifier("websocketExecutor") Executor websocketExecutor) {
         this.messagingTemplate = messagingTemplate;
         this.eventPublisher = eventPublisher;
         this.websocketExecutor = websocketExecutor;
@@ -86,7 +85,9 @@ public class TransferEventBus {
      * @param event the transfer event to publish
      */
     public void publish(TransferEvent event) {
-        log.debug("Event: {} - {} for transfer {}", event.getType(),
+        log.debug(
+                "Event: {} - {} for transfer {}",
+                event.getType(),
                 event.getCurrentState() != null ? event.getCurrentState().getCode() : "",
                 event.getTransferId());
 
@@ -101,9 +102,8 @@ public class TransferEventBus {
     }
 
     /**
-     * Publishes event to WebSocket topics.
-     * Called asynchronously via the websocketExecutor to prevent WebSocket issues
-     * from blocking transfer threads.
+     * Publishes event to WebSocket topics. Called asynchronously via the websocketExecutor to
+     * prevent WebSocket issues from blocking transfer threads.
      *
      * @param event the event to publish
      */
@@ -119,8 +119,11 @@ public class TransferEventBus {
             messagingTemplate.convertAndSend(TOPIC_ALL, event);
         } catch (RuntimeException e) {
             // Log error but don't fail transfer if WebSocket has issues
-            log.error("Failed to publish WebSocket message for transfer {}: {}",
-                    event.getTransferId(), e.getMessage(), e);
+            log.error(
+                    "Failed to publish WebSocket message for transfer {}: {}",
+                    event.getTransferId(),
+                    e.getMessage(),
+                    e);
         }
     }
 

@@ -2,10 +2,7 @@ package com.pesitwizard.fpdu;
 
 import java.io.IOException;
 
-/**
- * Builder for PESIT CONNECT message
- * Used to establish a PESIT session
- */
+/** Builder for PESIT CONNECT message Used to establish a PESIT session */
 public class ConnectMessageBuilder {
 
     private String demandeur = "CLIENT";
@@ -42,29 +39,21 @@ public class ConnectMessageBuilder {
         return this;
     }
 
-    /**
-     * Set password for authentication (PI_05 CONTROLE_ACCES)
-     */
+    /** Set password for authentication (PI_05 CONTROLE_ACCES) */
     public ConnectMessageBuilder password(String password) {
         this.password = password;
         return this;
     }
 
-    /**
-     * Enable sync points (PI_07 SYNC_POINTS)
-     * Uses default interval (undefined) and window (1)
-     */
+    /** Enable sync points (PI_07 SYNC_POINTS) Uses default interval (undefined) and window (1) */
     public ConnectMessageBuilder syncPointsEnabled(boolean enabled) {
         this.syncPointsEnabled = enabled;
         return this;
     }
 
     /**
-     * Set sync point interval in kilobytes.
-     * Special values:
-     * - 0 = no sync points
-     * - 0xFFFF = undefined interval (default)
-     * Minimum is 4 KB for SIT profile.
+     * Set sync point interval in kilobytes. Special values: - 0 = no sync points - 0xFFFF =
+     * undefined interval (default) Minimum is 4 KB for SIT profile.
      */
     public ConnectMessageBuilder syncIntervalKb(int intervalKb) {
         this.syncIntervalKb = intervalKb;
@@ -73,10 +62,8 @@ public class ConnectMessageBuilder {
     }
 
     /**
-     * Set sync point acknowledgment window.
-     * - 0 = no acknowledgment of sync points
-     * - 1-16 = acknowledgment window size
-     * Maximum is 16 for SIT profile.
+     * Set sync point acknowledgment window. - 0 = no acknowledgment of sync points - 1-16 =
+     * acknowledgment window size Maximum is 16 for SIT profile.
      */
     public ConnectMessageBuilder syncAckWindow(int window) {
         this.syncAckWindow = Math.min(window, 16);
@@ -84,9 +71,7 @@ public class ConnectMessageBuilder {
         return this;
     }
 
-    /**
-     * Enable resynchronization (PI_23 RESYNC)
-     */
+    /** Enable resynchronization (PI_23 RESYNC) */
     public ConnectMessageBuilder resyncEnabled(boolean enabled) {
         this.resyncEnabled = enabled;
         return this;
@@ -94,22 +79,26 @@ public class ConnectMessageBuilder {
 
     /**
      * Build complete CONNECT FPDU
-     * 
+     *
      * @return Complete FPDU byte array
      * @throws IOException if serialization fails
      */
     public Fpdu build(int connectionId) throws IOException {
         // PI order is critical in PeSIT: PI_03, PI_04, PI_05, PI_06, PI_07, PI_22,
         // PI_23
-        Fpdu fpdu = new Fpdu(FpduType.CONNECT)
-                .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, demandeur))
-                .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, serveur))
-                .withIdSrc(connectionId)
-                .withIdDst(0);
+        Fpdu fpdu =
+                new Fpdu(FpduType.CONNECT)
+                        .withParameter(
+                                new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, demandeur))
+                        .withParameter(
+                                new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, serveur))
+                        .withIdSrc(connectionId)
+                        .withIdDst(0);
 
         // PI_05 (password) - optional
         if (password != null && !password.isEmpty()) {
-            fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, password));
+            fpdu.withParameter(
+                    new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, password));
         }
 
         // PI_06 (version)
@@ -117,11 +106,12 @@ public class ConnectMessageBuilder {
 
         // PI_07 (sync points) - MUST come after PI_06 and before PI_22
         if (syncPointsEnabled) {
-            byte[] pi7Value = new byte[] {
-                    (byte) ((syncIntervalKb >> 8) & 0xFF),
-                    (byte) (syncIntervalKb & 0xFF),
-                    (byte) (syncAckWindow & 0xFF)
-            };
+            byte[] pi7Value =
+                    new byte[] {
+                        (byte) ((syncIntervalKb >> 8) & 0xFF),
+                        (byte) (syncIntervalKb & 0xFF),
+                        (byte) (syncAckWindow & 0xFF)
+                    };
             fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_07_SYNC_POINTS, pi7Value));
         }
 

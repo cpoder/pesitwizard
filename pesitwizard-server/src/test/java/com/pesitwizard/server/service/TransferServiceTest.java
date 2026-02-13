@@ -2,8 +2,12 @@ package com.pesitwizard.server.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.server.entity.TransferRecord;
+import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
+import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
+import com.pesitwizard.server.repository.TransferRecordRepository;
+import com.pesitwizard.server.service.TransferService.TransferStatistics;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,25 +18,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pesitwizard.server.entity.TransferRecord;
-import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
-import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
-import com.pesitwizard.server.repository.TransferRecordRepository;
-import com.pesitwizard.server.service.TransferService.TransferStatistics;
-
-/**
- * Tests for TransferService
- */
+/** Tests for TransferService */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 public class TransferServiceTest {
 
-    @Autowired
-    private TransferService transferService;
+    @Autowired private TransferService transferService;
 
-    @Autowired
-    private TransferRecordRepository transferRepository;
+    @Autowired private TransferRecordRepository transferRepository;
 
     @BeforeEach
     void setUp() {
@@ -43,10 +37,15 @@ public class TransferServiceTest {
     @DisplayName("Create and complete a transfer")
     void testCreateAndCompleteTransfer() {
         // Create transfer
-        TransferRecord transfer = transferService.createTransfer(
-                "session-1", "server-1", "node-1",
-                "PARTNER_A", "TEST_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.100");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-1",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_A",
+                        "TEST_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.100");
 
         assertNotNull(transfer.getId());
         assertNotNull(transfer.getTransferId());
@@ -56,7 +55,9 @@ public class TransferServiceTest {
         assertEquals(TransferDirection.RECEIVE, transfer.getDirection());
 
         // Start transfer
-        transfer = transferService.startTransfer(transfer.getTransferId(), 1024L, "/data/received/test.dat");
+        transfer =
+                transferService.startTransfer(
+                        transfer.getTransferId(), 1024L, "/data/received/test.dat");
         assertEquals(TransferStatus.IN_PROGRESS, transfer.getStatus());
         assertEquals(1024L, transfer.getFileSize());
 
@@ -75,14 +76,20 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Fail a transfer")
     void testFailTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-2", "server-1", "node-1",
-                "PARTNER_B", "FAIL_FILE.dat",
-                TransferDirection.SEND, "192.168.1.101");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-2",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_B",
+                        "FAIL_FILE.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.101");
 
         transferService.startTransfer(transfer.getTransferId(), 2048L, "/data/send/fail.dat");
 
-        transfer = transferService.failTransfer(transfer.getTransferId(), "E001", "Connection lost");
+        transfer =
+                transferService.failTransfer(transfer.getTransferId(), "E001", "Connection lost");
 
         assertEquals(TransferStatus.FAILED, transfer.getStatus());
         assertEquals("E001", transfer.getErrorCode());
@@ -93,10 +100,15 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Pause and resume transfer")
     void testPauseAndResumeTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-3", "server-1", "node-1",
-                "PARTNER_C", "PAUSE_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.102");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-3",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_C",
+                        "PAUSE_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.102");
 
         transferService.startTransfer(transfer.getTransferId(), 4096L, "/data/received/pause.dat");
         transferService.updateProgress(transfer.getTransferId(), 1024L);
@@ -114,10 +126,15 @@ public class TransferServiceTest {
     @DisplayName("Retry a failed transfer")
     void testRetryTransfer() {
         // Create and fail a transfer
-        TransferRecord original = transferService.createTransfer(
-                "session-4", "server-1", "node-1",
-                "PARTNER_D", "RETRY_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.103");
+        TransferRecord original =
+                transferService.createTransfer(
+                        "session-4",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_D",
+                        "RETRY_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.103");
 
         transferService.startTransfer(original.getTransferId(), 8192L, "/data/received/retry.dat");
         transferService.updateProgress(original.getTransferId(), 2048L);
@@ -142,10 +159,15 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Cannot retry beyond max retries")
     void testMaxRetries() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-5", "server-1", "node-1",
-                "PARTNER_E", "MAX_RETRY.dat",
-                TransferDirection.RECEIVE, "192.168.1.104");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-5",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_E",
+                        "MAX_RETRY.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.104");
 
         transferService.startTransfer(transfer.getTransferId(), 1024L, "/data/received/max.dat");
         transferService.failTransfer(transfer.getTransferId(), "E003", "Error 1");
@@ -168,22 +190,37 @@ public class TransferServiceTest {
     @DisplayName("Query active transfers")
     void testQueryActiveTransfers() {
         // Create multiple transfers
-        TransferRecord t1 = transferService.createTransfer(
-                "session-6", "server-1", "node-1",
-                "PARTNER_F", "ACTIVE_1.dat",
-                TransferDirection.RECEIVE, "192.168.1.105");
+        TransferRecord t1 =
+                transferService.createTransfer(
+                        "session-6",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_F",
+                        "ACTIVE_1.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.105");
         transferService.startTransfer(t1.getTransferId(), 1024L, "/data/1.dat");
 
-        TransferRecord t2 = transferService.createTransfer(
-                "session-7", "server-1", "node-1",
-                "PARTNER_F", "ACTIVE_2.dat",
-                TransferDirection.SEND, "192.168.1.106");
+        TransferRecord t2 =
+                transferService.createTransfer(
+                        "session-7",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_F",
+                        "ACTIVE_2.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.106");
         transferService.startTransfer(t2.getTransferId(), 2048L, "/data/2.dat");
 
-        TransferRecord t3 = transferService.createTransfer(
-                "session-8", "server-2", "node-2",
-                "PARTNER_G", "COMPLETED.dat",
-                TransferDirection.RECEIVE, "192.168.1.107");
+        TransferRecord t3 =
+                transferService.createTransfer(
+                        "session-8",
+                        "server-2",
+                        "node-2",
+                        "PARTNER_G",
+                        "COMPLETED.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.107");
         transferService.startTransfer(t3.getTransferId(), 512L, "/data/3.dat");
         transferService.completeTransfer(t3.getTransferId(), null);
 
@@ -204,12 +241,17 @@ public class TransferServiceTest {
     void testSearchTransfers() {
         // Create transfers with different attributes
         for (int i = 0; i < 5; i++) {
-            TransferRecord t = transferService.createTransfer(
-                    "session-" + (10 + i), "server-1", "node-1",
-                    "PARTNER_H", "SEARCH_" + i + ".dat",
-                    i % 2 == 0 ? TransferDirection.RECEIVE : TransferDirection.SEND,
-                    "192.168.1." + (110 + i));
-            transferService.startTransfer(t.getTransferId(), 1024L * (i + 1), "/data/search" + i + ".dat");
+            TransferRecord t =
+                    transferService.createTransfer(
+                            "session-" + (10 + i),
+                            "server-1",
+                            "node-1",
+                            "PARTNER_H",
+                            "SEARCH_" + i + ".dat",
+                            i % 2 == 0 ? TransferDirection.RECEIVE : TransferDirection.SEND,
+                            "192.168.1." + (110 + i));
+            transferService.startTransfer(
+                    t.getTransferId(), 1024L * (i + 1), "/data/search" + i + ".dat");
             if (i < 3) {
                 transferService.completeTransfer(t.getTransferId(), null);
             }
@@ -220,12 +262,14 @@ public class TransferServiceTest {
         assertEquals(5, byPartner.getTotalElements());
 
         // Search by status
-        Page<TransferRecord> completed = transferService.getTransfersByStatus(TransferStatus.COMPLETED, 0, 10);
+        Page<TransferRecord> completed =
+                transferService.getTransfersByStatus(TransferStatus.COMPLETED, 0, 10);
         assertEquals(3, completed.getTotalElements());
 
         // Search by direction
-        Page<TransferRecord> receives = transferService.searchTransfers(
-                null, null, TransferDirection.RECEIVE, null, null, null, 0, 10);
+        Page<TransferRecord> receives =
+                transferService.searchTransfers(
+                        null, null, TransferDirection.RECEIVE, null, null, null, 0, 10);
         assertEquals(3, receives.getTotalElements());
     }
 
@@ -234,10 +278,15 @@ public class TransferServiceTest {
     void testTransferStatistics() {
         // Create some transfers
         for (int i = 0; i < 10; i++) {
-            TransferRecord t = transferService.createTransfer(
-                    "session-" + (20 + i), "server-1", "node-1",
-                    "PARTNER_I", "STATS_" + i + ".dat",
-                    TransferDirection.RECEIVE, "192.168.1." + (120 + i));
+            TransferRecord t =
+                    transferService.createTransfer(
+                            "session-" + (20 + i),
+                            "server-1",
+                            "node-1",
+                            "PARTNER_I",
+                            "STATS_" + i + ".dat",
+                            TransferDirection.RECEIVE,
+                            "192.168.1." + (120 + i));
             transferService.startTransfer(t.getTransferId(), 1000L, "/data/stats" + i + ".dat");
             transferService.updateProgress(t.getTransferId(), 1000L);
 
@@ -261,10 +310,15 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Record sync points")
     void testSyncPoints() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-30", "server-1", "node-1",
-                "PARTNER_J", "SYNC_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.130");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-30",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_J",
+                        "SYNC_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.130");
 
         transferService.startTransfer(transfer.getTransferId(), 10000L, "/data/sync.dat");
 
@@ -279,23 +333,30 @@ public class TransferServiceTest {
         transferService.recordSyncPoint(transfer.getTransferId(), 6000L);
 
         // Verify sync point recorded
-        TransferRecord updated = transferService.getTransfer(transfer.getTransferId()).orElseThrow();
+        TransferRecord updated =
+                transferService.getTransfer(transfer.getTransferId()).orElseThrow();
         assertEquals(6000L, updated.getLastSyncPoint());
     }
 
     @Test
     @DisplayName("Interrupt and resume transfer")
     void testInterruptAndResumeTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-32", "server-1", "node-1",
-                "PARTNER_L", "INTERRUPT_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.132");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-32",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_L",
+                        "INTERRUPT_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.132");
 
         transferService.startTransfer(transfer.getTransferId(), 8000L, "/data/interrupt.dat");
         transferService.updateProgress(transfer.getTransferId(), 3000L);
         transferService.recordSyncPoint(transfer.getTransferId(), 3000L);
 
-        transfer = transferService.interruptTransfer(transfer.getTransferId(), "Network disconnected");
+        transfer =
+                transferService.interruptTransfer(transfer.getTransferId(), "Network disconnected");
 
         assertEquals(TransferStatus.INTERRUPTED, transfer.getStatus());
         assertTrue(transfer.canRetry());
@@ -308,10 +369,15 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Cancel transfer")
     void testCancelTransfer() {
-        TransferRecord transfer = transferService.createTransfer(
-                "session-33", "server-1", "node-1",
-                "PARTNER_M", "CANCEL_FILE.dat",
-                TransferDirection.SEND, "192.168.1.133");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-33",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_M",
+                        "CANCEL_FILE.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.133");
 
         transferService.startTransfer(transfer.getTransferId(), 5000L, "/data/cancel.dat");
         transferService.updateProgress(transfer.getTransferId(), 1000L);
@@ -327,10 +393,15 @@ public class TransferServiceTest {
     @DisplayName("Get retryable transfers")
     void testGetRetryableTransfers() {
         // Create an interrupted transfer
-        TransferRecord transfer = transferService.createTransfer(
-                "session-35", "server-1", "node-1",
-                "PARTNER_O", "RETRYABLE_FILE.dat",
-                TransferDirection.RECEIVE, "192.168.1.135");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-35",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_O",
+                        "RETRYABLE_FILE.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.135");
 
         transferService.startTransfer(transfer.getTransferId(), 10000L, "/data/retryable.dat");
         transferService.updateProgress(transfer.getTransferId(), 3000L);
@@ -338,31 +409,42 @@ public class TransferServiceTest {
         transferService.interruptTransfer(transfer.getTransferId(), "Network error");
 
         List<TransferRecord> retryable = transferService.getRetryableTransfers();
-        assertTrue(retryable.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
+        assertTrue(
+                retryable.stream()
+                        .anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
     }
 
     @Test
     @DisplayName("Get transfer or throw exception")
     void testGetTransferOrThrow() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transferService.getTransfer("non-existent-id").orElseThrow(
-                    () -> new IllegalArgumentException("Transfer not found"));
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    transferService
+                            .getTransfer("non-existent-id")
+                            .orElseThrow(() -> new IllegalArgumentException("Transfer not found"));
+                });
     }
 
     @Test
     @DisplayName("Get active transfers")
     void testGetActiveTransfers() {
         // Create an active transfer
-        TransferRecord transfer = transferService.createTransfer(
-                "session-36", "server-1", "node-1",
-                "PARTNER_P", "ACTIVE_FILE.dat",
-                TransferDirection.SEND, "192.168.1.136");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-36",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_P",
+                        "ACTIVE_FILE.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.136");
 
         transferService.startTransfer(transfer.getTransferId(), 5000L, "/data/active.dat");
 
         List<TransferRecord> active = transferService.getActiveTransfers();
-        assertTrue(active.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
+        assertTrue(
+                active.stream().anyMatch(t -> t.getTransferId().equals(transfer.getTransferId())));
     }
 
     @Test
@@ -371,10 +453,22 @@ public class TransferServiceTest {
         String sessionId = "session-query-test";
 
         // Create multiple transfers for the same session
-        transferService.createTransfer(sessionId, "server-1", "node-1",
-                "PARTNER_S", "file1.dat", TransferDirection.SEND, "192.168.1.1");
-        transferService.createTransfer(sessionId, "server-1", "node-1",
-                "PARTNER_S", "file2.dat", TransferDirection.RECEIVE, "192.168.1.1");
+        transferService.createTransfer(
+                sessionId,
+                "server-1",
+                "node-1",
+                "PARTNER_S",
+                "file1.dat",
+                TransferDirection.SEND,
+                "192.168.1.1");
+        transferService.createTransfer(
+                sessionId,
+                "server-1",
+                "node-1",
+                "PARTNER_S",
+                "file2.dat",
+                TransferDirection.RECEIVE,
+                "192.168.1.1");
 
         List<TransferRecord> transfers = transferService.getTransfersBySession(sessionId);
 
@@ -385,9 +479,11 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Get transfer or throw - not found")
     void testGetTransferOrThrowNotFound() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transferService.getTransferOrThrow("non-existent-transfer-id");
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    transferService.getTransferOrThrow("non-existent-transfer-id");
+                });
     }
 
     @Test
@@ -395,13 +491,20 @@ public class TransferServiceTest {
     void testGetPartnerStatistics() {
         String partnerId = "PARTNER_STATS";
 
-        TransferRecord transfer = transferService.createTransfer(
-                "session-ps", "server-1", "node-1",
-                partnerId, "stats.dat", TransferDirection.SEND, "192.168.1.1");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-ps",
+                        "server-1",
+                        "node-1",
+                        partnerId,
+                        "stats.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.1");
         transferService.startTransfer(transfer.getTransferId(), 1000L, "/data/stats.dat");
         transferService.completeTransfer(transfer.getTransferId(), "checksum123");
 
-        TransferService.PartnerTransferStatistics stats = transferService.getPartnerStatistics(partnerId);
+        TransferService.PartnerTransferStatistics stats =
+                transferService.getPartnerStatistics(partnerId);
 
         assertNotNull(stats);
         assertEquals(partnerId, stats.getPartnerId());
@@ -411,9 +514,15 @@ public class TransferServiceTest {
     @Test
     @DisplayName("Get retry history")
     void testGetRetryHistory() {
-        TransferRecord original = transferService.createTransfer(
-                "session-rh", "server-1", "node-1",
-                "PARTNER_RH", "retry.dat", TransferDirection.RECEIVE, "192.168.1.1");
+        TransferRecord original =
+                transferService.createTransfer(
+                        "session-rh",
+                        "server-1",
+                        "node-1",
+                        "PARTNER_RH",
+                        "retry.dat",
+                        TransferDirection.RECEIVE,
+                        "192.168.1.1");
         transferService.startTransfer(original.getTransferId(), 1000L, "/data/retry.dat");
         transferService.failTransfer(original.getTransferId(), "E001", "Test failure");
 
@@ -428,9 +537,15 @@ public class TransferServiceTest {
     void testMarkInterruptedTransfers() {
         String nodeId = "node-interrupted";
 
-        TransferRecord transfer = transferService.createTransfer(
-                "session-int", "server-1", nodeId,
-                "PARTNER_INT", "interrupted.dat", TransferDirection.SEND, "192.168.1.1");
+        TransferRecord transfer =
+                transferService.createTransfer(
+                        "session-int",
+                        "server-1",
+                        nodeId,
+                        "PARTNER_INT",
+                        "interrupted.dat",
+                        TransferDirection.SEND,
+                        "192.168.1.1");
         transferService.startTransfer(transfer.getTransferId(), 1000L, "/data/interrupted.dat");
 
         int count = transferService.markInterruptedTransfers(nodeId);
@@ -448,8 +563,13 @@ public class TransferServiceTest {
     @DisplayName("Get all transfers with pagination")
     void testGetAllTransfers() {
         transferService.createTransfer(
-                "session-all", "server-1", "node-1",
-                "PARTNER_ALL", "all.dat", TransferDirection.SEND, "192.168.1.1");
+                "session-all",
+                "server-1",
+                "node-1",
+                "PARTNER_ALL",
+                "all.dat",
+                TransferDirection.SEND,
+                "192.168.1.1");
 
         Page<TransferRecord> page = transferService.getAllTransfers(PageRequest.of(0, 10));
 

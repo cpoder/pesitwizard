@@ -1,5 +1,8 @@
 package com.pesitwizard.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -9,17 +12,11 @@ import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * HashiCorp Vault secrets provider with cache and circuit breaker.
- * Supports both Token and AppRole authentication.
- * Stores secrets in Vault KV v2 engine.
+ * HashiCorp Vault secrets provider with cache and circuit breaker. Supports both Token and AppRole
+ * authentication. Stores secrets in Vault KV v2 engine.
  */
 @Slf4j
 public class VaultSecretsProvider implements SecretsProvider {
@@ -64,19 +61,26 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     public enum AuthMethod {
-        TOKEN, APPROLE
+        TOKEN,
+        APPROLE
     }
 
     public VaultSecretsProvider(String vaultAddr, String vaultToken, String secretsPath) {
         this(vaultAddr, secretsPath, AuthMethod.TOKEN, vaultToken, null, null);
     }
 
-    public VaultSecretsProvider(String vaultAddr, String secretsPath, String roleId, String secretId) {
+    public VaultSecretsProvider(
+            String vaultAddr, String secretsPath, String roleId, String secretId) {
         this(vaultAddr, secretsPath, AuthMethod.APPROLE, null, roleId, secretId);
     }
 
-    public VaultSecretsProvider(String vaultAddr, String secretsPath, AuthMethod authMethod,
-            String staticToken, String roleId, String secretId) {
+    public VaultSecretsProvider(
+            String vaultAddr,
+            String secretsPath,
+            AuthMethod authMethod,
+            String staticToken,
+            String roleId,
+            String secretId) {
         this.vaultAddr = vaultAddr;
         this.secretsPath = secretsPath;
         this.authMethod = authMethod;
@@ -89,7 +93,8 @@ public class VaultSecretsProvider implements SecretsProvider {
         if (vaultAddr == null || vaultAddr.isBlank()) {
             log.info("Vault address not configured");
             this.available = false;
-        } else if (authMethod == AuthMethod.TOKEN && (staticToken == null || staticToken.isBlank())) {
+        } else if (authMethod == AuthMethod.TOKEN
+                && (staticToken == null || staticToken.isBlank())) {
             log.info("Vault token not configured");
             this.available = false;
         } else if (authMethod == AuthMethod.APPROLE && (roleId == null || secretId == null)) {
@@ -103,7 +108,8 @@ public class VaultSecretsProvider implements SecretsProvider {
             }
             this.available = testConnection();
             if (this.available) {
-                log.info("Vault secrets provider initialized: {} (auth: {})", vaultAddr, authMethod);
+                log.info(
+                        "Vault secrets provider initialized: {} (auth: {})", vaultAddr, authMethod);
             }
         }
     }
@@ -132,21 +138,24 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     private boolean refreshAppRoleToken() {
-        if (authMethod != AuthMethod.APPROLE)
-            return false;
+        if (authMethod != AuthMethod.APPROLE) return false;
         try {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("role_id", roleId);
             body.put("secret_id", secretId);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddr + "/v1/auth/approle/login"))
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddr + "/v1/auth/approle/login"))
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(body)))
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
                 String token = root.path("auth").path("client_token").asText();
@@ -166,13 +175,11 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     /**
-     * Get current valid token, refreshing if needed.
-     * Synchronized on tokenRefreshLock to prevent TOCTOU race where multiple
-     * threads see an expired token and all trigger concurrent refreshes.
+     * Get current valid token, refreshing if needed. Synchronized on tokenRefreshLock to prevent
+     * TOCTOU race where multiple threads see an expired token and all trigger concurrent refreshes.
      */
     private String getToken() {
-        if (authMethod == AuthMethod.TOKEN)
-            return staticToken;
+        if (authMethod == AuthMethod.TOKEN) return staticToken;
         // Quick check outside lock -- if token is clearly valid, skip locking
         Instant expiry = tokenExpiry.get();
         if (expiry != null && Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isBefore(expiry)) {
@@ -192,13 +199,16 @@ public class VaultSecretsProvider implements SecretsProvider {
     private boolean testConnection() {
         try {
             String token = getToken();
-            if (token == null)
-                return false;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddr + "/v1/sys/health"))
-                    .header("X-Vault-Token", token)
-                    .timeout(TIMEOUT).GET().build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (token == null) return false;
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddr + "/v1/sys/health"))
+                            .header("X-Vault-Token", token)
+                            .timeout(TIMEOUT)
+                            .GET()
+                            .build();
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200 || response.statusCode() == 429;
         } catch (java.io.IOException | InterruptedException e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -209,8 +219,7 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String encrypt(String plaintext) {
-        if (!available || plaintext == null || plaintext.isBlank())
-            return plaintext;
+        if (!available || plaintext == null || plaintext.isBlank()) return plaintext;
         String key = java.util.UUID.randomUUID().toString();
         storeSecret(key, plaintext);
         return PREFIX + key;
@@ -218,10 +227,8 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String encrypt(String plaintext, String context) {
-        if (!available || plaintext == null || plaintext.isBlank())
-            return plaintext;
-        if (context == null || context.isBlank())
-            return encrypt(plaintext);
+        if (!available || plaintext == null || plaintext.isBlank()) return plaintext;
+        if (context == null || context.isBlank()) return encrypt(plaintext);
         String sanitizedContext = sanitizeVaultPath(context);
         storeSecret(sanitizedContext, plaintext);
         return PREFIX + sanitizedContext;
@@ -233,7 +240,8 @@ public class VaultSecretsProvider implements SecretsProvider {
             String key = ciphertext.substring(PREFIX.length());
             String value = getSecret(key);
             if (value == null) {
-                throw new DecryptionException("Failed to retrieve secret from Vault for key: " + key);
+                throw new DecryptionException(
+                        "Failed to retrieve secret from Vault for key: " + key);
             }
             return value;
         }
@@ -256,15 +264,19 @@ public class VaultSecretsProvider implements SecretsProvider {
             dataNode.set("data", innerData);
 
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("X-Vault-Token", getToken())
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(dataNode)))
-                    .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .header("X-Vault-Token", getToken())
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(dataNode)))
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 recordSuccess();
                 log.debug("Secret stored in Vault: {}", key);
@@ -285,8 +297,7 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public String getSecret(String key) {
-        if (!available)
-            return null;
+        if (!available) return null;
 
         // Check cache first
         CachedSecret cached = secretCache.get(key);
@@ -295,17 +306,20 @@ public class VaultSecretsProvider implements SecretsProvider {
             return cached.value();
         }
 
-        if (isCircuitOpen())
-            return null;
+        if (isCircuitOpen()) return null;
 
         try {
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("X-Vault-Token", getToken())
-                    .timeout(TIMEOUT).GET().build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .header("X-Vault-Token", getToken())
+                            .timeout(TIMEOUT)
+                            .GET()
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 recordSuccess();
                 JsonNode root = objectMapper.readTree(response.body());
@@ -332,15 +346,18 @@ public class VaultSecretsProvider implements SecretsProvider {
 
     @Override
     public void deleteSecret(String key) {
-        if (!available || isCircuitOpen())
-            return;
+        if (!available || isCircuitOpen()) return;
         secretCache.remove(key);
         try {
-            String url = vaultAddr + "/v1/" + secretsPath.replace("/data/", "/metadata/") + "/" + key;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("X-Vault-Token", getToken())
-                    .timeout(TIMEOUT).DELETE().build();
+            String url =
+                    vaultAddr + "/v1/" + secretsPath.replace("/data/", "/metadata/") + "/" + key;
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .header("X-Vault-Token", getToken())
+                            .timeout(TIMEOUT)
+                            .DELETE()
+                            .build();
             httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             recordSuccess();
         } catch (java.io.IOException | InterruptedException e) {
@@ -369,8 +386,7 @@ public class VaultSecretsProvider implements SecretsProvider {
     }
 
     private String sanitizeVaultPath(String context) {
-        if (context == null)
-            return null;
+        if (context == null) return null;
         return context.toLowerCase()
                 .replaceAll("[^a-z0-9/_-]", "-")
                 .replaceAll("-+", "-")

@@ -16,8 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @DisplayName("PodLabelService Tests")
 class PodLabelServiceTest {
 
-    @Mock
-    private ClusterProvider clusterProvider;
+    @Mock private ClusterProvider clusterProvider;
 
     private PodLabelService service;
 

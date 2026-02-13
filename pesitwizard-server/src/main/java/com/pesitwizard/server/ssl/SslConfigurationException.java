@@ -1,8 +1,6 @@
 package com.pesitwizard.server.ssl;
 
-/**
- * Exception thrown when SSL/TLS configuration fails.
- */
+/** Exception thrown when SSL/TLS configuration fails. */
 public class SslConfigurationException extends Exception {
 
     public SslConfigurationException(String message) {

@@ -1,12 +1,10 @@
 package com.pesitwizard.client.repository;
 
+import com.pesitwizard.client.entity.StorageConnection;
 import java.util.List;
 import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import com.pesitwizard.client.entity.StorageConnection;
 
 @Repository
 public interface StorageConnectionRepository extends JpaRepository<StorageConnection, String> {

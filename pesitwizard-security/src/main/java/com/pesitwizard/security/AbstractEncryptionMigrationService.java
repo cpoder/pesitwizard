@@ -1,7 +1,6 @@
 package com.pesitwizard.security;
 
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -27,8 +26,7 @@ public abstract class AbstractEncryptionMigrationService {
     }
 
     protected String decryptIfNeeded(String value) {
-        if (value == null)
-            return null;
+        if (value == null) return null;
         if (secretsService.isEncrypted(value)) {
             return secretsService.decrypt(value);
         }
@@ -39,10 +37,12 @@ public abstract class AbstractEncryptionMigrationService {
         return secretsService.storeInVault(key, decryptIfNeeded(value));
     }
 
-    public record MigrationResult(boolean success, String message, int totalMigrated, int totalSkipped,
-            List<String> details) {
-    }
+    public record MigrationResult(
+            boolean success,
+            String message,
+            int totalMigrated,
+            int totalSkipped,
+            List<String> details) {}
 
-    public record MigrationCount(int migrated, int skipped) {
-    }
+    public record MigrationCount(int migrated, int skipped) {}
 }

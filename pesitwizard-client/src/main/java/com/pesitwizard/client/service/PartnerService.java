@@ -1,21 +1,16 @@
 package com.pesitwizard.client.service;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.client.entity.Partner;
 import com.pesitwizard.client.repository.PartnerRepository;
 import com.pesitwizard.security.SecretsService;
-
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for managing PeSIT partners with encrypted password storage.
- */
+/** Service for managing PeSIT partners with encrypted password storage. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -45,17 +40,19 @@ public class PartnerService {
 
     @Transactional
     public Optional<Partner> updatePartner(String id, Partner updated) {
-        return partnerRepository.findById(id)
-                .map(existing -> {
-                    existing.setPartnerId(updated.getPartnerId());
-                    existing.setDescription(updated.getDescription());
-                    if (updated.getPassword() != null) {
-                        existing.setPassword(updated.getPassword());
-                        encryptPassword(existing);
-                    }
-                    log.info("Updated partner: {}", existing.getPartnerId());
-                    return partnerRepository.save(existing);
-                });
+        return partnerRepository
+                .findById(id)
+                .map(
+                        existing -> {
+                            existing.setPartnerId(updated.getPartnerId());
+                            existing.setDescription(updated.getDescription());
+                            if (updated.getPassword() != null) {
+                                existing.setPassword(updated.getPassword());
+                                encryptPassword(existing);
+                            }
+                            log.info("Updated partner: {}", existing.getPartnerId());
+                            return partnerRepository.save(existing);
+                        });
     }
 
     @Transactional
@@ -65,8 +62,8 @@ public class PartnerService {
     }
 
     /**
-     * Resolve the plaintext password for a given PeSIT partner ID.
-     * Looks up the partner and decrypts the stored password.
+     * Resolve the plaintext password for a given PeSIT partner ID. Looks up the partner and
+     * decrypts the stored password.
      *
      * @return plaintext password or null if partner not found or no password set
      */
@@ -74,20 +71,21 @@ public class PartnerService {
         if (partnerId == null || partnerId.isBlank()) {
             return null;
         }
-        return partnerRepository.findByPartnerId(partnerId)
+        return partnerRepository
+                .findByPartnerId(partnerId)
                 .map(Partner::getPassword)
                 .filter(pw -> pw != null && !pw.isBlank())
                 .map(secretsService::decryptFromStorage)
                 .orElse(null);
     }
 
-    /**
-     * Encrypt the password field if present and not already encrypted.
-     */
+    /** Encrypt the password field if present and not already encrypted. */
     private void encryptPassword(Partner partner) {
         String password = partner.getPassword();
         if (password != null && !password.isBlank() && !secretsService.isEncrypted(password)) {
-            String encrypted = secretsService.encryptForStorage(password, "partner", partner.getPartnerId(), "password");
+            String encrypted =
+                    secretsService.encryptForStorage(
+                            password, "partner", partner.getPartnerId(), "password");
             partner.setPassword(encrypted);
         }
     }

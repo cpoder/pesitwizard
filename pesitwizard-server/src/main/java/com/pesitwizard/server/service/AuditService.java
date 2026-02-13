@@ -1,11 +1,18 @@
 package com.pesitwizard.server.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pesitwizard.server.entity.AuditEvent;
+import com.pesitwizard.server.entity.AuditEvent.AuditCategory;
+import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
+import com.pesitwizard.server.entity.AuditEvent.AuditOutcome;
+import com.pesitwizard.server.repository.AuditEventRepository;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,20 +21,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pesitwizard.server.entity.AuditEvent;
-import com.pesitwizard.server.entity.AuditEvent.AuditCategory;
-import com.pesitwizard.server.entity.AuditEvent.AuditEventType;
-import com.pesitwizard.server.entity.AuditEvent.AuditOutcome;
-import com.pesitwizard.server.repository.AuditEventRepository;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * Service for audit logging.
- * Provides structured audit trail for security and compliance.
- */
+/** Service for audit logging. Provides structured audit trail for security and compliance. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -44,23 +38,17 @@ public class AuditService {
 
     // ========== Audit Event Creation ==========
 
-    /**
-     * Log an audit event asynchronously
-     */
+    /** Log an audit event asynchronously */
     @Async
     @Transactional
     public void logAsync(AuditEvent.AuditEventBuilder builder) {
         log(builder);
     }
 
-    /**
-     * Log an audit event synchronously
-     */
+    /** Log an audit event synchronously */
     @Transactional
     public AuditEvent log(AuditEvent.AuditEventBuilder builder) {
-        AuditEvent event = builder
-                .timestamp(Instant.now())
-                .build();
+        AuditEvent event = builder.timestamp(Instant.now()).build();
 
         // Save to database
         event = auditRepository.save(event);
@@ -73,9 +61,7 @@ public class AuditService {
         return event;
     }
 
-    /**
-     * Log to console in JSON format for SIEM integration
-     */
+    /** Log to console in JSON format for SIEM integration */
     private void logToConsole(AuditEvent event) {
         try {
             Map<String, Object> logEntry = new HashMap<>();
@@ -142,205 +128,228 @@ public class AuditService {
 
     // ========== Convenience Methods ==========
 
-    /**
-     * Log authentication success
-     */
-    public void logAuthSuccess(String username, String authMethod, String clientIp, String sessionId) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.AUTHENTICATION)
-                .eventType(AuditEventType.LOGIN_SUCCESS)
-                .outcome(AuditOutcome.SUCCESS)
-                .username(username)
-                .authMethod(authMethod)
-                .clientIp(clientIp)
-                .sessionId(sessionId));
+    /** Log authentication success */
+    public void logAuthSuccess(
+            String username, String authMethod, String clientIp, String sessionId) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.AUTHENTICATION)
+                        .eventType(AuditEventType.LOGIN_SUCCESS)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .username(username)
+                        .authMethod(authMethod)
+                        .clientIp(clientIp)
+                        .sessionId(sessionId));
     }
 
-    /**
-     * Log authentication failure
-     */
+    /** Log authentication failure */
     public void logAuthFailure(String username, String authMethod, String clientIp, String reason) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.AUTHENTICATION)
-                .eventType(AuditEventType.LOGIN_FAILURE)
-                .outcome(AuditOutcome.FAILURE)
-                .username(username)
-                .authMethod(authMethod)
-                .clientIp(clientIp)
-                .errorMessage(reason));
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.AUTHENTICATION)
+                        .eventType(AuditEventType.LOGIN_FAILURE)
+                        .outcome(AuditOutcome.FAILURE)
+                        .username(username)
+                        .authMethod(authMethod)
+                        .clientIp(clientIp)
+                        .errorMessage(reason));
     }
 
-    /**
-     * Log access denied
-     */
+    /** Log access denied */
     public void logAccessDenied(String username, String resource, String action, String clientIp) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.AUTHORIZATION)
-                .eventType(AuditEventType.ACCESS_DENIED)
-                .outcome(AuditOutcome.DENIED)
-                .username(username)
-                .resourceType(resource)
-                .action(action)
-                .clientIp(clientIp));
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.AUTHORIZATION)
+                        .eventType(AuditEventType.ACCESS_DENIED)
+                        .outcome(AuditOutcome.DENIED)
+                        .username(username)
+                        .resourceType(resource)
+                        .action(action)
+                        .clientIp(clientIp));
     }
 
-    /**
-     * Log transfer started
-     */
-    public void logTransferStarted(String transferId, String partnerId, String filename,
-            String direction, String username, String clientIp) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.TRANSFER)
-                .eventType(AuditEventType.TRANSFER_STARTED)
-                .outcome(AuditOutcome.SUCCESS)
-                .transferId(transferId)
-                .partnerId(partnerId)
-                .filename(filename)
-                .action(direction)
-                .username(username)
-                .clientIp(clientIp));
+    /** Log transfer started */
+    public void logTransferStarted(
+            String transferId,
+            String partnerId,
+            String filename,
+            String direction,
+            String username,
+            String clientIp) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.TRANSFER)
+                        .eventType(AuditEventType.TRANSFER_STARTED)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .transferId(transferId)
+                        .partnerId(partnerId)
+                        .filename(filename)
+                        .action(direction)
+                        .username(username)
+                        .clientIp(clientIp));
     }
 
-    /**
-     * Log transfer completed
-     */
-    public void logTransferCompleted(String transferId, String partnerId, String filename,
-            long bytesTransferred, long durationMs) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.TRANSFER)
-                .eventType(AuditEventType.TRANSFER_COMPLETED)
-                .outcome(AuditOutcome.SUCCESS)
-                .transferId(transferId)
-                .partnerId(partnerId)
-                .filename(filename)
-                .bytesTransferred(bytesTransferred)
-                .durationMs(durationMs));
+    /** Log transfer completed */
+    public void logTransferCompleted(
+            String transferId,
+            String partnerId,
+            String filename,
+            long bytesTransferred,
+            long durationMs) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.TRANSFER)
+                        .eventType(AuditEventType.TRANSFER_COMPLETED)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .transferId(transferId)
+                        .partnerId(partnerId)
+                        .filename(filename)
+                        .bytesTransferred(bytesTransferred)
+                        .durationMs(durationMs));
     }
 
-    /**
-     * Log transfer failed
-     */
-    public void logTransferFailed(String transferId, String partnerId, String filename,
-            String errorCode, String errorMessage) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.TRANSFER)
-                .eventType(AuditEventType.TRANSFER_FAILED)
-                .outcome(AuditOutcome.FAILURE)
-                .transferId(transferId)
-                .partnerId(partnerId)
-                .filename(filename)
-                .errorCode(errorCode)
-                .errorMessage(errorMessage));
+    /** Log transfer failed */
+    public void logTransferFailed(
+            String transferId,
+            String partnerId,
+            String filename,
+            String errorCode,
+            String errorMessage) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.TRANSFER)
+                        .eventType(AuditEventType.TRANSFER_FAILED)
+                        .outcome(AuditOutcome.FAILURE)
+                        .transferId(transferId)
+                        .partnerId(partnerId)
+                        .filename(filename)
+                        .errorCode(errorCode)
+                        .errorMessage(errorMessage));
     }
 
-    /**
-     * Log configuration change
-     */
-    public void logConfigChange(AuditEventType eventType, String resourceType, String resourceId,
-            String username, String details) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.CONFIGURATION)
-                .eventType(eventType)
-                .outcome(AuditOutcome.SUCCESS)
-                .resourceType(resourceType)
-                .resourceId(resourceId)
-                .username(username)
-                .details(details));
+    /** Log configuration change */
+    public void logConfigChange(
+            AuditEventType eventType,
+            String resourceType,
+            String resourceId,
+            String username,
+            String details) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.CONFIGURATION)
+                        .eventType(eventType)
+                        .outcome(AuditOutcome.SUCCESS)
+                        .resourceType(resourceType)
+                        .resourceId(resourceId)
+                        .username(username)
+                        .details(details));
     }
 
-    /**
-     * Log security event
-     */
-    public void logSecurityEvent(AuditEventType eventType, AuditOutcome outcome,
-            String clientIp, String errorMessage) {
-        log(AuditEvent.builder()
-                .category(AuditCategory.SECURITY)
-                .eventType(eventType)
-                .outcome(outcome)
-                .clientIp(clientIp)
-                .errorMessage(errorMessage));
+    /** Log security event */
+    public void logSecurityEvent(
+            AuditEventType eventType, AuditOutcome outcome, String clientIp, String errorMessage) {
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.SECURITY)
+                        .eventType(eventType)
+                        .outcome(outcome)
+                        .clientIp(clientIp)
+                        .errorMessage(errorMessage));
     }
 
-    /**
-     * Log API request
-     */
-    public void logApiRequest(String username, String httpMethod, String requestUri,
-            int httpStatus, String clientIp, long durationMs) {
-        AuditOutcome outcome = httpStatus < 400 ? AuditOutcome.SUCCESS
-                : (httpStatus == 401 || httpStatus == 403) ? AuditOutcome.DENIED : AuditOutcome.FAILURE;
+    /** Log API request */
+    public void logApiRequest(
+            String username,
+            String httpMethod,
+            String requestUri,
+            int httpStatus,
+            String clientIp,
+            long durationMs) {
+        AuditOutcome outcome =
+                httpStatus < 400
+                        ? AuditOutcome.SUCCESS
+                        : (httpStatus == 401 || httpStatus == 403)
+                                ? AuditOutcome.DENIED
+                                : AuditOutcome.FAILURE;
 
-        log(AuditEvent.builder()
-                .category(AuditCategory.ADMIN)
-                .eventType(AuditEventType.ACCESS_GRANTED)
-                .outcome(outcome)
-                .username(username)
-                .httpMethod(httpMethod)
-                .requestUri(requestUri)
-                .httpStatus(httpStatus)
-                .clientIp(clientIp)
-                .durationMs(durationMs));
+        log(
+                AuditEvent.builder()
+                        .category(AuditCategory.ADMIN)
+                        .eventType(AuditEventType.ACCESS_GRANTED)
+                        .outcome(outcome)
+                        .username(username)
+                        .httpMethod(httpMethod)
+                        .requestUri(requestUri)
+                        .httpStatus(httpStatus)
+                        .clientIp(clientIp)
+                        .durationMs(durationMs));
     }
 
     // ========== Query Methods ==========
 
-    /**
-     * Search audit events
-     */
-    public Page<AuditEvent> search(AuditCategory category, AuditEventType eventType,
-            AuditOutcome outcome, String username, String partnerId, String clientIp,
-            Instant startTime, Instant endTime, int page, int size) {
-        return auditRepository.search(category, eventType, outcome, username, partnerId,
-                clientIp, startTime, endTime, PageRequest.of(page, size));
+    /** Search audit events */
+    public Page<AuditEvent> search(
+            AuditCategory category,
+            AuditEventType eventType,
+            AuditOutcome outcome,
+            String username,
+            String partnerId,
+            String clientIp,
+            Instant startTime,
+            Instant endTime,
+            int page,
+            int size) {
+        return auditRepository.search(
+                category,
+                eventType,
+                outcome,
+                username,
+                partnerId,
+                clientIp,
+                startTime,
+                endTime,
+                PageRequest.of(page, size));
     }
 
-    /**
-     * Get recent events
-     */
+    /** Get recent events */
     public Page<AuditEvent> getRecentEvents(int page, int size) {
-        return auditRepository.findAll(PageRequest.of(page, size,
-                org.springframework.data.domain.Sort.by("timestamp").descending()));
+        return auditRepository.findAll(
+                PageRequest.of(
+                        page,
+                        size,
+                        org.springframework.data.domain.Sort.by("timestamp").descending()));
     }
 
-    /**
-     * Get events by category
-     */
+    /** Get events by category */
     public Page<AuditEvent> getEventsByCategory(AuditCategory category, int page, int size) {
-        return auditRepository.findByCategoryOrderByTimestampDesc(category, PageRequest.of(page, size));
+        return auditRepository.findByCategoryOrderByTimestampDesc(
+                category, PageRequest.of(page, size));
     }
 
-    /**
-     * Get failures
-     */
+    /** Get failures */
     public Page<AuditEvent> getFailures(int page, int size) {
         return auditRepository.findFailures(PageRequest.of(page, size));
     }
 
-    /**
-     * Get security events
-     */
+    /** Get security events */
     public Page<AuditEvent> getSecurityEvents(int page, int size) {
         return auditRepository.findSecurityEvents(PageRequest.of(page, size));
     }
 
-    /**
-     * Get transfer events
-     */
+    /** Get transfer events */
     public Page<AuditEvent> getTransferEvents(int page, int size) {
         return auditRepository.findTransferEvents(PageRequest.of(page, size));
     }
 
-    /**
-     * Get events for a user
-     */
+    /** Get events for a user */
     public Page<AuditEvent> getEventsForUser(String username, int page, int size) {
-        return auditRepository.findByUsernameOrderByTimestampDesc(username, PageRequest.of(page, size));
+        return auditRepository.findByUsernameOrderByTimestampDesc(
+                username, PageRequest.of(page, size));
     }
 
     // ========== Statistics ==========
 
-    /**
-     * Get audit statistics
-     */
+    /** Get audit statistics */
     public AuditStatistics getStatistics(int hours) {
         Instant since = Instant.now().minus(hours, ChronoUnit.HOURS);
 
@@ -368,9 +377,7 @@ public class AuditService {
 
     // ========== Cleanup ==========
 
-    /**
-     * Clean up old audit events
-     */
+    /** Clean up old audit events */
     @Transactional
     @Scheduled(cron = "0 0 3 * * ?") // Run at 3 AM daily
     public void cleanupOldEvents() {

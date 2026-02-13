@@ -11,8 +11,8 @@ class ClusterMessageTest {
     @Test
     @DisplayName("should create message with all args constructor")
     void shouldCreateMessageWithAllArgs() {
-        ClusterMessage message = new ClusterMessage(
-                ClusterMessage.Type.SERVER_ACQUIRED, "server1", "node1");
+        ClusterMessage message =
+                new ClusterMessage(ClusterMessage.Type.SERVER_ACQUIRED, "server1", "node1");
 
         assertEquals(ClusterMessage.Type.SERVER_ACQUIRED, message.getType());
         assertEquals("server1", message.getServerId());
@@ -45,8 +45,8 @@ class ClusterMessageTest {
     @Test
     @DisplayName("should be serializable")
     void shouldBeSerializable() throws Exception {
-        ClusterMessage original = new ClusterMessage(
-                ClusterMessage.Type.SERVER_STATE_CHANGED, "server1", "node1");
+        ClusterMessage original =
+                new ClusterMessage(ClusterMessage.Type.SERVER_STATE_CHANGED, "server1", "node1");
 
         // Serialize
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();

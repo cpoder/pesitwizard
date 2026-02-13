@@ -6,14 +6,12 @@ import java.io.StringWriter;
 import java.security.PrivateKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-
+import lombok.experimental.UtilityClass;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-
-import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class PemUtils {
@@ -33,7 +31,10 @@ public class PemUtils {
     public static X509Certificate parseCertificate(String pem) throws CryptoException {
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            return (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(pem.getBytes()));
+            return (X509Certificate)
+                    cf.generateCertificate(
+                            new ByteArrayInputStream(
+                                    pem.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         } catch (java.security.cert.CertificateException e) {
             throw new CryptoException("Failed to parse certificate", e);
         }

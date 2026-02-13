@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.config.SslProperties;
+import com.pesitwizard.server.entity.CertificateStore;
+import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
+import com.pesitwizard.server.entity.CertificateStore.StoreType;
+import com.pesitwizard.server.repository.CertificateStoreRepository;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.security.KeyPair;
@@ -13,11 +19,9 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
-
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
-
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -32,25 +36,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.config.SslProperties;
-import com.pesitwizard.server.entity.CertificateStore;
-import com.pesitwizard.server.entity.CertificateStore.StoreFormat;
-import com.pesitwizard.server.entity.CertificateStore.StoreType;
-import com.pesitwizard.server.repository.CertificateStoreRepository;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SslContextFactory Integration Tests")
 class SslContextFactoryIntegrationTest {
 
-    @Mock
-    private CertificateStoreRepository certificateRepository;
+    @Mock private CertificateStoreRepository certificateRepository;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
     private SslContextFactory sslContextFactory;
 
@@ -60,7 +54,8 @@ class SslContextFactoryIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        sslContextFactory = new SslContextFactory(certificateRepository, sslProperties, secretsService);
+        sslContextFactory =
+                new SslContextFactory(certificateRepository, sslProperties, secretsService);
 
         // Generate test keystore with self-signed certificate
         testKeystoreData = generateTestKeystore();
@@ -78,18 +73,22 @@ class SslContextFactoryIntegrationTest {
         Date notBefore = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
         Date notAfter = new Date(System.currentTimeMillis() + 365 * 24 * 60 * 60 * 1000L);
 
-        JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                issuer, serial, notBefore, notAfter, subject, keyPair.getPublic());
+        JcaX509v3CertificateBuilder certBuilder =
+                new JcaX509v3CertificateBuilder(
+                        issuer, serial, notBefore, notAfter, subject, keyPair.getPublic());
 
-        ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSA")
-                .build(keyPair.getPrivate());
+        ContentSigner signer =
+                new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
         X509CertificateHolder certHolder = certBuilder.build(signer);
         X509Certificate cert = new JcaX509CertificateConverter().getCertificate(certHolder);
 
         KeyStore ks = KeyStore.getInstance("PKCS12");
         ks.load(null, null);
-        ks.setKeyEntry("server", keyPair.getPrivate(), TEST_PASSWORD.toCharArray(),
-                new X509Certificate[] { cert });
+        ks.setKeyEntry(
+                "server",
+                keyPair.getPrivate(),
+                TEST_PASSWORD.toCharArray(),
+                new X509Certificate[] {cert});
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ks.store(baos, TEST_PASSWORD.toCharArray());
@@ -106,11 +105,12 @@ class SslContextFactoryIntegrationTest {
         Date notBefore = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
         Date notAfter = new Date(System.currentTimeMillis() + 365 * 24 * 60 * 60 * 1000L);
 
-        JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic());
+        JcaX509v3CertificateBuilder certBuilder =
+                new JcaX509v3CertificateBuilder(
+                        issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic());
 
-        ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSA")
-                .build(keyPair.getPrivate());
+        ContentSigner signer =
+                new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
         X509CertificateHolder certHolder = certBuilder.build(signer);
         X509Certificate cert = new JcaX509CertificateConverter().getCertificate(certHolder);
 
@@ -153,9 +153,11 @@ class SslContextFactoryIntegrationTest {
         @DisplayName("should create default SSL context")
         void shouldCreateDefaultSslContext() throws Exception {
             CertificateStore keystore = createTestKeystore();
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.of(keystore));
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLContext sslContext = sslContextFactory.createDefaultSslContext();
@@ -166,7 +168,8 @@ class SslContextFactoryIntegrationTest {
         @Test
         @DisplayName("should throw when no default keystore")
         void shouldThrowWhenNoDefaultKeystore() {
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> sslContextFactory.createDefaultSslContext())
@@ -260,11 +263,14 @@ class SslContextFactoryIntegrationTest {
         void shouldCreatePartnerSslContextWithPartnerStore() throws Exception {
             CertificateStore partnerKeystore = createTestKeystore();
             partnerKeystore.setPartnerId("PARTNER1");
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER1", StoreType.KEYSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "PARTNER1", StoreType.KEYSTORE))
                     .thenReturn(Optional.of(partnerKeystore));
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER1", StoreType.TRUSTSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "PARTNER1", StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLContext context = sslContextFactory.createPartnerSslContext("PARTNER1");
@@ -276,13 +282,17 @@ class SslContextFactoryIntegrationTest {
         @DisplayName("should fallback to default keystore for partner")
         void shouldFallbackToDefaultKeystoreForPartner() throws Exception {
             CertificateStore defaultKeystore = createTestKeystore();
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER2", StoreType.KEYSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "PARTNER2", StoreType.KEYSTORE))
                     .thenReturn(Optional.empty());
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.of(defaultKeystore));
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER2", StoreType.TRUSTSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "PARTNER2", StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLContext context = sslContextFactory.createPartnerSslContext("PARTNER2");
@@ -293,9 +303,11 @@ class SslContextFactoryIntegrationTest {
         @Test
         @DisplayName("should throw when no keystore available for partner")
         void shouldThrowWhenNoKeystoreForPartner() {
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("PARTNER3", StoreType.KEYSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "PARTNER3", StoreType.KEYSTORE))
                     .thenReturn(Optional.empty());
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> sslContextFactory.createPartnerSslContext("PARTNER3"))
@@ -312,9 +324,11 @@ class SslContextFactoryIntegrationTest {
         @DisplayName("should create server socket factory")
         void shouldCreateServerSocketFactory() throws Exception {
             CertificateStore keystore = createTestKeystore();
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.of(keystore));
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLServerSocketFactory factory = sslContextFactory.createServerSocketFactory();
@@ -326,9 +340,11 @@ class SslContextFactoryIntegrationTest {
         @DisplayName("should create socket factory")
         void shouldCreateSocketFactory() throws Exception {
             CertificateStore keystore = createTestKeystore();
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.of(keystore));
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLSocketFactory factory = sslContextFactory.createSocketFactory();
@@ -340,11 +356,14 @@ class SslContextFactoryIntegrationTest {
         @DisplayName("should create partner socket factory")
         void shouldCreatePartnerSocketFactory() throws Exception {
             CertificateStore keystore = createTestKeystore();
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("P1", StoreType.KEYSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "P1", StoreType.KEYSTORE))
                     .thenReturn(Optional.of(keystore));
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("P1", StoreType.TRUSTSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "P1", StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.empty());
 
             SSLSocketFactory factory = sslContextFactory.createPartnerSocketFactory("P1");
@@ -363,7 +382,8 @@ class SslContextFactoryIntegrationTest {
             when(certificateRepository.findByNameAndStoreType("ts", StoreType.TRUSTSTORE))
                     .thenReturn(Optional.of(truststore));
 
-            SSLServerSocketFactory factory = sslContextFactory.createServerSocketFactory("ks", "ts");
+            SSLServerSocketFactory factory =
+                    sslContextFactory.createServerSocketFactory("ks", "ts");
 
             assertThat(factory).isNotNull();
         }
@@ -454,24 +474,32 @@ class SslContextFactoryIntegrationTest {
             Date notBefore = new Date();
             Date notAfter = new Date(System.currentTimeMillis() + 365 * 24 * 60 * 60 * 1000L);
 
-            JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                    issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic());
-            ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
-            X509Certificate cert = new JcaX509CertificateConverter().getCertificate(certBuilder.build(signer));
+            JcaX509v3CertificateBuilder certBuilder =
+                    new JcaX509v3CertificateBuilder(
+                            issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic());
+            ContentSigner signer =
+                    new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
+            X509Certificate cert =
+                    new JcaX509CertificateConverter().getCertificate(certBuilder.build(signer));
 
-            jks.setKeyEntry("key", keyPair.getPrivate(), TEST_PASSWORD.toCharArray(), new X509Certificate[] { cert });
+            jks.setKeyEntry(
+                    "key",
+                    keyPair.getPrivate(),
+                    TEST_PASSWORD.toCharArray(),
+                    new X509Certificate[] {cert});
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             jks.store(baos, TEST_PASSWORD.toCharArray());
 
-            CertificateStore store = CertificateStore.builder()
-                    .name("jks-store")
-                    .storeType(StoreType.KEYSTORE)
-                    .format(StoreFormat.JKS)
-                    .storeData(baos.toByteArray())
-                    .storePassword(TEST_PASSWORD)
-                    .active(true)
-                    .build();
+            CertificateStore store =
+                    CertificateStore.builder()
+                            .name("jks-store")
+                            .storeType(StoreType.KEYSTORE)
+                            .format(StoreFormat.JKS)
+                            .storeData(baos.toByteArray())
+                            .storePassword(TEST_PASSWORD)
+                            .active(true)
+                            .build();
 
             KeyStore loaded = sslContextFactory.loadKeyStore(store);
 
@@ -489,7 +517,8 @@ class SslContextFactoryIntegrationTest {
         void shouldExtractCertificateInfo() throws Exception {
             CertificateStore store = createTestKeystore();
 
-            SslContextFactory.CertificateInfo info = sslContextFactory.extractCertificateInfo(store);
+            SslContextFactory.CertificateInfo info =
+                    sslContextFactory.extractCertificateInfo(store);
 
             assertThat(info).isNotNull();
             assertThat(info.getSubjectDn()).contains("CN=Test Server");
@@ -503,7 +532,8 @@ class SslContextFactoryIntegrationTest {
         void shouldExtractCertificateInfoFromTruststore() throws Exception {
             CertificateStore store = createTestTruststore();
 
-            SslContextFactory.CertificateInfo info = sslContextFactory.extractCertificateInfo(store);
+            SslContextFactory.CertificateInfo info =
+                    sslContextFactory.extractCertificateInfo(store);
 
             assertThat(info).isNotNull();
             assertThat(info.getSubjectDn()).contains("CN=Test CA");

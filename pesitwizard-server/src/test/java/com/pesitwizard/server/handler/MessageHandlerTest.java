@@ -2,10 +2,6 @@ package com.pesitwizard.server.handler;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterGroupIdentifier;
@@ -13,6 +9,9 @@ import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.state.ServerState;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("MessageHandler Tests")
 class MessageHandlerTest {
@@ -29,7 +28,8 @@ class MessageHandlerTest {
     void handleMsgShouldReturnAckForSimpleMessage() {
         SessionContext ctx = new SessionContext("test-session");
         Fpdu fpdu = new Fpdu(FpduType.MSG);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Hello".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Hello".getBytes()));
 
         Fpdu response = handler.handleMsg(ctx, fpdu);
 
@@ -56,10 +56,14 @@ class MessageHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.MSG);
 
         // Create PGI_09 with PI_12 filename using varargs constructor
-        ParameterValue pgi9 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "testfile.dat".getBytes()));
+        ParameterValue pgi9 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "testfile.dat".getBytes()));
         fpdu.withParameter(pgi9);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Test message".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Test message".getBytes()));
 
         Fpdu response = handler.handleMsg(ctx, fpdu);
 
@@ -74,7 +78,8 @@ class MessageHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "First segment".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "First segment".getBytes()));
 
         Fpdu response = handler.handleMsgDm(ctx, fpdu);
 
@@ -91,7 +96,8 @@ class MessageHandlerTest {
         ctx.setMessageBuffer(new StringBuilder("First"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGMM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Second".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Second".getBytes()));
 
         Fpdu response = handler.handleMsgMm(ctx, fpdu);
 
@@ -122,7 +128,8 @@ class MessageHandlerTest {
         ctx.setMessageFilename("testfile.dat");
 
         Fpdu fpdu = new Fpdu(FpduType.MSGFM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Final part".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Final part".getBytes()));
 
         Fpdu response = handler.handleMsgFm(ctx, fpdu);
 
@@ -154,7 +161,8 @@ class MessageHandlerTest {
         ctx.setMessageBuffer(new StringBuilder("Initial"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGMM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "More".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "More".getBytes()));
 
         Fpdu response = handler.handleMsgReceiving(ctx, fpdu);
 
@@ -198,7 +206,8 @@ class MessageHandlerTest {
 
         // Create message longer than 100 chars to test truncation in logging
         String longMessage = "A".repeat(150);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, longMessage.getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, longMessage.getBytes()));
 
         Fpdu response = handler.handleMsg(ctx, fpdu);
 
@@ -277,8 +286,10 @@ class MessageHandlerTest {
         Fpdu fpdu = new Fpdu(FpduType.MSG);
 
         // Create PGI_09 with PI_11 but not PI_12
-        ParameterValue pgi9 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_11_TYPE_FICHIER, 0));
+        ParameterValue pgi9 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(ParameterIdentifier.PI_11_TYPE_FICHIER, 0));
         fpdu.withParameter(pgi9);
 
         Fpdu response = handler.handleMsg(ctx, fpdu);
@@ -310,7 +321,8 @@ class MessageHandlerTest {
         ctx.setMessageBuffer(new StringBuilder("Initial"));
 
         Fpdu fpdu = new Fpdu(FpduType.MSGMM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, " More content".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, " More content".getBytes()));
 
         Fpdu response = handler.handleMsgMm(ctx, fpdu);
 
@@ -327,7 +339,9 @@ class MessageHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Start of message".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(
+                        ParameterIdentifier.PI_91_MESSAGE, "Start of message".getBytes()));
 
         Fpdu response = handler.handleMsgDm(ctx, fpdu);
 
@@ -362,7 +376,8 @@ class MessageHandlerTest {
         ctx.setMessageFilename("test.dat");
 
         Fpdu fpdu = new Fpdu(FpduType.MSGFM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, " final part".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, " final part".getBytes()));
 
         Fpdu response = handler.handleMsgFm(ctx, fpdu);
 
@@ -395,11 +410,16 @@ class MessageHandlerTest {
         ctx.setState(ServerState.CN03_CONNECTED);
 
         Fpdu fpdu = new Fpdu(FpduType.MSGDM);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE, "Message content".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(
+                        ParameterIdentifier.PI_91_MESSAGE, "Message content".getBytes()));
 
         // Add PGI_09 with PI_12 for filename
-        ParameterValue pgi09 = new ParameterValue(ParameterGroupIdentifier.PGI_09_ID_FICHIER,
-                new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
+        ParameterValue pgi09 =
+                new ParameterValue(
+                        ParameterGroupIdentifier.PGI_09_ID_FICHIER,
+                        new ParameterValue(
+                                ParameterIdentifier.PI_12_NOM_FICHIER, "TESTFILE".getBytes()));
         fpdu.withParameter(pgi09);
 
         Fpdu response = handler.handleMsgDm(ctx, fpdu);

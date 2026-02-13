@@ -1,7 +1,11 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.security.SecretsProvider;
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.service.ConfigService;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,16 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.security.SecretsProvider;
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.service.ConfigService;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * REST API for configuring Vault encryption on the PeSIT server.
- * Called by admin to propagate Vault configuration to deployed clusters.
+ * REST API for configuring Vault encryption on the PeSIT server. Called by admin to propagate Vault
+ * configuration to deployed clusters.
  */
 @Slf4j
 @RestController
@@ -30,32 +27,32 @@ public class VaultController {
     private final SecretsProvider secretsProvider;
     private final ConfigService configService;
 
-    /**
-     * Get current Vault status
-     */
+    /** Get current Vault status */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         var status = secretsService.getStatus();
-        return ResponseEntity.ok(Map.of(
-                "enabled", secretsProvider.isAvailable(),
-                "providerType", status.providerType(),
-                "available", status.available(),
-                "message", status.message()));
+        return ResponseEntity.ok(
+                Map.of(
+                        "enabled", secretsProvider.isAvailable(),
+                        "providerType", status.providerType(),
+                        "available", status.available(),
+                        "message", status.message()));
     }
 
-    /**
-     * Configure Vault connection
-     */
+    /** Configure Vault connection */
     @PostMapping("/configure")
     public ResponseEntity<Map<String, Object>> configure(@RequestBody Map<String, String> request) {
         String address = request.get("address");
         String token = request.get("token");
-        String path = request.getOrDefault("path", "secret/data/pesitwizard-server");
 
         if (address == null || address.isBlank() || token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Vault address and token are required"));
+            return ResponseEntity.badRequest()
+                    .body(
+                            Map.of(
+                                    "success",
+                                    false,
+                                    "message",
+                                    "Vault address and token are required"));
         }
 
         log.info("Vault configuration request from admin: {}", address);
@@ -66,25 +63,20 @@ public class VaultController {
         boolean success = false;
 
         if (success) {
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Vault configured successfully"));
+            return ResponseEntity.ok(
+                    Map.of("success", true, "message", "Vault configured successfully"));
         } else {
-            return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "message", "Failed to connect to Vault"));
+            return ResponseEntity.ok(
+                    Map.of("success", false, "message", "Failed to connect to Vault"));
         }
     }
 
-    /**
-     * Encrypt all existing partner passwords
-     */
+    /** Encrypt all existing partner passwords */
     @PostMapping("/encrypt-existing")
     public ResponseEntity<Map<String, Object>> encryptExisting() {
         if (!secretsProvider.isAvailable()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Vault not configured"));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Vault not configured"));
         }
 
         log.info("Encrypting existing partner passwords");
@@ -107,10 +99,15 @@ public class VaultController {
 
         log.info("Encryption complete: {} encrypted, {} skipped", encrypted, skipped);
 
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "encrypted", encrypted,
-                "skipped", skipped,
-                "message", "Encrypted " + encrypted + " passwords, skipped " + skipped));
+        return ResponseEntity.ok(
+                Map.of(
+                        "success",
+                        true,
+                        "encrypted",
+                        encrypted,
+                        "skipped",
+                        skipped,
+                        "message",
+                        "Encrypted " + encrypted + " passwords, skipped " + skipped));
     }
 }

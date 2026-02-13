@@ -1,8 +1,12 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.backup.BackupInfo;
+import com.pesitwizard.backup.BackupResult;
+import com.pesitwizard.backup.RestoreResult;
+import com.pesitwizard.server.backup.BackupServiceAdapter;
 import java.io.IOException;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,17 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.backup.BackupInfo;
-import com.pesitwizard.backup.BackupResult;
-import com.pesitwizard.backup.RestoreResult;
-import com.pesitwizard.server.backup.BackupServiceAdapter;
-
-import lombok.RequiredArgsConstructor;
-
-/**
- * REST API for backup and recovery operations.
- * All endpoints require ADMIN role.
- */
+/** REST API for backup and recovery operations. All endpoints require ADMIN role. */
 @RestController
 @RequestMapping("/api/v1/backup")
 @RequiredArgsConstructor
@@ -32,34 +26,27 @@ public class BackupController {
 
     private final BackupServiceAdapter backupService;
 
-    /**
-     * Create a new backup
-     */
+    /** Create a new backup */
     @PostMapping
     public ResponseEntity<BackupResult> createBackup(
             @RequestParam(required = false) String description) throws IOException {
         return ResponseEntity.ok(backupService.createBackup(description));
     }
 
-    /**
-     * List all available backups
-     */
+    /** List all available backups */
     @GetMapping
     public ResponseEntity<List<BackupInfo>> listBackups() throws IOException {
         return ResponseEntity.ok(backupService.listBackups());
     }
 
-    /**
-     * Restore from a backup
-     */
+    /** Restore from a backup */
     @PostMapping("/restore/{backupName}")
-    public ResponseEntity<RestoreResult> restoreBackup(@PathVariable String backupName) throws IOException {
+    public ResponseEntity<RestoreResult> restoreBackup(@PathVariable String backupName)
+            throws IOException {
         return ResponseEntity.ok(backupService.restoreBackup(backupName));
     }
 
-    /**
-     * Delete a backup
-     */
+    /** Delete a backup */
     @DeleteMapping("/{backupName}")
     public ResponseEntity<Void> deleteBackup(@PathVariable String backupName) throws IOException {
         if (backupService.deleteBackup(backupName)) {
@@ -68,9 +55,7 @@ public class BackupController {
         return ResponseEntity.notFound().build();
     }
 
-    /**
-     * Cleanup old backups
-     */
+    /** Cleanup old backups */
     @PostMapping("/cleanup")
     public ResponseEntity<Integer> cleanupOldBackups() throws IOException {
         return ResponseEntity.ok(backupService.cleanupOldBackups());

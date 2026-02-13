@@ -2,26 +2,23 @@ package com.pesitwizard.server.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.server.service.FileSystemService.FileErrorType;
+import com.pesitwizard.server.service.FileSystemService.FileOperationResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.pesitwizard.server.service.FileSystemService.FileErrorType;
-import com.pesitwizard.server.service.FileSystemService.FileOperationResult;
-
 @DisplayName("FileSystemService Tests")
 class FileSystemServiceTest {
 
     private FileSystemService fileSystemService;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {
@@ -72,7 +69,8 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should resolve path within base directory")
         void shouldResolveWithinBase() {
-            FileOperationResult result = fileSystemService.resolveSecurePath(tempDir, "subdir/file.txt");
+            FileOperationResult result =
+                    fileSystemService.resolveSecurePath(tempDir, "subdir/file.txt");
 
             assertTrue(result.success());
             assertNotNull(result.resolvedPath());
@@ -82,7 +80,8 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should detect path traversal attempt")
         void shouldDetectPathTraversal() {
-            FileOperationResult result = fileSystemService.resolveSecurePath(tempDir, "../../../etc/passwd");
+            FileOperationResult result =
+                    fileSystemService.resolveSecurePath(tempDir, "../../../etc/passwd");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.PATH_OUTSIDE_ALLOWED, result.errorType());
@@ -217,8 +216,9 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should validate existing writable directory")
         void shouldValidateExistingDirectory() {
-            FileOperationResult result = fileSystemService.validateReceiveDirectory(
-                    tempDir.toString(), "Test virtual file");
+            FileOperationResult result =
+                    fileSystemService.validateReceiveDirectory(
+                            tempDir.toString(), "Test virtual file");
 
             assertTrue(result.success());
         }
@@ -228,8 +228,9 @@ class FileSystemServiceTest {
         void shouldCreateNonExistent() {
             Path newDir = tempDir.resolve("new-receive-dir");
 
-            FileOperationResult result = fileSystemService.validateReceiveDirectory(
-                    newDir.toString(), "Test virtual file");
+            FileOperationResult result =
+                    fileSystemService.validateReceiveDirectory(
+                            newDir.toString(), "Test virtual file");
 
             assertTrue(result.success());
             assertTrue(Files.exists(newDir));
@@ -238,8 +239,7 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should fail for null path")
         void shouldFailForNull() {
-            FileOperationResult result = fileSystemService.validateReceiveDirectory(
-                    null, "Test");
+            FileOperationResult result = fileSystemService.validateReceiveDirectory(null, "Test");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.INVALID_PATH, result.errorType());
@@ -248,8 +248,7 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should fail for blank path")
         void shouldFailForBlank() {
-            FileOperationResult result = fileSystemService.validateReceiveDirectory(
-                    "   ", "Test");
+            FileOperationResult result = fileSystemService.validateReceiveDirectory("   ", "Test");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.INVALID_PATH, result.errorType());
@@ -263,8 +262,9 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should validate existing readable directory")
         void shouldValidateExistingDirectory() {
-            FileOperationResult result = fileSystemService.validateSendDirectory(
-                    tempDir.toString(), "Test virtual file");
+            FileOperationResult result =
+                    fileSystemService.validateSendDirectory(
+                            tempDir.toString(), "Test virtual file");
 
             assertTrue(result.success());
         }
@@ -274,8 +274,8 @@ class FileSystemServiceTest {
         void shouldFailForNonExistent() {
             Path nonExistent = tempDir.resolve("does-not-exist");
 
-            FileOperationResult result = fileSystemService.validateSendDirectory(
-                    nonExistent.toString(), "Test");
+            FileOperationResult result =
+                    fileSystemService.validateSendDirectory(nonExistent.toString(), "Test");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.PATH_NOT_FOUND, result.errorType());
@@ -287,8 +287,8 @@ class FileSystemServiceTest {
             Path file = tempDir.resolve("testfile.txt");
             Files.createFile(file);
 
-            FileOperationResult result = fileSystemService.validateSendDirectory(
-                    file.toString(), "Test");
+            FileOperationResult result =
+                    fileSystemService.validateSendDirectory(file.toString(), "Test");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.INVALID_PATH, result.errorType());
@@ -342,8 +342,9 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should create error result")
         void shouldCreateErrorResult() {
-            FileOperationResult result = FileOperationResult.error(
-                    FileErrorType.ACCESS_DENIED, "Permission denied", tempDir);
+            FileOperationResult result =
+                    FileOperationResult.error(
+                            FileErrorType.ACCESS_DENIED, "Permission denied", tempDir);
 
             assertFalse(result.success());
             assertEquals("Permission denied", result.errorMessage());
@@ -381,8 +382,8 @@ class FileSystemServiceTest {
             Path dir = tempDir.resolve("send-dir");
             Files.createDirectories(dir);
 
-            FileOperationResult result = fileSystemService.validateSendDirectory(
-                    dir.toString(), "Test");
+            FileOperationResult result =
+                    fileSystemService.validateSendDirectory(dir.toString(), "Test");
 
             assertTrue(result.success());
         }
@@ -390,8 +391,7 @@ class FileSystemServiceTest {
         @Test
         @DisplayName("Should handle blank send directory path")
         void shouldHandleBlankSendDirectoryPath() {
-            FileOperationResult result = fileSystemService.validateSendDirectory(
-                    "   ", "Test");
+            FileOperationResult result = fileSystemService.validateSendDirectory("   ", "Test");
 
             assertFalse(result.success());
             assertEquals(FileErrorType.INVALID_PATH, result.errorType());

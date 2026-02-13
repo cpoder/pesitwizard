@@ -2,18 +2,13 @@ package com.pesitwizard.server.config;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashMap;
+import com.pesitwizard.server.security.SecurityProperties;
 import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;
-import org.springframework.core.env.Environment;
 import org.springframework.mock.env.MockEnvironment;
-
-import com.pesitwizard.server.security.SecurityProperties;
 
 @DisplayName("ProductionCredentialValidator Tests")
 class ProductionCredentialValidatorTest {
@@ -67,7 +62,8 @@ class ProductionCredentialValidatorTest {
         setBasicAuthUsers("changeme", "changeme");
 
         ProductionCredentialValidator validator = createValidator();
-        assertThrows(IllegalStateException.class,
+        assertThrows(
+                IllegalStateException.class,
                 () -> validator.run(new DefaultApplicationArguments()));
     }
 
@@ -78,7 +74,8 @@ class ProductionCredentialValidatorTest {
         setBasicAuthUsers("changeme", "changeme");
 
         ProductionCredentialValidator validator = createValidator();
-        assertThrows(IllegalStateException.class,
+        assertThrows(
+                IllegalStateException.class,
                 () -> validator.run(new DefaultApplicationArguments()));
     }
 
@@ -94,8 +91,10 @@ class ProductionCredentialValidatorTest {
         caProperties.setCaTruststorePassword("pr0d-ts-pass!");
 
         ProductionCredentialValidator validator = createValidator();
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> validator.run(new DefaultApplicationArguments()));
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> validator.run(new DefaultApplicationArguments()));
         assertTrue(ex.getMessage().contains("admin"));
     }
 
@@ -109,8 +108,10 @@ class ProductionCredentialValidatorTest {
         caProperties.setCaTruststorePassword("pr0d-ts-pass!");
 
         ProductionCredentialValidator validator = createValidator();
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> validator.run(new DefaultApplicationArguments()));
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> validator.run(new DefaultApplicationArguments()));
         assertTrue(ex.getMessage().contains("operator"));
     }
 
@@ -125,8 +126,10 @@ class ProductionCredentialValidatorTest {
         caProperties.setCaTruststorePassword("pr0d-ts-pass!");
 
         ProductionCredentialValidator validator = createValidator();
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> validator.run(new DefaultApplicationArguments()));
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> validator.run(new DefaultApplicationArguments()));
         assertTrue(ex.getMessage().contains("ca-keystore-password"));
     }
 
@@ -139,8 +142,10 @@ class ProductionCredentialValidatorTest {
         caProperties.setCaTruststorePassword("changeit");
 
         ProductionCredentialValidator validator = createValidator();
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> validator.run(new DefaultApplicationArguments()));
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> validator.run(new DefaultApplicationArguments()));
         assertTrue(ex.getMessage().contains("ca-truststore-password"));
     }
 
@@ -155,11 +160,14 @@ class ProductionCredentialValidatorTest {
         caProperties.setCaTruststorePassword("changeit");
 
         ProductionCredentialValidator validator = createValidator();
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> validator.run(new DefaultApplicationArguments()));
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> validator.run(new DefaultApplicationArguments()));
         // All four violations should be reported
         String msg = ex.getMessage();
-        assertTrue(msg.contains("4 default credential(s)"), "Expected 4 violations but got: " + msg);
+        assertTrue(
+                msg.contains("4 default credential(s)"), "Expected 4 violations but got: " + msg);
     }
 
     // ---- Happy path ----
@@ -209,9 +217,7 @@ class ProductionCredentialValidatorTest {
 
     // ---- Helper methods ----
 
-    /**
-     * Set admin and operator users with the given passwords.
-     */
+    /** Set admin and operator users with the given passwords. */
     private void setBasicAuthUsers(String adminPassword, String operatorPassword) {
         setBasicAuthUser("admin", adminPassword, List.of("ADMIN"));
         setBasicAuthUser("operator", operatorPassword, List.of("OPERATOR"));

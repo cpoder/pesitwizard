@@ -6,9 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for initiating a file transfer
- */
+/** DTO for initiating a file transfer */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,16 +25,14 @@ public class TransferRequest {
     private String password;
 
     /**
-     * Source connection ID for reading the file (null = local filesystem).
-     * For SEND: where to read the file from.
-     * For RECEIVE: not used (file comes from PeSIT server).
+     * Source connection ID for reading the file (null = local filesystem). For SEND: where to read
+     * the file from. For RECEIVE: not used (file comes from PeSIT server).
      */
     private String sourceConnectionId;
 
     /**
-     * Destination connection ID for writing the file (null = local filesystem).
-     * For SEND: not used (file goes to PeSIT server).
-     * For RECEIVE: where to write the received file.
+     * Destination connection ID for writing the file (null = local filesystem). For SEND: not used
+     * (file goes to PeSIT server). For RECEIVE: where to write the received file.
      */
     private String destinationConnectionId;
 
@@ -47,16 +43,14 @@ public class TransferRequest {
     /**
      * @deprecated Use filename instead. Kept for backward compatibility.
      */
-    @Deprecated
-    private String localPath;
+    @Deprecated private String localPath;
 
     /** Remote filename (virtual file ID on PeSIT server) */
     @NotBlank(message = "Remote filename is required")
     private String remoteFilename;
 
     /**
-     * Virtual file name (logical file identifier on server, optional - defaults to
-     * remoteFilename)
+     * Virtual file name (logical file identifier on server, optional - defaults to remoteFilename)
      */
     private String virtualFile;
 
@@ -82,11 +76,9 @@ public class TransferRequest {
     private Boolean syncPointsEnabled;
 
     /**
-     * Sync point interval in bytes. If null, auto-calculated based on file size:
-     * - Files < 1MB: no sync points
-     * - Files 1-10MB: every 256KB
-     * - Files 10-100MB: every 1MB
-     * - Files > 100MB: every 5MB
+     * Sync point interval in bytes. If null, auto-calculated based on file size: - Files < 1MB: no
+     * sync points - Files 1-10MB: every 256KB - Files 10-100MB: every 1MB - Files > 100MB: every
+     * 5MB
      */
     private Long syncPointIntervalBytes;
 
@@ -94,17 +86,14 @@ public class TransferRequest {
     private Boolean resyncEnabled;
 
     /**
-     * Resume from a previous interrupted transfer.
-     * If set, this is the transfer ID to resume from.
+     * Resume from a previous interrupted transfer. If set, this is the transfer ID to resume from.
      */
     private String resumeFromTransferId;
 
     /**
-     * Record/article length (PI_32) - max size of a single article/record.
-     * This is configured per virtual file on the server and must be known in
-     * advance.
-     * If null, uses config default (typically 506 bytes).
-     * Note: PI_32 (article) and PI_25 (entity) are INDEPENDENT limits.
+     * Record/article length (PI_32) - max size of a single article/record. This is configured per
+     * virtual file on the server and must be known in advance. If null, uses config default
+     * (typically 506 bytes). Note: PI_32 (article) and PI_25 (entity) are INDEPENDENT limits.
      */
     private Integer recordLength;
 }

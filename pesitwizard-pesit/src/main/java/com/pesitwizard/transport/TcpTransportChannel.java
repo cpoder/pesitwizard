@@ -3,10 +3,7 @@ package com.pesitwizard.transport;
 import java.io.IOException;
 import java.net.Socket;
 
-/**
- * TCP/IP transport implementation for PESIT protocol.
- * Plain TCP without encryption.
- */
+/** TCP/IP transport implementation for PESIT protocol. Plain TCP without encryption. */
 public class TcpTransportChannel extends AbstractSocketTransportChannel {
 
     public TcpTransportChannel(String host, int port) {

@@ -3,23 +3,21 @@ package com.pesitwizard.client.pesit;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.client.entity.PesitServer;
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.transport.TcpTransportChannel;
+import com.pesitwizard.transport.TlsTransportChannel;
+import com.pesitwizard.transport.TransportChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.client.entity.PesitServer;
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.transport.TcpTransportChannel;
-import com.pesitwizard.transport.TlsTransportChannel;
-import com.pesitwizard.transport.TransportChannel;
-
 @ExtendWith(MockitoExtension.class)
 class PesitChannelFactoryTest {
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
     private PesitChannelFactory factory;
 
@@ -66,17 +64,18 @@ class PesitChannelFactoryTest {
 
     @Test
     void createChannel_tlsWithTruststore_decryptsPasswords() {
-        PesitServer server = PesitServer.builder()
-                .host("secure.example.com")
-                .port(6503)
-                .serverId("SRV2")
-                .tlsEnabled(true)
-                .truststoreData(new byte[] { 1, 2, 3 })
-                .truststorePassword("AES:encrypted-ts-pw")
-                .keystoreData(new byte[] { 4, 5, 6 })
-                .keystorePassword("AES:encrypted-ks-pw")
-                .readTimeout(60000)
-                .build();
+        PesitServer server =
+                PesitServer.builder()
+                        .host("secure.example.com")
+                        .port(6503)
+                        .serverId("SRV2")
+                        .tlsEnabled(true)
+                        .truststoreData(new byte[] {1, 2, 3})
+                        .truststorePassword("AES:encrypted-ts-pw")
+                        .keystoreData(new byte[] {4, 5, 6})
+                        .keystorePassword("AES:encrypted-ks-pw")
+                        .readTimeout(60000)
+                        .build();
 
         when(secretsService.decrypt("AES:encrypted-ts-pw")).thenReturn("ts-plain");
         when(secretsService.decrypt("AES:encrypted-ks-pw")).thenReturn("ks-plain");
@@ -114,13 +113,14 @@ class PesitChannelFactoryTest {
 
     @Test
     void timeout_usesServerReadTimeout() {
-        PesitServer server = PesitServer.builder()
-                .host("localhost")
-                .port(6502)
-                .serverId("SRV1")
-                .tlsEnabled(false)
-                .readTimeout(120000)
-                .build();
+        PesitServer server =
+                PesitServer.builder()
+                        .host("localhost")
+                        .port(6502)
+                        .serverId("SRV1")
+                        .tlsEnabled(false)
+                        .readTimeout(120000)
+                        .build();
 
         TransportChannel channel = factory.createChannel(server, 0);
         assertThat(channel).isNotNull();
@@ -128,13 +128,14 @@ class PesitChannelFactoryTest {
 
     @Test
     void timeout_usesDefaultWhenReadTimeoutNull() {
-        PesitServer server = PesitServer.builder()
-                .host("localhost")
-                .port(6502)
-                .serverId("SRV1")
-                .tlsEnabled(false)
-                .readTimeout(null)
-                .build();
+        PesitServer server =
+                PesitServer.builder()
+                        .host("localhost")
+                        .port(6502)
+                        .serverId("SRV1")
+                        .tlsEnabled(false)
+                        .readTimeout(null)
+                        .build();
 
         TransportChannel channel = factory.createChannel(server, 0);
         assertThat(channel).isNotNull();

@@ -1,16 +1,15 @@
 package com.pesitwizard.security;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Prometheus metrics for secrets operations.
- * Tracks encryption/decryption counts, timings, and errors.
+ * Prometheus metrics for secrets operations. Tracks encryption/decryption counts, timings, and
+ * errors.
  */
 @Slf4j
 public class SecretsMetrics {
@@ -26,43 +25,52 @@ public class SecretsMetrics {
     private final Timer decryptTimer;
 
     public SecretsMetrics(MeterRegistry registry) {
-        this.encryptCounter = Counter.builder("pesitwizard.secrets.encrypt")
-                .description("Number of encryption operations")
-                .tag("provider", "all")
-                .register(registry);
+        this.encryptCounter =
+                Counter.builder("pesitwizard.secrets.encrypt")
+                        .description("Number of encryption operations")
+                        .tag("provider", "all")
+                        .register(registry);
 
-        this.decryptCounter = Counter.builder("pesitwizard.secrets.decrypt")
-                .description("Number of decryption operations")
-                .tag("provider", "all")
-                .register(registry);
+        this.decryptCounter =
+                Counter.builder("pesitwizard.secrets.decrypt")
+                        .description("Number of decryption operations")
+                        .tag("provider", "all")
+                        .register(registry);
 
-        this.encryptErrorCounter = Counter.builder("pesitwizard.secrets.encrypt.errors")
-                .description("Number of encryption errors")
-                .register(registry);
+        this.encryptErrorCounter =
+                Counter.builder("pesitwizard.secrets.encrypt.errors")
+                        .description("Number of encryption errors")
+                        .register(registry);
 
-        this.decryptErrorCounter = Counter.builder("pesitwizard.secrets.decrypt.errors")
-                .description("Number of decryption errors")
-                .register(registry);
+        this.decryptErrorCounter =
+                Counter.builder("pesitwizard.secrets.decrypt.errors")
+                        .description("Number of decryption errors")
+                        .register(registry);
 
-        this.vaultCacheHitCounter = Counter.builder("pesitwizard.vault.cache.hit")
-                .description("Vault cache hits")
-                .register(registry);
+        this.vaultCacheHitCounter =
+                Counter.builder("pesitwizard.vault.cache.hit")
+                        .description("Vault cache hits")
+                        .register(registry);
 
-        this.vaultCacheMissCounter = Counter.builder("pesitwizard.vault.cache.miss")
-                .description("Vault cache misses")
-                .register(registry);
+        this.vaultCacheMissCounter =
+                Counter.builder("pesitwizard.vault.cache.miss")
+                        .description("Vault cache misses")
+                        .register(registry);
 
-        this.vaultCircuitOpenCounter = Counter.builder("pesitwizard.vault.circuit.open")
-                .description("Vault circuit breaker open events")
-                .register(registry);
+        this.vaultCircuitOpenCounter =
+                Counter.builder("pesitwizard.vault.circuit.open")
+                        .description("Vault circuit breaker open events")
+                        .register(registry);
 
-        this.encryptTimer = Timer.builder("pesitwizard.secrets.encrypt.time")
-                .description("Time spent encrypting")
-                .register(registry);
+        this.encryptTimer =
+                Timer.builder("pesitwizard.secrets.encrypt.time")
+                        .description("Time spent encrypting")
+                        .register(registry);
 
-        this.decryptTimer = Timer.builder("pesitwizard.secrets.decrypt.time")
-                .description("Time spent decrypting")
-                .register(registry);
+        this.decryptTimer =
+                Timer.builder("pesitwizard.secrets.decrypt.time")
+                        .description("Time spent decrypting")
+                        .register(registry);
 
         log.info("SecretsMetrics initialized");
     }

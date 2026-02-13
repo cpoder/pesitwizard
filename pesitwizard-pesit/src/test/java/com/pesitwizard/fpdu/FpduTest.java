@@ -45,10 +45,11 @@ public class FpduTest {
     @Test
     @DisplayName("should support fluent API")
     void shouldSupportFluentApi() {
-        Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                .withIdDst(1)
-                .withIdSrc(2)
-                .withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, "Test"));
+        Fpdu fpdu =
+                new Fpdu(FpduType.CREATE)
+                        .withIdDst(1)
+                        .withIdSrc(2)
+                        .withParameter(new ParameterValue(PI_99_MESSAGE_LIBRE, "Test"));
 
         assertEquals(FpduType.CREATE, fpdu.getFpduType());
         assertEquals(1, fpdu.getIdDst());
@@ -60,7 +61,7 @@ public class FpduTest {
     @DisplayName("should handle DTF data")
     void shouldHandleDtfData() {
         Fpdu fpdu = new Fpdu(FpduType.DTF);
-        byte[] data = new byte[] { 0x01, 0x02, 0x03 };
+        byte[] data = new byte[] {0x01, 0x02, 0x03};
         fpdu.setData(data);
 
         assertArrayEquals(data, fpdu.getData());

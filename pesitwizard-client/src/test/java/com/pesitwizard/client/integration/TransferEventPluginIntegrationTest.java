@@ -3,11 +3,13 @@ package com.pesitwizard.client.integration;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.client.event.TransferEvent;
+import com.pesitwizard.client.event.TransferEventBus;
+import com.pesitwizard.client.pesit.ClientState;
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,16 +20,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.pesitwizard.client.event.TransferEvent;
-import com.pesitwizard.client.event.TransferEventBus;
-import com.pesitwizard.client.pesit.ClientState;
-
 /**
- * Integration test for Transfer Event Plugin Architecture.
- * Verifies that plugins can subscribe to transfer events using @EventListener.
+ * Integration test for Transfer Event Plugin Architecture. Verifies that plugins can subscribe to
+ * transfer events using @EventListener.
  */
 @SpringBootTest
 @ActiveProfiles({"test", "nosecurity"})
@@ -35,14 +32,11 @@ import com.pesitwizard.client.pesit.ClientState;
 @DisplayName("Transfer Event Plugin Integration Tests")
 class TransferEventPluginIntegrationTest {
 
-    @Autowired
-    private TransferEventBus eventBus;
+    @Autowired private TransferEventBus eventBus;
 
-    @Autowired
-    private TestSynchronousPlugin syncPlugin;
+    @Autowired private TestSynchronousPlugin syncPlugin;
 
-    @Autowired
-    private TestFilteredPlugin filteredPlugin;
+    @Autowired private TestFilteredPlugin filteredPlugin;
 
     @BeforeEach
     void setUp() {
@@ -101,9 +95,13 @@ class TransferEventPluginIntegrationTest {
         eventBus.completed(transferId, 10000L);
 
         // Wait for all events to be processed
-        await().atMost(Duration.ofSeconds(2)).untilAsserted(() ->
-            assertEquals(2, filteredPlugin.receivedEvents.size(), "Should only receive ERROR events")
-        );
+        await().atMost(Duration.ofSeconds(2))
+                .untilAsserted(
+                        () ->
+                                assertEquals(
+                                        2,
+                                        filteredPlugin.receivedEvents.size(),
+                                        "Should only receive ERROR events"));
 
         TransferEvent error1 = filteredPlugin.receivedEvents.poll(1, TimeUnit.SECONDS);
         assertNotNull(error1);
@@ -128,7 +126,9 @@ class TransferEventPluginIntegrationTest {
 
         // Assert - Both sync and filtered plugins should have received events
         assertFalse(syncPlugin.receivedEvents.isEmpty(), "Sync plugin should receive events");
-        assertFalse(filteredPlugin.receivedEvents.isEmpty(), "Filtered plugin should receive error event");
+        assertFalse(
+                filteredPlugin.receivedEvents.isEmpty(),
+                "Filtered plugin should receive error event");
 
         // Sync plugin should have both events
         TransferEvent syncEvent1 = syncPlugin.receivedEvents.poll(1, TimeUnit.SECONDS);
@@ -150,7 +150,8 @@ class TransferEventPluginIntegrationTest {
 
         // Act - Publish events in sequence
         eventBus.stateChange(transferId, null, ClientState.CN02A_CONNECT_PENDING);
-        eventBus.stateChange(transferId, ClientState.CN02A_CONNECT_PENDING, ClientState.CN03_CONNECTED);
+        eventBus.stateChange(
+                transferId, ClientState.CN02A_CONNECT_PENDING, ClientState.CN03_CONNECTED);
         eventBus.progress(transferId, 1000L, 10000L);
         eventBus.progress(transferId, 5000L, 10000L);
         eventBus.completed(transferId, 10000L);
@@ -196,8 +197,10 @@ class TransferEventPluginIntegrationTest {
         }
 
         // Assert - All events should be received by sync plugin
-        assertEquals(eventCount, syncPlugin.receivedEvents.size(),
-            "Sync plugin should receive all " + eventCount + " events");
+        assertEquals(
+                eventCount,
+                syncPlugin.receivedEvents.size(),
+                "Sync plugin should receive all " + eventCount + " events");
 
         // Verify first and last events
         TransferEvent firstEvent = syncPlugin.receivedEvents.poll();
@@ -236,9 +239,7 @@ class TransferEventPluginIntegrationTest {
 
     // ========== Test Plugin Components ==========
 
-    /**
-     * Test configuration to register test plugins.
-     */
+    /** Test configuration to register test plugins. */
     @TestConfiguration
     static class TestPluginConfiguration {
         @Bean
@@ -252,9 +253,7 @@ class TransferEventPluginIntegrationTest {
         }
     }
 
-    /**
-     * Test plugin that processes events synchronously.
-     */
+    /** Test plugin that processes events synchronously. */
     static class TestSynchronousPlugin {
         final BlockingQueue<TransferEvent> receivedEvents = new LinkedBlockingQueue<>();
 
@@ -268,9 +267,7 @@ class TransferEventPluginIntegrationTest {
         }
     }
 
-    /**
-     * Test plugin that processes events asynchronously.
-     */
+    /** Test plugin that processes events asynchronously. */
     static class TestAsyncPlugin {
         final BlockingQueue<TransferEvent> receivedEvents;
 
@@ -289,9 +286,7 @@ class TransferEventPluginIntegrationTest {
         }
     }
 
-    /**
-     * Test plugin that only listens to ERROR events.
-     */
+    /** Test plugin that only listens to ERROR events. */
     static class TestFilteredPlugin {
         final BlockingQueue<TransferEvent> receivedEvents = new LinkedBlockingQueue<>();
 

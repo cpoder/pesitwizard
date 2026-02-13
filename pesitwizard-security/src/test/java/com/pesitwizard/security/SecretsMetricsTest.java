@@ -2,17 +2,14 @@ package com.pesitwizard.security;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-
-/**
- * Unit tests for SecretsMetrics.
- */
+/** Unit tests for SecretsMetrics. */
 @DisplayName("SecretsMetrics Tests")
 class SecretsMetricsTest {
 
@@ -104,17 +101,20 @@ class SecretsMetricsTest {
         @Test
         @DisplayName("should record encrypt time with supplier")
         void shouldRecordEncryptTimeWithSupplier() {
-            String result = metrics.timeEncrypt(() -> {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                return "encrypted";
-            });
+            String result =
+                    metrics.timeEncrypt(
+                            () -> {
+                                try {
+                                    Thread.sleep(10);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                return "encrypted";
+                            });
 
             assertThat(result).isEqualTo("encrypted");
-            assertThat(registry.get("pesitwizard.secrets.encrypt.time").timer().count()).isEqualTo(1);
+            assertThat(registry.get("pesitwizard.secrets.encrypt.time").timer().count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -123,7 +123,8 @@ class SecretsMetricsTest {
             String result = metrics.timeDecrypt(() -> "decrypted");
 
             assertThat(result).isEqualTo("decrypted");
-            assertThat(registry.get("pesitwizard.secrets.decrypt.time").timer().count()).isEqualTo(1);
+            assertThat(registry.get("pesitwizard.secrets.decrypt.time").timer().count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -131,7 +132,8 @@ class SecretsMetricsTest {
         void shouldRecordEncryptTimeNanos() {
             metrics.recordEncryptTime(1_000_000); // 1ms
 
-            assertThat(registry.get("pesitwizard.secrets.encrypt.time").timer().count()).isEqualTo(1);
+            assertThat(registry.get("pesitwizard.secrets.encrypt.time").timer().count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -139,7 +141,8 @@ class SecretsMetricsTest {
         void shouldRecordDecryptTimeNanos() {
             metrics.recordDecryptTime(2_000_000); // 2ms
 
-            assertThat(registry.get("pesitwizard.secrets.decrypt.time").timer().count()).isEqualTo(1);
+            assertThat(registry.get("pesitwizard.secrets.decrypt.time").timer().count())
+                    .isEqualTo(1);
         }
     }
 

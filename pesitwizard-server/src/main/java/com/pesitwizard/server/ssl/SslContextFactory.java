@@ -1,5 +1,10 @@
 package com.pesitwizard.server.ssl;
 
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.config.SslProperties;
+import com.pesitwizard.server.entity.CertificateStore;
+import com.pesitwizard.server.entity.CertificateStore.StoreType;
+import com.pesitwizard.server.repository.CertificateStoreRepository;
 import java.io.ByteArrayInputStream;
 import java.security.KeyStore;
 import java.security.MessageDigest;
@@ -12,28 +17,18 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-
-import org.springframework.stereotype.Component;
-
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.config.SslProperties;
-import com.pesitwizard.server.entity.CertificateStore;
-import com.pesitwizard.server.entity.CertificateStore.StoreType;
-import com.pesitwizard.server.repository.CertificateStoreRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
- * Factory for creating SSL contexts from centrally managed certificates.
- * Supports JKS, PKCS12, and PEM formats.
- * Also supports loading certificates from environment variables for Kubernetes
+ * Factory for creating SSL contexts from centrally managed certificates. Supports JKS, PKCS12, and
+ * PEM formats. Also supports loading certificates from environment variables for Kubernetes
  * deployments.
  */
 @Slf4j
@@ -52,7 +47,8 @@ public class SslContextFactory {
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
     /** Cache of SSLContext by composite key (e.g., "default", "partner:xyz", "envvar"). */
-    private final ConcurrentHashMap<String, CachedContext> sslContextCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CachedContext> sslContextCache =
+            new ConcurrentHashMap<>();
 
     private record CachedContext(SSLContext context, Instant cachedAt) {
         boolean isExpired() {
@@ -61,27 +57,36 @@ public class SslContextFactory {
     }
 
     /**
-     * Create an SSL context using the default keystore and truststore.
-     * Results are cached for {@link #CACHE_TTL} to avoid repeated KeyStore parsing.
+     * Create an SSL context using the default keystore and truststore. Results are cached for
+     * {@link #CACHE_TTL} to avoid repeated KeyStore parsing.
      */
     public SSLContext createDefaultSslContext() throws SslConfigurationException {
-        return getCachedOrCreate("default", () -> {
-            CertificateStore keystore = certificateRepository
-                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
-                    .orElseThrow(() -> new SslConfigurationException("No default keystore configured"));
+        return getCachedOrCreate(
+                "default",
+                () -> {
+                    CertificateStore keystore =
+                            certificateRepository
+                                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                                            StoreType.KEYSTORE)
+                                    .orElseThrow(
+                                            () ->
+                                                    new SslConfigurationException(
+                                                            "No default keystore configured"));
 
-            CertificateStore truststore = certificateRepository
-                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
-                    .orElse(null);
+                    CertificateStore truststore =
+                            certificateRepository
+                                    .findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                                            StoreType.TRUSTSTORE)
+                                    .orElse(null);
 
-            return createSslContextUncached(keystore, truststore);
-        });
+                    return createSslContextUncached(keystore, truststore);
+                });
     }
 
     /**
-     * Create an SSL context using named keystore and truststore.
-     * If environment variable based certificates are configured, those take
-     * precedence. Results are cached for {@link #CACHE_TTL}.
+     * Create an SSL context using named keystore and truststore. If environment variable based
+     * certificates are configured, those take precedence. Results are cached for {@link
+     * #CACHE_TTL}.
      */
     public SSLContext createSslContext(String keystoreName, String truststoreName)
             throws SslConfigurationException {
@@ -92,35 +97,50 @@ public class SslContextFactory {
             return createSslContextFromEnvVars();
         }
 
-        String cacheKey = "named:" + keystoreName + ":" + (truststoreName != null ? truststoreName : "null");
-        return getCachedOrCreate(cacheKey, () -> {
-            CertificateStore keystore = certificateRepository
-                    .findByNameAndStoreType(keystoreName, StoreType.KEYSTORE)
-                    .orElseThrow(() -> new SslConfigurationException("Keystore not found: " + keystoreName));
+        String cacheKey =
+                "named:" + keystoreName + ":" + (truststoreName != null ? truststoreName : "null");
+        return getCachedOrCreate(
+                cacheKey,
+                () -> {
+                    CertificateStore keystore =
+                            certificateRepository
+                                    .findByNameAndStoreType(keystoreName, StoreType.KEYSTORE)
+                                    .orElseThrow(
+                                            () ->
+                                                    new SslConfigurationException(
+                                                            "Keystore not found: " + keystoreName));
 
-            if (!keystore.getActive()) {
-                throw new SslConfigurationException("Keystore is not active: " + keystoreName);
-            }
+                    if (!keystore.getActive()) {
+                        throw new SslConfigurationException(
+                                "Keystore is not active: " + keystoreName);
+                    }
 
-            CertificateStore truststore = null;
-            if (truststoreName != null) {
-                truststore = certificateRepository
-                        .findByNameAndStoreType(truststoreName, StoreType.TRUSTSTORE)
-                        .orElseThrow(() -> new SslConfigurationException("Truststore not found: " + truststoreName));
+                    CertificateStore truststore = null;
+                    if (truststoreName != null) {
+                        truststore =
+                                certificateRepository
+                                        .findByNameAndStoreType(
+                                                truststoreName, StoreType.TRUSTSTORE)
+                                        .orElseThrow(
+                                                () ->
+                                                        new SslConfigurationException(
+                                                                "Truststore not found: "
+                                                                        + truststoreName));
 
-                if (!truststore.getActive()) {
-                    throw new SslConfigurationException("Truststore is not active: " + truststoreName);
-                }
-            }
+                        if (!truststore.getActive()) {
+                            throw new SslConfigurationException(
+                                    "Truststore is not active: " + truststoreName);
+                        }
+                    }
 
-            return createSslContextUncached(keystore, truststore);
-        });
+                    return createSslContextUncached(keystore, truststore);
+                });
     }
 
     /**
-     * Create an SSL context from environment variable based certificates.
-     * Used in Kubernetes deployments where certificates are passed via ConfigMap.
-     * Cached permanently since env vars are immutable at runtime.
+     * Create an SSL context from environment variable based certificates. Used in Kubernetes
+     * deployments where certificates are passed via ConfigMap. Cached permanently since env vars
+     * are immutable at runtime.
      */
     public SSLContext createSslContextFromEnvVars() throws SslConfigurationException {
         CachedContext cached = sslContextCache.get("envvar");
@@ -133,7 +153,8 @@ public class SslContextFactory {
             String caCertPem = sslProperties.getCaCertPem();
 
             if (keystoreData == null || keystoreData.isEmpty()) {
-                throw new SslConfigurationException("No keystore data provided in environment variables");
+                throw new SslConfigurationException(
+                        "No keystore data provided in environment variables");
             }
 
             log.info("Creating SSL context from environment variable certificates");
@@ -147,7 +168,8 @@ public class SslContextFactory {
             }
 
             // Initialize key manager
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            KeyManagerFactory kmf =
+                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             kmf.init(keyStore, keystorePassword != null ? keystorePassword.toCharArray() : null);
 
             // Build truststore from CA certificate PEM if provided
@@ -158,10 +180,14 @@ public class SslContextFactory {
 
                 // Parse PEM certificate
                 CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                try (ByteArrayInputStream bis = new ByteArrayInputStream(caCertPem.getBytes())) {
+                try (ByteArrayInputStream bis =
+                        new ByteArrayInputStream(
+                                caCertPem.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
                     X509Certificate caCert = (X509Certificate) cf.generateCertificate(bis);
                     trustStore.setCertificateEntry("ca-cert", caCert);
-                    log.info("Loaded CA certificate: {}", caCert.getSubjectX500Principal().getName());
+                    log.info(
+                            "Loaded CA certificate: {}",
+                            caCert.getSubjectX500Principal().getName());
                 }
 
                 tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -177,7 +203,8 @@ public class SslContextFactory {
                 sslContext = SSLContext.getInstance(FALLBACK_PROTOCOL);
             }
 
-            sslContext.init(kmf.getKeyManagers(), tmf != null ? tmf.getTrustManagers() : null, null);
+            sslContext.init(
+                    kmf.getKeyManagers(), tmf != null ? tmf.getTrustManagers() : null, null);
             log.info("SSL context created successfully from environment variables");
 
             sslContextCache.put("envvar", new CachedContext(sslContext, Instant.now()));
@@ -187,59 +214,76 @@ public class SslContextFactory {
             throw e;
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException(
-                    "Failed to create SSL context from environment variables: " + e.getMessage(), e);
+                    "Failed to create SSL context from environment variables: " + e.getMessage(),
+                    e);
         }
     }
 
     /**
-     * Create an SSL context for a specific partner (mutual TLS).
-     * Results are cached for {@link #CACHE_TTL}.
+     * Create an SSL context for a specific partner (mutual TLS). Results are cached for {@link
+     * #CACHE_TTL}.
      */
     public SSLContext createPartnerSslContext(String partnerId) throws SslConfigurationException {
-        return getCachedOrCreate("partner:" + partnerId, () -> {
-            CertificateStore keystore = certificateRepository
-                    .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.KEYSTORE)
-                    .orElseGet(() -> certificateRepository
-                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE)
-                            .orElse(null));
+        return getCachedOrCreate(
+                "partner:" + partnerId,
+                () -> {
+                    CertificateStore keystore =
+                            certificateRepository
+                                    .findByPartnerIdAndStoreTypeAndActiveTrue(
+                                            partnerId, StoreType.KEYSTORE)
+                                    .orElseGet(
+                                            () ->
+                                                    certificateRepository
+                                                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                                                                    StoreType.KEYSTORE)
+                                                            .orElse(null));
 
-            if (keystore == null) {
-                throw new SslConfigurationException("No keystore available for partner: " + partnerId);
-            }
+                    if (keystore == null) {
+                        throw new SslConfigurationException(
+                                "No keystore available for partner: " + partnerId);
+                    }
 
-            CertificateStore truststore = certificateRepository
-                    .findByPartnerIdAndStoreTypeAndActiveTrue(partnerId, StoreType.TRUSTSTORE)
-                    .orElseGet(() -> certificateRepository
-                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE)
-                            .orElse(null));
+                    CertificateStore truststore =
+                            certificateRepository
+                                    .findByPartnerIdAndStoreTypeAndActiveTrue(
+                                            partnerId, StoreType.TRUSTSTORE)
+                                    .orElseGet(
+                                            () ->
+                                                    certificateRepository
+                                                            .findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                                                                    StoreType.TRUSTSTORE)
+                                                            .orElse(null));
 
-            return createSslContextUncached(keystore, truststore);
-        });
+                    return createSslContextUncached(keystore, truststore);
+                });
     }
 
-    /**
-     * Create an SSL context from certificate store entities (delegates to cached version).
-     */
+    /** Create an SSL context from certificate store entities (delegates to cached version). */
     public SSLContext createSslContext(CertificateStore keystore, CertificateStore truststore)
             throws SslConfigurationException {
-        String cacheKey = "stores:" + keystore.getId() + ":" + (truststore != null ? truststore.getId() : "null");
+        String cacheKey =
+                "stores:"
+                        + keystore.getId()
+                        + ":"
+                        + (truststore != null ? truststore.getId() : "null");
         return getCachedOrCreate(cacheKey, () -> createSslContextUncached(keystore, truststore));
     }
 
-    /**
-     * Create an SSL context without caching (internal).
-     */
-    private SSLContext createSslContextUncached(CertificateStore keystore, CertificateStore truststore)
+    /** Create an SSL context without caching (internal). */
+    private SSLContext createSslContextUncached(
+            CertificateStore keystore, CertificateStore truststore)
             throws SslConfigurationException {
         try {
             // Load keystore (loadKeyStore handles password decryption)
             KeyStore ks = loadKeyStore(keystore);
 
             // Initialize key manager
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            String keyPassword = keystore.getKeyPassword() != null
-                    ? decryptPassword(keystore.getKeyPassword())
-                    : decryptPassword(keystore.getStorePassword());
+            KeyManagerFactory kmf =
+                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            String keyPassword =
+                    keystore.getKeyPassword() != null
+                            ? decryptPassword(keystore.getKeyPassword())
+                            : decryptPassword(keystore.getStorePassword());
             kmf.init(ks, keyPassword != null ? keyPassword.toCharArray() : null);
 
             // Initialize trust manager
@@ -260,54 +304,48 @@ public class SslContextFactory {
             }
 
             sslContext.init(
-                    kmf.getKeyManagers(),
-                    tmf != null ? tmf.getTrustManagers() : null,
-                    null);
+                    kmf.getKeyManagers(), tmf != null ? tmf.getTrustManagers() : null, null);
 
-            log.info("SSL context created with keystore '{}' and truststore '{}'",
-                    keystore.getName(), truststore != null ? truststore.getName() : "default");
+            log.info(
+                    "SSL context created with keystore '{}' and truststore '{}'",
+                    keystore.getName(),
+                    truststore != null ? truststore.getName() : "default");
 
             return sslContext;
 
         } catch (SslConfigurationException e) {
             throw e;
         } catch (java.security.GeneralSecurityException e) {
-            throw new SslConfigurationException("Failed to create SSL context: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to create SSL context: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Create an SSL server socket factory
-     */
+    /** Create an SSL server socket factory */
     public SSLServerSocketFactory createServerSocketFactory() throws SslConfigurationException {
         return createDefaultSslContext().getServerSocketFactory();
     }
 
-    /**
-     * Create an SSL server socket factory with specific stores
-     */
-    public SSLServerSocketFactory createServerSocketFactory(String keystoreName, String truststoreName)
-            throws SslConfigurationException {
+    /** Create an SSL server socket factory with specific stores */
+    public SSLServerSocketFactory createServerSocketFactory(
+            String keystoreName, String truststoreName) throws SslConfigurationException {
         return createSslContext(keystoreName, truststoreName).getServerSocketFactory();
     }
 
-    /**
-     * Create an SSL socket factory for client connections
-     */
+    /** Create an SSL socket factory for client connections */
     public SSLSocketFactory createSocketFactory() throws SslConfigurationException {
         return createDefaultSslContext().getSocketFactory();
     }
 
-    /**
-     * Create an SSL socket factory for partner connections
-     */
-    public SSLSocketFactory createPartnerSocketFactory(String partnerId) throws SslConfigurationException {
+    /** Create an SSL socket factory for partner connections */
+    public SSLSocketFactory createPartnerSocketFactory(String partnerId)
+            throws SslConfigurationException {
         return createPartnerSslContext(partnerId).getSocketFactory();
     }
 
     /**
-     * Clear the entire SSLContext cache. Call this after certificate stores are updated
-     * to force immediate reload on next connection.
+     * Clear the entire SSLContext cache. Call this after certificate stores are updated to force
+     * immediate reload on next connection.
      */
     public void clearCache() {
         int size = sslContextCache.size();
@@ -318,17 +356,16 @@ public class SslContextFactory {
     }
 
     /**
-     * Clear a specific cache entry by key pattern. Useful when a specific
-     * certificate store is updated.
+     * Clear a specific cache entry by key pattern. Useful when a specific certificate store is
+     * updated.
      */
     public void clearCacheForPartner(String partnerId) {
         sslContextCache.remove("partner:" + partnerId);
     }
 
-    /**
-     * Get a cached SSLContext or create a new one. Thread-safe.
-     */
-    private SSLContext getCachedOrCreate(String key, SslContextSupplier supplier) throws SslConfigurationException {
+    /** Get a cached SSLContext or create a new one. Thread-safe. */
+    private SSLContext getCachedOrCreate(String key, SslContextSupplier supplier)
+            throws SslConfigurationException {
         CachedContext cached = sslContextCache.get(key);
         if (cached != null && !cached.isExpired()) {
             return cached.context();
@@ -346,9 +383,7 @@ public class SslContextFactory {
         SSLContext get() throws SslConfigurationException;
     }
 
-    /**
-     * Load a KeyStore from a CertificateStore entity
-     */
+    /** Load a KeyStore from a CertificateStore entity */
     public KeyStore loadKeyStore(CertificateStore store) throws SslConfigurationException {
         try {
             KeyStore keyStore;
@@ -363,13 +398,12 @@ public class SslContextFactory {
                 case PEM:
                     return loadPemStore(store);
                 default:
-                    throw new SslConfigurationException("Unsupported store format: " + store.getFormat());
+                    throw new SslConfigurationException(
+                            "Unsupported store format: " + store.getFormat());
             }
 
             String decryptedPassword = decryptPassword(store.getStorePassword());
-            char[] password = decryptedPassword != null
-                    ? decryptedPassword.toCharArray()
-                    : null;
+            char[] password = decryptedPassword != null ? decryptedPassword.toCharArray() : null;
 
             try (ByteArrayInputStream bis = new ByteArrayInputStream(store.getStoreData())) {
                 keyStore.load(bis, password);
@@ -380,14 +414,12 @@ public class SslContextFactory {
         } catch (SslConfigurationException e) {
             throw e;
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
-            throw new SslConfigurationException("Failed to load keystore '" + store.getName() + "': " + e.getMessage(),
-                    e);
+            throw new SslConfigurationException(
+                    "Failed to load keystore '" + store.getName() + "': " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Load a PEM-encoded certificate/key store
-     */
+    /** Load a PEM-encoded certificate/key store */
     private KeyStore loadPemStore(CertificateStore store) throws SslConfigurationException {
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -400,9 +432,10 @@ public class SslContextFactory {
                 while (bis.available() > 0) {
                     try {
                         Certificate cert = cf.generateCertificate(bis);
-                        String alias = store.getKeyAlias() != null
-                                ? store.getKeyAlias() + "_" + certIndex
-                                : "cert_" + certIndex;
+                        String alias =
+                                store.getKeyAlias() != null
+                                        ? store.getKeyAlias() + "_" + certIndex
+                                        : "cert_" + certIndex;
                         keyStore.setCertificateEntry(alias, cert);
                         certIndex++;
                     } catch (java.security.cert.CertificateException e) {
@@ -413,7 +446,8 @@ public class SslContextFactory {
             }
 
             if (keyStore.size() == 0) {
-                throw new SslConfigurationException("No certificates found in PEM store: " + store.getName());
+                throw new SslConfigurationException(
+                        "No certificates found in PEM store: " + store.getName());
             }
 
             return keyStore;
@@ -421,24 +455,25 @@ public class SslContextFactory {
         } catch (SslConfigurationException e) {
             throw e;
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
-            throw new SslConfigurationException("Failed to load PEM store '" + store.getName() + "': " + e.getMessage(),
-                    e);
+            throw new SslConfigurationException(
+                    "Failed to load PEM store '" + store.getName() + "': " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Extract certificate information from a keystore
-     */
-    public CertificateInfo extractCertificateInfo(CertificateStore store) throws SslConfigurationException {
+    /** Extract certificate information from a keystore */
+    public CertificateInfo extractCertificateInfo(CertificateStore store)
+            throws SslConfigurationException {
         try {
             KeyStore ks = loadKeyStore(store);
 
             Enumeration<String> aliases = ks.aliases();
             if (!aliases.hasMoreElements()) {
-                throw new SslConfigurationException("No entries found in store: " + store.getName());
+                throw new SslConfigurationException(
+                        "No entries found in store: " + store.getName());
             }
 
-            String alias = store.getKeyAlias() != null ? store.getKeyAlias() : aliases.nextElement();
+            String alias =
+                    store.getKeyAlias() != null ? store.getKeyAlias() : aliases.nextElement();
             Certificate cert = ks.getCertificate(alias);
 
             if (!(cert instanceof X509Certificate)) {
@@ -463,13 +498,12 @@ public class SslContextFactory {
         } catch (SslConfigurationException e) {
             throw e;
         } catch (java.security.GeneralSecurityException e) {
-            throw new SslConfigurationException("Failed to extract certificate info: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to extract certificate info: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Calculate SHA-256 fingerprint of a certificate
-     */
+    /** Calculate SHA-256 fingerprint of a certificate */
     public String calculateFingerprint(X509Certificate cert) throws SslConfigurationException {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -480,21 +514,20 @@ public class SslContextFactory {
             }
             return sb.toString();
         } catch (java.security.GeneralSecurityException e) {
-            throw new SslConfigurationException("Failed to calculate fingerprint: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to calculate fingerprint: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Get key usage as a list of strings
-     */
+    /** Get key usage as a list of strings */
     private List<String> getKeyUsage(X509Certificate cert) {
         List<String> usages = new ArrayList<>();
         boolean[] keyUsage = cert.getKeyUsage();
         if (keyUsage != null) {
             String[] usageNames = {
-                    "digitalSignature", "nonRepudiation", "keyEncipherment",
-                    "dataEncipherment", "keyAgreement", "keyCertSign",
-                    "cRLSign", "encipherOnly", "decipherOnly"
+                "digitalSignature", "nonRepudiation", "keyEncipherment",
+                "dataEncipherment", "keyAgreement", "keyCertSign",
+                "cRLSign", "encipherOnly", "decipherOnly"
             };
             for (int i = 0; i < keyUsage.length && i < usageNames.length; i++) {
                 if (keyUsage[i]) {
@@ -505,9 +538,7 @@ public class SslContextFactory {
         return usages;
     }
 
-    /**
-     * Validate that a certificate store is properly configured
-     */
+    /** Validate that a certificate store is properly configured */
     public void validateStore(CertificateStore store) throws SslConfigurationException {
         if (store.getStoreData() == null || store.getStoreData().length == 0) {
             throw new SslConfigurationException("Store data is empty: " + store.getName());
@@ -518,7 +549,8 @@ public class SslContextFactory {
 
         try {
             if (ks.size() == 0) {
-                throw new SslConfigurationException("Store contains no entries: " + store.getName());
+                throw new SslConfigurationException(
+                        "Store contains no entries: " + store.getName());
             }
 
             // For keystores, verify we have a private key
@@ -532,7 +564,8 @@ public class SslContextFactory {
                     }
                 }
                 if (!hasPrivateKey) {
-                    throw new SslConfigurationException("Keystore contains no private key: " + store.getName());
+                    throw new SslConfigurationException(
+                            "Keystore contains no private key: " + store.getName());
                 }
             }
         } catch (SslConfigurationException e) {
@@ -542,9 +575,7 @@ public class SslContextFactory {
         }
     }
 
-    /**
-     * Create an empty keystore
-     */
+    /** Create an empty keystore */
     public byte[] createEmptyKeyStore(CertificateStore.StoreFormat format, String password)
             throws SslConfigurationException {
         try {
@@ -566,14 +597,14 @@ public class SslContextFactory {
             return bos.toByteArray();
 
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
-            throw new SslConfigurationException("Failed to create empty keystore: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to create empty keystore: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Add a certificate to a store (for truststores)
-     */
-    public byte[] addCertificateToStore(CertificateStore store, byte[] certificateData, String alias)
+    /** Add a certificate to a store (for truststores) */
+    public byte[] addCertificateToStore(
+            CertificateStore store, byte[] certificateData, String alias)
             throws SslConfigurationException {
         try {
             KeyStore keyStore = loadKeyStore(store);
@@ -599,15 +630,14 @@ public class SslContextFactory {
         }
     }
 
-    /**
-     * Add a key pair to a store (for keystores)
-     */
+    /** Add a key pair to a store (for keystores) */
     public byte[] addKeyPairToStore(
             CertificateStore store,
             byte[] certificateData,
             byte[] privateKeyData,
             String alias,
-            String keyPassword) throws SslConfigurationException {
+            String keyPassword)
+            throws SslConfigurationException {
         try {
             KeyStore keyStore = loadKeyStore(store);
 
@@ -621,9 +651,11 @@ public class SslContextFactory {
             // Add to store (keyPassword param is already plaintext from caller;
             // store.getStorePassword() may be encrypted in DB)
             String decryptedStorePwd = decryptPassword(store.getStorePassword());
-            char[] keyPwd = keyPassword != null ? keyPassword.toCharArray()
-                    : (decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null);
-            keyStore.setKeyEntry(alias, privateKey, keyPwd, new Certificate[] { cert });
+            char[] keyPwd =
+                    keyPassword != null
+                            ? keyPassword.toCharArray()
+                            : (decryptedStorePwd != null ? decryptedStorePwd.toCharArray() : null);
+            keyStore.setKeyEntry(alias, privateKey, keyPwd, new Certificate[] {cert});
 
             // Export updated store
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
@@ -638,39 +670,40 @@ public class SslContextFactory {
         }
     }
 
-    /**
-     * Parse a PEM-encoded private key
-     */
-    private java.security.PrivateKey parsePrivateKey(byte[] keyData) throws SslConfigurationException {
+    /** Parse a PEM-encoded private key */
+    private java.security.PrivateKey parsePrivateKey(byte[] keyData)
+            throws SslConfigurationException {
         try {
             String keyPem = new String(keyData, java.nio.charset.StandardCharsets.UTF_8);
 
             // Remove PEM headers/footers
-            keyPem = keyPem.replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                    .replace("-----END RSA PRIVATE KEY-----", "")
-                    .replaceAll("\\s", "");
+            keyPem =
+                    keyPem.replace("-----BEGIN PRIVATE KEY-----", "")
+                            .replace("-----END PRIVATE KEY-----", "")
+                            .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                            .replace("-----END RSA PRIVATE KEY-----", "")
+                            .replaceAll("\\s", "");
 
             byte[] decoded = java.util.Base64.getDecoder().decode(keyPem);
 
-            java.security.spec.PKCS8EncodedKeySpec keySpec = new java.security.spec.PKCS8EncodedKeySpec(decoded);
+            java.security.spec.PKCS8EncodedKeySpec keySpec =
+                    new java.security.spec.PKCS8EncodedKeySpec(decoded);
             java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("RSA");
             return keyFactory.generatePrivate(keySpec);
 
         } catch (java.security.GeneralSecurityException | IllegalArgumentException e) {
-            throw new SslConfigurationException("Failed to parse private key: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to parse private key: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * List entries in a certificate store
-     */
-    public List<com.pesitwizard.server.service.CertificateService.StoreEntry> listStoreEntries(CertificateStore store)
-            throws SslConfigurationException {
+    /** List entries in a certificate store */
+    public List<com.pesitwizard.server.service.CertificateService.StoreEntry> listStoreEntries(
+            CertificateStore store) throws SslConfigurationException {
         try {
             KeyStore keyStore = loadKeyStore(store);
-            List<com.pesitwizard.server.service.CertificateService.StoreEntry> entries = new ArrayList<>();
+            List<com.pesitwizard.server.service.CertificateService.StoreEntry> entries =
+                    new ArrayList<>();
 
             Enumeration<String> aliases = keyStore.aliases();
             while (aliases.hasMoreElements()) {
@@ -687,8 +720,9 @@ public class SslContextFactory {
                     expiresAt = x509.getNotAfter().toInstant();
                 }
 
-                entries.add(new com.pesitwizard.server.service.CertificateService.StoreEntry(
-                        alias, type, subjectDn, expiresAt));
+                entries.add(
+                        new com.pesitwizard.server.service.CertificateService.StoreEntry(
+                                alias, type, subjectDn, expiresAt));
             }
 
             return entries;
@@ -696,14 +730,14 @@ public class SslContextFactory {
         } catch (SslConfigurationException e) {
             throw e;
         } catch (java.security.GeneralSecurityException e) {
-            throw new SslConfigurationException("Failed to list store entries: " + e.getMessage(), e);
+            throw new SslConfigurationException(
+                    "Failed to list store entries: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Remove an entry from a certificate store
-     */
-    public byte[] removeEntryFromStore(CertificateStore store, String alias) throws SslConfigurationException {
+    /** Remove an entry from a certificate store */
+    public byte[] removeEntryFromStore(CertificateStore store, String alias)
+            throws SslConfigurationException {
         try {
             KeyStore keyStore = loadKeyStore(store);
 
@@ -728,8 +762,8 @@ public class SslContextFactory {
     }
 
     /**
-     * Decrypt a password that may be stored encrypted (AES:, vault:, ENC: prefix).
-     * Returns null for null input, returns plaintext unchanged if not encrypted.
+     * Decrypt a password that may be stored encrypted (AES:, vault:, ENC: prefix). Returns null for
+     * null input, returns plaintext unchanged if not encrypted.
      */
     private String decryptPassword(String password) {
         if (password == null) {
@@ -741,9 +775,7 @@ public class SslContextFactory {
         return password;
     }
 
-    /**
-     * Certificate information DTO
-     */
+    /** Certificate information DTO */
     @lombok.Data
     public static class CertificateInfo {
         private String alias;

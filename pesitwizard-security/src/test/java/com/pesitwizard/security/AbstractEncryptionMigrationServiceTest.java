@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,15 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for AbstractEncryptionMigrationService.
- */
+/** Unit tests for AbstractEncryptionMigrationService. */
 @DisplayName("AbstractEncryptionMigrationService Tests")
 @ExtendWith(MockitoExtension.class)
 class AbstractEncryptionMigrationServiceTest {
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
     private TestMigrationService migrationService;
 
@@ -39,7 +35,8 @@ class AbstractEncryptionMigrationServiceTest {
         void shouldReturnFailureWhenVaultNotAvailable() {
             when(secretsService.isVaultAvailable()).thenReturn(false);
 
-            AbstractEncryptionMigrationService.MigrationResult result = migrationService.migrateAllToVault();
+            AbstractEncryptionMigrationService.MigrationResult result =
+                    migrationService.migrateAllToVault();
 
             assertThat(result.success()).isFalse();
             assertThat(result.message()).isEqualTo("Vault is not available");
@@ -52,7 +49,8 @@ class AbstractEncryptionMigrationServiceTest {
         void shouldCallDoMigrationWhenVaultAvailable() {
             when(secretsService.isVaultAvailable()).thenReturn(true);
 
-            AbstractEncryptionMigrationService.MigrationResult result = migrationService.migrateAllToVault();
+            AbstractEncryptionMigrationService.MigrationResult result =
+                    migrationService.migrateAllToVault();
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isEqualTo("Migration completed");
@@ -130,7 +128,8 @@ class AbstractEncryptionMigrationServiceTest {
         void shouldStoreDecryptedValueInVault() {
             when(secretsService.isEncrypted("AES:encrypted")).thenReturn(true);
             when(secretsService.decrypt("AES:encrypted")).thenReturn("plain-secret");
-            when(secretsService.storeInVault("test-key", "plain-secret")).thenReturn("vault:test-key");
+            when(secretsService.storeInVault("test-key", "plain-secret"))
+                    .thenReturn("vault:test-key");
 
             String result = migrationService.testMigrateToVault("test-key", "AES:encrypted");
 
@@ -146,8 +145,9 @@ class AbstractEncryptionMigrationServiceTest {
         @Test
         @DisplayName("should create MigrationResult with all fields")
         void shouldCreateMigrationResultWithAllFields() {
-            AbstractEncryptionMigrationService.MigrationResult result = new AbstractEncryptionMigrationService.MigrationResult(
-                    true, "Success", 5, 2, List.of("detail1", "detail2"));
+            AbstractEncryptionMigrationService.MigrationResult result =
+                    new AbstractEncryptionMigrationService.MigrationResult(
+                            true, "Success", 5, 2, List.of("detail1", "detail2"));
 
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isEqualTo("Success");
@@ -164,17 +164,15 @@ class AbstractEncryptionMigrationServiceTest {
         @Test
         @DisplayName("should create MigrationCount with fields")
         void shouldCreateMigrationCountWithFields() {
-            AbstractEncryptionMigrationService.MigrationCount count = new AbstractEncryptionMigrationService.MigrationCount(
-                    10, 3);
+            AbstractEncryptionMigrationService.MigrationCount count =
+                    new AbstractEncryptionMigrationService.MigrationCount(10, 3);
 
             assertThat(count.migrated()).isEqualTo(10);
             assertThat(count.skipped()).isEqualTo(3);
         }
     }
 
-    /**
-     * Concrete test implementation of AbstractEncryptionMigrationService.
-     */
+    /** Concrete test implementation of AbstractEncryptionMigrationService. */
     private static class TestMigrationService extends AbstractEncryptionMigrationService {
 
         TestMigrationService(SecretsService secretsService) {

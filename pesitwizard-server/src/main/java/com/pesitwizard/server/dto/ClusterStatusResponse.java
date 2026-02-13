@@ -2,12 +2,9 @@ package com.pesitwizard.server.dto;
 
 import java.util.List;
 import java.util.Map;
-
 import lombok.Data;
 
-/**
- * DTO for cluster status response
- */
+/** DTO for cluster status response */
 @Data
 public class ClusterStatusResponse {
     private boolean clusterEnabled;

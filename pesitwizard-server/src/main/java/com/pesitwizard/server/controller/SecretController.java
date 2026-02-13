@@ -1,9 +1,19 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.server.entity.SecretEntry;
+import com.pesitwizard.server.entity.SecretEntry.SecretScope;
+import com.pesitwizard.server.entity.SecretEntry.SecretType;
+import com.pesitwizard.server.service.SecretService;
+import com.pesitwizard.server.service.SecretService.SecretStatistics;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,23 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.server.entity.SecretEntry;
-import com.pesitwizard.server.entity.SecretEntry.SecretScope;
-import com.pesitwizard.server.entity.SecretEntry.SecretType;
-import com.pesitwizard.server.service.SecretService;
-import com.pesitwizard.server.service.SecretService.SecretStatistics;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-/**
- * REST API for secret management.
- * All endpoints require ADMIN role.
- */
+/** REST API for secret management. All endpoints require ADMIN role. */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/secrets")
@@ -44,109 +38,97 @@ public class SecretController {
 
     // ========== List & Get ==========
 
-    /**
-     * List all secrets (without values)
-     */
+    /** List all secrets (without values) */
     @GetMapping
     public ResponseEntity<List<SecretResponse>> listSecrets() {
-        List<SecretResponse> secrets = secretService.getAllSecrets().stream()
-                .map(SecretResponse::from)
-                .toList();
+        List<SecretResponse> secrets =
+                secretService.getAllSecrets().stream().map(SecretResponse::from).toList();
         return ResponseEntity.ok(secrets);
     }
 
-    /**
-     * List secrets by type
-     */
+    /** List secrets by type */
     @GetMapping("/type/{type}")
     public ResponseEntity<List<SecretResponse>> listSecretsByType(@PathVariable SecretType type) {
-        List<SecretResponse> secrets = secretService.getSecretsByType(type).stream()
-                .map(SecretResponse::from)
-                .toList();
+        List<SecretResponse> secrets =
+                secretService.getSecretsByType(type).stream().map(SecretResponse::from).toList();
         return ResponseEntity.ok(secrets);
     }
 
-    /**
-     * List secrets by scope
-     */
+    /** List secrets by scope */
     @GetMapping("/scope/{scope}")
-    public ResponseEntity<List<SecretResponse>> listSecretsByScope(@PathVariable SecretScope scope) {
-        List<SecretResponse> secrets = secretService.getSecretsByScope(scope).stream()
-                .map(SecretResponse::from)
-                .toList();
+    public ResponseEntity<List<SecretResponse>> listSecretsByScope(
+            @PathVariable SecretScope scope) {
+        List<SecretResponse> secrets =
+                secretService.getSecretsByScope(scope).stream().map(SecretResponse::from).toList();
         return ResponseEntity.ok(secrets);
     }
 
-    /**
-     * Get secret by ID (without value)
-     */
+    /** Get secret by ID (without value) */
     @GetMapping("/{id}")
     public ResponseEntity<SecretResponse> getSecret(@PathVariable Long id) {
-        return secretService.getSecretById(id)
+        return secretService
+                .getSecretById(id)
                 .map(secret -> ResponseEntity.ok(SecretResponse.from(secret)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get secret by name (without value)
-     */
+    /** Get secret by name (without value) */
     @GetMapping("/name/{name}")
     public ResponseEntity<SecretResponse> getSecretByName(@PathVariable String name) {
-        return secretService.getSecret(name)
+        return secretService
+                .getSecret(name)
                 .map(secret -> ResponseEntity.ok(SecretResponse.from(secret)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get decrypted secret value
-     */
+    /** Get decrypted secret value */
     @GetMapping("/name/{name}/value")
     public ResponseEntity<?> getSecretValue(@PathVariable String name) {
-        return secretService.getSecretValue(name)
+        return secretService
+                .getSecretValue(name)
                 .map(value -> ResponseEntity.ok(new SecretValueResponse(name, value)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get secrets for a partner
-     */
+    /** Get secrets for a partner */
     @GetMapping("/partner/{partnerId}")
-    public ResponseEntity<List<SecretResponse>> getSecretsForPartner(@PathVariable String partnerId) {
-        List<SecretResponse> secrets = secretService.getSecretsForPartner(partnerId).stream()
-                .map(SecretResponse::from)
-                .toList();
+    public ResponseEntity<List<SecretResponse>> getSecretsForPartner(
+            @PathVariable String partnerId) {
+        List<SecretResponse> secrets =
+                secretService.getSecretsForPartner(partnerId).stream()
+                        .map(SecretResponse::from)
+                        .toList();
         return ResponseEntity.ok(secrets);
     }
 
-    /**
-     * Get secrets for a server
-     */
+    /** Get secrets for a server */
     @GetMapping("/server/{serverId}")
     public ResponseEntity<List<SecretResponse>> getSecretsForServer(@PathVariable String serverId) {
-        List<SecretResponse> secrets = secretService.getSecretsForServer(serverId).stream()
-                .map(SecretResponse::from)
-                .toList();
+        List<SecretResponse> secrets =
+                secretService.getSecretsForServer(serverId).stream()
+                        .map(SecretResponse::from)
+                        .toList();
         return ResponseEntity.ok(secrets);
     }
 
     // ========== Create ==========
 
-    /**
-     * Create a new secret
-     */
+    /** Create a new secret */
     @PostMapping
-    public ResponseEntity<?> createSecret(@Valid @RequestBody CreateSecretRequest request, Principal principal) {
+    public ResponseEntity<?> createSecret(
+            @Valid @RequestBody CreateSecretRequest request, Principal principal) {
         try {
-            SecretEntry secret = secretService.createSecret(
-                    request.getName(),
-                    request.getValue(),
-                    request.getDescription(),
-                    request.getType() != null ? request.getType() : SecretType.GENERIC,
-                    request.getScope() != null ? request.getScope() : SecretScope.GLOBAL,
-                    request.getPartnerId(),
-                    request.getServerId(),
-                    request.getExpiresAt(),
-                    principal.getName());
+            SecretEntry secret =
+                    secretService.createSecret(
+                            request.getName(),
+                            request.getValue(),
+                            request.getDescription(),
+                            request.getType() != null ? request.getType() : SecretType.GENERIC,
+                            request.getScope() != null ? request.getScope() : SecretScope.GLOBAL,
+                            request.getPartnerId(),
+                            request.getServerId(),
+                            request.getExpiresAt(),
+                            principal.getName());
 
             log.info("Created secret: {}", request.getName());
             return ResponseEntity.status(HttpStatus.CREATED).body(SecretResponse.from(secret));
@@ -157,12 +139,10 @@ public class SecretController {
 
     // ========== Update ==========
 
-    /**
-     * Update secret value
-     */
+    /** Update secret value */
     @PutMapping("/name/{name}/value")
-    public ResponseEntity<?> updateSecretValue(@PathVariable String name,
-            @RequestBody UpdateSecretValueRequest request) {
+    public ResponseEntity<?> updateSecretValue(
+            @PathVariable String name, @RequestBody UpdateSecretValueRequest request) {
         try {
             SecretEntry secret = secretService.updateSecretValue(name, request.getValue(), "api");
             log.info("Updated secret value: {}", name);
@@ -172,31 +152,29 @@ public class SecretController {
         }
     }
 
-    /**
-     * Update secret metadata
-     */
+    /** Update secret metadata */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateSecretMetadata(@PathVariable Long id,
-            @RequestBody UpdateSecretMetadataRequest request) {
+    public ResponseEntity<?> updateSecretMetadata(
+            @PathVariable Long id, @RequestBody UpdateSecretMetadataRequest request) {
         try {
-            SecretEntry secret = secretService.updateSecretMetadata(
-                    id,
-                    request.getDescription(),
-                    request.getType(),
-                    request.getActive(),
-                    request.getExpiresAt(),
-                    "api");
+            SecretEntry secret =
+                    secretService.updateSecretMetadata(
+                            id,
+                            request.getDescription(),
+                            request.getType(),
+                            request.getActive(),
+                            request.getExpiresAt(),
+                            "api");
             return ResponseEntity.ok(SecretResponse.from(secret));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Rotate a secret
-     */
+    /** Rotate a secret */
     @PostMapping("/name/{name}/rotate")
-    public ResponseEntity<?> rotateSecret(@PathVariable String name, @RequestBody UpdateSecretValueRequest request) {
+    public ResponseEntity<?> rotateSecret(
+            @PathVariable String name, @RequestBody UpdateSecretValueRequest request) {
         try {
             SecretEntry secret = secretService.rotateSecret(name, request.getValue(), "api");
             log.info("Rotated secret: {} (version: {})", name, secret.getVersion());
@@ -208,9 +186,7 @@ public class SecretController {
 
     // ========== Delete ==========
 
-    /**
-     * Delete a secret
-     */
+    /** Delete a secret */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSecret(@PathVariable Long id) {
         try {
@@ -222,9 +198,7 @@ public class SecretController {
         }
     }
 
-    /**
-     * Deactivate a secret
-     */
+    /** Deactivate a secret */
     @PostMapping("/{id}/deactivate")
     public ResponseEntity<SecretResponse> deactivateSecret(@PathVariable Long id) {
         try {
@@ -238,18 +212,14 @@ public class SecretController {
 
     // ========== Utilities ==========
 
-    /**
-     * Generate a new encryption key
-     */
+    /** Generate a new encryption key */
     @GetMapping("/generate-key")
     public ResponseEntity<GeneratedKeyResponse> generateEncryptionKey() {
         String key = secretService.generateEncryptionKey();
         return ResponseEntity.ok(new GeneratedKeyResponse(key));
     }
 
-    /**
-     * Get secret statistics
-     */
+    /** Get secret statistics */
     @GetMapping("/stats")
     public ResponseEntity<SecretStatistics> getStatistics() {
         return ResponseEntity.ok(secretService.getStatistics());
@@ -261,7 +231,10 @@ public class SecretController {
     public static class CreateSecretRequest {
         @NotBlank(message = "Name is required")
         @Size(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
-        @Pattern(regexp = "^[a-zA-Z0-9_.-]+$", message = "Name can only contain alphanumeric characters, underscores, dots, and hyphens")
+        @Pattern(
+                regexp = "^[a-zA-Z0-9_.-]+$",
+                message =
+                        "Name can only contain alphanumeric characters, underscores, dots, and hyphens")
         private String name;
 
         @NotBlank(message = "Value is required")

@@ -3,6 +3,8 @@ package com.pesitwizard.server.observability;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,15 +12,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferObservation Tests")
 class TransferObservationTest {
 
-    @Mock
-    private PesitMetrics metrics;
+    @Mock private PesitMetrics metrics;
 
     private TransferObservation transferObservation;
 
@@ -32,8 +30,9 @@ class TransferObservationTest {
     @Test
     @DisplayName("createTransferObservation should create observation with all key values")
     void createTransferObservationShouldCreateWithAllKeyValues() {
-        Observation observation = transferObservation.createTransferObservation(
-                "transfer-123", "PARTNER_A", "FILE1.dat", "RECEIVE");
+        Observation observation =
+                transferObservation.createTransferObservation(
+                        "transfer-123", "PARTNER_A", "FILE1.dat", "RECEIVE");
 
         assertNotNull(observation);
     }
@@ -41,8 +40,9 @@ class TransferObservationTest {
     @Test
     @DisplayName("createTransferObservation should handle null filename")
     void createTransferObservationShouldHandleNullFilename() {
-        Observation observation = transferObservation.createTransferObservation(
-                "transfer-123", "PARTNER_A", null, "SEND");
+        Observation observation =
+                transferObservation.createTransferObservation(
+                        "transfer-123", "PARTNER_A", null, "SEND");
 
         assertNotNull(observation);
     }
@@ -50,8 +50,8 @@ class TransferObservationTest {
     @Test
     @DisplayName("createSessionObservation should create observation")
     void createSessionObservationShouldCreateObservation() {
-        Observation observation = transferObservation.createSessionObservation(
-                "session-123", "192.168.1.100");
+        Observation observation =
+                transferObservation.createSessionObservation("session-123", "192.168.1.100");
 
         assertNotNull(observation);
     }
@@ -59,8 +59,8 @@ class TransferObservationTest {
     @Test
     @DisplayName("createFpduObservation should create observation")
     void createFpduObservationShouldCreateObservation() {
-        Observation observation = transferObservation.createFpduObservation(
-                "CONNECT", "session-123");
+        Observation observation =
+                transferObservation.createFpduObservation("CONNECT", "session-123");
 
         assertNotNull(observation);
     }
@@ -84,7 +84,8 @@ class TransferObservationTest {
     @Test
     @DisplayName("recordTransferFailed should call metrics with error info")
     void recordTransferFailedShouldCallMetrics() {
-        transferObservation.recordTransferFailed("transfer-123", "PARTNER_A", "RECEIVE", "D2_205", "File not found");
+        transferObservation.recordTransferFailed(
+                "transfer-123", "PARTNER_A", "RECEIVE", "D2_205", "File not found");
 
         verify(metrics).transferFailed("PARTNER_A", "RECEIVE", "D2_205");
     }

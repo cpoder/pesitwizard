@@ -4,21 +4,17 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * Unit tests for PesitSessionRecorder.
- */
+/** Unit tests for PesitSessionRecorder. */
 @DisplayName("PesitSessionRecorder Tests")
 class PesitSessionRecorderTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     private PesitSessionRecorder recorder;
 
@@ -51,7 +47,7 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should record raw FPDU with type")
         void shouldRecordRawFpduWithType() {
-            byte[] data = new byte[] { 0x40, 0x11, 0, 0, 0, 0 }; // CONNECT FPDU bytes
+            byte[] data = new byte[] {0x40, 0x11, 0, 0, 0, 0}; // CONNECT FPDU bytes
             recorder.recordRaw(PesitSessionRecorder.Direction.SENT, FpduType.CONNECT, data);
 
             assertThat(recorder.getFrames()).hasSize(1);
@@ -63,7 +59,7 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should record raw bytes with type")
         void shouldRecordRawBytesWithType() {
-            byte[] data = new byte[] { 0x40, 0x21, 0, 0, 0, 0 };
+            byte[] data = new byte[] {0x40, 0x21, 0, 0, 0, 0};
             recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, FpduType.ACONNECT, data);
 
             assertThat(recorder.getFrames()).hasSize(1);
@@ -74,7 +70,7 @@ class PesitSessionRecorderTest {
         @DisplayName("should record raw bytes and parse type")
         void shouldRecordRawBytesAndParseType() {
             // Valid FPDU: [length=6][phase=0x40][type=0x21(ACONNECT)][idDst=0][idSrc=0]
-            byte[] data = new byte[] { 0x00, 0x06, 0x40, 0x21, 0, 0 };
+            byte[] data = new byte[] {0x00, 0x06, 0x40, 0x21, 0, 0};
             recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, data);
 
             assertThat(recorder.getFrames()).hasSize(1);
@@ -83,7 +79,7 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should record raw bytes with parse failure")
         void shouldRecordRawBytesWithParseFailure() {
-            byte[] data = new byte[] { 1, 2 }; // Too short to parse
+            byte[] data = new byte[] {1, 2}; // Too short to parse
             recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, data);
 
             assertThat(recorder.getFrames()).hasSize(1);
@@ -99,7 +95,8 @@ class PesitSessionRecorderTest {
         @DisplayName("should clear all frames")
         void shouldClearAllFrames() {
             recorder.recordRaw(PesitSessionRecorder.Direction.SENT, FpduType.CONNECT, new byte[6]);
-            recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, FpduType.ACONNECT, new byte[6]);
+            recorder.recordRaw(
+                    PesitSessionRecorder.Direction.RECEIVED, FpduType.ACONNECT, new byte[6]);
 
             assertThat(recorder.getFrames()).hasSize(2);
 
@@ -116,7 +113,7 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should save and load raw frames")
         void shouldSaveAndLoadRawFrames() throws Exception {
-            byte[] data = new byte[] { 0x40, 0x21, 0, 0, 0, 0 };
+            byte[] data = new byte[] {0x40, 0x21, 0, 0, 0, 0};
             recorder.recordRaw(PesitSessionRecorder.Direction.SENT, FpduType.CONNECT, data);
             recorder.recordRaw(PesitSessionRecorder.Direction.RECEIVED, FpduType.ACONNECT, data);
 
@@ -132,7 +129,7 @@ class PesitSessionRecorderTest {
         @Test
         @DisplayName("should save and load serialized frames")
         void shouldSaveAndLoadSerializedFrames() throws Exception {
-            byte[] data = new byte[] { 0x40, 0x21, 0, 0, 0, 0 };
+            byte[] data = new byte[] {0x40, 0x21, 0, 0, 0, 0};
             recorder.recordRaw(PesitSessionRecorder.Direction.SENT, FpduType.CONNECT, data);
 
             Path filePath = tempDir.resolve("session.ser");
@@ -154,11 +151,12 @@ class PesitSessionRecorderTest {
         @DisplayName("should format toString correctly")
         void shouldFormatToStringCorrectly() {
             byte[] data = new byte[10];
-            PesitSessionRecorder.RecordedFrame frame = new PesitSessionRecorder.RecordedFrame(
-                    java.time.Instant.now(),
-                    PesitSessionRecorder.Direction.SENT,
-                    FpduType.CONNECT,
-                    data);
+            PesitSessionRecorder.RecordedFrame frame =
+                    new PesitSessionRecorder.RecordedFrame(
+                            java.time.Instant.now(),
+                            PesitSessionRecorder.Direction.SENT,
+                            FpduType.CONNECT,
+                            data);
 
             String str = frame.toString();
             assertThat(str).contains("SENT");

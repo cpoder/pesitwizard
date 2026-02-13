@@ -1,8 +1,17 @@
 package com.pesitwizard.server.controller;
 
+import com.pesitwizard.server.entity.TransferRecord;
+import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
+import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
+import com.pesitwizard.server.service.TransferService;
+import com.pesitwizard.server.service.TransferService.DailyTransferStats;
+import com.pesitwizard.server.service.TransferService.PartnerTransferStatistics;
+import com.pesitwizard.server.service.TransferService.TransferStatistics;
 import java.time.Instant;
 import java.util.List;
-
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -15,22 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.server.entity.TransferRecord;
-import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
-import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
-import com.pesitwizard.server.service.TransferService;
-import com.pesitwizard.server.service.TransferService.DailyTransferStats;
-import com.pesitwizard.server.service.TransferService.PartnerTransferStatistics;
-import com.pesitwizard.server.service.TransferService.TransferStatistics;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.Set;
-
 /**
- * REST API for transfer management.
- * Provides endpoints for viewing, searching, and managing file transfers.
+ * REST API for transfer management. Provides endpoints for viewing, searching, and managing file
+ * transfers.
  */
 @Slf4j
 @RestController
@@ -41,15 +37,22 @@ public class TransferController {
     private final TransferService transferService;
 
     // S3-04: Allowlist of valid sortBy column names
-    private static final Set<String> ALLOWED_SORT_COLUMNS = Set.of(
-            "startedAt", "completedAt", "filename", "partnerId", "status",
-            "direction", "fileSize", "transferId", "serverId", "bytesTransferred");
+    private static final Set<String> ALLOWED_SORT_COLUMNS =
+            Set.of(
+                    "startedAt",
+                    "completedAt",
+                    "filename",
+                    "partnerId",
+                    "status",
+                    "direction",
+                    "fileSize",
+                    "transferId",
+                    "serverId",
+                    "bytesTransferred");
 
     // ========== List & Search ==========
 
-    /**
-     * List all transfers with pagination
-     */
+    /** List all transfers with pagination */
     @GetMapping
     public ResponseEntity<Page<TransferRecord>> listTransfers(
             @RequestParam(defaultValue = "0") int page,
@@ -62,19 +65,18 @@ public class TransferController {
             return ResponseEntity.badRequest().build();
         }
 
-        Sort sort = sortDir.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+        Sort sort =
+                sortDir.equalsIgnoreCase("asc")
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
 
-        Page<TransferRecord> transfers = transferService.getAllTransfers(
-                PageRequest.of(page, size, sort));
+        Page<TransferRecord> transfers =
+                transferService.getAllTransfers(PageRequest.of(page, size, sort));
 
         return ResponseEntity.ok(transfers);
     }
 
-    /**
-     * Search transfers with filters
-     */
+    /** Search transfers with filters */
     @GetMapping("/search")
     public ResponseEntity<Page<TransferRecord>> searchTransfers(
             @RequestParam(required = false) String partnerId,
@@ -86,32 +88,27 @@ public class TransferController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Page<TransferRecord> transfers = transferService.searchTransfers(
-                partnerId, status, direction, filename, startDate, endDate, page, size);
+        Page<TransferRecord> transfers =
+                transferService.searchTransfers(
+                        partnerId, status, direction, filename, startDate, endDate, page, size);
 
         return ResponseEntity.ok(transfers);
     }
 
-    /**
-     * Get active transfers
-     */
+    /** Get active transfers */
     @GetMapping("/active")
     public ResponseEntity<List<TransferRecord>> getActiveTransfers() {
         return ResponseEntity.ok(transferService.getActiveTransfers());
     }
 
-    /**
-     * Get active transfers for a specific server
-     */
+    /** Get active transfers for a specific server */
     @GetMapping("/active/server/{serverId}")
     public ResponseEntity<List<TransferRecord>> getActiveTransfersByServer(
             @PathVariable String serverId) {
         return ResponseEntity.ok(transferService.getActiveTransfersByServer(serverId));
     }
 
-    /**
-     * Get transfers by status
-     */
+    /** Get transfers by status */
     @GetMapping("/status/{status}")
     public ResponseEntity<Page<TransferRecord>> getTransfersByStatus(
             @PathVariable TransferStatus status,
@@ -121,9 +118,7 @@ public class TransferController {
         return ResponseEntity.ok(transferService.getTransfersByStatus(status, page, size));
     }
 
-    /**
-     * Get transfers by partner
-     */
+    /** Get transfers by partner */
     @GetMapping("/partner/{partnerId}")
     public ResponseEntity<Page<TransferRecord>> getTransfersByPartner(
             @PathVariable String partnerId,
@@ -133,9 +128,7 @@ public class TransferController {
         return ResponseEntity.ok(transferService.getTransfersByPartner(partnerId, page, size));
     }
 
-    /**
-     * Get retryable transfers
-     */
+    /** Get retryable transfers */
     @GetMapping("/retryable")
     public ResponseEntity<List<TransferRecord>> getRetryableTransfers() {
         return ResponseEntity.ok(transferService.getRetryableTransfers());
@@ -143,39 +136,31 @@ public class TransferController {
 
     // ========== Single Transfer ==========
 
-    /**
-     * Get a specific transfer by ID
-     */
+    /** Get a specific transfer by ID */
     @GetMapping("/{transferId}")
     public ResponseEntity<TransferRecord> getTransfer(@PathVariable String transferId) {
-        return transferService.getTransfer(transferId)
+        return transferService
+                .getTransfer(transferId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get transfers for a session
-     */
+    /** Get transfers for a session */
     @GetMapping("/session/{sessionId}")
     public ResponseEntity<List<TransferRecord>> getTransfersBySession(
             @PathVariable String sessionId) {
         return ResponseEntity.ok(transferService.getTransfersBySession(sessionId));
     }
 
-    /**
-     * Get retry history for a transfer
-     */
+    /** Get retry history for a transfer */
     @GetMapping("/{transferId}/retries")
-    public ResponseEntity<List<TransferRecord>> getRetryHistory(
-            @PathVariable String transferId) {
+    public ResponseEntity<List<TransferRecord>> getRetryHistory(@PathVariable String transferId) {
         return ResponseEntity.ok(transferService.getRetryHistory(transferId));
     }
 
     // ========== Transfer Actions ==========
 
-    /**
-     * Cancel an active transfer
-     */
+    /** Cancel an active transfer */
     @PostMapping("/{transferId}/cancel")
     public ResponseEntity<TransferRecord> cancelTransfer(
             @PathVariable String transferId,
@@ -192,9 +177,7 @@ public class TransferController {
         }
     }
 
-    /**
-     * Pause an active transfer
-     */
+    /** Pause an active transfer */
     @PostMapping("/{transferId}/pause")
     public ResponseEntity<TransferRecord> pauseTransfer(@PathVariable String transferId) {
         try {
@@ -208,9 +191,7 @@ public class TransferController {
         }
     }
 
-    /**
-     * Resume a paused transfer
-     */
+    /** Resume a paused transfer */
     @PostMapping("/{transferId}/resume")
     public ResponseEntity<TransferRecord> resumeTransfer(@PathVariable String transferId) {
         try {
@@ -224,15 +205,15 @@ public class TransferController {
         }
     }
 
-    /**
-     * Retry a failed transfer
-     */
+    /** Retry a failed transfer */
     @PostMapping("/{transferId}/retry")
     public ResponseEntity<TransferRecord> retryTransfer(@PathVariable String transferId) {
         try {
             TransferRecord transfer = transferService.retryTransfer(transferId);
-            log.info("Transfer {} retry initiated via API: new transfer {}",
-                    transferId, transfer.getTransferId());
+            log.info(
+                    "Transfer {} retry initiated via API: new transfer {}",
+                    transferId,
+                    transfer.getTransferId());
             return ResponseEntity.ok(transfer);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
@@ -243,26 +224,20 @@ public class TransferController {
 
     // ========== Statistics ==========
 
-    /**
-     * Get overall transfer statistics
-     */
+    /** Get overall transfer statistics */
     @GetMapping("/stats")
     public ResponseEntity<TransferStatistics> getStatistics() {
         return ResponseEntity.ok(transferService.getStatistics());
     }
 
-    /**
-     * Get statistics for a specific partner
-     */
+    /** Get statistics for a specific partner */
     @GetMapping("/stats/partner/{partnerId}")
     public ResponseEntity<PartnerTransferStatistics> getPartnerStatistics(
             @PathVariable String partnerId) {
         return ResponseEntity.ok(transferService.getPartnerStatistics(partnerId));
     }
 
-    /**
-     * Get daily transfer statistics
-     */
+    /** Get daily transfer statistics */
     @GetMapping("/stats/daily")
     public ResponseEntity<List<DailyTransferStats>> getDailyStatistics(
             @RequestParam(defaultValue = "30") int days) {
@@ -271,9 +246,7 @@ public class TransferController {
 
     // ========== Admin ==========
 
-    /**
-     * Trigger cleanup of old transfers
-     */
+    /** Trigger cleanup of old transfers */
     @DeleteMapping("/cleanup")
     public ResponseEntity<Void> triggerCleanup() {
         log.info("Transfer cleanup triggered via API");

@@ -4,6 +4,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduIO;
+import com.pesitwizard.fpdu.FpduType;
+import com.pesitwizard.fpdu.ParameterIdentifier;
+import com.pesitwizard.fpdu.ParameterValue;
+import com.pesitwizard.server.config.PesitServerProperties;
+import com.pesitwizard.server.entity.Partner;
+import com.pesitwizard.server.entity.PesitServerConfig;
+import com.pesitwizard.server.entity.VirtualFile;
+import com.pesitwizard.server.service.ConfigService;
+import com.pesitwizard.server.service.PesitServerManager;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
@@ -12,7 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,22 +40,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.fpdu.FpduIO;
-import com.pesitwizard.fpdu.FpduType;
-import com.pesitwizard.fpdu.ParameterIdentifier;
-import com.pesitwizard.fpdu.ParameterValue;
-import com.pesitwizard.server.config.PesitServerProperties;
-import com.pesitwizard.server.entity.Partner;
-import com.pesitwizard.server.entity.PesitServerConfig;
-import com.pesitwizard.server.entity.VirtualFile;
-import com.pesitwizard.server.service.ConfigService;
-import com.pesitwizard.server.service.PesitServerManager;
-
 /**
- * Integration tests for complete PeSIT transfer flows.
- * Tests the full protocol state machine from CONNECT through file transfer to
- * RELEASE.
+ * Integration tests for complete PeSIT transfer flows. Tests the full protocol state machine from
+ * CONNECT through file transfer to RELEASE.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("integration")
@@ -81,33 +78,33 @@ public class TransferFlowIntegrationTest {
         public ConfigService configService() {
             ConfigService mock = Mockito.mock(ConfigService.class);
 
-            Partner testPartner = Partner.builder()
-                    .id(CLIENT_ID)
-                    .enabled(true)
-                    .accessType(Partner.AccessType.BOTH)
-                    .build();
+            Partner testPartner =
+                    Partner.builder()
+                            .id(CLIENT_ID)
+                            .enabled(true)
+                            .accessType(Partner.AccessType.BOTH)
+                            .build();
             when(mock.findPartner(anyString())).thenReturn(Optional.of(testPartner));
 
-            VirtualFile testFile = VirtualFile.builder()
-                    .id("*")
-                    .enabled(true)
-                    .direction(VirtualFile.Direction.BOTH)
-                    .receiveDirectory(staticReceiveDirectory.toString())
-                    .sendDirectory(staticSendDirectory.toString())
-                    .receiveFilenamePattern("${filename}")
-                    .overwrite(true)
-                    .build();
+            VirtualFile testFile =
+                    VirtualFile.builder()
+                            .id("*")
+                            .enabled(true)
+                            .direction(VirtualFile.Direction.BOTH)
+                            .receiveDirectory(staticReceiveDirectory.toString())
+                            .sendDirectory(staticSendDirectory.toString())
+                            .receiveFilenamePattern("${filename}")
+                            .overwrite(true)
+                            .build();
             when(mock.findVirtualFile(anyString())).thenReturn(Optional.of(testFile));
 
             return mock;
         }
     }
 
-    @Autowired
-    private PesitServerProperties serverProperties;
+    @Autowired private PesitServerProperties serverProperties;
 
-    @Autowired
-    private PesitServerManager serverManager;
+    @Autowired private PesitServerManager serverManager;
 
     private Path tempDir;
     private int serverPort;
@@ -125,19 +122,21 @@ public class TransferFlowIntegrationTest {
             serverManager.createServer(serverConfig);
             serverManager.startServer(SERVER_ID);
         } catch (Exception e) {
-            org.junit.jupiter.api.Assumptions.assumeTrue(false,
-                    "Skipping integration test - server could not start: " + e.getMessage());
+            org.junit.jupiter.api.Assumptions.assumeTrue(
+                    false, "Skipping integration test - server could not start: " + e.getMessage());
         }
 
-        Awaitility.await().atMost(5, TimeUnit.SECONDS)
-            .pollInterval(100, TimeUnit.MILLISECONDS)
-            .until(() -> {
-                try (Socket s = new Socket(HOST, serverPort)) {
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            });
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(
+                        () -> {
+                            try (Socket s = new Socket(HOST, serverPort)) {
+                                return true;
+                            } catch (Exception e) {
+                                return false;
+                            }
+                        });
     }
 
     @AfterAll
@@ -151,12 +150,13 @@ public class TransferFlowIntegrationTest {
         if (tempDir != null && Files.exists(tempDir)) {
             Files.walk(tempDir)
                     .sorted((a, b) -> b.compareTo(a))
-                    .forEach(p -> {
-                        try {
-                            Files.deleteIfExists(p);
-                        } catch (Exception e) {
-                        }
-                    });
+                    .forEach(
+                            p -> {
+                                try {
+                                    Files.deleteIfExists(p);
+                                } catch (Exception e) {
+                                }
+                            });
         }
     }
 
@@ -169,12 +169,18 @@ public class TransferFlowIntegrationTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Send CONNECT
-            Fpdu connect = new Fpdu(FpduType.CONNECT)
-                    .withIdDst(0)
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
+            Fpdu connect =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdDst(0)
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
             FpduIO.writeFpdu(out, connect);
 
@@ -183,10 +189,13 @@ public class TransferFlowIntegrationTest {
             assertEquals(FpduType.ACONNECT, response.getFpduType(), "Should receive ACONNECT");
 
             // Send RELEASE
-            Fpdu release = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(response.getIdSrc())
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            Fpdu release =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(response.getIdSrc())
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
             FpduIO.writeFpdu(out, release);
 
@@ -205,18 +214,27 @@ public class TransferFlowIntegrationTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Send CONNECT with wrong server ID
-            Fpdu connect = new Fpdu(FpduType.CONNECT)
-                    .withIdDst(0)
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, "WRONG_SERVER"))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
+            Fpdu connect =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdDst(0)
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_04_SERVEUR, "WRONG_SERVER"))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
             FpduIO.writeFpdu(out, connect);
 
             // Read RCONNECT (rejected)
             Fpdu response = FpduIO.readFpdu(in);
-            assertEquals(FpduType.RCONNECT, response.getFpduType(), "Should receive RCONNECT for wrong server");
+            assertEquals(
+                    FpduType.RCONNECT,
+                    response.getFpduType(),
+                    "Should receive RCONNECT for wrong server");
         }
     }
 
@@ -229,12 +247,18 @@ public class TransferFlowIntegrationTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Send CONNECT
-            Fpdu connect = new Fpdu(FpduType.CONNECT)
-                    .withIdDst(0)
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
+            Fpdu connect =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdDst(0)
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
             FpduIO.writeFpdu(out, connect);
 
@@ -243,10 +267,14 @@ public class TransferFlowIntegrationTest {
             assertEquals(FpduType.ACONNECT, response.getFpduType());
 
             // Send ABORT
-            Fpdu abort = new Fpdu(FpduType.ABORT)
-                    .withIdDst(response.getIdSrc())
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 1, 0, 100 }));
+            Fpdu abort =
+                    new Fpdu(FpduType.ABORT)
+                            .withIdDst(response.getIdSrc())
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG,
+                                            new byte[] {1, 0, 100}));
 
             FpduIO.writeFpdu(out, abort);
 
@@ -265,23 +293,32 @@ public class TransferFlowIntegrationTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Connect first
-            Fpdu connect = new Fpdu(FpduType.CONNECT)
-                    .withIdDst(0)
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
+            Fpdu connect =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdDst(0)
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 2));
 
             FpduIO.writeFpdu(out, connect);
             Fpdu aconnect = FpduIO.readFpdu(in);
             assertEquals(FpduType.ACONNECT, aconnect.getFpduType());
 
             // Send MSG
-            Fpdu msg = new Fpdu(FpduType.MSG)
-                    .withIdDst(aconnect.getIdSrc())
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_91_MESSAGE,
-                            "Test message".getBytes(StandardCharsets.UTF_8)));
+            Fpdu msg =
+                    new Fpdu(FpduType.MSG)
+                            .withIdDst(aconnect.getIdSrc())
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_91_MESSAGE,
+                                            "Test message".getBytes(StandardCharsets.UTF_8)));
 
             FpduIO.writeFpdu(out, msg);
 
@@ -290,10 +327,13 @@ public class TransferFlowIntegrationTest {
             assertEquals(FpduType.ACK_MSG, ackMsg.getFpduType(), "Should receive ACK_MSG");
 
             // Clean up - send RELEASE
-            Fpdu release = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(aconnect.getIdSrc())
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            Fpdu release =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(aconnect.getIdSrc())
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
             FpduIO.writeFpdu(out, release);
             FpduIO.readFpdu(in); // RELCONF
         }
@@ -308,12 +348,18 @@ public class TransferFlowIntegrationTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Send CONNECT with version 1
-            Fpdu connect = new Fpdu(FpduType.CONNECT)
-                    .withIdDst(0)
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, 1));
+            Fpdu connect =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdDst(0)
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_03_DEMANDEUR, CLIENT_ID))
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_04_SERVEUR, SERVER_ID))
+                            .withParameter(
+                                    new ParameterValue(ParameterIdentifier.PI_06_VERSION, 1));
 
             FpduIO.writeFpdu(out, connect);
 
@@ -322,10 +368,13 @@ public class TransferFlowIntegrationTest {
             assertEquals(FpduType.ACONNECT, response.getFpduType(), "Version 1 should be accepted");
 
             // Clean up
-            Fpdu release = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(response.getIdSrc())
-                    .withIdSrc(1)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            Fpdu release =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(response.getIdSrc())
+                            .withIdSrc(1)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
             FpduIO.writeFpdu(out, release);
             FpduIO.readFpdu(in);
         }

@@ -4,13 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
@@ -22,19 +15,22 @@ import com.pesitwizard.server.service.FpduValidator;
 import com.pesitwizard.server.service.FpduValidator.ValidationResult;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.state.ServerState;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DataTransferHandler Tests")
 class DataTransferHandlerTest {
 
-    @Mock
-    private PesitServerProperties properties;
+    @Mock private PesitServerProperties properties;
 
-    @Mock
-    private TransferTracker transferTracker;
+    @Mock private TransferTracker transferTracker;
 
-    @Mock
-    private FpduValidator fpduValidator;
+    @Mock private FpduValidator fpduValidator;
 
     private DataTransferHandler handler;
 
@@ -43,8 +39,12 @@ class DataTransferHandlerTest {
         handler = new DataTransferHandler(properties, transferTracker, fpduValidator);
 
         // Default stubs for validator - return OK for all validations
-        lenient().when(fpduValidator.validateDtf(any(), any(), any())).thenReturn(ValidationResult.ok());
-        lenient().when(fpduValidator.validateMaxEntitySize(any(), any())).thenReturn(ValidationResult.ok());
+        lenient()
+                .when(fpduValidator.validateDtf(any(), any(), any()))
+                .thenReturn(ValidationResult.ok());
+        lenient()
+                .when(fpduValidator.validateMaxEntitySize(any(), any()))
+                .thenReturn(ValidationResult.ok());
     }
 
     @Test
@@ -366,7 +366,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
+        Fpdu response = handler.handleRead(ctx, fpdu);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_READ, response.getFpduType()); // NACK is ACK with error diag
@@ -382,7 +382,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
+        Fpdu response = handler.handleRead(ctx, fpdu);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_READ, response.getFpduType()); // NACK is ACK with error diag
@@ -398,7 +398,7 @@ class DataTransferHandlerTest {
 
         Fpdu fpdu = new Fpdu(FpduType.READ);
 
-        Fpdu response = handler.handleRead(ctx, fpdu, null, null);
+        Fpdu response = handler.handleRead(ctx, fpdu);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_READ, response.getFpduType()); // NACK is ACK with error diag
@@ -419,13 +419,18 @@ class DataTransferHandlerTest {
 
             when(properties.getMaxEntitySize()).thenReturn(4096);
 
-            Fpdu fpdu = new Fpdu(FpduType.READ);
-
-            // Create mock output stream
+            // Set up a channel on the context for streaming
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             java.io.DataOutputStream out = new java.io.DataOutputStream(baos);
+            ctx.setChannel(
+                    new com.pesitwizard.channel.TcpPesitChannel(
+                            new java.io.DataInputStream(
+                                    new java.io.ByteArrayInputStream(new byte[0])),
+                            out));
 
-            Fpdu response = handler.handleRead(ctx, fpdu, null, out);
+            Fpdu fpdu = new Fpdu(FpduType.READ);
+
+            Fpdu response = handler.handleRead(ctx, fpdu);
 
             assertNull(response); // Success returns null
             assertEquals(ServerState.TDL02B_SENDING_DATA, ctx.getState());
@@ -450,14 +455,20 @@ class DataTransferHandlerTest {
 
             when(properties.getMaxEntitySize()).thenReturn(4096);
 
+            // Set up a channel on the context for streaming
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            java.io.DataOutputStream out = new java.io.DataOutputStream(baos);
+            ctx.setChannel(
+                    new com.pesitwizard.channel.TcpPesitChannel(
+                            new java.io.DataInputStream(
+                                    new java.io.ByteArrayInputStream(new byte[0])),
+                            out));
+
             // Add restart point parameter
             Fpdu fpdu = new Fpdu(FpduType.READ);
             fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 5));
 
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            java.io.DataOutputStream out = new java.io.DataOutputStream(baos);
-
-            Fpdu response = handler.handleRead(ctx, fpdu, null, out);
+            Fpdu response = handler.handleRead(ctx, fpdu);
 
             assertNull(response);
             assertEquals(5, transfer.getRestartPoint());
@@ -536,7 +547,8 @@ class DataTransferHandlerTest {
         try {
             // Client sends RESYN requesting rollback to sync point 1
             Fpdu fpdu = new Fpdu(FpduType.RESYN);
-            fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            fpdu.withParameter(
+                    new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
             fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
 
             Fpdu response = handler.handleTDE02B(ctx, fpdu);
@@ -560,7 +572,8 @@ class DataTransferHandlerTest {
         ctx.setResyncEnabled(false); // RESYN not negotiated
 
         Fpdu fpdu = new Fpdu(FpduType.RESYN);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
 
         Fpdu response = handler.handleTDE02B(ctx, fpdu);
@@ -580,8 +593,11 @@ class DataTransferHandlerTest {
         // No sync points recorded
 
         Fpdu fpdu = new Fpdu(FpduType.RESYN);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 5)); // Unknown sync point
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
+        fpdu.withParameter(
+                new ParameterValue(
+                        ParameterIdentifier.PI_18_POINT_RELANCE, 5)); // Unknown sync point
 
         Fpdu response = handler.handleTDE02B(ctx, fpdu);
 
@@ -614,7 +630,8 @@ class DataTransferHandlerTest {
         // No transfer started
 
         Fpdu fpdu = new Fpdu(FpduType.RESYN);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
         fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_18_POINT_RELANCE, 1));
 
         Fpdu response = handler.handleTDE02B(ctx, fpdu);
@@ -622,5 +639,4 @@ class DataTransferHandlerTest {
         assertNotNull(response);
         assertEquals(FpduType.ABORT, response.getFpduType());
     }
-
 }

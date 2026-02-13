@@ -1,7 +1,5 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,20 +11,23 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Virtual file definition for PeSIT transfers.
- * Virtual files are logical file identifiers (PI_12) configured on the server.
- * Pre-configuring them here allows dropdown selection in the transfer form.
+ * Virtual file definition for PeSIT transfers. Virtual files are logical file identifiers (PI_12)
+ * configured on the server. Pre-configuring them here allows dropdown selection in the transfer
+ * form.
  */
 @Entity
-@Table(name = "client_virtual_files", indexes = {
-        @Index(name = "idx_client_virtual_file_name", columnList = "name", unique = true)
-})
+@Table(
+        name = "client_virtual_files",
+        indexes = {
+            @Index(name = "idx_client_virtual_file_name", columnList = "name", unique = true)
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

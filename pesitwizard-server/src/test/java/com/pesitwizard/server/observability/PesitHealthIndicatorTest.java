@@ -3,9 +3,11 @@ package com.pesitwizard.server.observability;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.server.cluster.ClusterProvider;
+import com.pesitwizard.server.service.PesitServerInstance;
+import com.pesitwizard.server.service.PesitServerManager;
 import java.util.Collections;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,19 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 
-import com.pesitwizard.server.cluster.ClusterProvider;
-import com.pesitwizard.server.service.PesitServerInstance;
-import com.pesitwizard.server.service.PesitServerManager;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PesitHealthIndicator Tests")
 class PesitHealthIndicatorTest {
 
-    @Mock
-    private ClusterProvider clusterProvider;
+    @Mock private ClusterProvider clusterProvider;
 
-    @Mock
-    private PesitServerManager serverManager;
+    @Mock private PesitServerManager serverManager;
 
     private PesitHealthIndicator healthIndicator;
 

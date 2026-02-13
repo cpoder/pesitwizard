@@ -3,10 +3,7 @@ package com.pesitwizard.security;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Health check indicator for secrets providers.
- * Can be integrated with Spring Boot Actuator.
- */
+/** Health check indicator for secrets providers. Can be integrated with Spring Boot Actuator. */
 public class SecretsHealthIndicator {
 
     private final SecretsProvider provider;
@@ -40,6 +37,5 @@ public class SecretsHealthIndicator {
         return new HealthStatus(healthy ? "UP" : "DOWN", details);
     }
 
-    public record HealthStatus(String status, Map<String, Object> details) {
-    }
+    public record HealthStatus(String status, Map<String, Object> details) {}
 }

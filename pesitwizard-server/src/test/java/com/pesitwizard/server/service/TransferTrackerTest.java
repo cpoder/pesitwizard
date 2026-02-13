@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.server.entity.TransferRecord;
+import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
+import com.pesitwizard.server.model.SessionContext;
+import com.pesitwizard.server.model.TransferContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,20 +17,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.server.entity.TransferRecord;
-import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
-import com.pesitwizard.server.model.SessionContext;
-import com.pesitwizard.server.model.TransferContext;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferTracker Tests")
 class TransferTrackerTest {
 
-    @Mock
-    private TransferService transferService;
+    @Mock private TransferService transferService;
 
-    @InjectMocks
-    private TransferTracker transferTracker;
+    @InjectMocks private TransferTracker transferTracker;
 
     private SessionContext sessionContext;
 
@@ -47,29 +44,62 @@ class TransferTrackerTest {
             TransferRecord record = new TransferRecord();
             record.setTransferId("transfer-123");
 
-            when(transferService.createTransfer(anyString(), anyString(), anyString(),
-                    anyString(), anyString(), any(TransferDirection.class), anyString()))
+            when(transferService.createTransfer(
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            any(TransferDirection.class),
+                            anyString()))
                     .thenReturn(record);
 
-            transferTracker.trackTransferStart(sessionContext, "server-1", "node-1",
-                    TransferDirection.RECEIVE, "test.dat", 1024L, "/data/test.dat");
+            transferTracker.trackTransferStart(
+                    sessionContext,
+                    "server-1",
+                    "node-1",
+                    TransferDirection.RECEIVE,
+                    "test.dat",
+                    1024L,
+                    "/data/test.dat");
 
             assertEquals("transfer-123", sessionContext.getTransferRecordId());
-            verify(transferService).createTransfer(eq("session-123"), eq("server-1"), eq("node-1"),
-                    eq("partner-1"), eq("test.dat"), eq(TransferDirection.RECEIVE), eq("192.168.1.100"));
+            verify(transferService)
+                    .createTransfer(
+                            eq("session-123"),
+                            eq("server-1"),
+                            eq("node-1"),
+                            eq("partner-1"),
+                            eq("test.dat"),
+                            eq(TransferDirection.RECEIVE),
+                            eq("192.168.1.100"));
             verify(transferService).startTransfer("transfer-123", 1024L, "/data/test.dat");
         }
 
         @Test
         @DisplayName("should handle exception gracefully when tracking start fails")
         void shouldHandleExceptionWhenTrackingStartFails() {
-            when(transferService.createTransfer(anyString(), anyString(), anyString(),
-                    anyString(), anyString(), any(TransferDirection.class), anyString()))
+            when(transferService.createTransfer(
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            any(TransferDirection.class),
+                            anyString()))
                     .thenThrow(new RuntimeException("Database error"));
 
             // Should not throw exception
-            assertDoesNotThrow(() -> transferTracker.trackTransferStart(sessionContext, "server-1",
-                    "node-1", TransferDirection.RECEIVE, "test.dat", 1024L, "/data/test.dat"));
+            assertDoesNotThrow(
+                    () ->
+                            transferTracker.trackTransferStart(
+                                    sessionContext,
+                                    "server-1",
+                                    "node-1",
+                                    TransferDirection.RECEIVE,
+                                    "test.dat",
+                                    1024L,
+                                    "/data/test.dat"));
         }
     }
 
@@ -99,7 +129,9 @@ class TransferTrackerTest {
         @DisplayName("should handle exception gracefully when tracking progress fails")
         void shouldHandleExceptionWhenTrackingProgressFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Update failed")).when(transferService).updateProgress(anyString(), anyLong());
+            doThrow(new RuntimeException("Update failed"))
+                    .when(transferService)
+                    .updateProgress(anyString(), anyLong());
 
             assertDoesNotThrow(() -> transferTracker.trackProgress(sessionContext, 512L));
         }
@@ -264,8 +296,9 @@ class TransferTrackerTest {
         @DisplayName("should handle exception when sync point tracking fails")
         void shouldHandleExceptionWhenSyncPointFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Database error")).when(transferService).recordSyncPoint(anyString(),
-                    anyLong());
+            doThrow(new RuntimeException("Database error"))
+                    .when(transferService)
+                    .recordSyncPoint(anyString(), anyLong());
 
             assertDoesNotThrow(() -> transferTracker.trackSyncPoint(sessionContext, 1000L));
         }
@@ -274,7 +307,9 @@ class TransferTrackerTest {
         @DisplayName("should handle exception when completion fails")
         void shouldHandleExceptionWhenCompletionFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Database error")).when(transferService).completeTransfer(anyString(), any());
+            doThrow(new RuntimeException("Database error"))
+                    .when(transferService)
+                    .completeTransfer(anyString(), any());
 
             assertDoesNotThrow(() -> transferTracker.trackTransferComplete(sessionContext));
         }
@@ -283,30 +318,38 @@ class TransferTrackerTest {
         @DisplayName("should handle exception when failure tracking fails")
         void shouldHandleExceptionWhenFailureTrackingFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Database error")).when(transferService).failTransfer(anyString(), anyString(),
-                    anyString());
+            doThrow(new RuntimeException("Database error"))
+                    .when(transferService)
+                    .failTransfer(anyString(), anyString(), anyString());
 
-            assertDoesNotThrow(() -> transferTracker.trackTransferFailed(sessionContext, "ERR001", "Error"));
+            assertDoesNotThrow(
+                    () -> transferTracker.trackTransferFailed(sessionContext, "ERR001", "Error"));
         }
 
         @Test
         @DisplayName("should handle exception when cancellation tracking fails")
         void shouldHandleExceptionWhenCancellationFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Database error")).when(transferService).cancelTransfer(anyString(),
-                    anyString());
+            doThrow(new RuntimeException("Database error"))
+                    .when(transferService)
+                    .cancelTransfer(anyString(), anyString());
 
-            assertDoesNotThrow(() -> transferTracker.trackTransferCancelled(sessionContext, "User requested"));
+            assertDoesNotThrow(
+                    () -> transferTracker.trackTransferCancelled(sessionContext, "User requested"));
         }
 
         @Test
         @DisplayName("should handle exception when interruption tracking fails")
         void shouldHandleExceptionWhenInterruptionFails() {
             sessionContext.setTransferRecordId("transfer-123");
-            doThrow(new RuntimeException("Database error")).when(transferService).interruptTransfer(anyString(),
-                    anyString());
+            doThrow(new RuntimeException("Database error"))
+                    .when(transferService)
+                    .interruptTransfer(anyString(), anyString());
 
-            assertDoesNotThrow(() -> transferTracker.trackTransferInterrupted(sessionContext, "Connection lost"));
+            assertDoesNotThrow(
+                    () ->
+                            transferTracker.trackTransferInterrupted(
+                                    sessionContext, "Connection lost"));
         }
 
         @Test
@@ -345,27 +388,53 @@ class TransferTrackerTest {
             TransferRecord record = new TransferRecord();
             record.setTransferId("transfer-auth-fail");
 
-            when(transferService.createTransfer(anyString(), anyString(), anyString(),
-                    anyString(), eq("AUTH_FAILURE"), any(TransferDirection.class), anyString()))
+            when(transferService.createTransfer(
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            eq("AUTH_FAILURE"),
+                            any(TransferDirection.class),
+                            anyString()))
                     .thenReturn(record);
 
-            transferTracker.trackAuthenticationFailure(sessionContext, "server-1", "node-1",
-                    "AUTH001", "Invalid credentials");
+            transferTracker.trackAuthenticationFailure(
+                    sessionContext, "server-1", "node-1", "AUTH001", "Invalid credentials");
 
-            verify(transferService).createTransfer(eq("session-123"), eq("server-1"), eq("node-1"),
-                    eq("partner-1"), eq("AUTH_FAILURE"), eq(TransferDirection.RECEIVE), eq("192.168.1.100"));
-            verify(transferService).failTransfer("transfer-auth-fail", "AUTH001", "Invalid credentials");
+            verify(transferService)
+                    .createTransfer(
+                            eq("session-123"),
+                            eq("server-1"),
+                            eq("node-1"),
+                            eq("partner-1"),
+                            eq("AUTH_FAILURE"),
+                            eq(TransferDirection.RECEIVE),
+                            eq("192.168.1.100"));
+            verify(transferService)
+                    .failTransfer("transfer-auth-fail", "AUTH001", "Invalid credentials");
         }
 
         @Test
         @DisplayName("should handle exception when tracking auth failure fails")
         void shouldHandleExceptionWhenAuthFailureTrackingFails() {
-            when(transferService.createTransfer(anyString(), anyString(), anyString(),
-                    anyString(), anyString(), any(TransferDirection.class), anyString()))
+            when(transferService.createTransfer(
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            any(TransferDirection.class),
+                            anyString()))
                     .thenThrow(new RuntimeException("Database error"));
 
-            assertDoesNotThrow(() -> transferTracker.trackAuthenticationFailure(
-                    sessionContext, "server-1", "node-1", "AUTH001", "Invalid credentials"));
+            assertDoesNotThrow(
+                    () ->
+                            transferTracker.trackAuthenticationFailure(
+                                    sessionContext,
+                                    "server-1",
+                                    "node-1",
+                                    "AUTH001",
+                                    "Invalid credentials"));
         }
     }
 }

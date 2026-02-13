@@ -5,9 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for EncryptionException.
- */
+/** Unit tests for EncryptionException. */
 @DisplayName("EncryptionException Tests")
 class EncryptionExceptionTest {
 

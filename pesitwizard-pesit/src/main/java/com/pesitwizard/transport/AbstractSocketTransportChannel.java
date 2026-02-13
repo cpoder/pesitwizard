@@ -5,12 +5,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Abstract base class for socket-based transport channels.
- * Provides common functionality for TCP and TLS transports.
+ * Abstract base class for socket-based transport channels. Provides common functionality for TCP
+ * and TLS transports.
  */
 @Slf4j
 public abstract class AbstractSocketTransportChannel implements TransportChannel {
@@ -18,27 +17,39 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
     /** Default socket timeout in milliseconds. */
     protected static final int DEFAULT_TIMEOUT = 60000;
 
-    /** Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length prefix. */
+    /**
+     * Default maximum FPDU length in bytes (32KB). Limits memory allocation from the 2-byte length
+     * prefix.
+     */
     public static final int DEFAULT_MAX_FPDU_LENGTH = 32768;
 
     /** Remote host address. */
     protected final String host;
+
     /** Remote port number. */
     protected final int port;
+
     /** Underlying socket connection. */
     protected Socket socket;
+
     /** Input stream for reading data. */
     protected DataInputStream inputStream;
+
     /** Output stream for writing data. */
     protected DataOutputStream outputStream;
+
     /** Receive timeout in milliseconds. */
     protected int receiveTimeout = DEFAULT_TIMEOUT;
-    /** Maximum allowed FPDU length in bytes. Prevents memory exhaustion from oversized length prefixes. */
+
+    /**
+     * Maximum allowed FPDU length in bytes. Prevents memory exhaustion from oversized length
+     * prefixes.
+     */
     protected int maxFpduLength = DEFAULT_MAX_FPDU_LENGTH;
 
     /**
      * Construct a new transport channel.
-     * 
+     *
      * @param host the remote host
      * @param port the remote port
      */
@@ -49,7 +60,7 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
 
     /**
      * Create and configure the socket. Subclasses override for TLS.
-     * 
+     *
      * @return the configured socket
      * @throws IOException if socket creation fails
      */
@@ -102,9 +113,16 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
                 throw new IOException("Invalid FPDU length: " + length);
             }
             if (length > maxFpduLength) {
-                throw new IOException("FPDU length " + length
-                        + " exceeds maximum allowed length " + maxFpduLength
-                        + " bytes (from " + host + ":" + port + ")");
+                throw new IOException(
+                        "FPDU length "
+                                + length
+                                + " exceeds maximum allowed length "
+                                + maxFpduLength
+                                + " bytes (from "
+                                + host
+                                + ":"
+                                + port
+                                + ")");
             }
 
             // Read data
@@ -181,16 +199,17 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
     }
 
     /**
-     * Set the maximum allowed FPDU length in bytes.
-     * FPDUs with a length prefix exceeding this value will be rejected with an IOException.
-     * This protects against memory exhaustion from malicious or corrupted length prefixes.
+     * Set the maximum allowed FPDU length in bytes. FPDUs with a length prefix exceeding this value
+     * will be rejected with an IOException. This protects against memory exhaustion from malicious
+     * or corrupted length prefixes.
      *
      * @param maxFpduLength maximum FPDU length in bytes (must be positive)
      * @throws IllegalArgumentException if maxFpduLength is not positive
      */
     public void setMaxFpduLength(int maxFpduLength) {
         if (maxFpduLength <= 0) {
-            throw new IllegalArgumentException("maxFpduLength must be positive, got: " + maxFpduLength);
+            throw new IllegalArgumentException(
+                    "maxFpduLength must be positive, got: " + maxFpduLength);
         }
         this.maxFpduLength = maxFpduLength;
     }
@@ -215,7 +234,7 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
 
     /**
      * Get the remote port.
-     * 
+     *
      * @return the port
      */
     public int getPort() {
@@ -224,7 +243,7 @@ public abstract class AbstractSocketTransportChannel implements TransportChannel
 
     /**
      * Get the input stream for reading data.
-     * 
+     *
      * @return the input stream
      */
     public DataInputStream getInputStream() {

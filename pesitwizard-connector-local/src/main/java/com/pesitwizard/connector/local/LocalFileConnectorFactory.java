@@ -1,14 +1,11 @@
 package com.pesitwizard.connector.local;
 
-import java.util.List;
-
 import com.pesitwizard.connector.ConfigParameter;
 import com.pesitwizard.connector.ConnectorFactory;
 import com.pesitwizard.connector.StorageConnector;
+import java.util.List;
 
-/**
- * Factory for creating local filesystem connectors.
- */
+/** Factory for creating local filesystem connectors. */
 public class LocalFileConnectorFactory implements ConnectorFactory {
 
     @Override

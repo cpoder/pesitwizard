@@ -2,18 +2,6 @@ package com.pesitwizard.client.pesit;
 
 import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
 import com.pesitwizard.client.dto.TransferRequest;
 import com.pesitwizard.client.entity.PesitServer;
 import com.pesitwizard.client.entity.TransferConfig;
@@ -32,11 +20,20 @@ import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.session.PesitSession;
 import com.pesitwizard.transport.TransportChannel;
-
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -54,40 +51,69 @@ public class PesitSendService {
     private final ObservationRegistry observationRegistry;
 
     @Async("transferExecutor")
-    public void sendFileAsync(TransferRequest request, String historyId, PesitServer server,
-            TransferConfig config, long fileSize, String correlationId, Set<String> cancelledTransfers) {
+    public void sendFileAsync(
+            TransferRequest request,
+            String historyId,
+            PesitServer server,
+            TransferConfig config,
+            long fileSize,
+            String correlationId,
+            Set<String> cancelledTransfers) {
         Observation.createNotStarted("pesit.send", observationRegistry)
                 .lowCardinalityKeyValue("pesit.direction", "SEND")
                 .highCardinalityKeyValue("pesit.server", request.getServer())
                 .highCardinalityKeyValue("correlation.id", correlationId)
-                .observe(() -> sendFile(request, historyId, server, config, fileSize, cancelledTransfers));
+                .observe(
+                        () ->
+                                sendFile(
+                                        request,
+                                        historyId,
+                                        server,
+                                        config,
+                                        fileSize,
+                                        cancelledTransfers));
     }
 
-    public void sendFile(TransferRequest request, String historyId, PesitServer server,
-            TransferConfig config, long fileSize, Set<String> cancelledTransfers) {
+    public void sendFile(
+            TransferRequest request,
+            String historyId,
+            PesitServer server,
+            TransferConfig config,
+            long fileSize,
+            Set<String> cancelledTransfers) {
         StorageConnector connector = null;
         InputStream inputStream = null;
         TransferContext ctx = new TransferContext(historyId, fileSize, eventBus);
 
         try {
             if (request.getSourceConnectionId() != null) {
-                connector = connectorFactory.createFromConnectionId(request.getSourceConnectionId());
+                connector =
+                        connectorFactory.createFromConnectionId(request.getSourceConnectionId());
                 inputStream = connector.read(request.getFilename(), 0);
             } else {
-                inputStream = new BufferedInputStream(Files.newInputStream(Path.of(request.getFilename())), 64 * 1024);
+                inputStream =
+                        new BufferedInputStream(
+                                Files.newInputStream(Path.of(request.getFilename())), 64 * 1024);
             }
 
             try (TransportChannel channel = channelFactory.createChannel(server, fileSize);
                     PesitSession session = new PesitSession(channel, false)) {
-                executeTransfer(session, server, request, inputStream, config, ctx, cancelledTransfers);
+                executeTransfer(
+                        session, server, request, inputStream, config, ctx, cancelledTransfers);
             }
             updateHistorySuccess(historyId, ctx.getBytesTransferred());
             ctx.completed();
         } catch (PesitException e) {
-            log.error("Transfer {} FAILED: {} ({})", historyId, e.getMessage(), e.getDiagnosticCodeHex());
+            log.error(
+                    "Transfer {} FAILED: {} ({})",
+                    historyId,
+                    e.getMessage(),
+                    e.getDiagnosticCodeHex());
             updateHistoryFailed(historyId, e.getMessage(), e.getDiagnosticCodeHex(), ctx);
             ctx.error(e.getMessage(), e.getDiagnosticCodeHex());
-        } catch (IOException | InterruptedException | com.pesitwizard.connector.ConnectorException e) {
+        } catch (IOException
+                | InterruptedException
+                | com.pesitwizard.connector.ConnectorException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -105,21 +131,40 @@ public class PesitSendService {
         }
     }
 
-    private void executeTransfer(PesitSession session, PesitServer server, TransferRequest request,
-            InputStream inputStream, TransferConfig config, TransferContext ctx,
-            Set<String> cancelledTransfers) throws IOException, InterruptedException {
+    private void executeTransfer(
+            PesitSession session,
+            PesitServer server,
+            TransferRequest request,
+            InputStream inputStream,
+            TransferConfig config,
+            TransferContext ctx,
+            Set<String> cancelledTransfers)
+            throws IOException, InterruptedException {
 
         int connectionId = 1;
-        String virtualFile = request.getVirtualFile() != null ? request.getVirtualFile() : request.getRemoteFilename();
+        String virtualFile =
+                request.getVirtualFile() != null
+                        ? request.getVirtualFile()
+                        : request.getRemoteFilename();
         int recordLength = config.getRecordLength() != null ? config.getRecordLength() : 506;
         boolean syncEnabled = config.isSyncPointsEnabled();
         // Use configured sync interval (default 100KB) instead of hardcoded 10KB
         // This reduces sync point overhead for large files
-        int syncIntervalKb = syncEnabled ? (config.getSyncPointInterval() != null ? config.getSyncPointInterval() : 100) : 0;
+        int syncIntervalKb =
+                syncEnabled
+                        ? (config.getSyncPointInterval() != null
+                                ? config.getSyncPointInterval()
+                                : 100)
+                        : 0;
 
-        ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
-                .demandeur(request.getPartnerId()).serveur(server.getServerId()).writeAccess()
-                .syncPointsEnabled(syncEnabled).syncIntervalKb(syncIntervalKb).resyncEnabled(config.isResyncEnabled());
+        ConnectMessageBuilder connectBuilder =
+                new ConnectMessageBuilder()
+                        .demandeur(request.getPartnerId())
+                        .serveur(server.getServerId())
+                        .writeAccess()
+                        .syncPointsEnabled(syncEnabled)
+                        .syncIntervalKb(syncIntervalKb)
+                        .resyncEnabled(config.isResyncEnabled());
 
         String password = null;
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
@@ -138,8 +183,7 @@ public class PesitSendService {
 
         int negotiatedSyncKb = ParameterParser.parsePI07SyncInterval(aconnect);
         long syncIntervalBytes = negotiatedSyncKb * 1024L;
-        if (negotiatedSyncKb == 0)
-            syncEnabled = false;
+        if (negotiatedSyncKb == 0) syncEnabled = false;
 
         int serverMaxEntity = ParameterParser.parsePI25MaxEntitySize(aconnect);
         int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
@@ -147,8 +191,15 @@ public class PesitSendService {
         int initialPi25 = serverMaxEntity > 0 ? serverMaxEntity : 65535;
 
         ctx.createSent();
-        int negotiatedPi25 = negotiateCreate(session, serverConnId, virtualFile, transferId, fileSizeKB, initialPi25,
-                recordLength);
+        int negotiatedPi25 =
+                negotiateCreate(
+                        session,
+                        serverConnId,
+                        virtualFile,
+                        transferId,
+                        fileSizeKB,
+                        initialPi25,
+                        recordLength);
         ctx.createAck();
 
         ctx.openSent();
@@ -159,14 +210,30 @@ public class PesitSendService {
         session.sendFpduWithAck(new Fpdu(FpduType.WRITE).withIdDst(serverConnId));
         ctx.writeAck();
 
-        sendData(session, serverConnId, inputStream, negotiatedPi25, recordLength, syncIntervalBytes, syncEnabled, ctx,
+        sendData(
+                session,
+                serverConnId,
+                inputStream,
+                negotiatedPi25,
+                recordLength,
+                syncIntervalBytes,
+                syncEnabled,
+                ctx,
                 cancelledTransfers);
         sendCleanup(session, serverConnId, connectionId, ctx);
     }
 
-    private void sendData(PesitSession session, int serverConnId, InputStream inputStream,
-            int entitySize, int chunkSize, long syncInterval, boolean syncEnabled,
-            TransferContext ctx, Set<String> cancelledTransfers) throws IOException, InterruptedException {
+    private void sendData(
+            PesitSession session,
+            int serverConnId,
+            InputStream inputStream,
+            int entitySize,
+            int chunkSize,
+            long syncInterval,
+            boolean syncEnabled,
+            TransferContext ctx,
+            Set<String> cancelledTransfers)
+            throws IOException, InterruptedException {
 
         FpduWriter writer = new FpduWriter(session, serverConnId, entitySize, chunkSize, false);
         byte[] buffer = new byte[Math.min(chunkSize, writer.getMaxDataPerDtf())];
@@ -179,27 +246,41 @@ public class PesitSendService {
                 ctx.cancelled();
                 throw new RuntimeException("Transfer cancelled");
             }
-            if (syncEnabled && syncInterval > 0 && bytesSinceSync > 0 && bytesSinceSync + bytesRead > syncInterval) {
+            if (syncEnabled
+                    && syncInterval > 0
+                    && bytesSinceSync > 0
+                    && bytesSinceSync + bytesRead > syncInterval) {
                 syncNum++;
                 ctx.syncSent();
                 // Send SYN and handle ACK_SYN or RESYN response
-                session.sendFpdu(new Fpdu(FpduType.SYN).withIdDst(serverConnId)
-                        .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
+                session.sendFpdu(
+                        new Fpdu(FpduType.SYN)
+                                .withIdDst(serverConnId)
+                                .withParameter(new ParameterValue(PI_20_NUM_SYNC, syncNum)));
                 Fpdu synResponse = session.receiveFpdu();
 
                 if (synResponse.getFpduType() == FpduType.RESYN) {
                     // Server requests resynchronization - rewind to requested sync point
                     int resyncPoint = ParameterParser.parsePI18RestartPoint(synResponse);
                     long resyncBytePos = ctx.getBytesAtSyncPoint(resyncPoint);
-                    log.info("RESYN from server: rollback to sync point {} (byte {})", resyncPoint, resyncBytePos);
+                    log.info(
+                            "RESYN from server: rollback to sync point {} (byte {})",
+                            resyncPoint,
+                            resyncBytePos);
 
                     // Send ACK_RESYN
-                    session.sendFpdu(new Fpdu(FpduType.ACK_RESYN).withIdDst(serverConnId)
-                            .withParameter(new ParameterValue(PI_18_POINT_RELANCE, resyncPoint)));
+                    session.sendFpdu(
+                            new Fpdu(FpduType.ACK_RESYN)
+                                    .withIdDst(serverConnId)
+                                    .withParameter(
+                                            new ParameterValue(PI_18_POINT_RELANCE, resyncPoint)));
 
                     // Stream-based send can't seek back; transfer must be retried
-                    throw new IOException("RESYN requested by server to sync point " + resyncPoint
-                            + " - transfer must be restarted from byte " + resyncBytePos);
+                    throw new IOException(
+                            "RESYN requested by server to sync point "
+                                    + resyncPoint
+                                    + " - transfer must be restarted from byte "
+                                    + resyncBytePos);
                 } else if (synResponse.getFpduType() == FpduType.ABORT) {
                     throw new IOException("Server sent ABORT after SYN");
                 }
@@ -208,7 +289,10 @@ public class PesitSendService {
                 ctx.syncPoint(syncNum, ctx.getBytesTransferred());
                 bytesSinceSync = 0;
             }
-            byte[] chunk = bytesRead == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, bytesRead);
+            byte[] chunk =
+                    bytesRead == buffer.length
+                            ? buffer
+                            : java.util.Arrays.copyOf(buffer, bytesRead);
             writer.writeDtf(chunk);
             ctx.addBytes(bytesRead);
             bytesSinceSync += bytesRead;
@@ -216,61 +300,90 @@ public class PesitSendService {
         log.info("Send complete: {} bytes", ctx.getBytesTransferred());
     }
 
-    private void sendCleanup(PesitSession session, int serverConnId, int connectionId, TransferContext ctx)
+    private void sendCleanup(
+            PesitSession session, int serverConnId, int connectionId, TransferContext ctx)
             throws IOException, InterruptedException {
         ctx.dtfEndSent();
-        session.sendFpdu(new Fpdu(FpduType.DTF_END).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        session.sendFpdu(
+                new Fpdu(FpduType.DTF_END)
+                        .withIdDst(serverConnId)
+                        .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         ctx.transEndSent();
         session.sendFpduWithAck(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnId));
         ctx.transEndAck();
         ctx.closeSent();
-        session.sendFpduWithAck(new Fpdu(FpduType.CLOSE).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        session.sendFpduWithAck(
+                new Fpdu(FpduType.CLOSE)
+                        .withIdDst(serverConnId)
+                        .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         ctx.closeAck();
         ctx.deselectSent();
-        session.sendFpduWithAck(new Fpdu(FpduType.DESELECT).withIdDst(serverConnId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        session.sendFpduWithAck(
+                new Fpdu(FpduType.DESELECT)
+                        .withIdDst(serverConnId)
+                        .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         ctx.deselectAck();
         ctx.releaseSent();
-        session.sendFpduWithAck(new Fpdu(FpduType.RELEASE).withIdDst(serverConnId).withIdSrc(connectionId)
-                .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0, 0, 0 })));
+        session.sendFpduWithAck(
+                new Fpdu(FpduType.RELEASE)
+                        .withIdDst(serverConnId)
+                        .withIdSrc(connectionId)
+                        .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         ctx.releaseAck();
     }
 
-    private int negotiateCreate(PesitSession session, int serverConnId, String virtualFile,
-            int transferId, long fileSizeKB, int initialPi25, int recordLength)
+    private int negotiateCreate(
+            PesitSession session,
+            int serverConnId,
+            String virtualFile,
+            int transferId,
+            long fileSizeKB,
+            int initialPi25,
+            int recordLength)
             throws IOException, InterruptedException {
         int pi25 = initialPi25;
-        Fpdu create = new CreateMessageBuilder().filename(virtualFile).transferId(transferId)
-                .variableFormat().recordLength(recordLength).maxEntitySize(pi25).fileSizeKB(fileSizeKB)
-                .build(serverConnId);
+        Fpdu create =
+                new CreateMessageBuilder()
+                        .filename(virtualFile)
+                        .transferId(transferId)
+                        .variableFormat()
+                        .recordLength(recordLength)
+                        .maxEntitySize(pi25)
+                        .fileSizeKB(fileSizeKB)
+                        .build(serverConnId);
         session.sendFpduWithAck(create);
         return pi25;
     }
 
     private void updateHistorySuccess(String historyId, long bytes) {
-        historyRepository.findById(historyId).ifPresent(h -> {
-            h.setStatus(TransferStatus.COMPLETED);
-            h.setBytesTransferred(bytes);
-            h.setCompletedAt(Instant.now());
-            historyRepository.save(h);
-        });
+        historyRepository
+                .findById(historyId)
+                .ifPresent(
+                        h -> {
+                            h.setStatus(TransferStatus.COMPLETED);
+                            h.setBytesTransferred(bytes);
+                            h.setCompletedAt(Instant.now());
+                            historyRepository.save(h);
+                        });
     }
 
-    private void updateHistoryFailed(String historyId, String error, String diagCode, TransferContext ctx) {
-        historyRepository.findById(historyId).ifPresent(h -> {
-            h.setStatus(TransferStatus.FAILED);
-            h.setErrorMessage(error);
-            h.setDiagnosticCode(diagCode);
-            h.setCompletedAt(Instant.now());
-            h.setBytesTransferred(ctx.getBytesTransferred());
-            if (ctx.getLastSyncPoint() > 0) {
-                h.setLastSyncPoint(ctx.getLastSyncPoint());
-                h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
-            }
-            historyRepository.save(h);
-        });
+    private void updateHistoryFailed(
+            String historyId, String error, String diagCode, TransferContext ctx) {
+        historyRepository
+                .findById(historyId)
+                .ifPresent(
+                        h -> {
+                            h.setStatus(TransferStatus.FAILED);
+                            h.setErrorMessage(error);
+                            h.setDiagnosticCode(diagCode);
+                            h.setCompletedAt(Instant.now());
+                            h.setBytesTransferred(ctx.getBytesTransferred());
+                            if (ctx.getLastSyncPoint() > 0) {
+                                h.setLastSyncPoint(ctx.getLastSyncPoint());
+                                h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+                            }
+                            historyRepository.save(h);
+                        });
     }
 
     private void closeQuietly(AutoCloseable c) {

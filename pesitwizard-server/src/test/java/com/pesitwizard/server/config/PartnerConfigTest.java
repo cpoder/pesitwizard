@@ -67,7 +67,7 @@ class PartnerConfigTest {
     @Test
     @DisplayName("canAccessFile should match exact filename")
     void canAccessFileShouldMatchExactFilename() {
-        config.setAllowedFiles(new String[] { "FILE1.dat", "FILE2.txt" });
+        config.setAllowedFiles(new String[] {"FILE1.dat", "FILE2.txt"});
         assertTrue(config.canAccessFile("FILE1.dat"));
         assertTrue(config.canAccessFile("FILE2.txt"));
         assertFalse(config.canAccessFile("FILE3.dat"));
@@ -76,7 +76,7 @@ class PartnerConfigTest {
     @Test
     @DisplayName("canAccessFile should match glob patterns")
     void canAccessFileShouldMatchGlobPatterns() {
-        config.setAllowedFiles(new String[] { "DATA_*.dat", "LOG_*" });
+        config.setAllowedFiles(new String[] {"DATA_*.dat", "LOG_*"});
         assertTrue(config.canAccessFile("DATA_001.dat"));
         assertTrue(config.canAccessFile("DATA_test.dat"));
         assertTrue(config.canAccessFile("LOG_2024"));
@@ -86,7 +86,7 @@ class PartnerConfigTest {
     @Test
     @DisplayName("canAccessFile should handle empty patterns")
     void canAccessFileShouldHandleEmptyPatterns() {
-        config.setAllowedFiles(new String[] { "", "  ", "VALID.dat" });
+        config.setAllowedFiles(new String[] {"", "  ", "VALID.dat"});
         assertTrue(config.canAccessFile("VALID.dat"));
         assertFalse(config.canAccessFile("INVALID.dat"));
     }
@@ -94,7 +94,7 @@ class PartnerConfigTest {
     @Test
     @DisplayName("canAccessFile should handle null patterns in array")
     void canAccessFileShouldHandleNullPatternsInArray() {
-        config.setAllowedFiles(new String[] { null, "VALID.dat", null });
+        config.setAllowedFiles(new String[] {null, "VALID.dat", null});
         assertTrue(config.canAccessFile("VALID.dat"));
         assertFalse(config.canAccessFile("INVALID.dat"));
     }

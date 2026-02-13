@@ -1,7 +1,5 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,14 +11,13 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Entity representing transfer configuration profiles
- */
+/** Entity representing transfer configuration profiles */
 @Entity
 @Table(name = "transfer_configs")
 @Data
@@ -46,8 +43,7 @@ public class TransferConfig {
     private Integer chunkSize = 32768; // 32KB - good balance for performance and compatibility
 
     /** Enable compression (PI 21) */
-    @Builder.Default
-    private boolean compressionEnabled = false;
+    @Builder.Default private boolean compressionEnabled = false;
 
     /** Compression algorithm: 0=none, 1=horizontal, 2=vertical */
     @Builder.Default
@@ -56,12 +52,10 @@ public class TransferConfig {
     private Integer compressionType = 0;
 
     /** Enable CRC checking */
-    @Builder.Default
-    private boolean crcEnabled = true;
+    @Builder.Default private boolean crcEnabled = true;
 
     /** Enable sync points for restart capability */
-    @Builder.Default
-    private boolean syncPointsEnabled = false;
+    @Builder.Default private boolean syncPointsEnabled = false;
 
     /** Sync point interval (number of records) */
     @Builder.Default
@@ -69,8 +63,7 @@ public class TransferConfig {
     private Integer syncPointInterval = 100;
 
     /** Enable resynchronization */
-    @Builder.Default
-    private boolean resyncEnabled = false;
+    @Builder.Default private boolean resyncEnabled = false;
 
     /** Transfer priority (0-9, 0=highest) */
     @Builder.Default
@@ -90,20 +83,17 @@ public class TransferConfig {
     private Integer retryDelayMs = 5000;
 
     /** Record format: F=fixed, V=variable, U=undefined */
-    @Builder.Default
-    private String recordFormat = "V";
+    @Builder.Default private String recordFormat = "V";
 
     /** Record length (for fixed format) - also used as max article size in DTF */
     @Builder.Default
     private Integer recordLength = 506; // Safe default tested with CX (PI 25 = 512)
 
     /** Data code: A=ASCII, E=EBCDIC, B=Binary */
-    @Builder.Default
-    private String dataCode = "B";
+    @Builder.Default private String dataCode = "B";
 
     /** Whether this is the default config */
-    @Builder.Default
-    private boolean defaultConfig = false;
+    @Builder.Default private boolean defaultConfig = false;
 
     /** Source storage connection ID (null = local filesystem) */
     private String sourceConnectionId;

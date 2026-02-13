@@ -1,7 +1,10 @@
 package com.pesitwizard.client.controller;
 
+import com.pesitwizard.client.entity.Partner;
+import com.pesitwizard.client.service.PartnerService;
+import jakarta.validation.Valid;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,15 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.client.entity.Partner;
-import com.pesitwizard.client.service.PartnerService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
-/**
- * REST API for managing PeSIT partners
- */
+/** REST API for managing PeSIT partners */
 @RestController
 @RequestMapping("/api/v1/partners")
 @RequiredArgsConstructor
@@ -37,14 +32,16 @@ public class PartnerController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Partner> getPartner(@PathVariable String id) {
-        return partnerService.getPartner(id)
+        return partnerService
+                .getPartner(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/by-partner-id/{partnerId}")
     public ResponseEntity<Partner> getByPartnerId(@PathVariable String partnerId) {
-        return partnerService.getByPartnerId(partnerId)
+        return partnerService
+                .getByPartnerId(partnerId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -57,9 +54,9 @@ public class PartnerController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Partner> updatePartner(
-            @PathVariable String id,
-            @Valid @RequestBody Partner partner) {
-        return partnerService.updatePartner(id, partner)
+            @PathVariable String id, @Valid @RequestBody Partner partner) {
+        return partnerService
+                .updatePartner(id, partner)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

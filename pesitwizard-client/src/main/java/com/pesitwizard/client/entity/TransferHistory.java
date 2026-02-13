@@ -1,7 +1,5 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,20 +10,21 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Entity representing transfer history/audit log
- */
+/** Entity representing transfer history/audit log */
 @Entity
-@Table(name = "transfer_history", indexes = {
-        @Index(name = "idx_transfer_history_server", columnList = "serverId"),
-        @Index(name = "idx_transfer_history_status", columnList = "status"),
-        @Index(name = "idx_transfer_history_started", columnList = "startedAt")
-})
+@Table(
+        name = "transfer_history",
+        indexes = {
+            @Index(name = "idx_transfer_history_server", columnList = "serverId"),
+            @Index(name = "idx_transfer_history_status", columnList = "status"),
+            @Index(name = "idx_transfer_history_started", columnList = "startedAt")
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,6 +37,7 @@ public class TransferHistory {
 
     /** Reference to the server used */
     private String serverId;
+
     private String serverName;
 
     /** Partner ID used for authentication */
@@ -76,6 +76,7 @@ public class TransferHistory {
 
     /** Transfer config used */
     private String transferConfigId;
+
     private String transferConfigName;
 
     /** User who initiated the transfer */
@@ -91,8 +92,7 @@ public class TransferHistory {
     private String spanId;
 
     /** Sync points enabled for this transfer */
-    @Builder.Default
-    private Boolean syncPointsEnabled = false;
+    @Builder.Default private Boolean syncPointsEnabled = false;
 
     /** Last acknowledged sync point number */
     private Integer lastSyncPoint;
@@ -115,11 +115,17 @@ public class TransferHistory {
     }
 
     public enum TransferDirection {
-        SEND, RECEIVE, MESSAGE
+        SEND,
+        RECEIVE,
+        MESSAGE
     }
 
     public enum TransferStatus {
-        PENDING, IN_PROGRESS, COMPLETED, FAILED, CANCELLED
+        PENDING,
+        IN_PROGRESS,
+        COMPLETED,
+        FAILED,
+        CANCELLED
     }
 
     /** Calculate duration in milliseconds */

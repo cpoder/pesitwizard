@@ -3,6 +3,7 @@ package com.pesitwizard.client.pesit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.client.event.TransferEventBus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,14 +12,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.client.event.TransferEventBus;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferContext Tests")
 class TransferContextTest {
 
-    @Mock
-    private TransferEventBus eventBus;
+    @Mock private TransferEventBus eventBus;
 
     private TransferContext context;
 
@@ -122,8 +120,9 @@ class TransferContextTest {
         @DisplayName("should reject invalid transitions")
         void shouldRejectInvalidTransitions() {
             // Cannot go from REPOS to FILE_SELECTED directly
-            assertThrows(IllegalStateException.class, () ->
-                context.transition(ClientState.SF03_FILE_SELECTED));
+            assertThrows(
+                    IllegalStateException.class,
+                    () -> context.transition(ClientState.SF03_FILE_SELECTED));
         }
     }
 

@@ -7,10 +7,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-/**
- * Builder for PESIT F.CREATE message
- * Used to initiate a write (send) file transfer
- */
+/** Builder for PESIT F.CREATE message Used to initiate a write (send) file transfer */
 public class CreateMessageBuilder {
 
     private String filename = "FILE";
@@ -66,8 +63,8 @@ public class CreateMessageBuilder {
     }
 
     /**
-     * Set max file size in KB (PI 42). Required to announce file size to server.
-     * PI 41 (allocationUnit) = 0 means KB.
+     * Set max file size in KB (PI 42). Required to announce file size to server. PI 41
+     * (allocationUnit) = 0 means KB.
      */
     public CreateMessageBuilder fileSizeKB(long fileSizeKB) {
         this.maxReservation = (int) Math.min(fileSizeKB, Integer.MAX_VALUE);
@@ -81,8 +78,8 @@ public class CreateMessageBuilder {
     }
 
     /**
-     * Mark this transfer as a restart/resume (PI 15 = 1).
-     * The actual restart point will come from ACK_WRITE (PI 18).
+     * Mark this transfer as a restart/resume (PI 15 = 1). The actual restart point will come from
+     * ACK_WRITE (PI 18).
      */
     public CreateMessageBuilder restart() {
         this.isRestart = true;
@@ -91,27 +88,33 @@ public class CreateMessageBuilder {
 
     /**
      * Build complete CREATE FPDU with all parameters
-     * 
+     *
      * @param serverConnectionId Server connection ID from ACONNECT
      * @return Complete FPDU byte array
      * @throws IOException if serialization fails
      */
     public Fpdu build(int serverConnectionId) throws IOException {
-        ParameterValue pgi9 = new ParameterValue(PGI_09_ID_FICHIER,
-                new ParameterValue(PI_11_TYPE_FICHIER, fileType),
-                new ParameterValue(PI_12_NOM_FICHIER, filename));
+        ParameterValue pgi9 =
+                new ParameterValue(
+                        PGI_09_ID_FICHIER,
+                        new ParameterValue(PI_11_TYPE_FICHIER, fileType),
+                        new ParameterValue(PI_12_NOM_FICHIER, filename));
 
         // PGI 30: Logical attributes
         // PI 32 (record length): must be > 0, CX crashes with "Null length for a
         // record" if 0
         // Use recordLength if set, otherwise default to 1024
         int effectiveRecordLength = recordLength > 0 ? recordLength : 1024;
-        ParameterValue pgi30 = new ParameterValue(PGI_30_ATTR_LOGIQUES,
-                new ParameterValue(PI_31_FORMAT_ARTICLE, articleFormat),
-                new ParameterValue(PI_32_LONG_ARTICLE, effectiveRecordLength));
-        ParameterValue pgi40 = new ParameterValue(PGI_40_ATTR_PHYSIQUES,
-                new ParameterValue(PI_41_UNITE_RESERVATION, allocationUnit),
-                new ParameterValue(PI_42_MAX_RESERVATION, maxReservation));
+        ParameterValue pgi30 =
+                new ParameterValue(
+                        PGI_30_ATTR_LOGIQUES,
+                        new ParameterValue(PI_31_FORMAT_ARTICLE, articleFormat),
+                        new ParameterValue(PI_32_LONG_ARTICLE, effectiveRecordLength));
+        ParameterValue pgi40 =
+                new ParameterValue(
+                        PGI_40_ATTR_PHYSIQUES,
+                        new ParameterValue(PI_41_UNITE_RESERVATION, allocationUnit),
+                        new ParameterValue(PI_42_MAX_RESERVATION, maxReservation));
 
         // For file-level FPDUs, idSrc (octet 6) must be 0
 
@@ -121,8 +124,10 @@ public class CreateMessageBuilder {
             creationDate = sdf.format(new Date());
         }
 
-        ParameterValue pgi50 = new ParameterValue(PGI_50_ATTR_HISTORIQUES,
-                new ParameterValue(PI_51_DATE_CREATION, creationDate));
+        ParameterValue pgi50 =
+                new ParameterValue(
+                        PGI_50_ATTR_HISTORIQUES,
+                        new ParameterValue(PI_51_DATE_CREATION, creationDate));
         // Individual PIs (not wrapped in PGI)
         ParameterValue pi13 = new ParameterValue(PI_13_ID_TRANSFERT, transferId);
         ParameterValue pi17 = new ParameterValue(PI_17_PRIORITE, priority);
@@ -130,9 +135,7 @@ public class CreateMessageBuilder {
 
         // Build FPDU with PIs in correct order: PGI9, PI13, PI15 (if restart), PI17,
         // PI25, PGI30, PGI40, PGI50
-        Fpdu fpdu = new Fpdu(FpduType.CREATE)
-                .withParameter(pgi9)
-                .withParameter(pi13);
+        Fpdu fpdu = new Fpdu(FpduType.CREATE).withParameter(pgi9).withParameter(pi13);
 
         // PI 15 must come BEFORE PI 17 (order is critical in PeSIT!)
         if (isRestart) {

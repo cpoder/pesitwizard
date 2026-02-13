@@ -1,13 +1,12 @@
 package com.pesitwizard.server.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.pesitwizard.server.entity.ApiKey;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,11 +14,9 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import com.pesitwizard.server.entity.ApiKey;
-
 /**
- * Unit tests for the RateLimitingFilter.
- * Tests rate limiting behavior for both IP-based and API key-based limits.
+ * Unit tests for the RateLimitingFilter. Tests rate limiting behavior for both IP-based and API
+ * key-based limits.
  */
 class RateLimitingFilterTest {
 
@@ -102,16 +99,18 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("Should use API key rate limit when API key is provided")
     void shouldUseApiKeyRateLimitWhenProvided() throws Exception {
-        ApiKey apiKey = ApiKey.builder()
-                .id(1L)
-                .name("test-key")
-                .keyHash("hash")
-                .keyPrefix("test1234")
-                .rateLimit(5) // Custom rate limit
-                .active(true)
-                .build();
+        ApiKey apiKey =
+                ApiKey.builder()
+                        .id(1L)
+                        .name("test-key")
+                        .keyHash("hash")
+                        .keyPrefix("test1234")
+                        .rateLimit(5) // Custom rate limit
+                        .active(true)
+                        .build();
 
-        when(apiKeyService.validateKey("test1234-abcd-efgh-ijkl", "192.168.1.4")).thenReturn(Optional.of(apiKey));
+        when(apiKeyService.validateKey("test1234-abcd-efgh-ijkl", "192.168.1.4"))
+                .thenReturn(Optional.of(apiKey));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("192.168.1.4");
@@ -164,16 +163,18 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("Should extract API key from query parameter")
     void shouldExtractApiKeyFromQueryParam() throws Exception {
-        ApiKey apiKey = ApiKey.builder()
-                .id(2L)
-                .name("query-key")
-                .keyHash("hash2")
-                .keyPrefix("query123")
-                .rateLimit(5)
-                .active(true)
-                .build();
+        ApiKey apiKey =
+                ApiKey.builder()
+                        .id(2L)
+                        .name("query-key")
+                        .keyHash("hash2")
+                        .keyPrefix("query123")
+                        .rateLimit(5)
+                        .active(true)
+                        .build();
 
-        when(apiKeyService.validateKey("query123-abcd-efgh-ijkl", "192.168.1.5")).thenReturn(Optional.of(apiKey));
+        when(apiKeyService.validateKey("query123-abcd-efgh-ijkl", "192.168.1.5"))
+                .thenReturn(Optional.of(apiKey));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("192.168.1.5");

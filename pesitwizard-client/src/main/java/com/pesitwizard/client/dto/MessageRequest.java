@@ -7,9 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for sending a message via PeSIT
- */
+/** DTO for sending a message via PeSIT */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,12 +28,10 @@ public class MessageRequest {
     private String message;
 
     /** Message mode: FPDU, PI99, FILE */
-    @Builder.Default
-    private MessageMode mode = MessageMode.FPDU;
+    @Builder.Default private MessageMode mode = MessageMode.FPDU;
 
     /** Use PI_91 instead of PI_99 (for PI99 mode) */
-    @Builder.Default
-    private boolean usePi91 = true;
+    @Builder.Default private boolean usePi91 = true;
 
     /** Message name (for FILE mode) */
     private String messageName;

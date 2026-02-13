@@ -1,5 +1,10 @@
 package com.pesitwizard.integration;
 
+import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduParser;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
+import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -8,24 +13,17 @@ import java.net.Socket;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.fpdu.FpduParser;
-import com.pesitwizard.fpdu.PesitSessionRecorder;
-import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
-import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Mock PeSIT client that replays recorded sessions against a server.
- * 
- * This is useful for testing PeSIT server implementations by replaying
- * what a real client (like Connect:Express) would send.
- * 
- * Usage:
- * 
+ *
+ * <p>This is useful for testing PeSIT server implementations by replaying what a real client (like
+ * Connect:Express) would send.
+ *
+ * <p>Usage:
+ *
  * <pre>
  * // Start your PeSIT server on some port
  * MockPesitClient client = MockPesitClient.fromGoldenFile(path);
@@ -41,20 +39,18 @@ public class MockPesitClient implements Closeable {
     private DataInputStream in;
     private DataOutputStream out;
 
-    @Getter
-    private int frameIndex = 0;
+    @Getter private int frameIndex = 0;
 
-    @Getter
-    private Throwable lastError;
+    @Getter private Throwable lastError;
 
-    @Getter
-    private final List<Fpdu> receivedFpdus = new ArrayList<>();
+    @Getter private final List<Fpdu> receivedFpdus = new ArrayList<>();
 
     public MockPesitClient(List<RecordedFrame> frames) {
         this.frames = frames;
     }
 
-    public static MockPesitClient fromGoldenFile(Path path) throws IOException, ClassNotFoundException {
+    public static MockPesitClient fromGoldenFile(Path path)
+            throws IOException, ClassNotFoundException {
         PesitSessionRecorder recorder = PesitSessionRecorder.loadFromFile(path);
         return new MockPesitClient(recorder.getFrames());
     }
@@ -64,8 +60,8 @@ public class MockPesitClient implements Closeable {
     }
 
     /**
-     * Replay the recorded session against a server.
-     * Sends SENT frames and validates RECEIVED frames.
+     * Replay the recorded session against a server. Sends SENT frames and validates RECEIVED
+     * frames.
      */
     public void replay(String host, int port) throws IOException {
         socket = new Socket(host, port);
@@ -73,7 +69,11 @@ public class MockPesitClient implements Closeable {
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
 
-        log.info("MockPesitClient connected to {}:{}, replaying {} frames", host, port, frames.size());
+        log.info(
+                "MockPesitClient connected to {}:{}, replaying {} frames",
+                host,
+                port,
+                frames.size());
 
         try {
             while (frameIndex < frames.size()) {
@@ -98,8 +98,11 @@ public class MockPesitClient implements Closeable {
                     log.debug("Received {} (expected {})", received.getFpduType(), frame.type());
 
                     if (received.getFpduType() != frame.type()) {
-                        log.warn("Frame mismatch at index {}: expected {} but got {}",
-                                frameIndex, frame.type(), received.getFpduType());
+                        log.warn(
+                                "Frame mismatch at index {}: expected {} but got {}",
+                                frameIndex,
+                                frame.type(),
+                                received.getFpduType());
                     }
                     frameIndex++;
                 }
@@ -114,8 +117,8 @@ public class MockPesitClient implements Closeable {
     }
 
     /**
-     * Replay with inverted directions - useful when the recording was made
-     * from the server's perspective but you want to act as a client.
+     * Replay with inverted directions - useful when the recording was made from the server's
+     * perspective but you want to act as a client.
      */
     public void replayInverted(String host, int port) throws IOException {
         socket = new Socket(host, port);
@@ -123,7 +126,11 @@ public class MockPesitClient implements Closeable {
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
 
-        log.info("MockPesitClient (inverted) connected to {}:{}, replaying {} frames", host, port, frames.size());
+        log.info(
+                "MockPesitClient (inverted) connected to {}:{}, replaying {} frames",
+                host,
+                port,
+                frames.size());
 
         try {
             while (frameIndex < frames.size()) {
@@ -146,11 +153,17 @@ public class MockPesitClient implements Closeable {
 
                     Fpdu received = new FpduParser(data).parse();
                     receivedFpdus.add(received);
-                    log.debug("Received (inverted) {} (expected {})", received.getFpduType(), frame.type());
+                    log.debug(
+                            "Received (inverted) {} (expected {})",
+                            received.getFpduType(),
+                            frame.type());
 
                     if (received.getFpduType() != frame.type()) {
-                        log.warn("Frame mismatch at index {}: expected {} but got {}",
-                                frameIndex, frame.type(), received.getFpduType());
+                        log.warn(
+                                "Frame mismatch at index {}: expected {} but got {}",
+                                frameIndex,
+                                frame.type(),
+                                received.getFpduType());
                     }
                     frameIndex++;
                 }

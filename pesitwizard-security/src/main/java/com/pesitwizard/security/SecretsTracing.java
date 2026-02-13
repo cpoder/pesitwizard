@@ -2,13 +2,11 @@ package com.pesitwizard.security;
 
 import java.util.UUID;
 import java.util.function.Supplier;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Distributed tracing support for secrets operations.
- * Provides span creation and context propagation.
- * Can be integrated with OpenTelemetry or other tracing systems.
+ * Distributed tracing support for secrets operations. Provides span creation and context
+ * propagation. Can be integrated with OpenTelemetry or other tracing systems.
  */
 @Slf4j
 public class SecretsTracing {
@@ -26,16 +24,24 @@ public class SecretsTracing {
             return result;
         } catch (RuntimeException e) {
             long duration = (System.nanoTime() - startTime) / 1_000_000;
-            log.error("[trace:{}] Failed {} after {}ms: {}", traceId, operationName, duration, e.getMessage());
+            log.error(
+                    "[trace:{}] Failed {} after {}ms: {}",
+                    traceId,
+                    operationName,
+                    duration,
+                    e.getMessage());
             throw e;
         }
     }
 
     public void traceVoid(String operationName, String provider, Runnable operation) {
-        trace(operationName, provider, () -> {
-            operation.run();
-            return null;
-        });
+        trace(
+                operationName,
+                provider,
+                () -> {
+                    operation.run();
+                    return null;
+                });
     }
 
     private String generateTraceId() {

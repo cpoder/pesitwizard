@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,8 +15,7 @@ class TransferContextTest {
 
     private TransferContext context;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {

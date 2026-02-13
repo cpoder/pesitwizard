@@ -5,15 +5,12 @@ import static org.assertj.core.api.Assertions.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * Unit tests for SecretsConfig.
- */
+/** Unit tests for SecretsConfig. */
 @DisplayName("SecretsConfig Tests")
 class SecretsConfigTest {
 
@@ -67,8 +64,7 @@ class SecretsConfigTest {
     @DisplayName("Secret File Reading")
     class SecretFileReadingTests {
 
-        @TempDir
-        Path tempDir;
+        @TempDir Path tempDir;
 
         @Test
         @DisplayName("should read master key from file")

@@ -2,14 +2,12 @@ package com.pesitwizard.server.entity;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
+import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
 import java.time.Instant;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.pesitwizard.server.entity.TransferRecord.TransferDirection;
-import com.pesitwizard.server.entity.TransferRecord.TransferStatus;
 
 @DisplayName("TransferRecord Tests")
 class TransferRecordTest {
@@ -18,16 +16,17 @@ class TransferRecordTest {
 
     @BeforeEach
     void setUp() {
-        record = TransferRecord.builder()
-                .transferId("test-transfer-123")
-                .sessionId("session-456")
-                .serverId("server-1")
-                .partnerId("PARTNER_A")
-                .filename("TEST.DAT")
-                .direction(TransferDirection.RECEIVE)
-                .startedAt(Instant.now().minusSeconds(60))
-                .updatedAt(Instant.now())
-                .build();
+        record =
+                TransferRecord.builder()
+                        .transferId("test-transfer-123")
+                        .sessionId("session-456")
+                        .serverId("server-1")
+                        .partnerId("PARTNER_A")
+                        .filename("TEST.DAT")
+                        .direction(TransferDirection.RECEIVE)
+                        .startedAt(Instant.now().minusSeconds(60))
+                        .updatedAt(Instant.now())
+                        .build();
     }
 
     @Test
@@ -206,34 +205,35 @@ class TransferRecordTest {
     @Test
     @DisplayName("should store all transfer attributes")
     void shouldStoreAllAttributes() {
-        TransferRecord tr = TransferRecord.builder()
-                .transferId("tr-1")
-                .sessionId("sess-1")
-                .serverId("srv-1")
-                .nodeId("node-1")
-                .direction(TransferDirection.SEND)
-                .status(TransferStatus.IN_PROGRESS)
-                .partnerId("PARTNER_B")
-                .filename("DATA.TXT")
-                .localPath("/data/DATA.TXT")
-                .fileSize(5000L)
-                .bytesTransferred(2500L)
-                .progressPercent(50)
-                .lastSyncPoint(2000L)
-                .syncPointCount(2)
-                .retryCount(1)
-                .maxRetries(5)
-                .startedAt(Instant.now())
-                .remoteAddress("192.168.1.100")
-                .protocolVersion(2)
-                .accessType(1)
-                .checksum("abc123")
-                .checksumAlgorithm("MD5")
-                .resumable(false)
-                .parentTransferId("parent-1")
-                .metadata("{\"key\":\"value\"}")
-                .updatedAt(Instant.now())
-                .build();
+        TransferRecord tr =
+                TransferRecord.builder()
+                        .transferId("tr-1")
+                        .sessionId("sess-1")
+                        .serverId("srv-1")
+                        .nodeId("node-1")
+                        .direction(TransferDirection.SEND)
+                        .status(TransferStatus.IN_PROGRESS)
+                        .partnerId("PARTNER_B")
+                        .filename("DATA.TXT")
+                        .localPath("/data/DATA.TXT")
+                        .fileSize(5000L)
+                        .bytesTransferred(2500L)
+                        .progressPercent(50)
+                        .lastSyncPoint(2000L)
+                        .syncPointCount(2)
+                        .retryCount(1)
+                        .maxRetries(5)
+                        .startedAt(Instant.now())
+                        .remoteAddress("192.168.1.100")
+                        .protocolVersion(2)
+                        .accessType(1)
+                        .checksum("abc123")
+                        .checksumAlgorithm("MD5")
+                        .resumable(false)
+                        .parentTransferId("parent-1")
+                        .metadata("{\"key\":\"value\"}")
+                        .updatedAt(Instant.now())
+                        .build();
 
         assertEquals("tr-1", tr.getTransferId());
         assertEquals("sess-1", tr.getSessionId());

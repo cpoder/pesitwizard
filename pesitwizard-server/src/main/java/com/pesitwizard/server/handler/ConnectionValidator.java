@@ -1,10 +1,5 @@
 package com.pesitwizard.server.handler;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-
-import org.springframework.stereotype.Component;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.ParameterIdentifier;
@@ -16,13 +11,15 @@ import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.ValidationResult;
 import com.pesitwizard.server.service.ConfigService;
-
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
- * Validates connection requests including partner authentication,
- * server name matching, and protocol version compatibility.
+ * Validates connection requests including partner authentication, server name matching, and
+ * protocol version compatibility.
  */
 @Slf4j
 @Component
@@ -33,9 +30,7 @@ public class ConnectionValidator {
     private final ConfigService configService;
     private final SecretsService secretsService;
 
-    /**
-     * Validate partner on CONNECT
-     */
+    /** Validate partner on CONNECT */
     public ValidationResult validatePartner(SessionContext ctx, Fpdu fpdu) {
         String partnerId = ctx.getClientIdentifier();
 
@@ -43,8 +38,8 @@ public class ConnectionValidator {
         Partner partner = configService.findPartner(partnerId).orElse(null);
 
         if (partner == null) {
-            return ValidationResult.error(DiagnosticCode.D3_301,
-                    "Partner '" + partnerId + "' not configured");
+            return ValidationResult.error(
+                    DiagnosticCode.D3_301, "Partner '" + partnerId + "' not configured");
         }
 
         // Store partner in session (convert to PartnerConfig for backward
@@ -54,14 +49,17 @@ public class ConnectionValidator {
 
         // Check if partner is enabled
         if (!partner.isEnabled()) {
-            return ValidationResult.error(DiagnosticCode.D3_304,
-                    "Partner '" + partnerId + "' is disabled");
+            return ValidationResult.error(
+                    DiagnosticCode.D3_304, "Partner '" + partnerId + "' is disabled");
         }
 
         // Check password if required (PI 5 - Access Control)
         if (partner.getPassword() != null && !partner.getPassword().isEmpty()) {
             ParameterValue pi5 = fpdu.getParameter(ParameterIdentifier.PI_05_CONTROLE_ACCES);
-            String providedPassword = pi5 != null ? new String(pi5.getValue(), StandardCharsets.ISO_8859_1).trim() : "";
+            String providedPassword =
+                    pi5 != null
+                            ? new String(pi5.getValue(), StandardCharsets.ISO_8859_1).trim()
+                            : "";
 
             // Decrypt stored password (may be encrypted with vault: or ENC: prefix)
             String storedPassword = secretsService.decryptFromStorage(partner.getPassword());
@@ -70,21 +68,22 @@ public class ConnectionValidator {
             if (!MessageDigest.isEqual(
                     storedPassword.getBytes(StandardCharsets.UTF_8),
                     providedPassword.getBytes(StandardCharsets.UTF_8))) {
-                log.warn("[{}] Password mismatch for partner '{}'",
-                        ctx.getSessionId(), partnerId);
-                return ValidationResult.error(DiagnosticCode.D3_304,
-                        "Invalid password for partner '" + partnerId + "'");
+                log.warn("[{}] Password mismatch for partner '{}'", ctx.getSessionId(), partnerId);
+                return ValidationResult.error(
+                        DiagnosticCode.D3_304, "Invalid password for partner '" + partnerId + "'");
             }
         }
 
         // Check access type compatibility
         int requestedAccess = ctx.getAccessType();
         if (requestedAccess == 0 && !partner.canRead()) { // Read access
-            return ValidationResult.error(DiagnosticCode.D3_304,
+            return ValidationResult.error(
+                    DiagnosticCode.D3_304,
                     "Partner '" + partnerId + "' not authorized for read access");
         }
         if (requestedAccess == 1 && !partner.canWrite()) { // Write access
-            return ValidationResult.error(DiagnosticCode.D3_304,
+            return ValidationResult.error(
+                    DiagnosticCode.D3_304,
                     "Partner '" + partnerId + "' not authorized for write access");
         }
 
@@ -92,9 +91,7 @@ public class ConnectionValidator {
         return ValidationResult.ok();
     }
 
-    /**
-     * Convert Partner entity to PartnerConfig for backward compatibility
-     */
+    /** Convert Partner entity to PartnerConfig for backward compatibility */
     public PartnerConfig convertToPartnerConfig(Partner partner) {
         PartnerConfig config = new PartnerConfig();
         config.setId(partner.getId());
@@ -109,12 +106,11 @@ public class ConnectionValidator {
         return config;
     }
 
-    /**
-     * Validate server name (PI 4) matches our configured server ID
-     */
+    /** Validate server name (PI 4) matches our configured server ID */
     public ValidationResult validateServerName(SessionContext ctx) {
         String requestedServer = ctx.getServerIdentifier();
-        String ourServerId = ctx.getOurServerId() != null ? ctx.getOurServerId() : properties.getServerId();
+        String ourServerId =
+                ctx.getOurServerId() != null ? ctx.getOurServerId() : properties.getServerId();
 
         if (requestedServer == null || requestedServer.isEmpty()) {
             // No server specified - allow if not strict
@@ -124,16 +120,19 @@ public class ConnectionValidator {
 
         // Check if server name matches (case-insensitive)
         if (!ourServerId.equalsIgnoreCase(requestedServer)) {
-            return ValidationResult.error(DiagnosticCode.D3_301,
-                    "Server '" + requestedServer + "' not found (this server is '" + ourServerId + "')");
+            return ValidationResult.error(
+                    DiagnosticCode.D3_301,
+                    "Server '"
+                            + requestedServer
+                            + "' not found (this server is '"
+                            + ourServerId
+                            + "')");
         }
 
         return ValidationResult.ok();
     }
 
-    /**
-     * Validate protocol version compatibility
-     */
+    /** Validate protocol version compatibility */
     public ValidationResult validateProtocolVersion(SessionContext ctx) {
         int clientVersion = ctx.getProtocolVersion();
         int serverVersion = properties.getProtocolVersion();
@@ -146,8 +145,13 @@ public class ConnectionValidator {
         // We support version 2 (PeSIT Hors-SIT)
         // Accept clients with version <= our version
         if (clientVersion > serverVersion) {
-            return ValidationResult.error(DiagnosticCode.D3_308,
-                    "Protocol version " + clientVersion + " not supported (max: " + serverVersion + ")");
+            return ValidationResult.error(
+                    DiagnosticCode.D3_308,
+                    "Protocol version "
+                            + clientVersion
+                            + " not supported (max: "
+                            + serverVersion
+                            + ")");
         }
 
         return ValidationResult.ok();

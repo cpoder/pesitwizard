@@ -7,9 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for SecretsTracing.
- */
+/** Unit tests for SecretsTracing. */
 @DisplayName("SecretsTracing Tests")
 class SecretsTracingTest {
 
@@ -43,9 +41,15 @@ class SecretsTracingTest {
         @Test
         @DisplayName("should propagate exception from supplier")
         void shouldPropagateExceptionFromSupplier() {
-            assertThatThrownBy(() -> tracing.trace("encrypt", "AES", () -> {
-                throw new RuntimeException("Encryption failed");
-            })).isInstanceOf(RuntimeException.class)
+            assertThatThrownBy(
+                            () ->
+                                    tracing.trace(
+                                            "encrypt",
+                                            "AES",
+                                            () -> {
+                                                throw new RuntimeException("Encryption failed");
+                                            }))
+                    .isInstanceOf(RuntimeException.class)
                     .hasMessage("Encryption failed");
         }
 
@@ -62,14 +66,18 @@ class SecretsTracingTest {
         @Test
         @DisplayName("should handle long-running operations")
         void shouldHandleLongRunningOperations() {
-            String result = tracing.trace("slowOperation", "AES", () -> {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                return "completed";
-            });
+            String result =
+                    tracing.trace(
+                            "slowOperation",
+                            "AES",
+                            () -> {
+                                try {
+                                    Thread.sleep(10);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                return "completed";
+                            });
 
             assertThat(result).isEqualTo("completed");
         }
@@ -92,9 +100,15 @@ class SecretsTracingTest {
         @Test
         @DisplayName("should propagate exception from runnable")
         void shouldPropagateExceptionFromRunnable() {
-            assertThatThrownBy(() -> tracing.traceVoid("deleteSecret", "VAULT", () -> {
-                throw new RuntimeException("Delete failed");
-            })).isInstanceOf(RuntimeException.class)
+            assertThatThrownBy(
+                            () ->
+                                    tracing.traceVoid(
+                                            "deleteSecret",
+                                            "VAULT",
+                                            () -> {
+                                                throw new RuntimeException("Delete failed");
+                                            }))
+                    .isInstanceOf(RuntimeException.class)
                     .hasMessage("Delete failed");
         }
     }
@@ -125,8 +139,8 @@ class SecretsTracingTest {
         @Test
         @DisplayName("should create SpanContext with custom values")
         void shouldCreateSpanContextWithCustomValues() {
-            SecretsTracing.SpanContext context = new SecretsTracing.SpanContext(
-                    "trace-123", "span-456", "parent-789");
+            SecretsTracing.SpanContext context =
+                    new SecretsTracing.SpanContext("trace-123", "span-456", "parent-789");
 
             assertThat(context.traceId()).isEqualTo("trace-123");
             assertThat(context.spanId()).isEqualTo("span-456");

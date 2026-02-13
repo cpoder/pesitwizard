@@ -11,17 +11,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Service for database backup and recovery operations.
- * Supports H2 database backup and file-based backup management.
+ * Service for database backup and recovery operations. Supports H2 database backup and file-based
+ * backup management.
  */
 @Slf4j
 @Service
@@ -40,13 +38,12 @@ public class BackupService {
     @Value("${spring.datasource.url:}")
     private String datasourceUrl;
 
-    private static final DateTimeFormatter BACKUP_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final DateTimeFormatter BACKUP_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     // ========== Backup Operations ==========
 
-    /**
-     * Create a database backup
-     */
+    /** Create a database backup */
     public BackupResult createBackup(String description) throws IOException {
         Path backupDir = ensureBackupDirectory();
         String timestamp = LocalDateTime.now().format(BACKUP_DATE_FORMAT);
@@ -92,9 +89,7 @@ public class BackupService {
         return result;
     }
 
-    /**
-     * Create H2 database backup using BACKUP TO command
-     */
+    /** Create H2 database backup using BACKUP TO command */
     private void createH2Backup(Path backupFile) throws Exception {
         // H2 BACKUP TO creates a ZIP file with the database
         // This requires a JDBC connection to execute
@@ -116,11 +111,11 @@ public class BackupService {
         }
     }
 
-    /**
-     * Create backup metadata file
-     */
+    /** Create backup metadata file */
     private void createBackupMetadata(Path metadataFile, String description) throws IOException {
-        String metadata = String.format("""
+        String metadata =
+                String.format(
+                        """
                 # PeSIT Server Backup Metadata
                 timestamp=%s
                 description=%s
@@ -133,16 +128,14 @@ public class BackupService {
                 #    - MySQL: mysql pesit < backup.sql
                 # 3. Start the PeSIT server
                 """,
-                Instant.now().toString(),
-                description != null ? description : "Manual backup",
-                datasourceUrl.replaceAll("password=[^&]*", "password=***"));
+                        Instant.now().toString(),
+                        description != null ? description : "Manual backup",
+                        datasourceUrl.replaceAll("password=[^&]*", "password=***"));
 
         Files.writeString(metadataFile, metadata);
     }
 
-    /**
-     * Scheduled automatic backup
-     */
+    /** Scheduled automatic backup */
     @Scheduled(cron = "${pesit.backup.schedule:0 0 1 * * ?}") // Default: 1 AM daily
     public void scheduledBackup() {
         try {
@@ -157,9 +150,7 @@ public class BackupService {
 
     // ========== Restore Operations ==========
 
-    /**
-     * List available backups
-     */
+    /** List available backups */
     public List<BackupInfo> listBackups() throws IOException {
         Path backupDir = Path.of(backupDirectory);
         if (!Files.exists(backupDir)) {
@@ -171,27 +162,29 @@ public class BackupService {
         try (Stream<Path> files = Files.list(backupDir)) {
             files.filter(p -> p.toString().endsWith(".zip") || p.toString().endsWith(".meta"))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
-                    .forEach(path -> {
-                        try {
-                            BackupInfo info = new BackupInfo();
-                            info.setName(path.getFileName().toString());
-                            info.setPath(path.toString());
-                            info.setSizeBytes(Files.size(path));
-                            info.setCreatedAt(Files.getLastModifiedTime(path).toInstant());
-                            info.setType(path.toString().endsWith(".zip") ? "H2_DATABASE" : "METADATA");
-                            backups.add(info);
-                        } catch (IOException e) {
-                            log.warn("Error reading backup info: {}", path, e);
-                        }
-                    });
+                    .forEach(
+                            path -> {
+                                try {
+                                    BackupInfo info = new BackupInfo();
+                                    info.setName(path.getFileName().toString());
+                                    info.setPath(path.toString());
+                                    info.setSizeBytes(Files.size(path));
+                                    info.setCreatedAt(Files.getLastModifiedTime(path).toInstant());
+                                    info.setType(
+                                            path.toString().endsWith(".zip")
+                                                    ? "H2_DATABASE"
+                                                    : "METADATA");
+                                    backups.add(info);
+                                } catch (IOException e) {
+                                    log.warn("Error reading backup info: {}", path, e);
+                                }
+                            });
         }
 
         return backups;
     }
 
-    /**
-     * Restore from backup (H2 only)
-     */
+    /** Restore from backup (H2 only) */
     public RestoreResult restoreBackup(String backupName) throws IOException {
         validateBackupFilename(backupName);
         RestoreResult result = new RestoreResult();
@@ -207,8 +200,9 @@ public class BackupService {
 
         if (!isH2Database()) {
             result.setSuccess(false);
-            result.setMessage("Automatic restore only supported for H2 database. " +
-                    "Use appropriate database tool for restore.");
+            result.setMessage(
+                    "Automatic restore only supported for H2 database. "
+                            + "Use appropriate database tool for restore.");
             return result;
         }
 
@@ -219,9 +213,11 @@ public class BackupService {
 
                 // Create backup of current database before restore
                 if (Files.exists(dbFile)) {
-                    Path preRestoreBackup = dbFile.resolveSibling(
-                            dbFile.getFileName() + ".pre_restore_" +
-                                    LocalDateTime.now().format(BACKUP_DATE_FORMAT));
+                    Path preRestoreBackup =
+                            dbFile.resolveSibling(
+                                    dbFile.getFileName()
+                                            + ".pre_restore_"
+                                            + LocalDateTime.now().format(BACKUP_DATE_FORMAT));
                     Files.copy(dbFile, preRestoreBackup);
                     log.info("Created pre-restore backup: {}", preRestoreBackup);
                 }
@@ -244,9 +240,7 @@ public class BackupService {
         return result;
     }
 
-    /**
-     * Delete a backup
-     */
+    /** Delete a backup */
     public boolean deleteBackup(String backupName) throws IOException {
         validateBackupFilename(backupName);
         Path backupFile = Path.of(backupDirectory, backupName);
@@ -260,9 +254,7 @@ public class BackupService {
 
     // ========== Cleanup ==========
 
-    /**
-     * Clean up old backups based on retention policy
-     */
+    /** Clean up old backups based on retention policy */
     public int cleanupOldBackups() throws IOException {
         Path backupDir = Path.of(backupDirectory);
         if (!Files.exists(backupDir)) {
@@ -271,16 +263,23 @@ public class BackupService {
 
         List<Path> backups;
         try (Stream<Path> files = Files.list(backupDir)) {
-            backups = files
-                    .filter(p -> p.toString().endsWith(".zip") || p.toString().endsWith(".meta"))
-                    .sorted(Comparator.comparing((Path p) -> {
-                        try {
-                            return Files.getLastModifiedTime(p).toInstant();
-                        } catch (IOException e) {
-                            return Instant.MIN;
-                        }
-                    }).reversed())
-                    .toList();
+            backups =
+                    files.filter(
+                                    p ->
+                                            p.toString().endsWith(".zip")
+                                                    || p.toString().endsWith(".meta"))
+                            .sorted(
+                                    Comparator.comparing(
+                                                    (Path p) -> {
+                                                        try {
+                                                            return Files.getLastModifiedTime(p)
+                                                                    .toInstant();
+                                                        } catch (IOException e) {
+                                                            return Instant.MIN;
+                                                        }
+                                                    })
+                                            .reversed())
+                            .toList();
         }
 
         int deleted = 0;
@@ -324,15 +323,14 @@ public class BackupService {
 
     // ========== Helper Methods ==========
 
-    /**
-     * Validate backup filename to prevent path traversal (S3-03).
-     */
+    /** Validate backup filename to prevent path traversal (S3-03). */
     private void validateBackupFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
             throw new IllegalArgumentException("Backup filename must not be empty");
         }
         if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
-            throw new IllegalArgumentException("Invalid backup filename: path traversal not allowed");
+            throw new IllegalArgumentException(
+                    "Invalid backup filename: path traversal not allowed");
         }
     }
 
@@ -350,8 +348,7 @@ public class BackupService {
     }
 
     private String extractH2DbPath() {
-        if (datasourceUrl == null)
-            return null;
+        if (datasourceUrl == null) return null;
 
         // jdbc:h2:file:./data/pesit -> ./data/pesit
         // jdbc:h2:./data/pesit -> ./data/pesit

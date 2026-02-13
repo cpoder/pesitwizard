@@ -16,7 +16,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -25,7 +24,6 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,14 +34,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 /**
- * Integration tests for mTLS (mutual TLS) socket-level communication.
- * These tests verify actual TLS handshakes between client and server,
- * ensuring proper certificate validation in both directions.
+ * Integration tests for mTLS (mutual TLS) socket-level communication. These tests verify actual TLS
+ * handshakes between client and server, ensuring proper certificate validation in both directions.
  */
 @DisplayName("mTLS Socket Integration Tests")
 public class MtlsSocketIntegrationTest {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MtlsSocketIntegrationTest.class);
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(MtlsSocketIntegrationTest.class);
     private static final String CERTS_DIR = "src/test/resources/certs";
     private static final String PASSWORD = "changeit";
     private static final int TEST_PORT_BASE = 19000;
@@ -100,39 +98,45 @@ public class MtlsSocketIntegrationTest {
             AtomicReference<String> clientDn = new AtomicReference<>();
 
             // Start server
-            executor.submit(() -> {
-                try (SSLServerSocket serverSocket = createMtlsServerSocket(serverContext, testPort)) {
-                    serverReady.countDown();
-                    log.info("mTLS server listening on port {}", testPort);
+            executor.submit(
+                    () -> {
+                        try (SSLServerSocket serverSocket =
+                                createMtlsServerSocket(serverContext, testPort)) {
+                            serverReady.countDown();
+                            log.info("mTLS server listening on port {}", testPort);
 
-                    try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
-                        clientConnection.startHandshake();
+                            try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
+                                clientConnection.startHandshake();
 
-                        // Get client certificate DN
-                        var clientCerts = clientConnection.getSession().getPeerCertificates();
-                        if (clientCerts.length > 0) {
-                            var x509Cert = (java.security.cert.X509Certificate) clientCerts[0];
-                            clientDn.set(x509Cert.getSubjectX500Principal().getName());
-                            log.info("Server received client cert: {}", clientDn.get());
+                                // Get client certificate DN
+                                var clientCerts =
+                                        clientConnection.getSession().getPeerCertificates();
+                                if (clientCerts.length > 0) {
+                                    var x509Cert =
+                                            (java.security.cert.X509Certificate) clientCerts[0];
+                                    clientDn.set(x509Cert.getSubjectX500Principal().getName());
+                                    log.info("Server received client cert: {}", clientDn.get());
+                                }
+
+                                // Exchange test data
+                                DataInputStream in =
+                                        new DataInputStream(clientConnection.getInputStream());
+                                DataOutputStream out =
+                                        new DataOutputStream(clientConnection.getOutputStream());
+
+                                String received = in.readUTF();
+                                log.info("Server received: {}", received);
+                                out.writeUTF("HELLO_FROM_SERVER");
+                                out.flush();
+
+                                serverSuccess.set("HELLO_FROM_CLIENT".equals(received));
+                            }
+                        } catch (Exception e) {
+                            log.error("Server error", e);
+                        } finally {
+                            handshakeComplete.countDown();
                         }
-
-                        // Exchange test data
-                        DataInputStream in = new DataInputStream(clientConnection.getInputStream());
-                        DataOutputStream out = new DataOutputStream(clientConnection.getOutputStream());
-
-                        String received = in.readUTF();
-                        log.info("Server received: {}", received);
-                        out.writeUTF("HELLO_FROM_SERVER");
-                        out.flush();
-
-                        serverSuccess.set("HELLO_FROM_CLIENT".equals(received));
-                    }
-                } catch (Exception e) {
-                    log.error("Server error", e);
-                } finally {
-                    handshakeComplete.countDown();
-                }
-            });
+                    });
 
             // Wait for server to be ready
             assertTrue(serverReady.await(5, TimeUnit.SECONDS), "Server should start");
@@ -140,13 +144,17 @@ public class MtlsSocketIntegrationTest {
             // Connect client
             try (SSLSocket clientSocket = createMtlsClientSocket(clientContext, testPort)) {
                 clientSocket.startHandshake();
-                log.info("Client handshake complete, protocol: {}", clientSocket.getSession().getProtocol());
+                log.info(
+                        "Client handshake complete, protocol: {}",
+                        clientSocket.getSession().getProtocol());
 
                 // Verify server certificate
                 var serverCerts = clientSocket.getSession().getPeerCertificates();
                 assertThat(serverCerts).isNotEmpty();
                 var serverCert = (java.security.cert.X509Certificate) serverCerts[0];
-                log.info("Client verified server cert: {}", serverCert.getSubjectX500Principal().getName());
+                log.info(
+                        "Client verified server cert: {}",
+                        serverCert.getSubjectX500Principal().getName());
 
                 // Exchange test data
                 DataInputStream in = new DataInputStream(clientSocket.getInputStream());
@@ -178,17 +186,19 @@ public class MtlsSocketIntegrationTest {
             CountDownLatch serverReady = new CountDownLatch(1);
             AtomicReference<String> negotiatedProtocol = new AtomicReference<>();
 
-            executor.submit(() -> {
-                try (SSLServerSocket serverSocket = createMtlsServerSocket(serverContext, testPort)) {
-                    serverReady.countDown();
-                    try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
-                        clientConnection.startHandshake();
-                        negotiatedProtocol.set(clientConnection.getSession().getProtocol());
-                    }
-                } catch (Exception e) {
-                    log.error("Server error", e);
-                }
-            });
+            executor.submit(
+                    () -> {
+                        try (SSLServerSocket serverSocket =
+                                createMtlsServerSocket(serverContext, testPort)) {
+                            serverReady.countDown();
+                            try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
+                                clientConnection.startHandshake();
+                                negotiatedProtocol.set(clientConnection.getSession().getProtocol());
+                            }
+                        } catch (Exception e) {
+                            log.error("Server error", e);
+                        }
+                    });
 
             assertTrue(serverReady.await(5, TimeUnit.SECONDS));
 
@@ -196,8 +206,10 @@ public class MtlsSocketIntegrationTest {
                 clientSocket.startHandshake();
             }
 
-            Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> assertThat(negotiatedProtocol.get()).isIn("TLSv1.3", "TLSv1.2"));
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(
+                            () -> assertThat(negotiatedProtocol.get()).isIn("TLSv1.3", "TLSv1.2"));
             log.info("Negotiated protocol: {}", negotiatedProtocol.get());
         }
     }
@@ -217,33 +229,38 @@ public class MtlsSocketIntegrationTest {
             AtomicBoolean handshakeFailed = new AtomicBoolean(false);
             AtomicReference<Exception> serverException = new AtomicReference<>();
 
-            executor.submit(() -> {
-                try (SSLServerSocket serverSocket = createMtlsServerSocket(serverContext, testPort)) {
-                    serverReady.countDown();
-                    try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
-                        clientConnection.startHandshake();
-                        // Try to read - this should fail if handshake issues occur late
-                        clientConnection.getInputStream().read();
-                        log.error("Connection should have failed for untrusted client");
-                    }
-                } catch (SSLHandshakeException e) {
-                    handshakeFailed.set(true);
-                    serverException.set(e);
-                    log.info("Server correctly rejected untrusted client: {}", e.getMessage());
-                } catch (IOException e) {
-                    // Connection reset or other IO error also indicates rejection
-                    handshakeFailed.set(true);
-                    serverException.set(e);
-                    log.info("Server connection failed (expected): {}", e.getMessage());
-                } catch (Exception e) {
-                    serverException.set(e);
-                    log.error("Unexpected server error", e);
-                }
-            });
+            executor.submit(
+                    () -> {
+                        try (SSLServerSocket serverSocket =
+                                createMtlsServerSocket(serverContext, testPort)) {
+                            serverReady.countDown();
+                            try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
+                                clientConnection.startHandshake();
+                                // Try to read - this should fail if handshake issues occur late
+                                clientConnection.getInputStream().read();
+                                log.error("Connection should have failed for untrusted client");
+                            }
+                        } catch (SSLHandshakeException e) {
+                            handshakeFailed.set(true);
+                            serverException.set(e);
+                            log.info(
+                                    "Server correctly rejected untrusted client: {}",
+                                    e.getMessage());
+                        } catch (IOException e) {
+                            // Connection reset or other IO error also indicates rejection
+                            handshakeFailed.set(true);
+                            serverException.set(e);
+                            log.info("Server connection failed (expected): {}", e.getMessage());
+                        } catch (Exception e) {
+                            serverException.set(e);
+                            log.error("Unexpected server error", e);
+                        }
+                    });
 
             assertTrue(serverReady.await(5, TimeUnit.SECONDS));
 
-            try (SSLSocket clientSocket = createMtlsClientSocket(untrustedClientContext, testPort)) {
+            try (SSLSocket clientSocket =
+                    createMtlsClientSocket(untrustedClientContext, testPort)) {
                 clientSocket.startHandshake();
                 // Try to exchange data - should fail
                 clientSocket.getOutputStream().write(1);
@@ -256,9 +273,14 @@ public class MtlsSocketIntegrationTest {
                 log.info("Client connection correctly failed: {}", e.getMessage());
             }
 
-            Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> assertTrue(handshakeFailed.get(),
-                    "Server should reject untrusted client. Server exception: " + serverException.get()));
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(
+                            () ->
+                                    assertTrue(
+                                            handshakeFailed.get(),
+                                            "Server should reject untrusted client. Server exception: "
+                                                    + serverException.get()));
             log.info("Untrusted client correctly rejected");
         }
 
@@ -274,28 +296,32 @@ public class MtlsSocketIntegrationTest {
             AtomicBoolean handshakeFailed = new AtomicBoolean(false);
             AtomicReference<Exception> serverException = new AtomicReference<>();
 
-            executor.submit(() -> {
-                try (SSLServerSocket serverSocket = createMtlsServerSocket(serverContext, testPort)) {
-                    serverReady.countDown();
-                    try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
-                        clientConnection.startHandshake();
-                        // Try to read - this should fail
-                        clientConnection.getInputStream().read();
-                        log.error("Connection should have failed for client without cert");
-                    }
-                } catch (SSLHandshakeException e) {
-                    handshakeFailed.set(true);
-                    serverException.set(e);
-                    log.info("Server correctly rejected client without cert: {}", e.getMessage());
-                } catch (IOException e) {
-                    handshakeFailed.set(true);
-                    serverException.set(e);
-                    log.info("Server connection failed (expected): {}", e.getMessage());
-                } catch (Exception e) {
-                    serverException.set(e);
-                    log.error("Unexpected server error", e);
-                }
-            });
+            executor.submit(
+                    () -> {
+                        try (SSLServerSocket serverSocket =
+                                createMtlsServerSocket(serverContext, testPort)) {
+                            serverReady.countDown();
+                            try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
+                                clientConnection.startHandshake();
+                                // Try to read - this should fail
+                                clientConnection.getInputStream().read();
+                                log.error("Connection should have failed for client without cert");
+                            }
+                        } catch (SSLHandshakeException e) {
+                            handshakeFailed.set(true);
+                            serverException.set(e);
+                            log.info(
+                                    "Server correctly rejected client without cert: {}",
+                                    e.getMessage());
+                        } catch (IOException e) {
+                            handshakeFailed.set(true);
+                            serverException.set(e);
+                            log.info("Server connection failed (expected): {}", e.getMessage());
+                        } catch (Exception e) {
+                            serverException.set(e);
+                            log.error("Unexpected server error", e);
+                        }
+                    });
 
             assertTrue(serverReady.await(5, TimeUnit.SECONDS));
 
@@ -310,9 +336,14 @@ public class MtlsSocketIntegrationTest {
                 // Client correctly failed - expected behavior
             }
 
-            Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                .untilAsserted(() -> assertTrue(handshakeFailed.get(),
-                    "Server should reject client without certificate. Server exception: " + serverException.get()));
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .untilAsserted(
+                            () ->
+                                    assertTrue(
+                                            handshakeFailed.get(),
+                                            "Server should reject client without certificate. Server exception: "
+                                                    + serverException.get()));
             // Client without certificate correctly rejected
         }
     }
@@ -331,24 +362,30 @@ public class MtlsSocketIntegrationTest {
 
             CountDownLatch serverReady = new CountDownLatch(1);
 
-            executor.submit(() -> {
-                try (SSLServerSocket serverSocket = createMtlsServerSocket(untrustedServerContext, testPort)) {
-                    serverReady.countDown();
-                    try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
-                        clientConnection.startHandshake();
-                    }
-                } catch (Exception e) {
-                    // Server saw handshake failure (expected)
-                }
-            });
+            executor.submit(
+                    () -> {
+                        try (SSLServerSocket serverSocket =
+                                createMtlsServerSocket(untrustedServerContext, testPort)) {
+                            serverReady.countDown();
+                            try (SSLSocket clientConnection = (SSLSocket) serverSocket.accept()) {
+                                clientConnection.startHandshake();
+                            }
+                        } catch (Exception e) {
+                            // Server saw handshake failure (expected)
+                        }
+                    });
 
             assertTrue(serverReady.await(5, TimeUnit.SECONDS));
 
-            assertThrows(SSLHandshakeException.class, () -> {
-                try (SSLSocket clientSocket = createMtlsClientSocket(clientContext, testPort)) {
-                    clientSocket.startHandshake();
-                }
-            }, "Client should reject untrusted server");
+            assertThrows(
+                    SSLHandshakeException.class,
+                    () -> {
+                        try (SSLSocket clientSocket =
+                                createMtlsClientSocket(clientContext, testPort)) {
+                            clientSocket.startHandshake();
+                        }
+                    },
+                    "Client should reject untrusted server");
 
             // Client correctly rejected untrusted server certificate
         }
@@ -375,9 +412,11 @@ public class MtlsSocketIntegrationTest {
     private SSLContext createClientContextWithoutCert() throws Exception {
         // Only truststore, no keystore (no client cert)
         KeyStore trustStore = KeyStore.getInstance("PKCS12");
-        trustStore.load(new java.io.ByteArrayInputStream(caTruststoreBytes), PASSWORD.toCharArray());
+        trustStore.load(
+                new java.io.ByteArrayInputStream(caTruststoreBytes), PASSWORD.toCharArray());
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        TrustManagerFactory tmf =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init(trustStore);
 
         SSLContext sslContext = SSLContext.getInstance("TLS");
@@ -385,17 +424,20 @@ public class MtlsSocketIntegrationTest {
         return sslContext;
     }
 
-    private SSLContext createSslContext(byte[] keystoreBytes, byte[] truststoreBytes) throws Exception {
+    private SSLContext createSslContext(byte[] keystoreBytes, byte[] truststoreBytes)
+            throws Exception {
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
         keyStore.load(new java.io.ByteArrayInputStream(keystoreBytes), PASSWORD.toCharArray());
 
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        KeyManagerFactory kmf =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, PASSWORD.toCharArray());
 
         KeyStore trustStore = KeyStore.getInstance("PKCS12");
         trustStore.load(new java.io.ByteArrayInputStream(truststoreBytes), PASSWORD.toCharArray());
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        TrustManagerFactory tmf =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init(trustStore);
 
         SSLContext sslContext = SSLContext.getInstance("TLS");
@@ -403,7 +445,8 @@ public class MtlsSocketIntegrationTest {
         return sslContext;
     }
 
-    private SSLServerSocket createMtlsServerSocket(SSLContext sslContext, int port) throws IOException {
+    private SSLServerSocket createMtlsServerSocket(SSLContext sslContext, int port)
+            throws IOException {
         SSLServerSocketFactory factory = sslContext.getServerSocketFactory();
         SSLServerSocket serverSocket = (SSLServerSocket) factory.createServerSocket(port);
 
@@ -411,7 +454,7 @@ public class MtlsSocketIntegrationTest {
         serverSocket.setNeedClientAuth(true);
 
         // Enable modern protocols only
-        serverSocket.setEnabledProtocols(new String[] { "TLSv1.3", "TLSv1.2" });
+        serverSocket.setEnabledProtocols(new String[] {"TLSv1.3", "TLSv1.2"});
 
         serverSocket.setSoTimeout(10000);
         return serverSocket;
@@ -422,7 +465,7 @@ public class MtlsSocketIntegrationTest {
         SSLSocket socket = (SSLSocket) factory.createSocket("localhost", port);
 
         // Enable modern protocols only
-        socket.setEnabledProtocols(new String[] { "TLSv1.3", "TLSv1.2" });
+        socket.setEnabledProtocols(new String[] {"TLSv1.3", "TLSv1.2"});
 
         socket.setSoTimeout(10000);
         return socket;

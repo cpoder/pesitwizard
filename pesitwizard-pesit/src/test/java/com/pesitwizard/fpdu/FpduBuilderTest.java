@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +32,7 @@ public class FpduBuilderTest {
     void shouldBuildFpduWithParameters() {
         // Use DTF_END which accepts PI_02 and PI_99
         ParameterValue pi99 = new ParameterValue(PI_99_MESSAGE_LIBRE, "TEST");
-        ParameterValue pi02 = new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 });
+        ParameterValue pi02 = new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00});
 
         byte[] fpdu = FpduBuilder.buildFpdu(FpduType.DTF_END, 1, 0, pi02, pi99);
 
@@ -68,10 +67,9 @@ public class FpduBuilderTest {
     @Test
     @DisplayName("should build multi-article DTF")
     void shouldBuildMultiArticleDtf() {
-        List<byte[]> articles = Arrays.asList(
-                new byte[] { 0x01, 0x02, 0x03 },
-                new byte[] { 0x04, 0x05 },
-                new byte[] { 0x06 });
+        List<byte[]> articles =
+                Arrays.asList(
+                        new byte[] {0x01, 0x02, 0x03}, new byte[] {0x04, 0x05}, new byte[] {0x06});
 
         byte[] fpdu = FpduBuilder.buildMultiArticleDtf(1, articles, 1000);
 
@@ -93,9 +91,7 @@ public class FpduBuilderTest {
     @Test
     @DisplayName("should return null when articles exceed max entity size")
     void shouldReturnNullWhenArticlesExceedMaxSize() {
-        List<byte[]> articles = Arrays.asList(
-                new byte[500],
-                new byte[500]);
+        List<byte[]> articles = Arrays.asList(new byte[500], new byte[500]);
 
         byte[] fpdu = FpduBuilder.buildMultiArticleDtf(1, articles, 100);
 
@@ -127,7 +123,7 @@ public class FpduBuilderTest {
     @Test
     @DisplayName("should build raw data FPDU")
     void shouldBuildRawDataFpdu() {
-        byte[] data = new byte[] { 0x41, 0x42, 0x43, 0x44 }; // "ABCD"
+        byte[] data = new byte[] {0x41, 0x42, 0x43, 0x44}; // "ABCD"
 
         byte[] fpdu = FpduBuilder.buildFpdu(FpduType.DTF, 1, 0, data);
 

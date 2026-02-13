@@ -5,8 +5,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.pesitwizard.backup.BackupInfo;
+import com.pesitwizard.backup.BackupResult;
+import com.pesitwizard.backup.RestoreResult;
+import com.pesitwizard.server.backup.BackupServiceAdapter;
 import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,21 +18,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.pesitwizard.backup.BackupInfo;
-import com.pesitwizard.backup.BackupResult;
-import com.pesitwizard.backup.RestoreResult;
-import com.pesitwizard.server.backup.BackupServiceAdapter;
-
 @WebMvcTest(BackupController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("BackupController Tests")
 class BackupControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private BackupServiceAdapter backupService;
+    @MockitoBean private BackupServiceAdapter backupService;
 
     @Test
     @DisplayName("should create backup")
@@ -53,8 +49,7 @@ class BackupControllerTest {
         result.setBackupName("backup-2023.zip");
         when(backupService.createBackup("Manual backup")).thenReturn(result);
 
-        mockMvc.perform(post("/api/v1/backup")
-                .param("description", "Manual backup"))
+        mockMvc.perform(post("/api/v1/backup").param("description", "Manual backup"))
                 .andExpect(status().isOk());
     }
 
@@ -90,8 +85,7 @@ class BackupControllerTest {
     void shouldDeleteBackup() throws Exception {
         when(backupService.deleteBackup("backup-2023.zip")).thenReturn(true);
 
-        mockMvc.perform(delete("/api/v1/backup/backup-2023.zip"))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/backup/backup-2023.zip")).andExpect(status().isNoContent());
     }
 
     @Test
@@ -99,8 +93,7 @@ class BackupControllerTest {
     void shouldReturn404WhenDeletingNonExistent() throws Exception {
         when(backupService.deleteBackup("non-existent.zip")).thenReturn(false);
 
-        mockMvc.perform(delete("/api/v1/backup/non-existent.zip"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/backup/non-existent.zip")).andExpect(status().isNotFound());
     }
 
     @Test

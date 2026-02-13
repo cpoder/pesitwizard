@@ -4,20 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.CertificatePurpose;
@@ -27,22 +13,30 @@ import com.pesitwizard.server.repository.CertificateStoreRepository;
 import com.pesitwizard.server.ssl.SslConfigurationException;
 import com.pesitwizard.server.ssl.SslContextFactory;
 import com.pesitwizard.server.ssl.SslContextFactory.CertificateInfo;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CertificateService Tests")
 class CertificateServiceTest {
 
-    @Mock
-    private CertificateStoreRepository certificateRepository;
+    @Mock private CertificateStoreRepository certificateRepository;
 
-    @Mock
-    private SslContextFactory sslContextFactory;
+    @Mock private SslContextFactory sslContextFactory;
 
-    @Mock
-    private SecretsService secretsService;
+    @Mock private SecretsService secretsService;
 
-    @InjectMocks
-    private CertificateService certificateService;
+    @InjectMocks private CertificateService certificateService;
 
     private CertificateStore testKeystore;
     private CertificateStore testTruststore;
@@ -53,44 +47,55 @@ class CertificateServiceTest {
         testStoreData = "test-store-data".getBytes();
 
         // SecretsService: encrypt returns an encrypted marker, isEncrypted detects it
-        lenient().when(secretsService.isEncrypted(any())).thenAnswer(inv -> {
-            String val = inv.getArgument(0);
-            return val != null && (val.startsWith("AES:") || val.startsWith("vault:") || val.startsWith("ENC:"));
-        });
-        lenient().when(secretsService.encryptForStorage(anyString(), anyString(), anyString(), anyString()))
+        lenient()
+                .when(secretsService.isEncrypted(any()))
+                .thenAnswer(
+                        inv -> {
+                            String val = inv.getArgument(0);
+                            return val != null
+                                    && (val.startsWith("AES:")
+                                            || val.startsWith("vault:")
+                                            || val.startsWith("ENC:"));
+                        });
+        lenient()
+                .when(
+                        secretsService.encryptForStorage(
+                                anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(inv -> "ENC:" + inv.getArgument(0));
 
-        testKeystore = CertificateStore.builder()
-                .id(1L)
-                .name("test-keystore")
-                .description("Test keystore")
-                .storeType(StoreType.KEYSTORE)
-                .format(StoreFormat.PKCS12)
-                .storeData(testStoreData)
-                .storePassword("changeit")
-                .keyPassword("keypass")
-                .keyAlias("server")
-                .purpose(CertificatePurpose.SERVER)
-                .isDefault(true)
-                .active(true)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .build();
+        testKeystore =
+                CertificateStore.builder()
+                        .id(1L)
+                        .name("test-keystore")
+                        .description("Test keystore")
+                        .storeType(StoreType.KEYSTORE)
+                        .format(StoreFormat.PKCS12)
+                        .storeData(testStoreData)
+                        .storePassword("changeit")
+                        .keyPassword("keypass")
+                        .keyAlias("server")
+                        .purpose(CertificatePurpose.SERVER)
+                        .isDefault(true)
+                        .active(true)
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
+                        .build();
 
-        testTruststore = CertificateStore.builder()
-                .id(2L)
-                .name("test-truststore")
-                .description("Test truststore")
-                .storeType(StoreType.TRUSTSTORE)
-                .format(StoreFormat.PKCS12)
-                .storeData(testStoreData)
-                .storePassword("changeit")
-                .purpose(CertificatePurpose.CA)
-                .isDefault(false)
-                .active(true)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .build();
+        testTruststore =
+                CertificateStore.builder()
+                        .id(2L)
+                        .name("test-truststore")
+                        .description("Test truststore")
+                        .storeType(StoreType.TRUSTSTORE)
+                        .format(StoreFormat.PKCS12)
+                        .storeData(testStoreData)
+                        .storePassword("changeit")
+                        .purpose(CertificatePurpose.CA)
+                        .isDefault(false)
+                        .active(true)
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
+                        .build();
     }
 
     @Nested
@@ -100,12 +105,15 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should create certificate store")
         void shouldCreateCertificateStore() throws SslConfigurationException {
-            when(certificateRepository.existsByNameAndStoreType("new-store", StoreType.KEYSTORE)).thenReturn(false);
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> {
-                CertificateStore saved = inv.getArgument(0);
-                saved.setId(3L);
-                return saved;
-            });
+            when(certificateRepository.existsByNameAndStoreType("new-store", StoreType.KEYSTORE))
+                    .thenReturn(false);
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(
+                            inv -> {
+                                CertificateStore saved = inv.getArgument(0);
+                                saved.setId(3L);
+                                return saved;
+                            });
 
             CertificateInfo mockInfo = mock(CertificateInfo.class);
             when(mockInfo.getSubjectDn()).thenReturn("CN=Test");
@@ -114,12 +122,23 @@ class CertificateServiceTest {
             when(mockInfo.getValidFrom()).thenReturn(Instant.now());
             when(mockInfo.getExpiresAt()).thenReturn(Instant.now().plus(365, ChronoUnit.DAYS));
             when(mockInfo.getFingerprint()).thenReturn("ABC123");
-            when(sslContextFactory.extractCertificateInfo(any(CertificateStore.class))).thenReturn(mockInfo);
+            when(sslContextFactory.extractCertificateInfo(any(CertificateStore.class)))
+                    .thenReturn(mockInfo);
 
-            CertificateStore result = certificateService.createCertificateStore(
-                    "new-store", "New store", StoreType.KEYSTORE, StoreFormat.PKCS12,
-                    testStoreData, "password", "keypass", "server",
-                    CertificatePurpose.SERVER, null, false, "admin");
+            CertificateStore result =
+                    certificateService.createCertificateStore(
+                            "new-store",
+                            "New store",
+                            StoreType.KEYSTORE,
+                            StoreFormat.PKCS12,
+                            testStoreData,
+                            "password",
+                            "keypass",
+                            "server",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "admin");
 
             assertNotNull(result);
             assertEquals("new-store", result.getName());
@@ -130,11 +149,25 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should reject duplicate store name")
         void shouldRejectDuplicateName() {
-            when(certificateRepository.existsByNameAndStoreType("existing", StoreType.KEYSTORE)).thenReturn(true);
+            when(certificateRepository.existsByNameAndStoreType("existing", StoreType.KEYSTORE))
+                    .thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class, () -> certificateService.createCertificateStore(
-                    "existing", null, StoreType.KEYSTORE, StoreFormat.PKCS12,
-                    testStoreData, "pass", null, null, CertificatePurpose.SERVER, null, false, "admin"));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            certificateService.createCertificateStore(
+                                    "existing",
+                                    null,
+                                    StoreType.KEYSTORE,
+                                    StoreFormat.PKCS12,
+                                    testStoreData,
+                                    "pass",
+                                    null,
+                                    null,
+                                    CertificatePurpose.SERVER,
+                                    null,
+                                    false,
+                                    "admin"));
         }
 
         @Test
@@ -151,9 +184,11 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should get certificate store by name")
         void shouldGetByName() {
-            when(certificateRepository.findByName("test-keystore")).thenReturn(Optional.of(testKeystore));
+            when(certificateRepository.findByName("test-keystore"))
+                    .thenReturn(Optional.of(testKeystore));
 
-            Optional<CertificateStore> result = certificateService.getCertificateStoreByName("test-keystore");
+            Optional<CertificateStore> result =
+                    certificateService.getCertificateStoreByName("test-keystore");
 
             assertTrue(result.isPresent());
         }
@@ -174,7 +209,8 @@ class CertificateServiceTest {
             when(certificateRepository.findByStoreTypeOrderByNameAsc(StoreType.KEYSTORE))
                     .thenReturn(List.of(testKeystore));
 
-            List<CertificateStore> result = certificateService.getCertificateStoresByType(StoreType.KEYSTORE);
+            List<CertificateStore> result =
+                    certificateService.getCertificateStoresByType(StoreType.KEYSTORE);
 
             assertEquals(1, result.size());
             assertEquals(StoreType.KEYSTORE, result.get(0).getStoreType());
@@ -183,10 +219,12 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should get active stores by type")
         void shouldGetActiveByType() {
-            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(StoreType.KEYSTORE, true))
+            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(
+                            StoreType.KEYSTORE, true))
                     .thenReturn(List.of(testKeystore));
 
-            List<CertificateStore> result = certificateService.getActiveCertificateStoresByType(StoreType.KEYSTORE);
+            List<CertificateStore> result =
+                    certificateService.getActiveCertificateStoresByType(StoreType.KEYSTORE);
 
             assertEquals(1, result.size());
             assertTrue(result.get(0).getActive());
@@ -196,10 +234,12 @@ class CertificateServiceTest {
         @DisplayName("Should update certificate store description")
         void shouldUpdateDescription() throws SslConfigurationException {
             when(certificateRepository.findById(1L)).thenReturn(Optional.of(testKeystore));
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
-            CertificateStore result = certificateService.updateCertificateStore(
-                    1L, "Updated description", null, null, null, null, null, null, "admin");
+            CertificateStore result =
+                    certificateService.updateCertificateStore(
+                            1L, "Updated description", null, null, null, null, null, null, "admin");
 
             assertEquals("Updated description", result.getDescription());
         }
@@ -209,9 +249,11 @@ class CertificateServiceTest {
         void shouldThrowOnUpdateNonExistent() {
             when(certificateRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
-                    () -> certificateService.updateCertificateStore(99L, null, null, null, null, null, null, null,
-                            null));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            certificateService.updateCertificateStore(
+                                    99L, null, null, null, null, null, null, null, null));
         }
 
         @Test
@@ -229,7 +271,9 @@ class CertificateServiceTest {
         void shouldThrowOnDeleteNonExistent() {
             when(certificateRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () -> certificateService.deleteCertificateStore(99L));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> certificateService.deleteCertificateStore(99L));
         }
     }
 
@@ -241,9 +285,11 @@ class CertificateServiceTest {
         @DisplayName("Should set store as default")
         void shouldSetAsDefault() {
             when(certificateRepository.findById(2L)).thenReturn(Optional.of(testTruststore));
-            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(StoreType.TRUSTSTORE, true))
+            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(
+                            StoreType.TRUSTSTORE, true))
                     .thenReturn(List.of());
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             CertificateStore result = certificateService.setAsDefault(2L);
 
@@ -253,21 +299,24 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should clear previous default when setting new default")
         void shouldClearPreviousDefault() {
-            CertificateStore previousDefault = CertificateStore.builder()
-                    .id(3L)
-                    .storeType(StoreType.TRUSTSTORE)
-                    .format(StoreFormat.PKCS12)
-                    .storeData(testStoreData)
-                    .isDefault(true)
-                    .active(true)
-                    .createdAt(Instant.now())
-                    .updatedAt(Instant.now())
-                    .build();
+            CertificateStore previousDefault =
+                    CertificateStore.builder()
+                            .id(3L)
+                            .storeType(StoreType.TRUSTSTORE)
+                            .format(StoreFormat.PKCS12)
+                            .storeData(testStoreData)
+                            .isDefault(true)
+                            .active(true)
+                            .createdAt(Instant.now())
+                            .updatedAt(Instant.now())
+                            .build();
 
             when(certificateRepository.findById(2L)).thenReturn(Optional.of(testTruststore));
-            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(StoreType.TRUSTSTORE, true))
+            when(certificateRepository.findByStoreTypeAndActiveOrderByNameAsc(
+                            StoreType.TRUSTSTORE, true))
                     .thenReturn(List.of(previousDefault));
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             certificateService.setAsDefault(2L);
 
@@ -278,10 +327,12 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should get default keystore")
         void shouldGetDefaultKeystore() {
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.KEYSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.KEYSTORE))
                     .thenReturn(Optional.of(testKeystore));
 
-            Optional<CertificateStore> result = certificateService.getDefaultCertificateStore(StoreType.KEYSTORE);
+            Optional<CertificateStore> result =
+                    certificateService.getDefaultCertificateStore(StoreType.KEYSTORE);
 
             assertTrue(result.isPresent());
             assertEquals(StoreType.KEYSTORE, result.get().getStoreType());
@@ -290,10 +341,12 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should get default truststore")
         void shouldGetDefaultTruststore() {
-            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(StoreType.TRUSTSTORE))
+            when(certificateRepository.findByStoreTypeAndIsDefaultTrueAndActiveTrue(
+                            StoreType.TRUSTSTORE))
                     .thenReturn(Optional.of(testTruststore));
 
-            Optional<CertificateStore> result = certificateService.getDefaultCertificateStore(StoreType.TRUSTSTORE);
+            Optional<CertificateStore> result =
+                    certificateService.getDefaultCertificateStore(StoreType.TRUSTSTORE);
 
             assertTrue(result.isPresent());
             assertEquals(StoreType.TRUSTSTORE, result.get().getStoreType());
@@ -304,7 +357,8 @@ class CertificateServiceTest {
         void shouldThrowOnSetNonExistentAsDefault() {
             when(certificateRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () -> certificateService.setAsDefault(99L));
+            assertThrows(
+                    IllegalArgumentException.class, () -> certificateService.setAsDefault(99L));
         }
     }
 
@@ -317,7 +371,9 @@ class CertificateServiceTest {
         void shouldHandleNonExistentForInfo() {
             when(certificateRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () -> certificateService.getCertificateInfo(99L));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> certificateService.getCertificateInfo(99L));
         }
 
         @Test
@@ -391,7 +447,8 @@ class CertificateServiceTest {
         void shouldActivateStore() {
             testKeystore.setActive(false);
             when(certificateRepository.findById(1L)).thenReturn(Optional.of(testKeystore));
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             CertificateStore result = certificateService.activate(1L);
 
@@ -402,7 +459,8 @@ class CertificateServiceTest {
         @DisplayName("Should deactivate store")
         void shouldDeactivateStore() {
             when(certificateRepository.findById(1L)).thenReturn(Optional.of(testKeystore));
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             CertificateStore result = certificateService.deactivate(1L);
 
@@ -446,7 +504,8 @@ class CertificateServiceTest {
         @DisplayName("Should get partner keystore")
         void shouldGetPartnerKeystore() {
             testKeystore.setPartnerId("partner1");
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("partner1", StoreType.KEYSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "partner1", StoreType.KEYSTORE))
                     .thenReturn(Optional.of(testKeystore));
 
             Optional<CertificateStore> result = certificateService.getPartnerKeystore("partner1");
@@ -459,7 +518,8 @@ class CertificateServiceTest {
         @DisplayName("Should get partner truststore")
         void shouldGetPartnerTruststore() {
             testTruststore.setPartnerId("partner1");
-            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue("partner1", StoreType.TRUSTSTORE))
+            when(certificateRepository.findByPartnerIdAndStoreTypeAndActiveTrue(
+                            "partner1", StoreType.TRUSTSTORE))
                     .thenReturn(Optional.of(testTruststore));
 
             Optional<CertificateStore> result = certificateService.getPartnerTruststore("partner1");
@@ -476,19 +536,29 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should create empty keystore")
         void shouldCreateEmptyKeystore() throws SslConfigurationException {
-            when(certificateRepository.existsByNameAndStoreType("empty-keystore", StoreType.KEYSTORE))
+            when(certificateRepository.existsByNameAndStoreType(
+                            "empty-keystore", StoreType.KEYSTORE))
                     .thenReturn(false);
             when(sslContextFactory.createEmptyKeyStore(StoreFormat.PKCS12, "password"))
                     .thenReturn(testStoreData);
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> {
-                CertificateStore saved = inv.getArgument(0);
-                saved.setId(10L);
-                return saved;
-            });
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(
+                            inv -> {
+                                CertificateStore saved = inv.getArgument(0);
+                                saved.setId(10L);
+                                return saved;
+                            });
 
-            CertificateStore result = certificateService.createEmptyKeystore(
-                    "empty-keystore", "Empty keystore", StoreFormat.PKCS12, "password",
-                    CertificatePurpose.SERVER, null, false, "admin");
+            CertificateStore result =
+                    certificateService.createEmptyKeystore(
+                            "empty-keystore",
+                            "Empty keystore",
+                            StoreFormat.PKCS12,
+                            "password",
+                            CertificatePurpose.SERVER,
+                            null,
+                            false,
+                            "admin");
 
             assertNotNull(result);
             assertEquals("empty-keystore", result.getName());
@@ -501,27 +571,45 @@ class CertificateServiceTest {
             when(certificateRepository.existsByNameAndStoreType("existing", StoreType.KEYSTORE))
                     .thenReturn(true);
 
-            assertThrows(IllegalArgumentException.class, () -> certificateService.createEmptyKeystore(
-                    "existing", null, StoreFormat.PKCS12, "password",
-                    CertificatePurpose.SERVER, null, false, "admin"));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            certificateService.createEmptyKeystore(
+                                    "existing",
+                                    null,
+                                    StoreFormat.PKCS12,
+                                    "password",
+                                    CertificatePurpose.SERVER,
+                                    null,
+                                    false,
+                                    "admin"));
         }
 
         @Test
         @DisplayName("Should create empty truststore")
         void shouldCreateEmptyTruststore() throws SslConfigurationException {
-            when(certificateRepository.existsByNameAndStoreType("empty-truststore", StoreType.TRUSTSTORE))
+            when(certificateRepository.existsByNameAndStoreType(
+                            "empty-truststore", StoreType.TRUSTSTORE))
                     .thenReturn(false);
             when(sslContextFactory.createEmptyKeyStore(StoreFormat.PKCS12, "password"))
                     .thenReturn(testStoreData);
-            when(certificateRepository.save(any(CertificateStore.class))).thenAnswer(inv -> {
-                CertificateStore saved = inv.getArgument(0);
-                saved.setId(11L);
-                return saved;
-            });
+            when(certificateRepository.save(any(CertificateStore.class)))
+                    .thenAnswer(
+                            inv -> {
+                                CertificateStore saved = inv.getArgument(0);
+                                saved.setId(11L);
+                                return saved;
+                            });
 
-            CertificateStore result = certificateService.createEmptyTruststore(
-                    "empty-truststore", "Empty truststore", StoreFormat.PKCS12, "password",
-                    null, false, "admin");
+            CertificateStore result =
+                    certificateService.createEmptyTruststore(
+                            "empty-truststore",
+                            "Empty truststore",
+                            StoreFormat.PKCS12,
+                            "password",
+                            null,
+                            false,
+                            "admin");
 
             assertNotNull(result);
             assertEquals("empty-truststore", result.getName());
@@ -536,10 +624,13 @@ class CertificateServiceTest {
         @Test
         @DisplayName("Should get certificate statistics")
         void shouldGetStatistics() {
-            when(certificateRepository.countByStoreTypeAndActive(StoreType.KEYSTORE, true)).thenReturn(5L);
-            when(certificateRepository.countByStoreTypeAndActive(StoreType.TRUSTSTORE, true)).thenReturn(3L);
+            when(certificateRepository.countByStoreTypeAndActive(StoreType.KEYSTORE, true))
+                    .thenReturn(5L);
+            when(certificateRepository.countByStoreTypeAndActive(StoreType.TRUSTSTORE, true))
+                    .thenReturn(3L);
             when(certificateRepository.findExpired()).thenReturn(List.of());
-            when(certificateRepository.findExpiringBefore(any(Instant.class))).thenReturn(List.of());
+            when(certificateRepository.findExpiringBefore(any(Instant.class)))
+                    .thenReturn(List.of());
 
             CertificateService.CertificateStatistics result = certificateService.getStatistics();
 

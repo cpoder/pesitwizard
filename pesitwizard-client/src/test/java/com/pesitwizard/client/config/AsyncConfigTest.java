@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
- * Unit tests for AsyncConfig.
- * Tests that all executors are configured correctly with appropriate thread pool settings.
+ * Unit tests for AsyncConfig. Tests that all executors are configured correctly with appropriate
+ * thread pool settings.
  */
 @DisplayName("AsyncConfig Unit Tests")
 class AsyncConfigTest {
@@ -40,7 +39,8 @@ class AsyncConfigTest {
         assertEquals(4, taskExecutor.getCorePoolSize(), "Core pool size should be 4");
         assertEquals(10, taskExecutor.getMaxPoolSize(), "Max pool size should be 10");
         assertEquals(100, taskExecutor.getQueueCapacity(), "Queue capacity should be 100");
-        assertTrue(taskExecutor.getThreadNamePrefix().startsWith("transfer-"),
+        assertTrue(
+                taskExecutor.getThreadNamePrefix().startsWith("transfer-"),
                 "Thread name prefix should be 'transfer-'");
     }
 
@@ -58,7 +58,8 @@ class AsyncConfigTest {
         assertEquals(2, taskExecutor.getCorePoolSize(), "Core pool size should be 2");
         assertEquals(4, taskExecutor.getMaxPoolSize(), "Max pool size should be 4");
         assertEquals(100, taskExecutor.getQueueCapacity(), "Queue capacity should be 100");
-        assertTrue(taskExecutor.getThreadNamePrefix().startsWith("websocket-"),
+        assertTrue(
+                taskExecutor.getThreadNamePrefix().startsWith("websocket-"),
                 "Thread name prefix should be 'websocket-'");
     }
 
@@ -76,12 +77,15 @@ class AsyncConfigTest {
         assertEquals(2, taskExecutor.getCorePoolSize(), "Core pool size should be 2");
         assertEquals(5, taskExecutor.getMaxPoolSize(), "Max pool size should be 5");
         assertEquals(50, taskExecutor.getQueueCapacity(), "Queue capacity should be 50");
-        assertTrue(taskExecutor.getThreadNamePrefix().startsWith("plugin-"),
+        assertTrue(
+                taskExecutor.getThreadNamePrefix().startsWith("plugin-"),
                 "Thread name prefix should be 'plugin-'");
 
         // Check rejection policy is CallerRunsPolicy
         ThreadPoolExecutor threadPoolExecutor = taskExecutor.getThreadPoolExecutor();
-        assertTrue(threadPoolExecutor.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.CallerRunsPolicy,
+        assertTrue(
+                threadPoolExecutor.getRejectedExecutionHandler()
+                        instanceof ThreadPoolExecutor.CallerRunsPolicy,
                 "Rejection policy should be CallerRunsPolicy");
     }
 
@@ -89,8 +93,10 @@ class AsyncConfigTest {
     @DisplayName("All executors should have unique thread name prefixes")
     void allExecutors_shouldHaveUniqueThreadNamePrefixes() {
         // Act
-        ThreadPoolTaskExecutor transferExecutor = (ThreadPoolTaskExecutor) config.transferExecutor();
-        ThreadPoolTaskExecutor websocketExecutor = (ThreadPoolTaskExecutor) config.websocketExecutor();
+        ThreadPoolTaskExecutor transferExecutor =
+                (ThreadPoolTaskExecutor) config.transferExecutor();
+        ThreadPoolTaskExecutor websocketExecutor =
+                (ThreadPoolTaskExecutor) config.websocketExecutor();
         ThreadPoolTaskExecutor pluginExecutor = (ThreadPoolTaskExecutor) config.pluginExecutor();
 
         // Assert
@@ -98,22 +104,33 @@ class AsyncConfigTest {
         String websocketPrefix = websocketExecutor.getThreadNamePrefix();
         String pluginPrefix = pluginExecutor.getThreadNamePrefix();
 
-        assertNotEquals(transferPrefix, websocketPrefix, "Transfer and WebSocket should have different prefixes");
-        assertNotEquals(transferPrefix, pluginPrefix, "Transfer and Plugin should have different prefixes");
-        assertNotEquals(websocketPrefix, pluginPrefix, "WebSocket and Plugin should have different prefixes");
+        assertNotEquals(
+                transferPrefix,
+                websocketPrefix,
+                "Transfer and WebSocket should have different prefixes");
+        assertNotEquals(
+                transferPrefix, pluginPrefix, "Transfer and Plugin should have different prefixes");
+        assertNotEquals(
+                websocketPrefix,
+                pluginPrefix,
+                "WebSocket and Plugin should have different prefixes");
     }
 
     @Test
     @DisplayName("websocketExecutor should have smaller pool than transferExecutor")
     void websocketExecutor_shouldHaveSmallerPoolThanTransferExecutor() {
         // Act
-        ThreadPoolTaskExecutor transferExecutor = (ThreadPoolTaskExecutor) config.transferExecutor();
-        ThreadPoolTaskExecutor websocketExecutor = (ThreadPoolTaskExecutor) config.websocketExecutor();
+        ThreadPoolTaskExecutor transferExecutor =
+                (ThreadPoolTaskExecutor) config.transferExecutor();
+        ThreadPoolTaskExecutor websocketExecutor =
+                (ThreadPoolTaskExecutor) config.websocketExecutor();
 
         // Assert - WebSocket is lower priority, should have smaller pool
-        assertTrue(websocketExecutor.getCorePoolSize() <= transferExecutor.getCorePoolSize(),
+        assertTrue(
+                websocketExecutor.getCorePoolSize() <= transferExecutor.getCorePoolSize(),
                 "WebSocket core pool should be <= transfer core pool");
-        assertTrue(websocketExecutor.getMaxPoolSize() <= transferExecutor.getMaxPoolSize(),
+        assertTrue(
+                websocketExecutor.getMaxPoolSize() <= transferExecutor.getMaxPoolSize(),
                 "WebSocket max pool should be <= transfer max pool");
     }
 
@@ -121,11 +138,13 @@ class AsyncConfigTest {
     @DisplayName("pluginExecutor should have smaller queue than transferExecutor")
     void pluginExecutor_shouldHaveSmallerQueueThanTransferExecutor() {
         // Act
-        ThreadPoolTaskExecutor transferExecutor = (ThreadPoolTaskExecutor) config.transferExecutor();
+        ThreadPoolTaskExecutor transferExecutor =
+                (ThreadPoolTaskExecutor) config.transferExecutor();
         ThreadPoolTaskExecutor pluginExecutor = (ThreadPoolTaskExecutor) config.pluginExecutor();
 
         // Assert - Plugin queue should be smaller (plugins can use CallerRunsPolicy fallback)
-        assertTrue(pluginExecutor.getQueueCapacity() <= transferExecutor.getQueueCapacity(),
+        assertTrue(
+                pluginExecutor.getQueueCapacity() <= transferExecutor.getQueueCapacity(),
                 "Plugin queue should be <= transfer queue");
     }
 
@@ -133,46 +152,58 @@ class AsyncConfigTest {
     @DisplayName("Executors should be properly initialized after creation")
     void executors_shouldBeInitializedAfterCreation() {
         // Act
-        ThreadPoolTaskExecutor transferExecutor = (ThreadPoolTaskExecutor) config.transferExecutor();
-        ThreadPoolTaskExecutor websocketExecutor = (ThreadPoolTaskExecutor) config.websocketExecutor();
+        ThreadPoolTaskExecutor transferExecutor =
+                (ThreadPoolTaskExecutor) config.transferExecutor();
+        ThreadPoolTaskExecutor websocketExecutor =
+                (ThreadPoolTaskExecutor) config.websocketExecutor();
         ThreadPoolTaskExecutor pluginExecutor = (ThreadPoolTaskExecutor) config.pluginExecutor();
 
         // Assert - All executors should be initialized and have thread pools
-        assertNotNull(transferExecutor.getThreadPoolExecutor(),
+        assertNotNull(
+                transferExecutor.getThreadPoolExecutor(),
                 "Transfer executor should have initialized thread pool");
-        assertNotNull(websocketExecutor.getThreadPoolExecutor(),
+        assertNotNull(
+                websocketExecutor.getThreadPoolExecutor(),
                 "WebSocket executor should have initialized thread pool");
-        assertNotNull(pluginExecutor.getThreadPoolExecutor(),
+        assertNotNull(
+                pluginExecutor.getThreadPoolExecutor(),
                 "Plugin executor should have initialized thread pool");
     }
 
     @Test
-    @DisplayName("pluginExecutor CallerRunsPolicy should execute task in caller thread when queue is full")
+    @DisplayName(
+            "pluginExecutor CallerRunsPolicy should execute task in caller thread when queue is full")
     void pluginExecutor_callerRunsPolicy_shouldExecuteInCallerThread() throws InterruptedException {
         // Arrange
         ThreadPoolTaskExecutor executor = (ThreadPoolTaskExecutor) config.pluginExecutor();
 
         // Fill up the thread pool and queue
         for (int i = 0; i < executor.getMaxPoolSize() + executor.getQueueCapacity(); i++) {
-            executor.execute(() -> {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            });
+            executor.execute(
+                    () -> {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    });
         }
 
         // Act - Submit one more task that should trigger CallerRunsPolicy
         String callerThreadName = Thread.currentThread().getName();
         final String[] executionThreadName = new String[1];
 
-        executor.execute(() -> {
-            executionThreadName[0] = Thread.currentThread().getName();
-        });
+        executor.execute(
+                () -> {
+                    executionThreadName[0] = Thread.currentThread().getName();
+                });
 
         // Assert - Task should have executed in caller thread (or completed in pool)
-        Awaitility.await().atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> assertNotNull(executionThreadName[0], "Task should have been executed"));
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(
+                        () ->
+                                assertNotNull(
+                                        executionThreadName[0], "Task should have been executed"));
     }
 }

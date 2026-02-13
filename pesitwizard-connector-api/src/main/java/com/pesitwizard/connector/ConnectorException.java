@@ -1,8 +1,6 @@
 package com.pesitwizard.connector;
 
-/**
- * Exception thrown by storage connectors.
- */
+/** Exception thrown by storage connectors. */
 public class ConnectorException extends Exception {
 
     private final ErrorCode errorCode;
@@ -31,9 +29,7 @@ public class ConnectorException extends Exception {
         return errorCode;
     }
 
-    /**
-     * Standard error codes for connector operations
-     */
+    /** Standard error codes for connector operations */
     public enum ErrorCode {
         UNKNOWN,
         CONNECTION_FAILED,

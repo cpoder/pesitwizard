@@ -2,26 +2,6 @@ package com.pesitwizard.server.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import com.pesitwizard.fpdu.ConnectMessageBuilder;
 import com.pesitwizard.fpdu.CreateMessageBuilder;
 import com.pesitwizard.fpdu.Fpdu;
@@ -38,10 +18,28 @@ import com.pesitwizard.server.entity.PesitServerConfig;
 import com.pesitwizard.server.handler.PesitSessionHandler;
 import com.pesitwizard.server.service.PesitServerInstance;
 import com.pesitwizard.server.ssl.SslContextFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Integration test for complete PeSIT file transfer.
- * Starts an embedded PeSIT server and performs a full transfer cycle.
+ * Integration test for complete PeSIT file transfer. Starts an embedded PeSIT server and performs a
+ * full transfer cycle.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -53,17 +51,13 @@ class PesitFileTransferIntegrationTest {
     private static final String TEST_SERVER_ID = "TEST_SERVER";
     private static final String TEST_PARTNER_ID = "TEST_PARTNER";
 
-    @Autowired
-    private PesitSessionHandler sessionHandler;
+    @Autowired private PesitSessionHandler sessionHandler;
 
-    @TempDir
-    static Path tempDir;
+    @TempDir static Path tempDir;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SslContextFactory sslContextFactory;
+    @Mock private SslContextFactory sslContextFactory;
 
     private PesitServerInstance serverInstance;
     private PesitServerProperties testProperties;
@@ -85,13 +79,14 @@ class PesitFileTransferIntegrationTest {
         testProperties.getPartners().put(TEST_PARTNER_ID, partner);
 
         // Add a test logical file
-        LogicalFileConfig fileConfig = LogicalFileConfig.builder()
-                .id("FILE")
-                .enabled(true)
-                .direction(LogicalFileConfig.Direction.BOTH)
-                .receiveDirectory(tempDir.toString())
-                .receiveFilenamePattern("${filename}_${transferId}")
-                .build();
+        LogicalFileConfig fileConfig =
+                LogicalFileConfig.builder()
+                        .id("FILE")
+                        .enabled(true)
+                        .direction(LogicalFileConfig.Direction.BOTH)
+                        .receiveDirectory(tempDir.toString())
+                        .receiveFilenamePattern("${filename}_${transferId}")
+                        .build();
         testProperties.getFiles().put("FILE", fileConfig);
 
         // Create server config
@@ -101,20 +96,27 @@ class PesitFileTransferIntegrationTest {
         serverConfig.setAutoStart(true);
 
         // Start the server
-        serverInstance = new PesitServerInstance(serverConfig, testProperties, sessionHandler, sslProperties,
-                sslContextFactory);
+        serverInstance =
+                new PesitServerInstance(
+                        serverConfig,
+                        testProperties,
+                        sessionHandler,
+                        sslProperties,
+                        sslContextFactory);
         serverInstance.start();
 
         // Wait for server to be ready
-        Awaitility.await().atMost(5, TimeUnit.SECONDS)
-            .pollInterval(100, TimeUnit.MILLISECONDS)
-            .until(() -> {
-                try (Socket s = new Socket("localhost", TEST_PORT)) {
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            });
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(
+                        () -> {
+                            try (Socket s = new Socket("localhost", TEST_PORT)) {
+                                return true;
+                            } catch (Exception e) {
+                                return false;
+                            }
+                        });
     }
 
     @AfterAll
@@ -126,7 +128,8 @@ class PesitFileTransferIntegrationTest {
 
     @Test
     @Disabled("Requires full server initialization - run manually with proper setup")
-    @DisplayName("Should complete full file transfer: CONNECT → CREATE → OPEN → WRITE → DTF → close sequence")
+    @DisplayName(
+            "Should complete full file transfer: CONNECT → CREATE → OPEN → WRITE → DTF → close sequence")
     void shouldCompleteFullFileTransfer() throws IOException {
         try (Socket socket = new Socket("localhost", TEST_PORT)) {
             socket.setSoTimeout(5000);
@@ -136,10 +139,11 @@ class PesitFileTransferIntegrationTest {
             int clientConnectionId = 0x05;
 
             // Step 1: CONNECT
-            ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
-                    .demandeur(TEST_PARTNER_ID)
-                    .serveur(TEST_SERVER_ID)
-                    .writeAccess();
+            ConnectMessageBuilder connectBuilder =
+                    new ConnectMessageBuilder()
+                            .demandeur(TEST_PARTNER_ID)
+                            .serveur(TEST_SERVER_ID)
+                            .writeAccess();
 
             byte[] connectBytes = FpduBuilder.buildFpdu(connectBuilder.build(clientConnectionId));
             out.write(connectBytes);
@@ -150,12 +154,13 @@ class PesitFileTransferIntegrationTest {
             int serverConnectionId = aconnect.getIdSrc();
 
             // Step 2: CREATE
-            CreateMessageBuilder createBuilder = new CreateMessageBuilder()
-                    .filename("FILE")
-                    .transferId(1)
-                    .variableFormat()
-                    .recordLength(30)
-                    .maxEntitySize(56);
+            CreateMessageBuilder createBuilder =
+                    new CreateMessageBuilder()
+                            .filename("FILE")
+                            .transferId(1)
+                            .variableFormat()
+                            .recordLength(30)
+                            .maxEntitySize(56);
 
             out.write(FpduBuilder.buildFpdu(createBuilder.build(serverConnectionId)));
             out.flush();
@@ -171,7 +176,8 @@ class PesitFileTransferIntegrationTest {
             assertEquals(FpduType.ACK_OPEN, ackOpen.getFpduType(), "Expected ACK(OPEN)");
 
             // Step 4: WRITE
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.WRITE).withIdDst(serverConnectionId)));
+            out.write(
+                    FpduBuilder.buildFpdu(new Fpdu(FpduType.WRITE).withIdDst(serverConnectionId)));
             out.flush();
 
             Fpdu ackWrite = readFpdu(in);
@@ -179,46 +185,71 @@ class PesitFileTransferIntegrationTest {
 
             // Step 5: Send DTF data
             String testData = "Hello from integration test!";
-            byte[] dtfBytes = FpduBuilder.buildFpdu(FpduType.DTF, serverConnectionId, 0, testData.getBytes());
+            byte[] dtfBytes =
+                    FpduBuilder.buildFpdu(FpduType.DTF, serverConnectionId, 0, testData.getBytes());
             out.write(dtfBytes);
             out.flush();
 
             // Step 6: DTF.END
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.DTF_END).withIdDst(serverConnectionId)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            new byte[] { 0x00, 0x00, 0x00 }))));
+            out.write(
+                    FpduBuilder.buildFpdu(
+                            new Fpdu(FpduType.DTF_END)
+                                    .withIdDst(serverConnectionId)
+                                    .withParameter(
+                                            new ParameterValue(
+                                                    ParameterIdentifier.PI_02_DIAG,
+                                                    new byte[] {0x00, 0x00, 0x00}))));
             out.flush();
 
             // Step 7: TRANS.END
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.TRANS_END).withIdDst(serverConnectionId)));
+            out.write(
+                    FpduBuilder.buildFpdu(
+                            new Fpdu(FpduType.TRANS_END).withIdDst(serverConnectionId)));
             out.flush();
 
             Fpdu ackTransEnd = readFpdu(in);
-            assertEquals(FpduType.ACK_TRANS_END, ackTransEnd.getFpduType(), "Expected ACK(TRANS.END)");
+            assertEquals(
+                    FpduType.ACK_TRANS_END, ackTransEnd.getFpduType(), "Expected ACK(TRANS.END)");
 
             // Step 8: CLOSE
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.CLOSE).withIdDst(serverConnectionId)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            new byte[] { 0x00, 0x00, 0x00 }))));
+            out.write(
+                    FpduBuilder.buildFpdu(
+                            new Fpdu(FpduType.CLOSE)
+                                    .withIdDst(serverConnectionId)
+                                    .withParameter(
+                                            new ParameterValue(
+                                                    ParameterIdentifier.PI_02_DIAG,
+                                                    new byte[] {0x00, 0x00, 0x00}))));
             out.flush();
 
             Fpdu ackClose = readFpdu(in);
             assertEquals(FpduType.ACK_CLOSE, ackClose.getFpduType(), "Expected ACK(CLOSE)");
 
             // Step 9: DESELECT
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.DESELECT).withIdDst(serverConnectionId)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            new byte[] { 0x00, 0x00, 0x00 }))));
+            out.write(
+                    FpduBuilder.buildFpdu(
+                            new Fpdu(FpduType.DESELECT)
+                                    .withIdDst(serverConnectionId)
+                                    .withParameter(
+                                            new ParameterValue(
+                                                    ParameterIdentifier.PI_02_DIAG,
+                                                    new byte[] {0x00, 0x00, 0x00}))));
             out.flush();
 
             Fpdu ackDeselect = readFpdu(in);
-            assertEquals(FpduType.ACK_DESELECT, ackDeselect.getFpduType(), "Expected ACK(DESELECT)");
+            assertEquals(
+                    FpduType.ACK_DESELECT, ackDeselect.getFpduType(), "Expected ACK(DESELECT)");
 
             // Step 10: RELEASE
-            out.write(FpduBuilder.buildFpdu(new Fpdu(FpduType.RELEASE).withIdDst(serverConnectionId)
-                    .withIdSrc(clientConnectionId)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            new byte[] { 0x00, 0x00, 0x00 }))));
+            out.write(
+                    FpduBuilder.buildFpdu(
+                            new Fpdu(FpduType.RELEASE)
+                                    .withIdDst(serverConnectionId)
+                                    .withIdSrc(clientConnectionId)
+                                    .withParameter(
+                                            new ParameterValue(
+                                                    ParameterIdentifier.PI_02_DIAG,
+                                                    new byte[] {0x00, 0x00, 0x00}))));
             out.flush();
 
             Fpdu relconf = readFpdu(in);
@@ -235,17 +266,21 @@ class PesitFileTransferIntegrationTest {
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
 
-            ConnectMessageBuilder connectBuilder = new ConnectMessageBuilder()
-                    .demandeur(TEST_PARTNER_ID)
-                    .serveur("UNKNOWN_SERVER")
-                    .writeAccess();
+            ConnectMessageBuilder connectBuilder =
+                    new ConnectMessageBuilder()
+                            .demandeur(TEST_PARTNER_ID)
+                            .serveur("UNKNOWN_SERVER")
+                            .writeAccess();
 
             out.write(FpduBuilder.buildFpdu(connectBuilder.build(0x05)));
             out.flush();
 
             Fpdu response = readFpdu(in);
             // Should get RCONNECT (reject) for unknown server
-            assertEquals(FpduType.RCONNECT, response.getFpduType(), "Expected RCONNECT for unknown server");
+            assertEquals(
+                    FpduType.RCONNECT,
+                    response.getFpduType(),
+                    "Expected RCONNECT for unknown server");
         }
     }
 

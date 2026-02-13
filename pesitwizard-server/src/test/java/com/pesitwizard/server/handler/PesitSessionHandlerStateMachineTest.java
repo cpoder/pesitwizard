@@ -2,11 +2,10 @@ package com.pesitwizard.server.handler;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.state.ServerState;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("State Machine Transition Tests")
 class PesitSessionHandlerStateMachineTest {

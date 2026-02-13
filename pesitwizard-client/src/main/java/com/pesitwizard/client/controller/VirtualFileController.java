@@ -1,7 +1,11 @@
 package com.pesitwizard.client.controller;
 
+import com.pesitwizard.client.entity.VirtualFile;
+import com.pesitwizard.client.entity.VirtualFile.Direction;
+import com.pesitwizard.client.service.VirtualFileService;
+import jakarta.validation.Valid;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,16 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pesitwizard.client.entity.VirtualFile;
-import com.pesitwizard.client.entity.VirtualFile.Direction;
-import com.pesitwizard.client.service.VirtualFileService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
-/**
- * REST API for managing virtual file definitions
- */
+/** REST API for managing virtual file definitions */
 @RestController
 @RequestMapping("/api/v1/virtual-files")
 @RequiredArgsConstructor
@@ -43,7 +38,8 @@ public class VirtualFileController {
 
     @GetMapping("/{id}")
     public ResponseEntity<VirtualFile> getVirtualFile(@PathVariable String id) {
-        return virtualFileService.getVirtualFile(id)
+        return virtualFileService
+                .getVirtualFile(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -56,9 +52,9 @@ public class VirtualFileController {
 
     @PutMapping("/{id}")
     public ResponseEntity<VirtualFile> updateVirtualFile(
-            @PathVariable String id,
-            @Valid @RequestBody VirtualFile virtualFile) {
-        return virtualFileService.updateVirtualFile(id, virtualFile)
+            @PathVariable String id, @Valid @RequestBody VirtualFile virtualFile) {
+        return virtualFileService
+                .updateVirtualFile(id, virtualFile)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

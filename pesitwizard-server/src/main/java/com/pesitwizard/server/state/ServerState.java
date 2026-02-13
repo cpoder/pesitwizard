@@ -3,11 +3,10 @@ package com.pesitwizard.server.state;
 import java.util.Set;
 
 /**
- * PeSIT Server State Machine States
- * Based on PeSIT E specification - Server (Serveur) role
+ * PeSIT Server State Machine States Based on PeSIT E specification - Server (Serveur) role
  *
- * States ending with 'B' are server-specific states
- * States without suffix are common to both demandeur and serveur
+ * <p>States ending with 'B' are server-specific states States without suffix are common to both
+ * demandeur and serveur
  */
 public enum ServerState {
 
@@ -37,7 +36,8 @@ public enum ServerState {
     SF03_FILE_SELECTED("SF03", "FICHIER SELECTIONNE"),
 
     /** SF04B - Deselection pending, waiting for F.DESELECT response */
-    SF04B_DESELECT_PENDING("SF04B", "Libération de fichier en attente d'une primitive F.DESELECT,R"),
+    SF04B_DESELECT_PENDING(
+            "SF04B", "Libération de fichier en attente d'une primitive F.DESELECT,R"),
 
     // ===== PHASE OUVERTURE DE FICHIER (OF) =====
 
@@ -62,19 +62,22 @@ public enum ServerState {
     TDE03_RESYNC_PENDING("TDE03", "Resynchronisation en attente d'une FPDU.ACK(RESYN)"),
 
     /** TDE04 - Resync pending, waiting for F.RESTART response */
-    TDE04_RESYNC_RESPONSE_PENDING("TDE04", "Resynchronisation en attente d'une primitive F.RESTART,R"),
+    TDE04_RESYNC_RESPONSE_PENDING(
+            "TDE04", "Resynchronisation en attente d'une primitive F.RESTART,R"),
 
     /** TDE05 - Interruption pending, waiting for FPDU.ACK(IDT) */
     TDE05_IDT_PENDING("TDE05", "Interruption du transfert en attente d'une FPDU.ACK(IDT)"),
 
     /** TDE06 - Interruption pending, waiting for F.CANCEL response */
-    TDE06_CANCEL_PENDING("TDE06", "Interruption du transfert en attente d'une primitive F.CANCEL,R"),
+    TDE06_CANCEL_PENDING(
+            "TDE06", "Interruption du transfert en attente d'une primitive F.CANCEL,R"),
 
     /** TDE07 - End of write */
     TDE07_WRITE_END("TDE07", "Fin d'écriture"),
 
     /** TDE08B - End of transfer pending, waiting for F.TRANSFER.END response */
-    TDE08B_TRANS_END_PENDING("TDE08B", "Fin de transfert d'écriture en attente d'une primitive F.TRANSFER.END,R"),
+    TDE08B_TRANS_END_PENDING(
+            "TDE08B", "Fin de transfert d'écriture en attente d'une primitive F.TRANSFER.END,R"),
 
     // ===== PHASE TRANSFERT DE DONNEES EN LECTURE - Serveur Emetteur (TDL) =====
 
@@ -88,14 +91,12 @@ public enum ServerState {
     TDL07_READ_END("TDL07", "Fin de lecture"),
 
     /** TDL08B - End of transfer pending, waiting for F.TRANSFER.END response */
-    TDL08B_TRANS_END_PENDING("TDL08B", "Fin de transfert de lecture en attente d'une primitive F.TRANSFER.END,R"),
+    TDL08B_TRANS_END_PENDING(
+            "TDL08B", "Fin de transfert de lecture en attente d'une primitive F.TRANSFER.END,R"),
 
     // ===== PHASE MESSAGE (MSG) =====
 
-    /**
-     * MSG_RECEIVING - Receiving segmented message (after MSGDM, waiting for
-     * MSGMM/MSGFM)
-     */
+    /** MSG_RECEIVING - Receiving segmented message (after MSGDM, waiting for MSGMM/MSGFM) */
     MSG_RECEIVING("MSG", "Réception de message segmenté"),
 
     // ===== ERROR STATE =====
@@ -118,8 +119,15 @@ public enum ServerState {
         // CN03 -> SF03: server handles CREATE/SELECT synchronously (skips SF01B/SF02B pending)
         // CN03 -> CN01: server handles RELEASE synchronously (skips CN04B pending)
         // CN03 -> MSG_RECEIVING: server handles segmented messages (MSGDM)
-        CN03_CONNECTED.validTransitions = Set.of(SF01B_CREATE_PENDING, SF02B_SELECT_PENDING,
-                CN04B_RELEASE_PENDING, SF03_FILE_SELECTED, CN01_REPOS, MSG_RECEIVING, ERROR);
+        CN03_CONNECTED.validTransitions =
+                Set.of(
+                        SF01B_CREATE_PENDING,
+                        SF02B_SELECT_PENDING,
+                        CN04B_RELEASE_PENDING,
+                        SF03_FILE_SELECTED,
+                        CN01_REPOS,
+                        MSG_RECEIVING,
+                        ERROR);
         CN04B_RELEASE_PENDING.validTransitions = Set.of(CN01_REPOS, ERROR);
 
         // File selection phase transitions
@@ -127,35 +135,60 @@ public enum ServerState {
         SF02B_SELECT_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, CN03_CONNECTED, ERROR);
         // SF03 -> OF02: server handles OPEN synchronously (skips OF01B pending)
         // SF03 -> CN03: server handles DESELECT synchronously (skips SF04B pending)
-        SF03_FILE_SELECTED.validTransitions = Set.of(OF01B_OPEN_PENDING, SF04B_DESELECT_PENDING,
-                OF02_TRANSFER_READY, CN03_CONNECTED, ERROR);
+        SF03_FILE_SELECTED.validTransitions =
+                Set.of(
+                        OF01B_OPEN_PENDING,
+                        SF04B_DESELECT_PENDING,
+                        OF02_TRANSFER_READY,
+                        CN03_CONNECTED,
+                        ERROR);
         SF04B_DESELECT_PENDING.validTransitions = Set.of(CN03_CONNECTED, ERROR);
 
         // File open phase transitions
-        OF01B_OPEN_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, SF03_FILE_SELECTED, ERROR);
+        OF01B_OPEN_PENDING.validTransitions =
+                Set.of(OF02_TRANSFER_READY, SF03_FILE_SELECTED, ERROR);
         // OF02 -> TDE02B: server handles WRITE synchronously (skips TDE01B pending)
         // OF02 -> TDL02B: server handles READ synchronously (skips TDL01B pending)
         // OF02 -> SF03: server handles CLOSE synchronously (skips OF03B pending)
-        OF02_TRANSFER_READY.validTransitions = Set.of(TDE01B_WRITE_PENDING, TDL01B_READ_PENDING,
-                OF03B_CLOSE_PENDING, TDE02B_RECEIVING_DATA, TDL02B_SENDING_DATA, SF03_FILE_SELECTED, ERROR);
+        OF02_TRANSFER_READY.validTransitions =
+                Set.of(
+                        TDE01B_WRITE_PENDING,
+                        TDL01B_READ_PENDING,
+                        OF03B_CLOSE_PENDING,
+                        TDE02B_RECEIVING_DATA,
+                        TDL02B_SENDING_DATA,
+                        SF03_FILE_SELECTED,
+                        ERROR);
         OF03B_CLOSE_PENDING.validTransitions = Set.of(SF03_FILE_SELECTED, ERROR);
 
         // Data transfer (receive/write) phase transitions
-        TDE01B_WRITE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDE01B_WRITE_PENDING.validTransitions =
+                Set.of(TDE02B_RECEIVING_DATA, OF02_TRANSFER_READY, ERROR);
         // TDE02B -> OF02: server handles IDT synchronously (skips TDE05/TDE06 pending)
-        TDE02B_RECEIVING_DATA.validTransitions = Set.of(TDE02B_RECEIVING_DATA, TDE03_RESYNC_PENDING,
-                TDE05_IDT_PENDING, TDE07_WRITE_END, OF02_TRANSFER_READY, ERROR);
-        TDE03_RESYNC_PENDING.validTransitions = Set.of(TDE04_RESYNC_RESPONSE_PENDING, TDE02B_RECEIVING_DATA, ERROR);
+        TDE02B_RECEIVING_DATA.validTransitions =
+                Set.of(
+                        TDE02B_RECEIVING_DATA,
+                        TDE03_RESYNC_PENDING,
+                        TDE05_IDT_PENDING,
+                        TDE07_WRITE_END,
+                        OF02_TRANSFER_READY,
+                        ERROR);
+        TDE03_RESYNC_PENDING.validTransitions =
+                Set.of(TDE04_RESYNC_RESPONSE_PENDING, TDE02B_RECEIVING_DATA, ERROR);
         TDE04_RESYNC_RESPONSE_PENDING.validTransitions = Set.of(TDE02B_RECEIVING_DATA, ERROR);
-        TDE05_IDT_PENDING.validTransitions = Set.of(TDE06_CANCEL_PENDING, OF02_TRANSFER_READY, ERROR);
+        TDE05_IDT_PENDING.validTransitions =
+                Set.of(TDE06_CANCEL_PENDING, OF02_TRANSFER_READY, ERROR);
         TDE06_CANCEL_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
         // TDE07 -> OF02: server handles TRANS_END synchronously (skips TDE08B pending)
-        TDE07_WRITE_END.validTransitions = Set.of(TDE08B_TRANS_END_PENDING, OF02_TRANSFER_READY, ERROR);
+        TDE07_WRITE_END.validTransitions =
+                Set.of(TDE08B_TRANS_END_PENDING, OF02_TRANSFER_READY, ERROR);
         TDE08B_TRANS_END_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
 
         // Data transfer (send/read) phase transitions
-        TDL01B_READ_PENDING.validTransitions = Set.of(TDL02B_SENDING_DATA, OF02_TRANSFER_READY, ERROR);
-        TDL02B_SENDING_DATA.validTransitions = Set.of(TDL02B_SENDING_DATA, TDL07_READ_END, OF02_TRANSFER_READY, ERROR);
+        TDL01B_READ_PENDING.validTransitions =
+                Set.of(TDL02B_SENDING_DATA, OF02_TRANSFER_READY, ERROR);
+        TDL02B_SENDING_DATA.validTransitions =
+                Set.of(TDL02B_SENDING_DATA, TDL07_READ_END, OF02_TRANSFER_READY, ERROR);
         TDL07_READ_END.validTransitions = Set.of(TDL08B_TRANS_END_PENDING, ERROR);
         TDL08B_TRANS_END_PENDING.validTransitions = Set.of(OF02_TRANSFER_READY, ERROR);
 
@@ -179,9 +212,7 @@ public enum ServerState {
         return description;
     }
 
-    /**
-     * Get the set of valid states that can be transitioned to from this state.
-     */
+    /** Get the set of valid states that can be transitioned to from this state. */
     public Set<ServerState> getValidTransitions() {
         return validTransitions;
     }
@@ -196,44 +227,32 @@ public enum ServerState {
         return validTransitions != null && validTransitions.contains(nextState);
     }
 
-    /**
-     * Check if this state is in the connection phase
-     */
+    /** Check if this state is in the connection phase */
     public boolean isConnectionPhase() {
         return this.name().startsWith("CN");
     }
 
-    /**
-     * Check if this state is in the file selection phase
-     */
+    /** Check if this state is in the file selection phase */
     public boolean isSelectionPhase() {
         return this.name().startsWith("SF");
     }
 
-    /**
-     * Check if this state is in the file open phase
-     */
+    /** Check if this state is in the file open phase */
     public boolean isOpenPhase() {
         return this.name().startsWith("OF");
     }
 
-    /**
-     * Check if this state is in the data transfer phase
-     */
+    /** Check if this state is in the data transfer phase */
     public boolean isTransferPhase() {
         return this.name().startsWith("TDE") || this.name().startsWith("TDL");
     }
 
-    /**
-     * Check if this state allows receiving data
-     */
+    /** Check if this state allows receiving data */
     public boolean canReceiveData() {
         return this == TDE02B_RECEIVING_DATA;
     }
 
-    /**
-     * Check if this state allows sending data
-     */
+    /** Check if this state allows sending data */
     public boolean canSendData() {
         return this == TDL02B_SENDING_DATA;
     }

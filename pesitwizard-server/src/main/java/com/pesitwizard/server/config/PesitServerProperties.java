@@ -2,15 +2,11 @@ package com.pesitwizard.server.config;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import lombok.Data;
-
-/**
- * Configuration properties for PeSIT server
- */
+/** Configuration properties for PeSIT server */
 @Data
 @Component
 @ConfigurationProperties(prefix = "pesit.server")
@@ -72,25 +68,23 @@ public class PesitServerProperties {
 
     /**
      * Get partner configuration by ID
-     * 
+     *
      * @return PartnerConfig or null if not found
      */
     public PartnerConfig getPartner(String partnerId) {
-        if (partnerId == null)
-            return null;
+        if (partnerId == null) return null;
 
         // Try exact match first
         PartnerConfig config = partners.get(partnerId);
-        if (config != null)
-            return config;
+        if (config != null) return config;
 
         // Try case-insensitive match
         for (Map.Entry<String, PartnerConfig> entry : partners.entrySet()) {
             if (entry.getKey().equalsIgnoreCase(partnerId)) {
                 return entry.getValue();
             }
-            if (entry.getValue().getId() != null &&
-                    entry.getValue().getId().equalsIgnoreCase(partnerId)) {
+            if (entry.getValue().getId() != null
+                    && entry.getValue().getId().equalsIgnoreCase(partnerId)) {
                 return entry.getValue();
             }
         }
@@ -99,25 +93,23 @@ public class PesitServerProperties {
 
     /**
      * Get logical file configuration by filename
-     * 
+     *
      * @return LogicalFileConfig or null if not found
      */
     public LogicalFileConfig getLogicalFile(String filename) {
-        if (filename == null)
-            return null;
+        if (filename == null) return null;
 
         // Try exact match first
         LogicalFileConfig config = files.get(filename);
-        if (config != null)
-            return config;
+        if (config != null) return config;
 
         // Try case-insensitive match
         for (Map.Entry<String, LogicalFileConfig> entry : files.entrySet()) {
             if (entry.getKey().equalsIgnoreCase(filename)) {
                 return entry.getValue();
             }
-            if (entry.getValue().getId() != null &&
-                    entry.getValue().getId().equalsIgnoreCase(filename)) {
+            if (entry.getValue().getId() != null
+                    && entry.getValue().getId().equalsIgnoreCase(filename)) {
                 return entry.getValue();
             }
         }
@@ -133,16 +125,12 @@ public class PesitServerProperties {
         return null;
     }
 
-    /**
-     * Check if a partner exists
-     */
+    /** Check if a partner exists */
     public boolean hasPartner(String partnerId) {
         return getPartner(partnerId) != null;
     }
 
-    /**
-     * Check if a logical file exists
-     */
+    /** Check if a logical file exists */
     public boolean hasLogicalFile(String filename) {
         return getLogicalFile(filename) != null;
     }

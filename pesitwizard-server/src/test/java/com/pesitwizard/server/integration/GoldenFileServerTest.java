@@ -2,26 +2,23 @@ package com.pesitwizard.server.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
 import com.pesitwizard.fpdu.PesitSessionRecorder.RecordedFrame;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("Server Golden File Tests")
 public class GoldenFileServerTest {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @Test
     @DisplayName("verify request-response pairs from PUSH session")
@@ -56,7 +53,10 @@ public class GoldenFileServerTest {
 
     private boolean hasType(List<RecordedFrame> frames, Direction dir, FpduType type) {
         return frames.stream()
-                .anyMatch(f -> f.direction() == dir && new FpduParser(f.data()).parse().getFpduType() == type);
+                .anyMatch(
+                        f ->
+                                f.direction() == dir
+                                        && new FpduParser(f.data()).parse().getFpduType() == type);
     }
 
     private PesitSessionRecorder loadGoldenFile(String name) throws Exception {

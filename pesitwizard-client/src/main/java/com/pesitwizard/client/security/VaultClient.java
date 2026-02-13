@@ -1,20 +1,16 @@
 package com.pesitwizard.client.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Simple Vault client for storing and retrieving secrets.
- */
+/** Simple Vault client for storing and retrieving secrets. */
 @Slf4j
 public class VaultClient {
 
@@ -23,7 +19,8 @@ public class VaultClient {
     private static final Duration TOKEN_REFRESH_THRESHOLD = Duration.ofMinutes(5);
 
     public enum AuthMethod {
-        TOKEN, APPROLE
+        TOKEN,
+        APPROLE
     }
 
     private final String vaultAddr;
@@ -45,25 +42,24 @@ public class VaultClient {
     // Lock for token refresh to prevent TOCTOU race (S2-18)
     private final Object tokenRefreshLock = new Object();
 
-    /**
-     * Constructor for token authentication.
-     */
+    /** Constructor for token authentication. */
     public VaultClient(String vaultAddr, String vaultToken, String secretsPath) {
         this(vaultAddr, secretsPath, AuthMethod.TOKEN, vaultToken, null, null);
     }
 
-    /**
-     * Constructor for AppRole authentication (recommended for production).
-     */
+    /** Constructor for AppRole authentication (recommended for production). */
     public VaultClient(String vaultAddr, String secretsPath, String roleId, String secretId) {
         this(vaultAddr, secretsPath, AuthMethod.APPROLE, null, roleId, secretId);
     }
 
-    /**
-     * Full constructor.
-     */
-    public VaultClient(String vaultAddr, String secretsPath, AuthMethod authMethod,
-            String staticToken, String roleId, String secretId) {
+    /** Full constructor. */
+    public VaultClient(
+            String vaultAddr,
+            String secretsPath,
+            AuthMethod authMethod,
+            String staticToken,
+            String roleId,
+            String secretId) {
         this.vaultAddr = vaultAddr;
         this.secretsPath = secretsPath != null ? secretsPath : "secret/data/pesitwizard/client";
         this.authMethod = authMethod;
@@ -71,18 +67,17 @@ public class VaultClient {
         this.roleId = roleId;
         this.secretId = secretId;
         this.objectMapper = new ObjectMapper();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .build();
+        this.httpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
         if (vaultAddr == null || vaultAddr.isBlank()) {
             log.debug("Vault address not configured");
             this.available = false;
-        } else if (authMethod == AuthMethod.TOKEN && (staticToken == null || staticToken.isBlank())) {
+        } else if (authMethod == AuthMethod.TOKEN
+                && (staticToken == null || staticToken.isBlank())) {
             log.debug("Vault token not configured");
             this.available = false;
-        } else if (authMethod == AuthMethod.APPROLE &&
-                (roleId == null || roleId.isBlank() || secretId == null || secretId.isBlank())) {
+        } else if (authMethod == AuthMethod.APPROLE
+                && (roleId == null || roleId.isBlank() || secretId == null || secretId.isBlank())) {
             log.debug("Vault AppRole credentials not configured");
             this.available = false;
         } else {
@@ -101,25 +96,26 @@ public class VaultClient {
         }
     }
 
-    /**
-     * Refresh token using AppRole authentication.
-     */
+    /** Refresh token using AppRole authentication. */
     private boolean refreshAppRoleToken() {
-        if (authMethod != AuthMethod.APPROLE)
-            return false;
+        if (authMethod != AuthMethod.APPROLE) return false;
         try {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("role_id", roleId);
             body.put("secret_id", secretId);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddr + "/v1/auth/approle/login"))
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddr + "/v1/auth/approle/login"))
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(body)))
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
                 String token = root.path("auth").path("client_token").asText();
@@ -140,9 +136,8 @@ public class VaultClient {
     }
 
     /**
-     * Get current valid token, refreshing if needed.
-     * Synchronized on tokenRefreshLock to prevent TOCTOU race where multiple
-     * threads see an expired token and all trigger concurrent refreshes.
+     * Get current valid token, refreshing if needed. Synchronized on tokenRefreshLock to prevent
+     * TOCTOU race where multiple threads see an expired token and all trigger concurrent refreshes.
      */
     private String getToken() {
         if (authMethod == AuthMethod.TOKEN) {
@@ -150,13 +145,15 @@ public class VaultClient {
         }
         // Quick volatile check outside lock -- if token is clearly valid, skip locking
         java.time.Instant expiry = tokenExpiry;
-        if (expiry != null && java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isBefore(expiry)) {
+        if (expiry != null
+                && java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isBefore(expiry)) {
             return currentToken;
         }
         // Token needs refresh -- synchronize so only one thread refreshes
         synchronized (tokenRefreshLock) {
             // Re-check after acquiring lock (another thread may have already refreshed)
-            if (tokenExpiry == null || java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(tokenExpiry)) {
+            if (tokenExpiry == null
+                    || java.time.Instant.now().plus(TOKEN_REFRESH_THRESHOLD).isAfter(tokenExpiry)) {
                 refreshAppRoleToken();
             }
         }
@@ -166,18 +163,21 @@ public class VaultClient {
     private boolean testConnection() {
         try {
             String token = getToken();
-            if (token == null)
-                return false;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddr + "/v1/sys/health"))
-                    .header("X-Vault-Token", token)
-                    .timeout(TIMEOUT)
-                    .GET()
-                    .build();
+            if (token == null) return false;
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddr + "/v1/sys/health"))
+                            .header("X-Vault-Token", token)
+                            .timeout(TIMEOUT)
+                            .GET()
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 200 || response.statusCode() == 429
-                    || response.statusCode() == 472 || response.statusCode() == 473;
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200
+                    || response.statusCode() == 429
+                    || response.statusCode() == 472
+                    || response.statusCode() == 473;
         } catch (java.io.IOException | InterruptedException e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             log.warn("Vault health check failed: {}", e.getMessage());
@@ -185,9 +185,7 @@ public class VaultClient {
         }
     }
 
-    /**
-     * Store a secret in Vault and return a reference.
-     */
+    /** Store a secret in Vault and return a reference. */
     public String storeSecret(String key, String value) {
         if (!available) {
             log.warn("Vault not available, cannot store secret: {}", key);
@@ -206,18 +204,25 @@ public class VaultClient {
 
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
             String token = getToken();
-            log.debug("Storing secret at {} with auth method {} (token present: {})",
-                    url, authMethod, token != null && !token.isBlank());
+            log.debug(
+                    "Storing secret at {} with auth method {} (token present: {})",
+                    url,
+                    authMethod,
+                    token != null && !token.isBlank());
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("X-Vault-Token", token)
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(dataNode)))
-                    .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .header("X-Vault-Token", token)
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(dataNode)))
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 log.debug("Secret stored in Vault: {}", key);
@@ -232,7 +237,10 @@ public class VaultClient {
                 if (refreshed) {
                     return storeSecretWithRetry(key, value, false);
                 }
-                log.error("Failed to store secret in Vault after token refresh: {} - {}", key, response.body());
+                log.error(
+                        "Failed to store secret in Vault after token refresh: {} - {}",
+                        key,
+                        response.body());
                 throw new RuntimeException("Vault permission denied: " + response.body());
             } else {
                 log.error("Failed to store secret in Vault: {} - {}", key, response.body());
@@ -248,9 +256,7 @@ public class VaultClient {
         }
     }
 
-    /**
-     * Get a secret from Vault.
-     */
+    /** Get a secret from Vault. */
     public String getSecret(String key) {
         if (!available) {
             return null;
@@ -259,14 +265,16 @@ public class VaultClient {
         try {
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("X-Vault-Token", getToken())
-                    .timeout(TIMEOUT)
-                    .GET()
-                    .build();
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .header("X-Vault-Token", getToken())
+                            .timeout(TIMEOUT)
+                            .GET()
+                            .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -277,7 +285,10 @@ public class VaultClient {
             } else if (response.statusCode() == 404) {
                 log.debug("Secret not found in Vault: {}", key);
             } else {
-                log.error("Failed to retrieve secret from Vault: {} - {}", key, response.statusCode());
+                log.error(
+                        "Failed to retrieve secret from Vault: {} - {}",
+                        key,
+                        response.statusCode());
             }
 
             return null;
@@ -289,16 +300,12 @@ public class VaultClient {
         }
     }
 
-    /**
-     * Check if a value is a Vault reference.
-     */
+    /** Check if a value is a Vault reference. */
     public boolean isVaultReference(String value) {
         return value != null && value.startsWith(PREFIX);
     }
 
-    /**
-     * Resolve a Vault reference to its actual value.
-     */
+    /** Resolve a Vault reference to its actual value. */
     public String resolveReference(String reference) {
         if (!isVaultReference(reference)) {
             return reference;

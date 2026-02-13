@@ -4,12 +4,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.session.PesitSession;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,14 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.session.PesitSession;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FpduWriter Tests")
 class FpduWriterTest {
 
-    @Mock
-    private PesitSession session;
+    @Mock private PesitSession session;
 
     private static final int SERVER_CONNECTION_ID = 0x42;
     private static final int DEFAULT_MAX_ENTITY_SIZE = 4096;
@@ -52,7 +49,8 @@ class FpduWriterTest {
         @Test
         @DisplayName("should track total bytes sent")
         void shouldTrackTotalBytesSent() {
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
             assertEquals(0, writer.getTotalBytesSent());
         }
     }
@@ -90,7 +88,8 @@ class FpduWriterTest {
         @Test
         @DisplayName("should handle empty data gracefully")
         void shouldHandleEmptyData() throws Exception {
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
 
             writer.writeDtf(new byte[0]);
             writer.writeDtf(null);
@@ -149,11 +148,12 @@ class FpduWriterTest {
             ByteArrayInputStream inputStream = new ByteArrayInputStream(testData);
 
             AtomicInteger callbackCount = new AtomicInteger(0);
-            FpduWriter.WriteCallback callback = (chunkSize, totalSent) -> {
-                callbackCount.incrementAndGet();
-                assertTrue(chunkSize > 0);
-                assertTrue(totalSent > 0);
-            };
+            FpduWriter.WriteCallback callback =
+                    (chunkSize, totalSent) -> {
+                        callbackCount.incrementAndGet();
+                        assertTrue(chunkSize > 0);
+                        assertTrue(totalSent > 0);
+                    };
 
             long totalWritten = writer.writeFromStream(inputStream, callback);
 
@@ -164,7 +164,8 @@ class FpduWriterTest {
         @Test
         @DisplayName("should write from InputStream without callback")
         void shouldWriteFromInputStreamWithoutCallback() throws Exception {
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
 
             byte[] testData = new byte[1000];
             ByteArrayInputStream inputStream = new ByteArrayInputStream(testData);
@@ -184,7 +185,8 @@ class FpduWriterTest {
         @DisplayName("should batch small articles into single DTFMA")
         void shouldBatchSmallArticlesIntoSingleDtfma() throws Exception {
             int maxEntitySize = 1000;
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, maxEntitySize, 100, true);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, maxEntitySize, 100, true);
 
             List<byte[]> articles = new ArrayList<>();
             // 5 articles of 50 bytes each = 5 * (2 + 50) = 260 bytes total
@@ -203,7 +205,8 @@ class FpduWriterTest {
         @DisplayName("should split articles across multiple DTFMAs when needed")
         void shouldSplitArticlesAcrossMultipleDtfmas() throws Exception {
             int maxEntitySize = 100; // Very small for testing
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, maxEntitySize, 30, true);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, maxEntitySize, 30, true);
 
             List<byte[]> articles = new ArrayList<>();
             // Each article: 2 (prefix) + 30 (data) = 32 bytes
@@ -221,7 +224,9 @@ class FpduWriterTest {
         @Test
         @DisplayName("should handle empty article list")
         void shouldHandleEmptyArticleList() throws Exception {
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE, 100, true);
+            FpduWriter writer =
+                    new FpduWriter(
+                            session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE, 100, true);
 
             writer.writeMultiArticle(new ArrayList<>());
             writer.writeMultiArticle(null);
@@ -239,9 +244,11 @@ class FpduWriterTest {
         @DisplayName("should propagate IOException from session")
         void shouldPropagateIoException() throws Exception {
             doThrow(new IOException("Connection lost"))
-                    .when(session).sendFpduWithData(any(), any());
+                    .when(session)
+                    .sendFpduWithData(any(), any());
 
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
 
             assertThrows(IOException.class, () -> writer.writeDtf(new byte[100]));
         }
@@ -250,11 +257,14 @@ class FpduWriterTest {
         @DisplayName("should convert InterruptedException to IOException")
         void shouldConvertInterruptedException() throws Exception {
             doThrow(new InterruptedException("Cancelled"))
-                    .when(session).sendFpduWithData(any(), any());
+                    .when(session)
+                    .sendFpduWithData(any(), any());
 
-            FpduWriter writer = new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
+            FpduWriter writer =
+                    new FpduWriter(session, SERVER_CONNECTION_ID, DEFAULT_MAX_ENTITY_SIZE);
 
-            IOException thrown = assertThrows(IOException.class, () -> writer.writeDtf(new byte[100]));
+            IOException thrown =
+                    assertThrows(IOException.class, () -> writer.writeDtf(new byte[100]));
             assertTrue(thrown.getMessage().contains("Interrupted"));
         }
     }

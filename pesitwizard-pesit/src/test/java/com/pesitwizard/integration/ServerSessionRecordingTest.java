@@ -1,20 +1,5 @@
 package com.pesitwizard.integration;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.EbcdicConverter;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
@@ -25,20 +10,31 @@ import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
 import com.pesitwizard.fpdu.PesitSessionRecorder;
 import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
-
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Records PeSIT sessions from the SERVER's perspective.
- * 
- * These tests start a simple PeSIT server and wait for Connect:Express
- * to connect as a client (using cx-test-push.sh or cx-test-pull.sh).
- * The recorded sessions can then be replayed with MockPesitClient.
- * 
- * Run these tests manually with C:X available:
- * 1. Start this test (it will wait for connection)
- * 2. In another terminal, run: ./scripts/cx-test-push.sh
- * 3. The session will be recorded to golden-sessions/
+ *
+ * <p>These tests start a simple PeSIT server and wait for Connect:Express to connect as a client
+ * (using cx-test-push.sh or cx-test-pull.sh). The recorded sessions can then be replayed with
+ * MockPesitClient.
+ *
+ * <p>Run these tests manually with C:X available: 1. Start this test (it will wait for connection)
+ * 2. In another terminal, run: ./scripts/cx-test-push.sh 3. The session will be recorded to
+ * golden-sessions/
  */
 @Slf4j
 @Tag("integration")
@@ -98,9 +94,7 @@ public class ServerSessionRecordingTest {
         log.info("Recorded {} frames for incoming PULL", recorder.getFrames().size());
     }
 
-    /**
-     * Record a PeSIT session, responding as a minimal server.
-     */
+    /** Record a PeSIT session, responding as a minimal server. */
     private void recordSession(Socket client, PesitSessionRecorder recorder, boolean respond)
             throws IOException {
         DataInputStream in = new DataInputStream(client.getInputStream());
@@ -145,8 +139,12 @@ public class ServerSessionRecordingTest {
                 // Parse to get type info
                 Fpdu received = new FpduParser(rawData).parse();
                 recorder.recordRaw(Direction.RECEIVED, received.getFpduType(), rawData);
-                log.info("Received: {} (id_src={}, id_dst={}, {} bytes)",
-                        received.getFpduType(), received.getIdSrc(), received.getIdDst(), rawData.length);
+                log.info(
+                        "Received: {} (id_src={}, id_dst={}, {} bytes)",
+                        received.getFpduType(),
+                        received.getIdSrc(),
+                        received.getIdDst(),
+                        rawData.length);
 
                 if (respond) {
                     Fpdu response = createResponse(received, serverConnId);
@@ -170,73 +168,104 @@ public class ServerSessionRecordingTest {
         }
     }
 
-    /**
-     * Create minimal server responses for common FPDUs.
-     */
+    /** Create minimal server responses for common FPDUs. */
     private Fpdu createResponse(Fpdu received, int serverConnId) {
         return switch (received.getFpduType()) {
             case CONNECT -> {
                 // Echo back the version from the CONNECT, add sync points if client supports it
-                ParameterValue clientVersion = received.getParameter(ParameterIdentifier.PI_06_VERSION);
-                int version = (clientVersion != null && clientVersion.getValue().length > 0)
-                        ? clientVersion.getValue()[0] & 0xFF
-                        : 2;
-                Fpdu aconnect = new Fpdu(FpduType.ACONNECT)
-                        .withIdSrc(serverConnId)
-                        .withIdDst(received.getIdSrc())
-                        .withParameter(new ParameterValue(ParameterIdentifier.PI_06_VERSION, version));
+                ParameterValue clientVersion =
+                        received.getParameter(ParameterIdentifier.PI_06_VERSION);
+                int version =
+                        (clientVersion != null && clientVersion.getValue().length > 0)
+                                ? clientVersion.getValue()[0] & 0xFF
+                                : 2;
+                Fpdu aconnect =
+                        new Fpdu(FpduType.ACONNECT)
+                                .withIdSrc(serverConnId)
+                                .withIdDst(received.getIdSrc())
+                                .withParameter(
+                                        new ParameterValue(
+                                                ParameterIdentifier.PI_06_VERSION, version));
                 // Add sync points option if client sent it
-                ParameterValue clientSync = received.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
+                ParameterValue clientSync =
+                        received.getParameter(ParameterIdentifier.PI_07_SYNC_POINTS);
                 if (clientSync != null) {
-                    aconnect.withParameter(new ParameterValue(ParameterIdentifier.PI_07_SYNC_POINTS,
-                            new byte[] { 0, 32, 2 })); // 32KB interval, window 2
+                    aconnect.withParameter(
+                            new ParameterValue(
+                                    ParameterIdentifier.PI_07_SYNC_POINTS,
+                                    new byte[] {0, 32, 2})); // 32KB interval, window 2
                 }
                 yield aconnect;
             }
 
-            case CREATE -> new Fpdu(FpduType.ACK_CREATE)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case CREATE ->
+                    new Fpdu(FpduType.ACK_CREATE)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case SELECT -> new Fpdu(FpduType.ACK_SELECT)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case SELECT ->
+                    new Fpdu(FpduType.ACK_SELECT)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case OPEN -> new Fpdu(FpduType.ACK_OPEN)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case OPEN ->
+                    new Fpdu(FpduType.ACK_OPEN)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case WRITE -> new Fpdu(FpduType.ACK_WRITE)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case WRITE ->
+                    new Fpdu(FpduType.ACK_WRITE)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case READ -> new Fpdu(FpduType.ACK_READ)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case READ ->
+                    new Fpdu(FpduType.ACK_READ)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case TRANS_END -> new Fpdu(FpduType.ACK_TRANS_END)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case TRANS_END ->
+                    new Fpdu(FpduType.ACK_TRANS_END)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case CLOSE -> new Fpdu(FpduType.ACK_CLOSE)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case CLOSE ->
+                    new Fpdu(FpduType.ACK_CLOSE)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case DESELECT -> new Fpdu(FpduType.ACK_DESELECT)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc())
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG, new byte[] { 0, 0, 0 }));
+            case DESELECT ->
+                    new Fpdu(FpduType.ACK_DESELECT)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc())
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG, new byte[] {0, 0, 0}));
 
-            case RELEASE -> new Fpdu(FpduType.RELCONF)
-                    .withIdSrc(serverConnId)
-                    .withIdDst(received.getIdSrc());
+            case RELEASE ->
+                    new Fpdu(FpduType.RELCONF)
+                            .withIdSrc(serverConnId)
+                            .withIdDst(received.getIdSrc());
 
             case DTF, DTF_END, SYN, ACK_SYN -> null; // No response needed
 

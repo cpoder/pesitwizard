@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,12 +16,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FileSystemController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@TestPropertySource(properties = "pesit.server.filesystem.base-path=${java.io.tmpdir}/pesitwizard-test")
+@TestPropertySource(
+        properties = "pesit.server.filesystem.base-path=${java.io.tmpdir}/pesitwizard-test")
 @DisplayName("FileSystemController Tests")
 class FileSystemControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
     private static String basePath;
 

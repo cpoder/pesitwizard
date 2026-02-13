@@ -2,7 +2,6 @@ package com.pesitwizard.client.config;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -12,10 +11,11 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * Async configuration for background operations.
  *
  * <p>Provides three separate thread pools:
+ *
  * <ul>
- *   <li><b>transferExecutor</b> - For PeSIT transfer operations (send/receive)</li>
- *   <li><b>websocketExecutor</b> - For WebSocket message broadcasting (prevents blocking transfers)</li>
- *   <li><b>pluginExecutor</b> - For third-party event listeners (Kafka, monitoring, etc.)</li>
+ *   <li><b>transferExecutor</b> - For PeSIT transfer operations (send/receive)
+ *   <li><b>websocketExecutor</b> - For WebSocket message broadcasting (prevents blocking transfers)
+ *   <li><b>pluginExecutor</b> - For third-party event listeners (Kafka, monitoring, etc.)
  * </ul>
  */
 @Configuration
@@ -23,10 +23,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class AsyncConfig {
 
     /**
-     * Thread pool for PeSIT transfer operations.
-     * Core: 4 threads, Max: 10 threads, Queue: 100 tasks.
-     * Graceful shutdown: waits up to 60s for in-flight transfers to complete
-     * protocol teardown (CLOSE, DESELECT, RELEASE) before forcing termination.
+     * Thread pool for PeSIT transfer operations. Core: 4 threads, Max: 10 threads, Queue: 100
+     * tasks. Graceful shutdown: waits up to 60s for in-flight transfers to complete protocol
+     * teardown (CLOSE, DESELECT, RELEASE) before forcing termination.
      */
     @Bean(name = "transferExecutor")
     public Executor transferExecutor() {
@@ -42,10 +41,9 @@ public class AsyncConfig {
     }
 
     /**
-     * Thread pool for WebSocket message broadcasting.
-     * Separate from transfer threads to prevent WebSocket issues from blocking transfers.
-     * Core: 2 threads, Max: 4 threads, Queue: 100 messages.
-     * Graceful shutdown: waits up to 30s for pending messages to be delivered.
+     * Thread pool for WebSocket message broadcasting. Separate from transfer threads to prevent
+     * WebSocket issues from blocking transfers. Core: 2 threads, Max: 4 threads, Queue: 100
+     * messages. Graceful shutdown: waits up to 30s for pending messages to be delivered.
      */
     @Bean(name = "websocketExecutor")
     public Executor websocketExecutor() {
@@ -62,11 +60,10 @@ public class AsyncConfig {
     }
 
     /**
-     * Thread pool for third-party event listener plugins.
-     * Plugins can use @Async("pluginExecutor") to process events asynchronously.
-     * Core: 2 threads, Max: 5 threads, Queue: 50 tasks.
-     * Rejection policy: CallerRunsPolicy (fallback to caller thread if queue full).
-     * Graceful shutdown: waits up to 30s for pending plugin tasks to complete.
+     * Thread pool for third-party event listener plugins. Plugins can use @Async("pluginExecutor")
+     * to process events asynchronously. Core: 2 threads, Max: 5 threads, Queue: 50 tasks. Rejection
+     * policy: CallerRunsPolicy (fallback to caller thread if queue full). Graceful shutdown: waits
+     * up to 30s for pending plugin tasks to complete.
      */
     @Bean(name = "pluginExecutor")
     public Executor pluginExecutor() {

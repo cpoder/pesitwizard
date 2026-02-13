@@ -3,15 +3,6 @@ package com.pesitwizard.server.handler;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduType;
@@ -23,19 +14,23 @@ import com.pesitwizard.server.entity.Partner;
 import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.ValidationResult;
 import com.pesitwizard.server.service.ConfigService;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ConnectionValidator Tests")
 class ConnectionValidatorTest {
 
-    @Mock
-    private PesitServerProperties properties;
+    @Mock private PesitServerProperties properties;
 
-    @Mock
-    private ConfigService configService;
+    @Mock private ConfigService configService;
 
-    @Mock
-    private com.pesitwizard.security.SecretsService secretsService;
+    @Mock private com.pesitwizard.security.SecretsService secretsService;
 
     private ConnectionValidator validator;
 
@@ -185,7 +180,8 @@ class ConnectionValidatorTest {
         SessionContext ctx = new SessionContext("test-session");
         ctx.setClientIdentifier("PARTNER1");
         Fpdu fpdu = new Fpdu(FpduType.CONNECT);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, "wrong".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, "wrong".getBytes()));
 
         Partner partner = createPartner("PARTNER1", true);
         partner.setPassword("secret");
@@ -206,7 +202,8 @@ class ConnectionValidatorTest {
         ctx.setClientIdentifier("PARTNER1");
         ctx.setAccessType(0);
         Fpdu fpdu = new Fpdu(FpduType.CONNECT);
-        fpdu.withParameter(new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, "secret".getBytes()));
+        fpdu.withParameter(
+                new ParameterValue(ParameterIdentifier.PI_05_CONTROLE_ACCES, "secret".getBytes()));
 
         Partner partner = createPartner("PARTNER1", true);
         partner.setPassword("secret");
@@ -275,7 +272,7 @@ class ConnectionValidatorTest {
         assertTrue(config.isEnabled());
         assertEquals(PartnerConfig.AccessType.BOTH, config.getAccessType());
         assertEquals(5, config.getMaxConnections());
-        assertArrayEquals(new String[] { "FILE1", "FILE2" }, config.getAllowedFiles());
+        assertArrayEquals(new String[] {"FILE1", "FILE2"}, config.getAllowedFiles());
     }
 
     @Test
@@ -376,7 +373,8 @@ class ConnectionValidatorTest {
     }
 
     @Test
-    @DisplayName("validateProtocolVersion should return ok when client version equals server version")
+    @DisplayName(
+            "validateProtocolVersion should return ok when client version equals server version")
     void validateProtocolVersionShouldReturnOkWhenEqualVersion() {
         SessionContext ctx = new SessionContext("test-session");
         ctx.setProtocolVersion(2);

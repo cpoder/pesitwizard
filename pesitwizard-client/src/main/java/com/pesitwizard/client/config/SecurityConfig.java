@@ -1,7 +1,9 @@
 package com.pesitwizard.client.config;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.function.Supplier;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,16 +24,13 @@ import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Security configuration with multiple authentication modes:
+ *
  * <ul>
- *   <li>{@code nosecurity} profile: all endpoints open (development only)</li>
- *   <li>{@code apikey} profile: static API key authentication</li>
- *   <li>default (no profile match): OAuth2/JWT authentication</li>
+ *   <li>{@code nosecurity} profile: all endpoints open (development only)
+ *   <li>{@code apikey} profile: static API key authentication
+ *   <li>default (no profile match): OAuth2/JWT authentication
  * </ul>
  */
 @Slf4j
@@ -46,84 +45,97 @@ public class SecurityConfig {
     @Value("${pesitwizard.security.api-key:}")
     private String apiKey;
 
-    /**
-     * OAuth2/JWT security (production default when not using apikey or nosecurity profiles)
-     */
+    /** OAuth2/JWT security (production default when not using apikey or nosecurity profiles) */
     @Bean
     @Profile("!nosecurity & !apikey")
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/v1/public/**").permitAll()
-                        .requestMatchers("/api/v1/auth/status").permitAll()
-                        // All other API endpoints require authentication
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder())));
+        http.csrf(
+                        csrf ->
+                                csrf.csrfTokenRepository(
+                                                CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        auth ->
+                                auth
+                                        // Public endpoints
+                                        .requestMatchers("/actuator/health", "/actuator/info")
+                                        .permitAll()
+                                        .requestMatchers("/api/v1/public/**")
+                                        .permitAll()
+                                        .requestMatchers("/api/v1/auth/status")
+                                        .permitAll()
+                                        // All other API endpoints require authentication
+                                        .requestMatchers("/api/**")
+                                        .authenticated()
+                                        .anyRequest()
+                                        .permitAll())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
 
         return http.build();
     }
 
-    /**
-     * API key security (simple static key for standalone deployments)
-     */
+    /** API key security (simple static key for standalone deployments) */
     @Bean
     @Profile("apikey")
     public SecurityFilterChain apiKeyFilterChain(HttpSecurity http) throws Exception {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
                     "API key profile is active but pesitwizard.security.api-key is not configured. "
-                    + "Set PESITWIZARD_SECURITY_API_KEY environment variable.");
+                            + "Set PESITWIZARD_SECURITY_API_KEY environment variable.");
         }
 
-        http
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                        .ignoringRequestMatchers("/api/v1/auth/login")
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/v1/public/**").permitAll()
-                        .requestMatchers("/api/v1/auth/status").permitAll()
-                        .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
-                .addFilterBefore(new ApiKeyAuthenticationFilter(apiKey),
+        http.csrf(
+                        csrf ->
+                                csrf.csrfTokenRepository(
+                                                CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                                        .ignoringRequestMatchers("/api/v1/auth/login"))
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        auth ->
+                                auth.requestMatchers("/actuator/health", "/actuator/info")
+                                        .permitAll()
+                                        .requestMatchers("/api/v1/public/**")
+                                        .permitAll()
+                                        .requestMatchers("/api/v1/auth/status")
+                                        .permitAll()
+                                        .requestMatchers("/api/v1/auth/login")
+                                        .permitAll()
+                                        .requestMatchers("/api/**")
+                                        .authenticated()
+                                        .anyRequest()
+                                        .permitAll())
+                .addFilterBefore(
+                        new ApiKeyAuthenticationFilter(apiKey),
                         UsernamePasswordAuthenticationFilter.class);
 
         log.info("API key authentication enabled");
         return http.build();
     }
 
-    /**
-     * No security (development only)
-     */
+    /** No security (development only) */
     @Bean
     @Profile("nosecurity")
     public SecurityFilterChain noSecurityFilterChain(HttpSecurity http) throws Exception {
-        log.warn("*** SECURITY DISABLED *** The 'nosecurity' profile is active. "
-                + "All endpoints are unauthenticated. Do NOT use in production. "
-                + "Set SPRING_PROFILES_ACTIVE=apikey and configure PESITWIZARD_SECURITY_API_KEY for production.");
+        log.warn(
+                "*** SECURITY DISABLED *** The 'nosecurity' profile is active. "
+                        + "All endpoints are unauthenticated. Do NOT use in production. "
+                        + "Set SPRING_PROFILES_ACTIVE=apikey and configure PESITWIZARD_SECURITY_API_KEY for production.");
 
-        http
-                .cors(cors -> cors.configurationSource(request -> {
-                    var config = new CorsConfiguration();
-                    config.addAllowedOriginPattern("*");
-                    config.addAllowedMethod("*");
-                    config.addAllowedHeader("*");
-                    config.setAllowCredentials(true);
-                    return config;
-                }))
+        http.cors(
+                        cors ->
+                                cors.configurationSource(
+                                        request -> {
+                                            var config = new CorsConfiguration();
+                                            config.addAllowedOriginPattern("*");
+                                            config.addAllowedMethod("*");
+                                            config.addAllowedHeader("*");
+                                            config.setAllowCredentials(true);
+                                            return config;
+                                        }))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
@@ -142,16 +154,17 @@ public class SecurityConfig {
     }
 
     /**
-     * SPA-compatible CSRF token request handler for Spring Security 6+.
-     * Uses XOR-based token masking for BREACH protection when the token
-     * comes via a header (set by the SPA from the XSRF-TOKEN cookie),
-     * and falls back to the plain attribute handler for form submissions.
+     * SPA-compatible CSRF token request handler for Spring Security 6+. Uses XOR-based token
+     * masking for BREACH protection when the token comes via a header (set by the SPA from the
+     * XSRF-TOKEN cookie), and falls back to the plain attribute handler for form submissions.
      */
     static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
         private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
 
         @Override
-        public void handle(HttpServletRequest request, HttpServletResponse response,
+        public void handle(
+                HttpServletRequest request,
+                HttpServletResponse response,
                 Supplier<CsrfToken> csrfToken) {
             this.delegate.handle(request, response, csrfToken);
         }

@@ -7,27 +7,20 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.springframework.stereotype.Service;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Service for resolving placeholders in file paths.
- * 
- * Supported placeholders (PeSIT protocol context):
- * - ${partner} or ${partnerId} - Partner ID (our client ID sent to server)
- * - ${virtualFile} - Virtual file name (PI 12 - Filename)
- * - ${server} or ${serverId} - Server ID
- * - ${serverName} - Server name
- * - ${timestamp} - Current timestamp (yyyyMMdd_HHmmss)
- * - ${date} - Current date (yyyyMMdd)
- * - ${time} - Current time (HHmmss)
- * - ${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}
- * - ${uuid} - Random UUID
- * - ${direction} - Transfer direction (SEND/RECEIVE)
- * 
- * Note: PeSIT does not transmit physical filenames, only virtual file IDs.
+ *
+ * <p>Supported placeholders (PeSIT protocol context): - ${partner} or ${partnerId} - Partner ID
+ * (our client ID sent to server) - ${virtualFile} - Virtual file name (PI 12 - Filename) -
+ * ${server} or ${serverId} - Server ID - ${serverName} - Server name - ${timestamp} - Current
+ * timestamp (yyyyMMdd_HHmmss) - ${date} - Current date (yyyyMMdd) - ${time} - Current time (HHmmss)
+ * - ${year}, ${month}, ${day}, ${hour}, ${minute}, ${second} - ${uuid} - Random UUID - ${direction}
+ * - Transfer direction (SEND/RECEIVE)
+ *
+ * <p>Note: PeSIT does not transmit physical filenames, only virtual file IDs.
  */
 @Service
 @Slf4j
@@ -35,9 +28,7 @@ public class PathPlaceholderService {
 
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
 
-    /**
-     * Resolve all placeholders in a path
-     */
+    /** Resolve all placeholders in a path */
     public String resolvePath(String path, PlaceholderContext context) {
         if (path == null || !path.contains("${")) {
             return path;
@@ -102,10 +93,7 @@ public class PathPlaceholderService {
         }
     }
 
-    /**
-     * Context for placeholder resolution.
-     * Contains only data available from PeSIT protocol.
-     */
+    /** Context for placeholder resolution. Contains only data available from PeSIT protocol. */
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
@@ -113,19 +101,21 @@ public class PathPlaceholderService {
     public static class PlaceholderContext {
         /** Partner ID (our client ID sent to server) */
         private String partnerId;
+
         /** Virtual file name (PI 12 - Filename) - NOT a physical filename */
         private String virtualFile;
+
         /** Server ID */
         private String serverId;
+
         /** Server name */
         private String serverName;
+
         /** Transfer direction */
         private String direction;
     }
 
-    /**
-     * Get list of available placeholders with descriptions
-     */
+    /** Get list of available placeholders with descriptions */
     public static Map<String, String> getAvailablePlaceholders() {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("${partner}", "Partner ID (our client ID)");

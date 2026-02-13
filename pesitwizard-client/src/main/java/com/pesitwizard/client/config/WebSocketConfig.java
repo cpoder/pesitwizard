@@ -6,9 +6,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-/**
- * WebSocket configuration for real-time transfer progress updates.
- */
+/** WebSocket configuration for real-time transfer progress updates. */
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
@@ -24,11 +22,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // WebSocket endpoint with SockJS fallback
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
         // Raw WebSocket endpoint (for native WebSocket clients)
-        registry.addEndpoint("/ws-raw")
-                .setAllowedOriginPatterns("*");
+        registry.addEndpoint("/ws-raw").setAllowedOriginPatterns("*");
     }
 }

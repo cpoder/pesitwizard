@@ -1,5 +1,6 @@
 package com.pesitwizard.fpdu;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
@@ -10,7 +11,7 @@ public enum ParameterValueType {
     C {
         @Override
         public String renderValue(ParameterValue value) {
-            return new String(value.getValue());
+            return new String(value.getValue(), StandardCharsets.UTF_8);
         }
     },
     // Nombre sans signe / Unsigned Number
@@ -50,12 +51,13 @@ public enum ParameterValueType {
     D {
         @Override
         public String renderValue(ParameterValue value) {
-            String dateTime = new String(value.getValue());
+            String dateTime = new String(value.getValue(), StandardCharsets.UTF_8);
             if (dateTime.equals("000000000000") || dateTime.isBlank()) {
                 return "N/A";
             }
             try {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss", Locale.ENGLISH);
+                DateTimeFormatter formatter =
+                        DateTimeFormatter.ofPattern("yyMMddHHmmss", Locale.ENGLISH);
                 return LocalDateTime.parse(dateTime, formatter).toString();
             } catch (java.time.format.DateTimeParseException e) {
                 return dateTime + " (invalid)";

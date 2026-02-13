@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.server.entity.ApiKey;
+import com.pesitwizard.server.repository.ApiKeyRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,19 +20,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import com.pesitwizard.server.entity.ApiKey;
-import com.pesitwizard.server.repository.ApiKeyRepository;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("ApiKeyService Tests")
 class ApiKeyServiceTest {
 
-    @Mock
-    private ApiKeyRepository apiKeyRepository;
+    @Mock private ApiKeyRepository apiKeyRepository;
 
-    @Mock
-    private SecurityProperties securityProperties;
+    @Mock private SecurityProperties securityProperties;
 
     private ApiKeyService apiKeyService;
 
@@ -52,15 +48,24 @@ class ApiKeyServiceTest {
         @DisplayName("Should create new API key")
         void shouldCreateNewApiKey() {
             when(apiKeyRepository.existsByName("test-key")).thenReturn(false);
-            when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(inv -> {
-                ApiKey key = inv.getArgument(0);
-                key.setId(1L);
-                return key;
-            });
+            when(apiKeyRepository.save(any(ApiKey.class)))
+                    .thenAnswer(
+                            inv -> {
+                                ApiKey key = inv.getArgument(0);
+                                key.setId(1L);
+                                return key;
+                            });
 
-            ApiKeyService.ApiKeyResult result = apiKeyService.createApiKey(
-                    "test-key", "Test description", List.of("USER"),
-                    null, null, null, null, "admin");
+            ApiKeyService.ApiKeyResult result =
+                    apiKeyService.createApiKey(
+                            "test-key",
+                            "Test description",
+                            List.of("USER"),
+                            null,
+                            null,
+                            null,
+                            null,
+                            "admin");
 
             assertThat(result).isNotNull();
             assertThat(result.getApiKey()).isNotNull();
@@ -75,9 +80,17 @@ class ApiKeyServiceTest {
         void shouldRejectDuplicateKeyName() {
             when(apiKeyRepository.existsByName("existing-key")).thenReturn(true);
 
-            assertThatThrownBy(() -> apiKeyService.createApiKey(
-                    "existing-key", "desc", List.of("USER"),
-                    null, null, null, null, "admin"))
+            assertThatThrownBy(
+                            () ->
+                                    apiKeyService.createApiKey(
+                                            "existing-key",
+                                            "desc",
+                                            List.of("USER"),
+                                            null,
+                                            null,
+                                            null,
+                                            null,
+                                            "admin"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("already exists");
         }
@@ -102,7 +115,8 @@ class ApiKeyServiceTest {
             when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(inv -> inv.getArgument(0));
 
             Instant expiresAt = Instant.now().plusSeconds(3600);
-            apiKeyService.createApiKey("test-key", "desc", List.of("ADMIN"), expiresAt, null, null, null, "admin");
+            apiKeyService.createApiKey(
+                    "test-key", "desc", List.of("ADMIN"), expiresAt, null, null, null, "admin");
 
             ArgumentCaptor<ApiKey> captor = ArgumentCaptor.forClass(ApiKey.class);
             verify(apiKeyRepository).save(captor.capture());
@@ -140,11 +154,7 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should validate active key")
         void shouldValidateActiveKey() {
-            ApiKey apiKey = ApiKey.builder()
-                    .id(1L)
-                    .name("test-key")
-                    .active(true)
-                    .build();
+            ApiKey apiKey = ApiKey.builder().id(1L).name("test-key").active(true).build();
 
             when(apiKeyRepository.findActiveByKeyHash(anyString())).thenReturn(Optional.of(apiKey));
             when(apiKeyRepository.save(any(ApiKey.class))).thenReturn(apiKey);
@@ -159,12 +169,13 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should reject expired key")
         void shouldRejectExpiredKey() {
-            ApiKey apiKey = ApiKey.builder()
-                    .id(1L)
-                    .name("expired-key")
-                    .active(true)
-                    .expiresAt(Instant.now().minusSeconds(3600))
-                    .build();
+            ApiKey apiKey =
+                    ApiKey.builder()
+                            .id(1L)
+                            .name("expired-key")
+                            .active(true)
+                            .expiresAt(Instant.now().minusSeconds(3600))
+                            .build();
 
             when(apiKeyRepository.findActiveByKeyHash(anyString())).thenReturn(Optional.of(apiKey));
 
@@ -175,12 +186,13 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should reject IP not in allowed list")
         void shouldRejectIpNotInAllowedList() {
-            ApiKey apiKey = ApiKey.builder()
-                    .id(1L)
-                    .name("ip-restricted")
-                    .active(true)
-                    .allowedIps("10.0.0.0/8")
-                    .build();
+            ApiKey apiKey =
+                    ApiKey.builder()
+                            .id(1L)
+                            .name("ip-restricted")
+                            .active(true)
+                            .allowedIps("10.0.0.0/8")
+                            .build();
 
             when(apiKeyRepository.findActiveByKeyHash(anyString())).thenReturn(Optional.of(apiKey));
 
@@ -220,9 +232,10 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should get all API keys")
         void shouldGetAllApiKeys() {
-            List<ApiKey> keys = List.of(
-                    ApiKey.builder().id(1L).name("key1").build(),
-                    ApiKey.builder().id(2L).name("key2").build());
+            List<ApiKey> keys =
+                    List.of(
+                            ApiKey.builder().id(1L).name("key1").build(),
+                            ApiKey.builder().id(2L).name("key2").build());
             when(apiKeyRepository.findAll()).thenReturn(keys);
 
             List<ApiKey> result = apiKeyService.getAllApiKeys();
@@ -233,7 +246,8 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should get active API keys")
         void shouldGetActiveApiKeys() {
-            List<ApiKey> keys = List.of(ApiKey.builder().id(1L).name("active").active(true).build());
+            List<ApiKey> keys =
+                    List.of(ApiKey.builder().id(1L).name("active").active(true).build());
             when(apiKeyRepository.findByActiveTrue()).thenReturn(keys);
 
             List<ApiKey> result = apiKeyService.getActiveApiKeys();
@@ -250,7 +264,8 @@ class ApiKeyServiceTest {
         @DisplayName("Should create ApiKeyResult")
         void shouldCreateApiKeyResult() {
             ApiKey apiKey = ApiKey.builder().id(1L).name("test").build();
-            ApiKeyService.ApiKeyResult result = new ApiKeyService.ApiKeyResult(apiKey, "psk_plainkey");
+            ApiKeyService.ApiKeyResult result =
+                    new ApiKeyService.ApiKeyResult(apiKey, "psk_plainkey");
 
             assertThat(result.getApiKey()).isEqualTo(apiKey);
             assertThat(result.getPlainKey()).isEqualTo("psk_plainkey");
@@ -268,7 +283,8 @@ class ApiKeyServiceTest {
             when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
             when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(i -> i.getArgument(0));
 
-            ApiKey result = apiKeyService.updateApiKey(1L, "new description", null, null, null, null, null);
+            ApiKey result =
+                    apiKeyService.updateApiKey(1L, "new description", null, null, null, null, null);
 
             assertThat(result.getDescription()).isEqualTo("new description");
         }
@@ -278,7 +294,10 @@ class ApiKeyServiceTest {
         void shouldThrowWhenUpdatingNonExistentKey() {
             when(apiKeyRepository.findById(999L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> apiKeyService.updateApiKey(999L, "desc", null, null, null, null, null))
+            assertThatThrownBy(
+                            () ->
+                                    apiKeyService.updateApiKey(
+                                            999L, "desc", null, null, null, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("not found");
         }
@@ -342,7 +361,13 @@ class ApiKeyServiceTest {
         @Test
         @DisplayName("Should regenerate API key")
         void shouldRegenerateApiKey() {
-            ApiKey apiKey = ApiKey.builder().id(1L).name("test").keyHash("oldhash").keyPrefix("psk_old").build();
+            ApiKey apiKey =
+                    ApiKey.builder()
+                            .id(1L)
+                            .name("test")
+                            .keyHash("oldhash")
+                            .keyPrefix("psk_old")
+                            .build();
             when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(apiKey));
             when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(i -> i.getArgument(0));
 

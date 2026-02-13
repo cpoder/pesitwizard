@@ -1,5 +1,16 @@
 package com.pesitwizard.server.handler;
 
+import com.pesitwizard.channel.PesitChannel;
+import com.pesitwizard.channel.TcpPesitChannel;
+import com.pesitwizard.channel.TlsPesitChannel;
+import com.pesitwizard.fpdu.EbcdicConverter;
+import com.pesitwizard.fpdu.Fpdu;
+import com.pesitwizard.fpdu.FpduReader;
+import com.pesitwizard.fpdu.PesitSessionRecorder;
+import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
+import com.pesitwizard.server.config.PesitServerProperties;
+import com.pesitwizard.server.model.SessionContext;
+import com.pesitwizard.server.state.ServerState;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -7,27 +18,14 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import javax.net.ssl.SSLSocket;
-
-import com.pesitwizard.fpdu.EbcdicConverter;
-import com.pesitwizard.fpdu.Fpdu;
-import com.pesitwizard.fpdu.FpduIO;
-import com.pesitwizard.fpdu.FpduReader;
-import com.pesitwizard.fpdu.PesitSessionRecorder;
-import com.pesitwizard.fpdu.PesitSessionRecorder.Direction;
-import com.pesitwizard.server.config.PesitServerProperties;
-import com.pesitwizard.server.model.SessionContext;
-import com.pesitwizard.server.state.ServerState;
-
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Handles a single TCP connection for PeSIT protocol
- */
+/** Handles a single TCP connection for PeSIT protocol */
 @Slf4j
 public class TcpConnectionHandler implements Runnable {
 
@@ -38,8 +36,11 @@ public class TcpConnectionHandler implements Runnable {
     private SessionContext sessionContext;
     private PesitSessionRecorder recorder;
 
-    public TcpConnectionHandler(Socket socket, PesitSessionHandler sessionHandler,
-            PesitServerProperties properties, String serverId) {
+    public TcpConnectionHandler(
+            Socket socket,
+            PesitSessionHandler sessionHandler,
+            PesitServerProperties properties,
+            String serverId) {
         this.socket = socket;
         this.sessionHandler = sessionHandler;
         this.properties = properties;
@@ -56,17 +57,16 @@ public class TcpConnectionHandler implements Runnable {
             socket.setKeepAlive(true);
             socket.setTcpNoDelay(true);
 
-            // For SSL sockets, explicitly complete the handshake before reading data
-            if (socket instanceof SSLSocket sslSocket) {
-                try {
-                    sslSocket.startHandshake();
-                    log.info("TLS handshake completed: protocol={}, cipher={}",
-                            sslSocket.getSession().getProtocol(),
-                            sslSocket.getSession().getCipherSuite());
-                } catch (IOException e) {
-                    log.error("TLS handshake failed: {}", e.getMessage());
-                    throw e;
-                }
+            boolean isTls = socket instanceof SSLSocket;
+
+            // Complete TLS handshake before reading data
+            if (isTls) {
+                SSLSocket sslSocket = (SSLSocket) socket;
+                sslSocket.startHandshake();
+                log.info(
+                        "TLS handshake completed: protocol={}, cipher={}",
+                        sslSocket.getSession().getProtocol(),
+                        sslSocket.getSession().getCipherSuite());
             }
 
             sessionContext = sessionHandler.createSession(remoteAddress, serverId);
@@ -80,47 +80,54 @@ public class TcpConnectionHandler implements Runnable {
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-            // Use FpduReader to handle concatenated FPDUs (PeSIT section 4.5)
-            FpduReader fpduReader = new FpduReader(in);
+            // Create the appropriate channel based on transport type
+            PesitChannel channel =
+                    isTls ? new TlsPesitChannel(in, out) : new TcpPesitChannel(in, out);
+            sessionContext.setChannel(channel);
 
-            // Handle pre-connection handshake first (IBM CX compatibility)
-            // This is a 24-byte PURE EBCDIC message that comes BEFORE the CONNECT FPDU
-            byte[] firstData = FpduIO.readRawFpdu(in);
-            boolean isPreConnection = false;
-            if (firstData.length == 24) {
-                boolean isEbcdic = EbcdicConverter.isEbcdic(firstData);
-                if (isEbcdic) {
-                    byte[] asciiData = EbcdicConverter.toAscii(firstData);
-                    String preConnMsg = new String(asciiData).trim();
-                    if (preConnMsg.startsWith("PESIT")) {
-                        sessionContext.setEbcdicEncoding(true);
-                        log.info("[{}] Client uses EBCDIC encoding (IBM mainframe)",
-                                sessionContext.getSessionId());
-                        handlePreConnection(asciiData, out);
-                        sessionContext.setPreConnectionHandled(true);
-                        isPreConnection = true;
-                    }
+            FpduReader fpduReader = new FpduReader(channel);
+
+            log.info(
+                    "[{}] Connection from {} (TLS={}, framing={})",
+                    sessionContext.getSessionId(),
+                    remoteAddress,
+                    isTls,
+                    isTls ? "TLS" : "TCP");
+
+            if (isTls) {
+                // TLS: probe first bytes to detect pre-connection handshake
+                byte[] probe = new byte[1024];
+                int probeLen = in.read(probe, 0, probe.length);
+
+                if (probeLen <= 0) {
+                    log.warn(
+                            "[{}] No data received from TLS client", sessionContext.getSessionId());
+                    return;
                 }
-            }
-            // If not pre-connection, inject data into FpduReader for normal processing
-            if (!isPreConnection) {
-                fpduReader.injectRawData(firstData);
+
+                byte[] firstData = new byte[probeLen];
+                System.arraycopy(probe, 0, firstData, 0, probeLen);
+                handleFirstMessage(firstData, channel, fpduReader);
+            } else {
+                // TCP: read first FPDU (with external length prefix)
+                byte[] firstData = channel.readFrame();
+                handleFirstMessage(firstData, channel, fpduReader);
             }
 
-            // Main protocol loop - continue until session ends or socket closes
+            // Main protocol loop
             boolean sessionActive = true;
             while (!socket.isClosed() && sessionActive) {
-
                 try {
-                    // Read next FPDU using FpduReader (handles concatenated FPDUs)
                     Fpdu fpdu = fpduReader.read();
                     if (fpdu == null) {
                         log.debug("[{}] No FPDU received", sessionContext.getSessionId());
                         break;
                     }
 
-                    log.debug("[{}] Received FPDU: type={} (encoding: {})",
-                            sessionContext.getSessionId(), fpdu.getFpduType(),
+                    log.debug(
+                            "[{}] Received FPDU: type={} (encoding: {})",
+                            sessionContext.getSessionId(),
+                            fpdu.getFpduType(),
                             sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
 
                     // Record received FPDU if recording is enabled
@@ -128,28 +135,12 @@ public class TcpConnectionHandler implements Runnable {
                         recorder.record(Direction.RECEIVED, fpdu);
                     }
 
-                    // Process the FPDU directly (pass parsed Fpdu object to avoid data loss)
-                    byte[] response = sessionHandler.processIncomingFpdu(sessionContext, fpdu, in, out);
+                    // Process the FPDU
+                    byte[] response = sessionHandler.processIncomingFpdu(sessionContext, fpdu);
 
                     // Send response if any (READ streams directly, so response may be null)
                     if (response != null) {
-                        // Protocol FPDUs are always binary - do NOT convert to EBCDIC
-                        // Only the pre-connection ACK0 was in pure EBCDIC
-
-                        // Debug: log first 16 bytes of response in hex
-                        if (response.length >= 8) {
-                            StringBuilder hex = new StringBuilder();
-                            for (int i = 0; i < Math.min(16, response.length); i++) {
-                                hex.append(String.format("%02X ", response[i] & 0xFF));
-                            }
-                            log.debug("[{}] Sending response bytes: {}", sessionContext.getSessionId(),
-                                    hex.toString().trim());
-                        }
-
-                        FpduIO.writeRawFpdu(out, response);
-                        log.debug("[{}] Sent {} bytes (client encoding: {})",
-                                sessionContext.getSessionId(), response.length,
-                                sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
+                        channel.writeFrame(response);
 
                         // Record sent FPDU if recording is enabled
                         if (recorder != null) {
@@ -157,8 +148,9 @@ public class TcpConnectionHandler implements Runnable {
                         }
                     }
 
-                    // Check if session ended normally (RELCONF sent or ABORT)
-                    if (sessionContext.getState() == ServerState.CN01_REPOS || sessionContext.isAborted()) {
+                    // Check if session ended normally
+                    if (sessionContext.getState() == ServerState.CN01_REPOS
+                            || sessionContext.isAborted()) {
                         log.info("[{}] Session ended normally", sessionContext.getSessionId());
                         sessionActive = false;
                     }
@@ -173,21 +165,79 @@ public class TcpConnectionHandler implements Runnable {
             }
 
         } catch (SocketException e) {
-            log.info("[{}] Connection reset: {}",
+            log.info(
+                    "[{}] Connection reset: {}",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
                     e.getMessage());
         } catch (IOException e) {
-            log.error("[{}] IO error: {}",
+            log.error(
+                    "[{}] IO error: {}",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
-                    e.getMessage(), e);
+                    e.getMessage(),
+                    e);
         } catch (RuntimeException e) {
-            log.error("[{}] Unexpected error: {}",
+            log.error(
+                    "[{}] Unexpected error: {}",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown",
-                    e.getMessage(), e);
+                    e.getMessage(),
+                    e);
         } finally {
             saveRecordingIfEnabled();
             closeConnection();
         }
+    }
+
+    /**
+     * Detect EBCDIC pre-connection handshake in first message data. If the data is a 24-byte EBCDIC
+     * "PESIT" pre-connection message, handle it; otherwise inject the raw data into the FPDU
+     * reader.
+     */
+    private void handleFirstMessage(byte[] firstData, PesitChannel channel, FpduReader fpduReader)
+            throws IOException {
+        if (firstData.length >= 24 && EbcdicConverter.isEbcdic(firstData)) {
+            byte[] asciiData = EbcdicConverter.toAscii(firstData);
+            String preConnMsg =
+                    new String(asciiData, 0, Math.min(24, asciiData.length), StandardCharsets.UTF_8)
+                            .trim();
+            if (preConnMsg.startsWith("PESIT")) {
+                sessionContext.setEbcdicEncoding(true);
+                log.info("[{}] Client uses EBCDIC encoding", sessionContext.getSessionId());
+                handlePreConnection(asciiData, channel);
+                sessionContext.setPreConnectionHandled(true);
+                return;
+            }
+        }
+        fpduReader.injectRawData(firstData);
+    }
+
+    /**
+     * Handle standard PeSIT pre-connection handshake.
+     *
+     * <p>Message format (24 bytes, EBCDIC encoded): - 8 bytes: Protocol identifier ("PESIT ") - 8
+     * bytes: Client identifier - 8 bytes: Password
+     *
+     * <p>Response: "ACK0" (4 bytes in EBCDIC), framed according to channel type.
+     */
+    private void handlePreConnection(byte[] asciiData, PesitChannel channel) throws IOException {
+        String protocol = new String(asciiData, 0, 8, StandardCharsets.UTF_8).trim();
+        String identifier = new String(asciiData, 8, 8, StandardCharsets.UTF_8).trim();
+        String password = new String(asciiData, 16, 8, StandardCharsets.UTF_8).trim();
+
+        log.info(
+                "[{}] Pre-connection handshake: protocol={}, identifier={}, password={}",
+                sessionContext.getSessionId(),
+                protocol,
+                identifier,
+                password.replaceAll(".", "*"));
+
+        // Send ACK0 response in EBCDIC, using channel's framing
+        byte[] ebcdicAck = EbcdicConverter.asciiToEbcdic("ACK0".getBytes(StandardCharsets.UTF_8));
+        channel.writeFrame(ebcdicAck);
+
+        log.info(
+                "[{}] Sent pre-connection ACK0 (framing={})",
+                sessionContext.getSessionId(),
+                channel.isTls() ? "TLS" : "TCP");
     }
 
     private void saveRecordingIfEnabled() {
@@ -199,16 +249,20 @@ public class TcpConnectionHandler implements Runnable {
                 }
                 Path recordingDir = Paths.get(dir);
                 Files.createDirectories(recordingDir);
-                String filename = String.format("session-%s-%d.raw",
-                        sessionContext != null ? sessionContext.getSessionId() : "unknown",
-                        System.currentTimeMillis());
+                String filename =
+                        String.format(
+                                "session-%s-%d.raw",
+                                sessionContext != null ? sessionContext.getSessionId() : "unknown",
+                                System.currentTimeMillis());
                 Path recordingPath = recordingDir.resolve(filename);
                 recorder.saveRawToFile(recordingPath);
-                log.info("[{}] Session recording saved to {}",
+                log.info(
+                        "[{}] Session recording saved to {}",
                         sessionContext != null ? sessionContext.getSessionId() : "unknown",
                         recordingPath);
             } catch (IOException e) {
-                log.error("[{}] Failed to save session recording: {}",
+                log.error(
+                        "[{}] Failed to save session recording: {}",
                         sessionContext != null ? sessionContext.getSessionId() : "unknown",
                         e.getMessage());
             }
@@ -220,47 +274,15 @@ public class TcpConnectionHandler implements Runnable {
             if (!socket.isClosed()) {
                 socket.close();
             }
-            log.info("[{}] Connection closed",
+            log.info(
+                    "[{}] Connection closed",
                     sessionContext != null ? sessionContext.getSessionId() : "unknown");
         } catch (IOException e) {
             log.warn("Error closing socket: {}", e.getMessage());
         }
     }
 
-    /**
-     * Handle pre-connection handshake (IBM CX compatibility)
-     *
-     * Message format (24 bytes, EBCDIC encoded):
-     * - 8 bytes: Protocol identifier ("PESIT ")
-     * - 8 bytes: Client identifier (e.g., "CXCLIENT")
-     * - 8 bytes: Password (e.g., "TEST123 ")
-     *
-     * Response: "ACK0" (4 bytes in EBCDIC)
-     */
-    private void handlePreConnection(byte[] asciiData, DataOutputStream out) throws IOException {
-        // Parse the 24-byte message
-        String protocol = new String(asciiData, 0, 8).trim();
-        String identifier = new String(asciiData, 8, 8).trim();
-        String password = new String(asciiData, 16, 8).trim();
-
-        log.info("[{}] Pre-connection handshake: protocol={}, identifier={}, password={}",
-                sessionContext.getSessionId(), protocol, identifier, password.replaceAll(".", "*"));
-
-        // Send ACK0 response in EBCDIC (without frame length prefix)
-        byte[] ack = "ACK0".getBytes();
-        byte[] ebcdicAck = EbcdicConverter.asciiToEbcdic(ack); // Direct EBCDIC conversion for 4-byte ACK0
-
-        // Write ACK0 with frame length prefix
-        out.writeShort(4); // Frame length
-        out.write(ebcdicAck);
-        out.flush();
-
-        log.info("[{}] Sent pre-connection ACK0", sessionContext.getSessionId());
-    }
-
-    /**
-     * Get the session context for this connection
-     */
+    /** Get the session context for this connection */
     public SessionContext getSessionContext() {
         return sessionContext;
     }

@@ -1,21 +1,19 @@
 package com.pesitwizard.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Shared Vault management utilities for configuration and setup.
- * Used by both pesitwizard-admin and pesitwizard-client.
+ * Shared Vault management utilities for configuration and setup. Used by both pesitwizard-admin and
+ * pesitwizard-client.
  */
 @Slf4j
 public class VaultManager {
@@ -28,21 +26,16 @@ public class VaultManager {
 
     public VaultManager(String vaultAddress) {
         this.vaultAddress = vaultAddress.replaceAll("/+$", "");
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .build();
+        this.httpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
     }
 
-    /**
-     * Test Vault connection with token authentication.
-     */
+    /** Test Vault connection with token authentication. */
     public VaultTestResult testConnection(String token, String namespace) {
         return testHealth(token, namespace);
     }
 
     /**
-     * Test Vault connection with AppRole authentication.
-     * Returns the obtained token if successful.
+     * Test Vault connection with AppRole authentication. Returns the obtained token if successful.
      */
     public VaultTestResult testAppRole(String roleId, String secretId, String namespace) {
         try {
@@ -50,18 +43,21 @@ public class VaultManager {
             body.put("role_id", roleId);
             body.put("secret_id", secretId);
 
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/auth/approle/login"))
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddress + "/v1/auth/approle/login"))
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(body)));
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -71,9 +67,11 @@ public class VaultManager {
                 // Test health with the obtained token
                 VaultTestResult healthResult = testHealth(token, namespace);
                 if (healthResult.success()) {
-                    return new VaultTestResult(true,
+                    return new VaultTestResult(
+                            true,
                             "AppRole authentication successful (token TTL: " + ttl + "s)",
-                            healthResult.details(), token);
+                            healthResult.details(),
+                            token);
                 }
                 return healthResult;
             } else {
@@ -87,23 +85,22 @@ public class VaultManager {
         }
     }
 
-    /**
-     * Check Vault health status.
-     */
+    /** Check Vault health status. */
     private VaultTestResult testHealth(String token, String namespace) {
         try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/sys/health"))
-                    .timeout(TIMEOUT)
-                    .header("X-Vault-Token", token)
-                    .GET();
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddress + "/v1/sys/health"))
+                            .timeout(TIMEOUT)
+                            .header("X-Vault-Token", token)
+                            .GET();
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 || response.statusCode() == 429) {
                 JsonNode health = objectMapper.readTree(response.body());
@@ -113,11 +110,13 @@ public class VaultManager {
                 if (sealed) {
                     return new VaultTestResult(false, "Vault is sealed", null, token);
                 }
-                return new VaultTestResult(true, "Connected to Vault " + version, health.toString(), token);
+                return new VaultTestResult(
+                        true, "Connected to Vault " + version, health.toString(), token);
             } else if (response.statusCode() == 503) {
                 return new VaultTestResult(false, "Vault is sealed", null, null);
             } else {
-                return new VaultTestResult(false, "Vault returned status: " + response.statusCode(), null, null);
+                return new VaultTestResult(
+                        false, "Vault returned status: " + response.statusCode(), null, null);
             }
         } catch (IOException e) {
             log.error("Failed to connect to Vault: {}", e.getMessage());
@@ -129,8 +128,8 @@ public class VaultManager {
     }
 
     /**
-     * Ensure KV secrets engine is enabled at the specified path.
-     * If not enabled, attempts to enable it (requires appropriate permissions).
+     * Ensure KV secrets engine is enabled at the specified path. If not enabled, attempts to enable
+     * it (requires appropriate permissions).
      */
     public SetupResult ensureKvSecretsEngine(String token, String path, String namespace) {
         String mountPath = path.startsWith("secret") ? "secret" : path.split("/")[0];
@@ -151,19 +150,22 @@ public class VaultManager {
             options.put("version", "2");
             body.set("options", options);
 
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/sys/mounts/" + mountPath))
-                    .header("X-Vault-Token", token)
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddress + "/v1/sys/mounts/" + mountPath))
+                            .header("X-Vault-Token", token)
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(body)));
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 log.info("KV secrets engine enabled successfully at: {}", mountPath);
@@ -182,23 +184,22 @@ public class VaultManager {
         }
     }
 
-    /**
-     * Check if a secrets engine is mounted at the given path.
-     */
+    /** Check if a secrets engine is mounted at the given path. */
     private boolean isSecretsMounted(String token, String path, String namespace) {
         try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/sys/mounts"))
-                    .header("X-Vault-Token", token)
-                    .timeout(TIMEOUT)
-                    .GET();
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddress + "/v1/sys/mounts"))
+                            .header("X-Vault-Token", token)
+                            .timeout(TIMEOUT)
+                            .GET();
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 JsonNode mounts = objectMapper.readTree(response.body());
@@ -212,10 +213,9 @@ public class VaultManager {
         }
     }
 
-    /**
-     * Setup AppRole authentication method.
-     */
-    public SetupResult setupAppRole(String token, String roleName, String policy, String namespace) {
+    /** Setup AppRole authentication method. */
+    public SetupResult setupAppRole(
+            String token, String roleName, String policy, String namespace) {
         try {
             // 1. Enable AppRole auth if not enabled
             enableAppRoleAuth(token, namespace);
@@ -232,19 +232,22 @@ public class VaultManager {
             roleConfig.put("token_max_ttl", "4h");
             roleConfig.put("secret_id_ttl", "0"); // No expiration
 
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName))
-                    .header("X-Vault-Token", token)
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(roleConfig)));
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName))
+                            .header("X-Vault-Token", token)
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            objectMapper.writeValueAsString(roleConfig)));
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 log.info("AppRole '{}' configured successfully", roleName);
@@ -260,23 +263,27 @@ public class VaultManager {
         }
     }
 
-    /**
-     * Get Role ID for an AppRole.
-     */
+    /** Get Role ID for an AppRole. */
     public String getRoleId(String token, String roleName, String namespace) {
         try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName + "/role-id"))
-                    .header("X-Vault-Token", token)
-                    .timeout(TIMEOUT)
-                    .GET();
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(
+                                    URI.create(
+                                            vaultAddress
+                                                    + "/v1/auth/approle/role/"
+                                                    + roleName
+                                                    + "/role-id"))
+                            .header("X-Vault-Token", token)
+                            .timeout(TIMEOUT)
+                            .GET();
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -290,24 +297,28 @@ public class VaultManager {
         }
     }
 
-    /**
-     * Generate a new Secret ID for an AppRole.
-     */
+    /** Generate a new Secret ID for an AppRole. */
     public String generateSecretId(String token, String roleName, String namespace) {
         try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultAddress + "/v1/auth/approle/role/" + roleName + "/secret-id"))
-                    .header("X-Vault-Token", token)
-                    .header("Content-Type", "application/json")
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString("{}"));
+            HttpRequest.Builder requestBuilder =
+                    HttpRequest.newBuilder()
+                            .uri(
+                                    URI.create(
+                                            vaultAddress
+                                                    + "/v1/auth/approle/role/"
+                                                    + roleName
+                                                    + "/secret-id"))
+                            .header("X-Vault-Token", token)
+                            .header("Content-Type", "application/json")
+                            .timeout(TIMEOUT)
+                            .POST(HttpRequest.BodyPublishers.ofString("{}"));
 
             if (namespace != null && !namespace.isBlank()) {
                 requestBuilder.header("X-Vault-Namespace", namespace);
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response =
+                    httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -321,41 +332,50 @@ public class VaultManager {
         }
     }
 
-    private void enableAppRoleAuth(String token, String namespace) throws IOException, InterruptedException {
+    private void enableAppRoleAuth(String token, String namespace)
+            throws IOException, InterruptedException {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("type", "approle");
 
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(vaultAddress + "/v1/sys/auth/approle"))
-                .header("X-Vault-Token", token)
-                .header("Content-Type", "application/json")
-                .timeout(TIMEOUT)
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));
+        HttpRequest.Builder requestBuilder =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(vaultAddress + "/v1/sys/auth/approle"))
+                        .header("X-Vault-Token", token)
+                        .header("Content-Type", "application/json")
+                        .timeout(TIMEOUT)
+                        .POST(
+                                HttpRequest.BodyPublishers.ofString(
+                                        objectMapper.writeValueAsString(body)));
 
         if (namespace != null && !namespace.isBlank()) {
             requestBuilder.header("X-Vault-Namespace", namespace);
         }
 
-        HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response =
+                httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
         // 200 = enabled, 400 with "already in use" = already enabled
-        if (response.statusCode() != 200 && response.statusCode() != 204
+        if (response.statusCode() != 200
+                && response.statusCode() != 204
                 && !response.body().contains("already in use")) {
             log.warn("AppRole auth enable response: {}", response.body());
         }
     }
 
-    private void createPolicy(String token, String policyName, String policy, String namespace) throws IOException, InterruptedException {
+    private void createPolicy(String token, String policyName, String policy, String namespace)
+            throws IOException, InterruptedException {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("policy", policy);
 
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(vaultAddress + "/v1/sys/policies/acl/" + policyName))
-                .header("X-Vault-Token", token)
-                .header("Content-Type", "application/json")
-                .timeout(TIMEOUT)
-                .PUT(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));
+        HttpRequest.Builder requestBuilder =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(vaultAddress + "/v1/sys/policies/acl/" + policyName))
+                        .header("X-Vault-Token", token)
+                        .header("Content-Type", "application/json")
+                        .timeout(TIMEOUT)
+                        .PUT(
+                                HttpRequest.BodyPublishers.ofString(
+                                        objectMapper.writeValueAsString(body)));
 
         if (namespace != null && !namespace.isBlank()) {
             requestBuilder.header("X-Vault-Namespace", namespace);
@@ -383,20 +403,19 @@ public class VaultManager {
         }
     }
 
-    public record SetupResult(boolean success, String message) {
-    }
+    public record SetupResult(boolean success, String message) {}
 
-    /**
-     * Default policy for PeSIT Wizard.
-     */
+    /** Default policy for PeSIT Wizard. */
     public static String getDefaultPolicy(String secretPath) {
-        return String.format("""
+        return String.format(
+                """
                 path "%s/*" {
                   capabilities = ["create", "read", "update", "delete", "list"]
                 }
                 path "%s" {
                   capabilities = ["list"]
                 }
-                """, secretPath, secretPath.split("/")[0] + "/metadata/" + secretPath.split("/")[1]);
+                """,
+                secretPath, secretPath.split("/")[0] + "/metadata/" + secretPath.split("/")[1]);
     }
 }

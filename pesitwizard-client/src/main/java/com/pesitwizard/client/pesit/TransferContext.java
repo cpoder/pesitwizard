@@ -1,31 +1,21 @@
 package com.pesitwizard.client.pesit;
 
+import com.pesitwizard.client.event.TransferEventBus;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.pesitwizard.client.event.TransferEventBus;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Contexte d'un transfert PeSIT encapsulant l'état et les événements.
- */
+/** Contexte d'un transfert PeSIT encapsulant l'état et les événements. */
 @Slf4j
 public class TransferContext {
 
-    @Getter
-    private final String transferId;
-    @Getter
-    private ClientState state = ClientState.CN01_REPOS;
-    @Getter
-    private long bytesTransferred = 0;
-    @Getter
-    private long totalBytes = 0;
-    @Getter
-    private int lastSyncPoint = 0;
-    @Getter
-    private long bytesAtLastSyncPoint = 0;
+    @Getter private final String transferId;
+    @Getter private ClientState state = ClientState.CN01_REPOS;
+    @Getter private long bytesTransferred = 0;
+    @Getter private long totalBytes = 0;
+    @Getter private int lastSyncPoint = 0;
+    @Getter private long bytesAtLastSyncPoint = 0;
 
     /** Map of sync point number → byte position for RESYN rollback */
     private final Map<Integer, Long> syncPointPositions = new ConcurrentHashMap<>();
@@ -77,8 +67,8 @@ public class TransferContext {
     }
 
     /**
-     * Look up the byte position for a given sync point number.
-     * Returns -1 if the sync point is unknown.
+     * Look up the byte position for a given sync point number. Returns -1 if the sync point is
+     * unknown.
      */
     public long getBytesAtSyncPoint(int syncPoint) {
         return syncPointPositions.getOrDefault(syncPoint, -1L);

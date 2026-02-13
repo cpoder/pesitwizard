@@ -8,7 +8,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -26,14 +25,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 @DisplayName("JwtRoleConverter Tests")
 class JwtRoleConverterTest {
 
-    @Mock
-    private SecurityProperties securityProperties;
+    @Mock private SecurityProperties securityProperties;
 
-    @Mock
-    private SecurityProperties.OAuth2Config oauth2Config;
+    @Mock private SecurityProperties.OAuth2Config oauth2Config;
 
-    @Mock
-    private SecurityProperties.RoleMappingConfig roleMappingConfig;
+    @Mock private SecurityProperties.RoleMappingConfig roleMappingConfig;
 
     private JwtRoleConverter converter;
 
@@ -51,8 +47,12 @@ class JwtRoleConverterTest {
     }
 
     private Jwt createJwt(Map<String, Object> claims) {
-        return new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600),
-                Map.of("alg", "RS256"), claims);
+        return new Jwt(
+                "token",
+                Instant.now(),
+                Instant.now().plusSeconds(3600),
+                Map.of("alg", "RS256"),
+                claims);
     }
 
     @Nested
@@ -69,7 +69,8 @@ class JwtRoleConverterTest {
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
             assertThat(authorities).hasSize(2);
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
         }
 
@@ -85,7 +86,8 @@ class JwtRoleConverterTest {
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
             assertThat(authorities).hasSize(1);
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_ADMIN");
         }
 
@@ -97,7 +99,8 @@ class JwtRoleConverterTest {
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
             assertThat(authorities).hasSize(1);
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_USER");
         }
 
@@ -129,7 +132,8 @@ class JwtRoleConverterTest {
 
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_ADMIN");
         }
 
@@ -142,7 +146,8 @@ class JwtRoleConverterTest {
 
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_OPERATOR");
         }
     }
@@ -236,7 +241,8 @@ class JwtRoleConverterTest {
 
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_ADMIN");
         }
 
@@ -244,16 +250,20 @@ class JwtRoleConverterTest {
         @DisplayName("Should replace client_id placeholder")
         void shouldReplaceClientIdPlaceholder() {
             when(oauth2Config.getRolesClaim()).thenReturn("roles");
-            when(oauth2Config.getAlternativeRolesClaims()).thenReturn(List.of("resource_access.${client_id}.roles"));
+            when(oauth2Config.getAlternativeRolesClaims())
+                    .thenReturn(List.of("resource_access.${client_id}.roles"));
             when(oauth2Config.getClientId()).thenReturn("my-client");
 
             Map<String, Object> claims = new HashMap<>();
-            claims.put("resource_access", Map.of("my-client", Map.of("roles", List.of("CLIENT_ADMIN"))));
+            claims.put(
+                    "resource_access",
+                    Map.of("my-client", Map.of("roles", List.of("CLIENT_ADMIN"))));
             Jwt jwt = createJwt(claims);
 
             Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
-            assertThat(authorities).extracting(GrantedAuthority::getAuthority)
+            assertThat(authorities)
+                    .extracting(GrantedAuthority::getAuthority)
                     .containsExactly("ROLE_CLIENT_ADMIN");
         }
     }

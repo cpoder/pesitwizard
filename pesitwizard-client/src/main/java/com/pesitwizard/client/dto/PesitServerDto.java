@@ -9,9 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for PeSIT server configuration
- */
+/** DTO for PeSIT server configuration */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,23 +34,18 @@ public class PesitServerDto {
 
     private String description;
 
-    @Builder.Default
-    private boolean tlsEnabled = false;
+    @Builder.Default private boolean tlsEnabled = false;
 
     // Indicates if truststore is configured (don't expose actual data in DTO)
     private boolean truststoreConfigured;
     // Indicates if keystore is configured
     private boolean keystoreConfigured;
 
-    @Builder.Default
-    private Integer connectionTimeout = 30000;
+    @Builder.Default private Integer connectionTimeout = 30000;
 
-    @Builder.Default
-    private Integer readTimeout = 60000;
+    @Builder.Default private Integer readTimeout = 60000;
 
-    @Builder.Default
-    private boolean enabled = true;
+    @Builder.Default private boolean enabled = true;
 
-    @Builder.Default
-    private boolean defaultServer = false;
+    @Builder.Default private boolean defaultServer = false;
 }

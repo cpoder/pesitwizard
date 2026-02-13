@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for VaultSecretsProvider.
- */
+/** Unit tests for VaultSecretsProvider. */
 @DisplayName("VaultSecretsProvider Tests")
 class VaultSecretsProviderTest {
 
@@ -19,7 +17,8 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available with null address")
         void shouldNotBeAvailableWithNullAddress() {
-            VaultSecretsProvider provider = new VaultSecretsProvider(null, "token", "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider(null, "token", "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
             assertThat(provider.getProviderType()).isEqualTo("VAULT");
@@ -28,7 +27,8 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available with empty address")
         void shouldNotBeAvailableWithEmptyAddress() {
-            VaultSecretsProvider provider = new VaultSecretsProvider("", "token", "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider("", "token", "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -36,7 +36,8 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available with null token")
         void shouldNotBeAvailableWithNullToken() {
-            VaultSecretsProvider provider = new VaultSecretsProvider("http://vault:8200", null, "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider("http://vault:8200", null, "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -44,7 +45,8 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available with empty token")
         void shouldNotBeAvailableWithEmptyToken() {
-            VaultSecretsProvider provider = new VaultSecretsProvider("http://vault:8200", "", "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider("http://vault:8200", "", "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -53,8 +55,8 @@ class VaultSecretsProviderTest {
         @DisplayName("should not be available when vault unreachable")
         void shouldNotBeAvailableWhenVaultUnreachable() {
             // Use unreachable address that will fail connection
-            VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://localhost:39999", "token", "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider("http://localhost:39999", "token", "secret/data/test");
 
             assertThat(provider.isAvailable()).isFalse();
         }
@@ -93,7 +95,8 @@ class VaultSecretsProviderTest {
         }
 
         @Test
-        @DisplayName("decrypt should throw DecryptionException for vault reference when unavailable")
+        @DisplayName(
+                "decrypt should throw DecryptionException for vault reference when unavailable")
         void decryptShouldThrowForVaultRefWhenUnavailable() {
             VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
 
@@ -172,8 +175,7 @@ class VaultSecretsProviderTest {
         void deleteSecretShouldNotThrowWhenUnavailable() {
             VaultSecretsProvider provider = new VaultSecretsProvider(null, null, null);
 
-            assertThatCode(() -> provider.deleteSecret("key"))
-                    .doesNotThrowAnyException();
+            assertThatCode(() -> provider.deleteSecret("key")).doesNotThrowAnyException();
         }
     }
 
@@ -184,8 +186,8 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should be closed initially")
         void shouldBeClosedInitially() {
-            VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://localhost:39999", "token", "secret/data/test");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider("http://localhost:39999", "token", "secret/data/test");
             // Circuit starts closed, provider attempts connection
             assertThat(provider.getProviderType()).isEqualTo("VAULT");
         }
@@ -212,16 +214,18 @@ class VaultSecretsProviderTest {
         @Test
         @DisplayName("should not be available with null roleId for AppRole")
         void shouldNotBeAvailableWithNullRoleIdForAppRole() {
-            VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://vault:8200", "secret/data/test", null, "secret-id");
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider(
+                            "http://vault:8200", "secret/data/test", null, "secret-id");
             assertThat(provider.isAvailable()).isFalse();
         }
 
         @Test
         @DisplayName("should not be available with null secretId for AppRole")
         void shouldNotBeAvailableWithNullSecretIdForAppRole() {
-            VaultSecretsProvider provider = new VaultSecretsProvider(
-                    "http://vault:8200", "secret/data/test", "role-id", null);
+            VaultSecretsProvider provider =
+                    new VaultSecretsProvider(
+                            "http://vault:8200", "secret/data/test", "role-id", null);
             assertThat(provider.isAvailable()).isFalse();
         }
     }

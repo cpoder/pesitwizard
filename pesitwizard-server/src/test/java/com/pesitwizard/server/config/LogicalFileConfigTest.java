@@ -25,9 +25,8 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("canReceive should return true for RECEIVE direction")
     void canReceiveShouldReturnTrueForReceiveDirection() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .direction(LogicalFileConfig.Direction.RECEIVE)
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder().direction(LogicalFileConfig.Direction.RECEIVE).build();
 
         assertTrue(config.canReceive());
         assertFalse(config.canSend());
@@ -36,9 +35,8 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("canSend should return true for SEND direction")
     void canSendShouldReturnTrueForSendDirection() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .direction(LogicalFileConfig.Direction.SEND)
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder().direction(LogicalFileConfig.Direction.SEND).build();
 
         assertTrue(config.canSend());
         assertFalse(config.canReceive());
@@ -47,9 +45,8 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("canReceive and canSend should return true for BOTH direction")
     void canReceiveAndSendShouldReturnTrueForBothDirection() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .direction(LogicalFileConfig.Direction.BOTH)
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder().direction(LogicalFileConfig.Direction.BOTH).build();
 
         assertTrue(config.canReceive());
         assertTrue(config.canSend());
@@ -69,9 +66,10 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should generate receive filename with custom pattern")
     void shouldGenerateReceiveFilenameWithCustomPattern() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .receiveFilenamePattern("${filename}_TID${transferId}")
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder()
+                        .receiveFilenamePattern("${filename}_TID${transferId}")
+                        .build();
 
         String filename = config.generateReceiveFilename("TEST.TXT", 456);
 
@@ -81,9 +79,10 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should handle null virtual filename")
     void shouldHandleNullVirtualFilename() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .receiveFilenamePattern("${filename}_${transferId}")
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder()
+                        .receiveFilenamePattern("${filename}_${transferId}")
+                        .build();
 
         String filename = config.generateReceiveFilename(null, 789);
 
@@ -93,9 +92,7 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should handle null or empty pattern")
     void shouldHandleNullOrEmptyPattern() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .receiveFilenamePattern(null)
-                .build();
+        LogicalFileConfig config = LogicalFileConfig.builder().receiveFilenamePattern(null).build();
 
         String filename = config.generateReceiveFilename("DATA", 1);
         assertTrue(filename.startsWith("DATA_"));
@@ -108,9 +105,8 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should replace date placeholder")
     void shouldReplaceDatePlaceholder() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .receiveFilenamePattern("${filename}_${date}")
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder().receiveFilenamePattern("${filename}_${date}").build();
 
         String filename = config.generateReceiveFilename("LOG", 1);
         String today = java.time.LocalDate.now().toString();
@@ -121,9 +117,8 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should replace time placeholder")
     void shouldReplaceTimePlaceholder() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .receiveFilenamePattern("${filename}_${time}")
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder().receiveFilenamePattern("${filename}_${time}").build();
 
         String filename = config.generateReceiveFilename("LOG", 1);
 
@@ -134,19 +129,20 @@ class LogicalFileConfigTest {
     @Test
     @DisplayName("should store all config attributes")
     void shouldStoreAllConfigAttributes() {
-        LogicalFileConfig config = LogicalFileConfig.builder()
-                .id("FILE1")
-                .description("Test file")
-                .enabled(false)
-                .direction(LogicalFileConfig.Direction.RECEIVE)
-                .receiveDirectory("/data/in")
-                .sendDirectory("/data/out")
-                .receiveFilenamePattern("${filename}")
-                .overwrite(true)
-                .maxFileSize(1024000L)
-                .allowedRecordFormats(new int[] { 0, 1 })
-                .fileType(2)
-                .build();
+        LogicalFileConfig config =
+                LogicalFileConfig.builder()
+                        .id("FILE1")
+                        .description("Test file")
+                        .enabled(false)
+                        .direction(LogicalFileConfig.Direction.RECEIVE)
+                        .receiveDirectory("/data/in")
+                        .sendDirectory("/data/out")
+                        .receiveFilenamePattern("${filename}")
+                        .overwrite(true)
+                        .maxFileSize(1024000L)
+                        .allowedRecordFormats(new int[] {0, 1})
+                        .fileType(2)
+                        .build();
 
         assertEquals("FILE1", config.getId());
         assertEquals("Test file", config.getDescription());

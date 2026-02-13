@@ -5,8 +5,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.pesitwizard.security.SecretsProvider;
+import com.pesitwizard.security.SecretsService;
+import com.pesitwizard.server.entity.Partner;
+import com.pesitwizard.server.service.ConfigService;
 import java.util.List;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,27 +20,18 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.pesitwizard.security.SecretsProvider;
-import com.pesitwizard.security.SecretsService;
-import com.pesitwizard.server.entity.Partner;
-import com.pesitwizard.server.service.ConfigService;
-
 @WebMvcTest(VaultController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("VaultController Tests")
 class VaultControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private SecretsService secretsService;
+    @MockBean private SecretsService secretsService;
 
-    @MockBean
-    private SecretsProvider secretsProvider;
+    @MockBean private SecretsProvider secretsProvider;
 
-    @MockBean
-    private ConfigService configService;
+    @MockBean private ConfigService configService;
 
     @Nested
     @DisplayName("GET /api/v1/config/vault/status")
@@ -47,8 +41,10 @@ class VaultControllerTest {
         @DisplayName("Should return Vault status")
         void shouldReturnVaultStatus() throws Exception {
             when(secretsProvider.isAvailable()).thenReturn(true);
-            when(secretsService.getStatus()).thenReturn(
-                    new SecretsService.SecretsProviderStatus("VAULT", true, "Vault available"));
+            when(secretsService.getStatus())
+                    .thenReturn(
+                            new SecretsService.SecretsProviderStatus(
+                                    "VAULT", true, "Vault available"));
 
             mockMvc.perform(get("/api/v1/config/vault/status"))
                     .andExpect(status().isOk())
@@ -61,8 +57,9 @@ class VaultControllerTest {
         @DisplayName("Should return status when Vault is not available")
         void shouldReturnStatusWhenVaultNotAvailable() throws Exception {
             when(secretsProvider.isAvailable()).thenReturn(false);
-            when(secretsService.getStatus()).thenReturn(
-                    new SecretsService.SecretsProviderStatus("AES", true, "AES fallback"));
+            when(secretsService.getStatus())
+                    .thenReturn(
+                            new SecretsService.SecretsProviderStatus("AES", true, "AES fallback"));
 
             mockMvc.perform(get("/api/v1/config/vault/status"))
                     .andExpect(status().isOk())
@@ -78,9 +75,10 @@ class VaultControllerTest {
         @Test
         @DisplayName("Should reject missing address")
         void shouldRejectMissingAddress() throws Exception {
-            mockMvc.perform(post("/api/v1/config/vault/configure")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"token\": \"test-token\"}"))
+            mockMvc.perform(
+                            post("/api/v1/config/vault/configure")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"token\": \"test-token\"}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.message").value("Vault address and token are required"));
@@ -89,9 +87,10 @@ class VaultControllerTest {
         @Test
         @DisplayName("Should reject missing token")
         void shouldRejectMissingToken() throws Exception {
-            mockMvc.perform(post("/api/v1/config/vault/configure")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"address\": \"http://vault:8200\"}"))
+            mockMvc.perform(
+                            post("/api/v1/config/vault/configure")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"address\": \"http://vault:8200\"}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false));
         }
@@ -99,9 +98,10 @@ class VaultControllerTest {
         @Test
         @DisplayName("Should reject empty address")
         void shouldRejectEmptyAddress() throws Exception {
-            mockMvc.perform(post("/api/v1/config/vault/configure")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"address\": \"\", \"token\": \"test-token\"}"))
+            mockMvc.perform(
+                            post("/api/v1/config/vault/configure")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"address\": \"\", \"token\": \"test-token\"}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false));
         }
@@ -109,10 +109,11 @@ class VaultControllerTest {
         @Test
         @DisplayName("Should handle valid configuration request")
         void shouldHandleValidConfigurationRequest() throws Exception {
-            mockMvc.perform(post("/api/v1/config/vault/configure")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(
-                            "{\"address\": \"http://vault:8200\", \"token\": \"test-token\", \"path\": \"secret/data/test\"}"))
+            mockMvc.perform(
+                            post("/api/v1/config/vault/configure")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(
+                                            "{\"address\": \"http://vault:8200\", \"token\": \"test-token\", \"path\": \"secret/data/test\"}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.message").value("Failed to connect to Vault"));
@@ -145,7 +146,8 @@ class VaultControllerTest {
 
             when(configService.getAllPartners()).thenReturn(List.of(partner));
             when(secretsService.isEncrypted("plaintext-password")).thenReturn(false);
-            when(secretsService.encryptForStorage("plaintext-password")).thenReturn("AES:v2:encrypted");
+            when(secretsService.encryptForStorage("plaintext-password"))
+                    .thenReturn("AES:v2:encrypted");
 
             mockMvc.perform(post("/api/v1/config/vault/encrypt-existing"))
                     .andExpect(status().isOk())

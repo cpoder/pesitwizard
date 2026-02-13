@@ -77,8 +77,8 @@ class PesitStateMachineTest {
     @Test
     @DisplayName("should reject invalid transition")
     void shouldRejectInvalidTransition() {
-        assertThrows(IllegalStateException.class,
-                () -> sm.transition(ClientState.SF03_FILE_SELECTED));
+        assertThrows(
+                IllegalStateException.class, () -> sm.transition(ClientState.SF03_FILE_SELECTED));
     }
 
     @Test

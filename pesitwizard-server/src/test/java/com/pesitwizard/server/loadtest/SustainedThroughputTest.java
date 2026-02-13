@@ -2,7 +2,6 @@ package com.pesitwizard.server.loadtest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
@@ -17,7 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -27,20 +28,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Sustained throughput tests to verify server stability over extended periods.
  *
- * These tests verify:
- * - No memory leaks over time
- * - No connection pool exhaustion
- * - Consistent performance without degradation
- * - Stability at 80% capacity
+ * <p>These tests verify: - No memory leaks over time - No connection pool exhaustion - Consistent
+ * performance without degradation - Stability at 80% capacity
  *
- * Run with: mvn test -Dtest=SustainedThroughputTest -Dload-test=true
+ * <p>Run with: mvn test -Dtest=SustainedThroughputTest -Dload-test=true
  */
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -84,19 +78,19 @@ class SustainedThroughputTest {
     void testSustained80PercentCapacity4Hours() throws Exception {
         Duration testDuration = Duration.ofHours(4);
 
-        SoakTestResult result = runSoakTest(SoakTestConfig.builder()
-                .concurrentTransfers(SUSTAINED_LOAD)
-                .fileSizeBytes(FILE_SIZE_BYTES)
-                .duration(testDuration)
-                .metricIntervalSeconds(60)
-                .build());
+        SoakTestResult result =
+                runSoakTest(
+                        SoakTestConfig.builder()
+                                .concurrentTransfers(SUSTAINED_LOAD)
+                                .fileSizeBytes(FILE_SIZE_BYTES)
+                                .duration(testDuration)
+                                .metricIntervalSeconds(60)
+                                .build());
 
         log.info("4-hour soak test results:\n{}", result.toDetailedReport());
 
         // Verify no degradation
-        assertThat(result.isStable())
-                .as("Server should remain stable over 4 hours")
-                .isTrue();
+        assertThat(result.isStable()).as("Server should remain stable over 4 hours").isTrue();
 
         assertThat(result.getMemoryGrowthPercent())
                 .as("Memory growth should be less than 20%")
@@ -112,12 +106,14 @@ class SustainedThroughputTest {
     void testSustained80PercentCapacity1Hour() throws Exception {
         Duration testDuration = Duration.ofHours(1);
 
-        SoakTestResult result = runSoakTest(SoakTestConfig.builder()
-                .concurrentTransfers(SUSTAINED_LOAD)
-                .fileSizeBytes(FILE_SIZE_BYTES)
-                .duration(testDuration)
-                .metricIntervalSeconds(30)
-                .build());
+        SoakTestResult result =
+                runSoakTest(
+                        SoakTestConfig.builder()
+                                .concurrentTransfers(SUSTAINED_LOAD)
+                                .fileSizeBytes(FILE_SIZE_BYTES)
+                                .duration(testDuration)
+                                .metricIntervalSeconds(30)
+                                .build());
 
         log.info("1-hour soak test results:\n{}", result.toDetailedReport());
 
@@ -130,19 +126,19 @@ class SustainedThroughputTest {
     void testMemoryLeakDetection() throws Exception {
         Duration testDuration = Duration.ofHours(2);
 
-        SoakTestResult result = runSoakTest(SoakTestConfig.builder()
-                .concurrentTransfers(100)
-                .fileSizeBytes(1024 * 1024) // 1 MB
-                .duration(testDuration)
-                .metricIntervalSeconds(30)
-                .build());
+        SoakTestResult result =
+                runSoakTest(
+                        SoakTestConfig.builder()
+                                .concurrentTransfers(100)
+                                .fileSizeBytes(1024 * 1024) // 1 MB
+                                .duration(testDuration)
+                                .metricIntervalSeconds(30)
+                                .build());
 
         log.info("Memory leak detection results:\n{}", result.toDetailedReport());
 
         // Memory should not grow unboundedly
-        assertThat(result.getMemoryGrowthPercent())
-                .as("Memory should not leak")
-                .isLessThan(50.0);
+        assertThat(result.getMemoryGrowthPercent()).as("Memory should not leak").isLessThan(50.0);
 
         // Check for consistent memory pattern
         assertThat(result.getMemoryTrend())
@@ -156,12 +152,14 @@ class SustainedThroughputTest {
         Duration testDuration = Duration.ofMinutes(30);
 
         // Run at capacity to stress connection pool
-        SoakTestResult result = runSoakTest(SoakTestConfig.builder()
-                .concurrentTransfers(200)
-                .fileSizeBytes(1024 * 1024)
-                .duration(testDuration)
-                .metricIntervalSeconds(10)
-                .build());
+        SoakTestResult result =
+                runSoakTest(
+                        SoakTestConfig.builder()
+                                .concurrentTransfers(200)
+                                .fileSizeBytes(1024 * 1024)
+                                .duration(testDuration)
+                                .metricIntervalSeconds(10)
+                                .build());
 
         log.info("Connection pool test results:\n{}", result.toDetailedReport());
 
@@ -172,8 +170,10 @@ class SustainedThroughputTest {
     }
 
     private SoakTestResult runSoakTest(SoakTestConfig config) throws Exception {
-        log.info("Starting soak test: {} concurrent for {}",
-                config.getConcurrentTransfers(), config.getDuration());
+        log.info(
+                "Starting soak test: {} concurrent for {}",
+                config.getConcurrentTransfers(),
+                config.getDuration());
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger errorCount = new AtomicInteger(0);
@@ -185,54 +185,64 @@ class SustainedThroughputTest {
         Instant endTime = startTime.plus(config.getDuration());
 
         // Start metrics collection
-        metricsCollector.scheduleAtFixedRate(() -> {
-            try {
-                MetricSnapshot snapshot = collectMetrics();
-                synchronized (metricHistory) {
-                    metricHistory.add(snapshot);
-                }
-                log.debug("Metrics: heap={}MB, active={}, errors={}",
-                        snapshot.getHeapUsedMb(),
-                        successCount.get() + errorCount.get(),
-                        errorCount.get());
-            } catch (Exception e) {
-                log.warn("Failed to collect metrics: {}", e.getMessage());
-            }
-        }, 0, config.getMetricIntervalSeconds(), TimeUnit.SECONDS);
+        metricsCollector.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        MetricSnapshot snapshot = collectMetrics();
+                        synchronized (metricHistory) {
+                            metricHistory.add(snapshot);
+                        }
+                        log.debug(
+                                "Metrics: heap={}MB, active={}, errors={}",
+                                snapshot.getHeapUsedMb(),
+                                successCount.get() + errorCount.get(),
+                                errorCount.get());
+                    } catch (Exception e) {
+                        log.warn("Failed to collect metrics: {}", e.getMessage());
+                    }
+                },
+                0,
+                config.getMetricIntervalSeconds(),
+                TimeUnit.SECONDS);
 
         // Create and manage transfer tasks
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (int i = 0; i < config.getConcurrentTransfers(); i++) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                while (Instant.now().isBefore(endTime)) {
-                    try {
-                        long startNanos = System.nanoTime();
+            CompletableFuture<Void> future =
+                    CompletableFuture.runAsync(
+                            () -> {
+                                while (Instant.now().isBefore(endTime)) {
+                                    try {
+                                        long startNanos = System.nanoTime();
 
-                        boolean success = performTransfer(config.getFileSizeBytes());
+                                        boolean success =
+                                                performTransfer(config.getFileSizeBytes());
 
-                        long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
+                                        long latencyMs =
+                                                (System.nanoTime() - startNanos) / 1_000_000;
 
-                        if (success) {
-                            successCount.incrementAndGet();
-                            totalBytes.addAndGet(config.getFileSizeBytes());
-                            synchronized (latencies) {
-                                latencies.add(latencyMs);
-                            }
-                        } else {
-                            errorCount.incrementAndGet();
-                        }
+                                        if (success) {
+                                            successCount.incrementAndGet();
+                                            totalBytes.addAndGet(config.getFileSizeBytes());
+                                            synchronized (latencies) {
+                                                latencies.add(latencyMs);
+                                            }
+                                        } else {
+                                            errorCount.incrementAndGet();
+                                        }
 
-                        // Brief pause between transfers
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    } catch (Exception e) {
-                        errorCount.incrementAndGet();
-                    }
-                }
-            }, scheduler);
+                                        // Brief pause between transfers
+                                        Thread.sleep(100);
+                                    } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
+                                        break;
+                                    } catch (Exception e) {
+                                        errorCount.incrementAndGet();
+                                    }
+                                }
+                            },
+                            scheduler);
             futures.add(future);
         }
 
@@ -345,16 +355,18 @@ class SustainedThroughputTest {
         int tenPercent = latencies.size() / 10;
 
         // First 10%
-        double firstAvg = latencies.subList(0, tenPercent).stream()
-                .mapToLong(Long::longValue)
-                .average()
-                .orElse(0);
+        double firstAvg =
+                latencies.subList(0, tenPercent).stream()
+                        .mapToLong(Long::longValue)
+                        .average()
+                        .orElse(0);
 
         // Last 10%
-        double lastAvg = latencies.subList(latencies.size() - tenPercent, latencies.size()).stream()
-                .mapToLong(Long::longValue)
-                .average()
-                .orElse(0);
+        double lastAvg =
+                latencies.subList(latencies.size() - tenPercent, latencies.size()).stream()
+                        .mapToLong(Long::longValue)
+                        .average()
+                        .orElse(0);
 
         if (firstAvg == 0) return 0;
 
@@ -367,8 +379,7 @@ class SustainedThroughputTest {
         private int concurrentTransfers;
         private int fileSizeBytes;
         private Duration duration;
-        @Builder.Default
-        private int metricIntervalSeconds = 60;
+        @Builder.Default private int metricIntervalSeconds = 60;
     }
 
     @Data
@@ -391,7 +402,8 @@ class SustainedThroughputTest {
         private List<MetricSnapshot> metricHistory;
 
         public String toDetailedReport() {
-            return String.format("""
+            return String.format(
+                    """
                     ╔══════════════════════════════════════════════════════════════╗
                     ║                    SOAK TEST RESULTS                          ║
                     ╠══════════════════════════════════════════════════════════════╣

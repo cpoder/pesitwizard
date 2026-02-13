@@ -2,10 +2,6 @@ package com.pesitwizard.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
@@ -13,6 +9,9 @@ import com.pesitwizard.fpdu.FpduParser;
 import com.pesitwizard.fpdu.FpduType;
 import com.pesitwizard.fpdu.ParameterIdentifier;
 import com.pesitwizard.fpdu.ParameterValue;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("Edge Case Tests")
 public class EdgeCaseTest {
@@ -34,15 +33,16 @@ public class EdgeCaseTest {
         @DisplayName("should create error diagnostic codes")
         void shouldCreateErrorDiagnosticCodes() {
             DiagnosticCode[] errorCodes = {
-                    DiagnosticCode.D2_205,
-                    DiagnosticCode.D2_211,
-                    DiagnosticCode.D2_299,
-                    DiagnosticCode.D3_301
+                DiagnosticCode.D2_205,
+                DiagnosticCode.D2_211,
+                DiagnosticCode.D2_299,
+                DiagnosticCode.D3_301
             };
             for (DiagnosticCode code : errorCodes) {
                 byte[] bytes = code.toBytes();
                 assertEquals(3, bytes.length);
-                assertTrue(bytes[0] != 0 || bytes[1] != 0,
+                assertTrue(
+                        bytes[0] != 0 || bytes[1] != 0,
                         "Error code should not be 0x000000: " + code);
             }
         }
@@ -95,8 +95,8 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should create parameter with string value")
         void shouldCreateParameterWithStringValue() {
-            ParameterValue param = new ParameterValue(
-                    ParameterIdentifier.PI_12_NOM_FICHIER, "TEST.DAT");
+            ParameterValue param =
+                    new ParameterValue(ParameterIdentifier.PI_12_NOM_FICHIER, "TEST.DAT");
             assertNotNull(param.getValue());
             assertTrue(param.getValue().length > 0);
         }
@@ -104,17 +104,15 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should create parameter with int value")
         void shouldCreateParameterWithIntValue() {
-            ParameterValue param = new ParameterValue(
-                    ParameterIdentifier.PI_13_ID_TRANSFERT, 42);
+            ParameterValue param = new ParameterValue(ParameterIdentifier.PI_13_ID_TRANSFERT, 42);
             assertNotNull(param.getValue());
         }
 
         @Test
         @DisplayName("should create parameter with byte array")
         void shouldCreateParameterWithByteArray() {
-            byte[] diagBytes = new byte[] { 0x00, 0x00, 0x00 };
-            ParameterValue param = new ParameterValue(
-                    ParameterIdentifier.PI_02_DIAG, diagBytes);
+            byte[] diagBytes = new byte[] {0x00, 0x00, 0x00};
+            ParameterValue param = new ParameterValue(ParameterIdentifier.PI_02_DIAG, diagBytes);
             assertArrayEquals(diagBytes, param.getValue());
         }
     }
@@ -126,9 +124,7 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should roundtrip RELCONF FPDU")
         void shouldRoundtripRelconfFpdu() throws Exception {
-            Fpdu original = new Fpdu(FpduType.RELCONF)
-                    .withIdDst(1)
-                    .withIdSrc(0);
+            Fpdu original = new Fpdu(FpduType.RELCONF).withIdDst(1).withIdSrc(0);
 
             byte[] raw = FpduBuilder.buildFpdu(original);
             Fpdu parsed = new FpduParser(raw).parse();
@@ -141,11 +137,14 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should roundtrip RELEASE FPDU")
         void shouldRoundtripReleaseFpdu() throws Exception {
-            Fpdu original = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(1)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            DiagnosticCode.D0_000.toBytes()));
+            Fpdu original =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(1)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG,
+                                            DiagnosticCode.D0_000.toBytes()));
 
             byte[] raw = FpduBuilder.buildFpdu(original);
             Fpdu parsed = new FpduParser(raw).parse();
@@ -161,11 +160,14 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should create ABORT FPDU with diagnostic")
         void shouldCreateAbortWithDiagnostic() {
-            Fpdu abort = new Fpdu(FpduType.ABORT)
-                    .withIdDst(1)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            DiagnosticCode.D3_301.toBytes()));
+            Fpdu abort =
+                    new Fpdu(FpduType.ABORT)
+                            .withIdDst(1)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG,
+                                            DiagnosticCode.D3_301.toBytes()));
 
             assertEquals(FpduType.ABORT, abort.getFpduType());
             ParameterValue diag = abort.getParameter(ParameterIdentifier.PI_02_DIAG);
@@ -175,11 +177,14 @@ public class EdgeCaseTest {
         @Test
         @DisplayName("should build and parse ABORT FPDU")
         void shouldBuildAndParseAbortFpdu() throws Exception {
-            Fpdu original = new Fpdu(FpduType.ABORT)
-                    .withIdDst(1)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(ParameterIdentifier.PI_02_DIAG,
-                            DiagnosticCode.D2_299.toBytes()));
+            Fpdu original =
+                    new Fpdu(FpduType.ABORT)
+                            .withIdDst(1)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(
+                                            ParameterIdentifier.PI_02_DIAG,
+                                            DiagnosticCode.D2_299.toBytes()));
 
             byte[] raw = FpduBuilder.buildFpdu(original);
             Fpdu parsed = new FpduParser(raw).parse();

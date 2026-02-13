@@ -86,9 +86,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("getLogicalFile should find exact match")
     void getLogicalFileShouldFindExactMatch() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("FILE1")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("FILE1").build();
         properties.getFiles().put("FILE1", file);
 
         assertNotNull(properties.getLogicalFile("FILE1"));
@@ -97,9 +95,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("getLogicalFile should find case-insensitive match by key")
     void getLogicalFileShouldFindCaseInsensitiveByKey() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("DATAFILE")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("DATAFILE").build();
         properties.getFiles().put("DATAFILE", file);
 
         assertNotNull(properties.getLogicalFile("datafile"));
@@ -108,9 +104,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("getLogicalFile should find case-insensitive match by id")
     void getLogicalFileShouldFindCaseInsensitiveById() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("MyFile")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("MyFile").build();
         properties.getFiles().put("key", file);
 
         assertNotNull(properties.getLogicalFile("myfile"));
@@ -119,9 +113,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("getLogicalFile should match pattern with wildcard")
     void getLogicalFileShouldMatchPattern() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("DATA_*")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("DATA_*").build();
         properties.getFiles().put("DATA_*", file);
 
         assertNotNull(properties.getLogicalFile("DATA_001"));
@@ -131,9 +123,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("getLogicalFile should return null for non-matching pattern")
     void getLogicalFileShouldReturnNullForNonMatching() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("DATA_*")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("DATA_*").build();
         properties.getFiles().put("DATA_*", file);
 
         assertNull(properties.getLogicalFile("OTHER_FILE"));
@@ -153,9 +143,7 @@ class PesitServerPropertiesTest {
     @Test
     @DisplayName("hasLogicalFile should return correct result")
     void hasLogicalFileShouldReturnCorrectResult() {
-        LogicalFileConfig file = LogicalFileConfig.builder()
-                .id("EXIST")
-                .build();
+        LogicalFileConfig file = LogicalFileConfig.builder().id("EXIST").build();
         properties.getFiles().put("EXIST", file);
 
         assertTrue(properties.hasLogicalFile("EXIST"));

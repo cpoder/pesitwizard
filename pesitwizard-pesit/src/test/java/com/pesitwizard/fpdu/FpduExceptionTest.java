@@ -6,9 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for FPDU exception classes.
- */
+/** Unit tests for FPDU exception classes. */
 @DisplayName("FPDU Exception Tests")
 class FpduExceptionTest {
 
@@ -35,8 +33,9 @@ class FpduExceptionTest {
         @Test
         @DisplayName("should create for missing mandatory parameter")
         void shouldCreateForMissingMandatoryParameter() {
-            FpduBuildException ex = FpduBuildException.missingMandatoryParameter(
-                    ParameterIdentifier.PI_02_DIAG, FpduType.CONNECT);
+            FpduBuildException ex =
+                    FpduBuildException.missingMandatoryParameter(
+                            ParameterIdentifier.PI_02_DIAG, FpduType.CONNECT);
             assertThat(ex.getMessage()).contains("Missing mandatory parameter");
             assertThat(ex.getMessage()).contains("CONNECT");
         }
@@ -45,8 +44,9 @@ class FpduExceptionTest {
         @DisplayName("should create for parameter encoding failure")
         void shouldCreateForParameterEncodingFailure() {
             Throwable cause = new RuntimeException("Encoding error");
-            FpduBuildException ex = FpduBuildException.parameterEncodingFailed(
-                    ParameterIdentifier.PI_12_NOM_FICHIER, cause);
+            FpduBuildException ex =
+                    FpduBuildException.parameterEncodingFailed(
+                            ParameterIdentifier.PI_12_NOM_FICHIER, cause);
             assertThat(ex.getMessage()).contains("Failed to encode parameter");
             assertThat(ex.getCause()).isEqualTo(cause);
         }

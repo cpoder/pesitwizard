@@ -1,22 +1,19 @@
 package com.pesitwizard.server.backup;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
 import com.pesitwizard.backup.BackupConfig;
 import com.pesitwizard.backup.BackupInfo;
 import com.pesitwizard.backup.BackupResult;
 import com.pesitwizard.backup.RestoreResult;
-
 import jakarta.annotation.PostConstruct;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
 /**
- * Spring adapter for the centralized BackupService.
- * Configures and exposes the backup functionality with Spring properties.
+ * Spring adapter for the centralized BackupService. Configures and exposes the backup functionality
+ * with Spring properties.
  */
 @Slf4j
 @Service
@@ -44,15 +41,16 @@ public class BackupServiceAdapter {
 
     @PostConstruct
     public void init() {
-        BackupConfig config = BackupConfig.builder()
-                .backupDirectory(backupDirectory)
-                .backupPrefix("pesit_backup")
-                .retentionDays(retentionDays)
-                .maxBackups(maxBackups)
-                .datasourceUrl(datasourceUrl)
-                .dbUser(dbUser)
-                .dbPassword(dbPassword)
-                .build();
+        BackupConfig config =
+                BackupConfig.builder()
+                        .backupDirectory(backupDirectory)
+                        .backupPrefix("pesit_backup")
+                        .retentionDays(retentionDays)
+                        .maxBackups(maxBackups)
+                        .datasourceUrl(datasourceUrl)
+                        .dbUser(dbUser)
+                        .dbPassword(dbPassword)
+                        .build();
         this.backupService = new com.pesitwizard.backup.BackupService(config);
         log.info("Backup service initialized with directory: {}", backupDirectory);
     }

@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Configuration for a logical file (virtual file mapping)
- * Maps PeSIT virtual filenames to local file system paths
+ * Configuration for a logical file (virtual file mapping) Maps PeSIT virtual filenames to local
+ * file system paths
  */
 @Data
 @Builder
@@ -22,12 +22,10 @@ public class LogicalFileConfig {
     private String description;
 
     /** Whether this logical file is enabled */
-    @Builder.Default
-    private boolean enabled = true;
+    @Builder.Default private boolean enabled = true;
 
     /** Direction: RECEIVE (for CREATE), SEND (for SELECT), BOTH */
-    @Builder.Default
-    private Direction direction = Direction.BOTH;
+    @Builder.Default private Direction direction = Direction.BOTH;
 
     /** Local directory for received files (for RECEIVE direction) */
     private String receiveDirectory;
@@ -36,32 +34,25 @@ public class LogicalFileConfig {
     private String sendDirectory;
 
     /** Filename pattern for received files (supports placeholders) */
-    @Builder.Default
-    private String receiveFilenamePattern = "${filename}_${timestamp}";
+    @Builder.Default private String receiveFilenamePattern = "${filename}_${timestamp}";
 
     /** Whether to overwrite existing files */
-    @Builder.Default
-    private boolean overwrite = false;
+    @Builder.Default private boolean overwrite = false;
 
     /** Maximum file size in bytes (0 = unlimited) */
-    @Builder.Default
-    private long maxFileSize = 0;
+    @Builder.Default private long maxFileSize = 0;
 
     /** Allowed record formats (empty = all) */
-    @Builder.Default
-    private int[] allowedRecordFormats = {};
+    @Builder.Default private int[] allowedRecordFormats = {};
 
     /** File type filter (PI 11) - 0 = any */
-    @Builder.Default
-    private int fileType = 0;
+    @Builder.Default private int fileType = 0;
 
     /** Record length (PI 32) - must match partner's LREC config */
-    @Builder.Default
-    private int recordLength = 1024;
+    @Builder.Default private int recordLength = 1024;
 
     /** Record format (PI 31) - 0x80 = variable, 0x00 = fixed */
-    @Builder.Default
-    private int recordFormat = 0x80;
+    @Builder.Default private int recordFormat = 0x80;
 
     public enum Direction {
         RECEIVE, // Only for CREATE (receiving files)
@@ -69,31 +60,24 @@ public class LogicalFileConfig {
         BOTH // Both directions
     }
 
-    /**
-     * Check if this logical file can receive data (CREATE)
-     */
+    /** Check if this logical file can receive data (CREATE) */
     public boolean canReceive() {
         return direction == Direction.RECEIVE || direction == Direction.BOTH;
     }
 
-    /**
-     * Check if this logical file can send data (SELECT)
-     */
+    /** Check if this logical file can send data (SELECT) */
     public boolean canSend() {
         return direction == Direction.SEND || direction == Direction.BOTH;
     }
 
-    /**
-     * Generate the local filename for a received file
-     */
+    /** Generate the local filename for a received file */
     public String generateReceiveFilename(String virtualFilename, int transferId) {
         String pattern = receiveFilenamePattern;
         if (pattern == null || pattern.isEmpty()) {
             pattern = "${filename}_${timestamp}";
         }
 
-        return pattern
-                .replace("${filename}", virtualFilename != null ? virtualFilename : "file")
+        return pattern.replace("${filename}", virtualFilename != null ? virtualFilename : "file")
                 .replace("${transferId}", String.valueOf(transferId))
                 .replace("${timestamp}", String.valueOf(System.currentTimeMillis()))
                 .replace("${date}", java.time.LocalDate.now().toString())

@@ -4,21 +4,6 @@ import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.net.ConnectException;
-import java.net.Socket;
-import java.util.concurrent.TimeUnit;
-
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.mockito.Mock;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
 import com.pesitwizard.fpdu.FpduParser;
@@ -40,14 +25,26 @@ import com.pesitwizard.server.service.PathPlaceholderService;
 import com.pesitwizard.server.service.PesitServerInstance;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.ssl.SslContextFactory;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.ConnectException;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.mockito.Mock;
 
 /**
- * Integration test for cluster failover scenarios.
- * Tests that when one PeSIT server instance goes down,
- * another instance can take over and process requests.
- * 
- * This test simulates a multi-node scenario on a single machine
- * by running multiple PesitServerInstance objects.
+ * Integration test for cluster failover scenarios. Tests that when one PeSIT server instance goes
+ * down, another instance can take over and process requests.
+ *
+ * <p>This test simulates a multi-node scenario on a single machine by running multiple
+ * PesitServerInstance objects.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ClusterFailoverTest {
@@ -58,21 +55,20 @@ public class ClusterFailoverTest {
     private static final String SERVER_ID = "FAILOVER_TEST_SERVER";
     private static final int CLIENT_ID = 5;
 
-    private static final boolean INTEGRATION_ENABLED = Boolean.parseBoolean(
-            System.getProperty("pesit.integration.enabled", "false"));
+    private static final boolean INTEGRATION_ENABLED =
+            Boolean.parseBoolean(System.getProperty("pesit.integration.enabled", "false"));
 
     private PesitServerInstance primaryServer;
     private PesitServerInstance secondaryServer;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SslContextFactory sslContextFactory;
+    @Mock private SslContextFactory sslContextFactory;
 
     @BeforeAll
     void checkIntegrationEnabled() {
-        Assumptions.assumeTrue(INTEGRATION_ENABLED,
+        Assumptions.assumeTrue(
+                INTEGRATION_ENABLED,
                 "Integration tests disabled. Enable with -Dpesit.integration.enabled=true");
     }
 
@@ -100,7 +96,8 @@ public class ClusterFailoverTest {
 
         // Step 2: Verify primary server accepts connections
         System.out.println("\nStep 2: Verify PRIMARY server accepts connections");
-        assertTrue(canConnectAndAuthenticate(PRIMARY_PORT, SERVER_ID),
+        assertTrue(
+                canConnectAndAuthenticate(PRIMARY_PORT, SERVER_ID),
                 "Should be able to connect to primary server");
         System.out.println("  ✓ Primary server accepting connections");
 
@@ -113,7 +110,8 @@ public class ClusterFailoverTest {
 
         // Step 4: Verify secondary server also accepts connections
         System.out.println("\nStep 4: Verify SECONDARY server accepts connections");
-        assertTrue(canConnectAndAuthenticate(SECONDARY_PORT, SERVER_ID),
+        assertTrue(
+                canConnectAndAuthenticate(SECONDARY_PORT, SERVER_ID),
                 "Should be able to connect to secondary server");
         System.out.println("  ✓ Secondary server accepting connections");
 
@@ -131,7 +129,8 @@ public class ClusterFailoverTest {
         // Step 7: Verify secondary server is still processing requests
         System.out.println("\nStep 7: Verify SECONDARY server is still processing requests");
         assertTrue(secondaryServer.isRunning(), "Secondary server should still be running");
-        assertTrue(canConnectAndAuthenticate(SECONDARY_PORT, SERVER_ID),
+        assertTrue(
+                canConnectAndAuthenticate(SECONDARY_PORT, SERVER_ID),
                 "Secondary server should still accept connections");
         System.out.println("  ✓ Secondary server is processing requests (FAILOVER SUCCESS)");
 
@@ -163,27 +162,34 @@ public class ClusterFailoverTest {
         // Connect to both servers simultaneously
         System.out.println("\nStep 2: Connect to both servers simultaneously");
 
-        Thread clientA = new Thread(() -> {
-            try {
-                for (int i = 0; i < 3; i++) {
-                    assertTrue(canConnectAndAuthenticate(PRIMARY_PORT, "SERVER_A"));
-                    Thread.sleep(100);
-                }
-            } catch (Exception e) {
-                fail("Client A failed: " + e.getMessage());
-            }
-        }, "client-A");
+        Thread clientA =
+                new Thread(
+                        () -> {
+                            try {
+                                for (int i = 0; i < 3; i++) {
+                                    assertTrue(canConnectAndAuthenticate(PRIMARY_PORT, "SERVER_A"));
+                                    Thread.sleep(100);
+                                }
+                            } catch (Exception e) {
+                                fail("Client A failed: " + e.getMessage());
+                            }
+                        },
+                        "client-A");
 
-        Thread clientB = new Thread(() -> {
-            try {
-                for (int i = 0; i < 3; i++) {
-                    assertTrue(canConnectAndAuthenticate(SECONDARY_PORT, "SERVER_B"));
-                    Thread.sleep(100);
-                }
-            } catch (Exception e) {
-                fail("Client B failed: " + e.getMessage());
-            }
-        }, "client-B");
+        Thread clientB =
+                new Thread(
+                        () -> {
+                            try {
+                                for (int i = 0; i < 3; i++) {
+                                    assertTrue(
+                                            canConnectAndAuthenticate(SECONDARY_PORT, "SERVER_B"));
+                                    Thread.sleep(100);
+                                }
+                            } catch (Exception e) {
+                                fail("Client B failed: " + e.getMessage());
+                            }
+                        },
+                        "client-B");
 
         clientA.start();
         clientB.start();
@@ -223,15 +229,17 @@ public class ClusterFailoverTest {
         System.out.println("  ✓ Server stopped");
 
         // Wait for port to be released
-        Awaitility.await().atMost(5, TimeUnit.SECONDS)
-            .pollInterval(100, TimeUnit.MILLISECONDS)
-            .until(() -> {
-                try (Socket s = new Socket("localhost", PRIMARY_PORT)) {
-                    return false; // Still in use
-                } catch (Exception e) {
-                    return true; // Port freed
-                }
-            });
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(
+                        () -> {
+                            try (Socket s = new Socket("localhost", PRIMARY_PORT)) {
+                                return false; // Still in use
+                            } catch (Exception e) {
+                                return true; // Port freed
+                            }
+                        });
 
         // Restart server
         System.out.println("\nStep 4: Restart server");
@@ -248,9 +256,7 @@ public class ClusterFailoverTest {
         System.out.println("\n✓✓✓ SERVER RESTART TEST PASSED ✓✓✓\n");
     }
 
-    /**
-     * Create a PeSIT server instance for testing
-     */
+    /** Create a PeSIT server instance for testing */
     private PesitServerInstance createServerInstance(String serverId, int port) {
         PesitServerConfig config = new PesitServerConfig();
         config.setServerId(serverId);
@@ -267,31 +273,47 @@ public class ClusterFailoverTest {
         ConfigService configService = mock(ConfigService.class);
         TransferTracker transferTracker = mock(TransferTracker.class);
         PathPlaceholderService pathPlaceholderService = new PathPlaceholderService();
-        com.pesitwizard.server.service.FileSystemService fileSystemService = new com.pesitwizard.server.service.FileSystemService();
+        com.pesitwizard.server.service.FileSystemService fileSystemService =
+                new com.pesitwizard.server.service.FileSystemService();
 
         // Create split handler components
-        com.pesitwizard.security.SecretsService secretsService = mock(com.pesitwizard.security.SecretsService.class);
-        ConnectionValidator connectionValidator = new ConnectionValidator(properties, configService, secretsService);
+        com.pesitwizard.security.SecretsService secretsService =
+                mock(com.pesitwizard.security.SecretsService.class);
+        ConnectionValidator connectionValidator =
+                new ConnectionValidator(properties, configService, secretsService);
         FileValidator fileValidator = new FileValidator(properties, configService);
-        TransferOperationHandler transferOperationHandler = new TransferOperationHandler(
-                properties, fileValidator, transferTracker, pathPlaceholderService, fileSystemService);
+        TransferOperationHandler transferOperationHandler =
+                new TransferOperationHandler(
+                        properties,
+                        fileValidator,
+                        transferTracker,
+                        pathPlaceholderService,
+                        fileSystemService);
         FpduValidator fpduValidator = new FpduValidator();
-        DataTransferHandler dataTransferHandler = new DataTransferHandler(properties, transferTracker, fpduValidator);
+        DataTransferHandler dataTransferHandler =
+                new DataTransferHandler(properties, transferTracker, fpduValidator);
         MessageHandler messageHandler = new MessageHandler();
         AuditService auditService = org.mockito.Mockito.mock(AuditService.class);
-        com.pesitwizard.server.cluster.ClusterProvider clusterProvider = org.mockito.Mockito
-                .mock(com.pesitwizard.server.cluster.ClusterProvider.class);
+        com.pesitwizard.server.cluster.ClusterProvider clusterProvider =
+                org.mockito.Mockito.mock(com.pesitwizard.server.cluster.ClusterProvider.class);
 
-        PesitSessionHandler sessionHandler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService,
-                clusterProvider, fpduValidator);
+        PesitSessionHandler sessionHandler =
+                new PesitSessionHandler(
+                        properties,
+                        connectionValidator,
+                        transferOperationHandler,
+                        dataTransferHandler,
+                        messageHandler,
+                        transferTracker,
+                        auditService,
+                        clusterProvider,
+                        fpduValidator);
 
-        return new PesitServerInstance(config, properties, sessionHandler, sslProperties, sslContextFactory);
+        return new PesitServerInstance(
+                config, properties, sessionHandler, sslProperties, sslContextFactory);
     }
 
-    /**
-     * Check if we can connect to a port
-     */
+    /** Check if we can connect to a port */
     private boolean canConnect(int port) {
         try (Socket socket = new Socket(HOST, port)) {
             return true;
@@ -302,9 +324,7 @@ public class ClusterFailoverTest {
         }
     }
 
-    /**
-     * Check if we can connect and authenticate with a server
-     */
+    /** Check if we can connect and authenticate with a server */
     private boolean canConnectAndAuthenticate(int port, String serverId) {
         try (Socket socket = new Socket(HOST, port)) {
             socket.setSoTimeout(5000);
@@ -312,12 +332,13 @@ public class ClusterFailoverTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // Send CONNECT
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(CLIENT_ID)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, "TEST"))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
-                    .withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
+            Fpdu connectFpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdSrc(CLIENT_ID)
+                            .withParameter(new ParameterValue(PI_03_DEMANDEUR, "TEST"))
+                            .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
+                            .withParameter(new ParameterValue(PI_06_VERSION, 2))
+                            .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
 
             byte[] fpduBytes = FpduBuilder.buildFpdu(connectFpdu);
             out.writeShort(fpduBytes.length);
@@ -339,9 +360,7 @@ public class ClusterFailoverTest {
         }
     }
 
-    /**
-     * Perform a full connection cycle: CONNECT -> RELEASE
-     */
+    /** Perform a full connection cycle: CONNECT -> RELEASE */
     private void performFullConnectionCycle(int port, String serverId) throws Exception {
         try (Socket socket = new Socket(HOST, port)) {
             socket.setSoTimeout(5000);
@@ -349,12 +368,13 @@ public class ClusterFailoverTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // CONNECT
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(CLIENT_ID)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, "TEST"))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
-                    .withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
+            Fpdu connectFpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdSrc(CLIENT_ID)
+                            .withParameter(new ParameterValue(PI_03_DEMANDEUR, "TEST"))
+                            .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
+                            .withParameter(new ParameterValue(PI_06_VERSION, 2))
+                            .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
 
             byte[] fpduBytes = FpduBuilder.buildFpdu(connectFpdu);
             out.writeShort(fpduBytes.length);
@@ -370,10 +390,12 @@ public class ClusterFailoverTest {
             int serverConnId = aconnect.getIdSrc();
 
             // RELEASE (PI_02_DIAG is mandatory - use 0x000000 for success)
-            Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(serverConnId)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+            Fpdu releaseFpdu =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(serverConnId)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
 
             fpduBytes = FpduBuilder.buildFpdu(releaseFpdu);
             out.writeShort(fpduBytes.length);

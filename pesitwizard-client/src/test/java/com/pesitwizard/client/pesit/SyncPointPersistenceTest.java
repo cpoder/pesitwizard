@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.pesitwizard.client.entity.TransferHistory;
+import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
+import com.pesitwizard.client.event.TransferEventBus;
+import com.pesitwizard.client.repository.TransferHistoryRepository;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,27 +19,19 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pesitwizard.client.entity.TransferHistory;
-import com.pesitwizard.client.entity.TransferHistory.TransferStatus;
-import com.pesitwizard.client.event.TransferEventBus;
-import com.pesitwizard.client.repository.TransferHistoryRepository;
-
 /**
- * Tests for sync point persistence when transfers fail or are cancelled.
- * Verifies that lastSyncPoint and bytesAtLastSyncPoint are saved to the database.
+ * Tests for sync point persistence when transfers fail or are cancelled. Verifies that
+ * lastSyncPoint and bytesAtLastSyncPoint are saved to the database.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Sync Point Persistence Tests")
 class SyncPointPersistenceTest {
 
-    @Mock
-    private TransferHistoryRepository historyRepository;
+    @Mock private TransferHistoryRepository historyRepository;
 
-    @Mock
-    private TransferEventBus eventBus;
+    @Mock private TransferEventBus eventBus;
 
-    @Captor
-    private ArgumentCaptor<TransferHistory> historyCaptor;
+    @Captor private ArgumentCaptor<TransferHistory> historyCaptor;
 
     private TransferHistory history;
 
@@ -103,17 +98,20 @@ class SyncPointPersistenceTest {
             ctx.addBytes(4500000L);
 
             // Simulate what updateHistoryFailed should do
-            historyRepository.findById("test-history-123").ifPresent(h -> {
-                h.setStatus(TransferStatus.FAILED);
-                h.setErrorMessage("Connection lost");
-                h.setDiagnosticCode("0x010203");
-                h.setBytesTransferred(ctx.getBytesTransferred());
-                if (ctx.getLastSyncPoint() > 0) {
-                    h.setLastSyncPoint(ctx.getLastSyncPoint());
-                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
-                }
-                historyRepository.save(h);
-            });
+            historyRepository
+                    .findById("test-history-123")
+                    .ifPresent(
+                            h -> {
+                                h.setStatus(TransferStatus.FAILED);
+                                h.setErrorMessage("Connection lost");
+                                h.setDiagnosticCode("0x010203");
+                                h.setBytesTransferred(ctx.getBytesTransferred());
+                                if (ctx.getLastSyncPoint() > 0) {
+                                    h.setLastSyncPoint(ctx.getLastSyncPoint());
+                                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+                                }
+                                historyRepository.save(h);
+                            });
 
             verify(historyRepository).save(historyCaptor.capture());
             TransferHistory saved = historyCaptor.getValue();
@@ -135,16 +133,19 @@ class SyncPointPersistenceTest {
             ctx.addBytes(50000L); // Some bytes transferred but no sync points
 
             // Simulate what updateHistoryFailed should do
-            historyRepository.findById("test-history-123").ifPresent(h -> {
-                h.setStatus(TransferStatus.FAILED);
-                h.setErrorMessage("Early failure");
-                h.setBytesTransferred(ctx.getBytesTransferred());
-                if (ctx.getLastSyncPoint() > 0) {
-                    h.setLastSyncPoint(ctx.getLastSyncPoint());
-                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
-                }
-                historyRepository.save(h);
-            });
+            historyRepository
+                    .findById("test-history-123")
+                    .ifPresent(
+                            h -> {
+                                h.setStatus(TransferStatus.FAILED);
+                                h.setErrorMessage("Early failure");
+                                h.setBytesTransferred(ctx.getBytesTransferred());
+                                if (ctx.getLastSyncPoint() > 0) {
+                                    h.setLastSyncPoint(ctx.getLastSyncPoint());
+                                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+                                }
+                                historyRepository.save(h);
+                            });
 
             verify(historyRepository).save(historyCaptor.capture());
             TransferHistory saved = historyCaptor.getValue();
@@ -170,16 +171,19 @@ class SyncPointPersistenceTest {
             TransferContext ctx = new TransferContext("test-history-123", 10485760L, eventBus);
             ctx.syncPoint(10, 1024000L);
 
-            historyRepository.findById("test-history-123").ifPresent(h -> {
-                h.setStatus(TransferStatus.FAILED);
-                h.setErrorMessage("Network error");
-                h.setBytesTransferred(ctx.getBytesTransferred());
-                if (ctx.getLastSyncPoint() > 0) {
-                    h.setLastSyncPoint(ctx.getLastSyncPoint());
-                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
-                }
-                historyRepository.save(h);
-            });
+            historyRepository
+                    .findById("test-history-123")
+                    .ifPresent(
+                            h -> {
+                                h.setStatus(TransferStatus.FAILED);
+                                h.setErrorMessage("Network error");
+                                h.setBytesTransferred(ctx.getBytesTransferred());
+                                if (ctx.getLastSyncPoint() > 0) {
+                                    h.setLastSyncPoint(ctx.getLastSyncPoint());
+                                    h.setBytesAtLastSyncPoint(ctx.getBytesAtLastSyncPoint());
+                                }
+                                historyRepository.save(h);
+                            });
 
             verify(historyRepository).save(historyCaptor.capture());
             TransferHistory saved = historyCaptor.getValue();
@@ -205,7 +209,8 @@ class SyncPointPersistenceTest {
         @Test
         @DisplayName("should have sufficient data for resume after failure")
         void shouldHaveSufficientDataForResumeAfterFailure() {
-            TransferContext ctx = new TransferContext("test-123", 104857600L, eventBus); // 100MB file
+            TransferContext ctx =
+                    new TransferContext("test-123", 104857600L, eventBus); // 100MB file
 
             // Simulate transfer with sync points every ~10MB
             for (int i = 1; i <= 5; i++) {

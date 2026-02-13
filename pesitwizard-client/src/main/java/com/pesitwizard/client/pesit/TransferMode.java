@@ -2,30 +2,23 @@ package com.pesitwizard.client.pesit;
 
 /**
  * Transfer mode presets for PeSIT transfers.
- * 
- * SIMPLE mode auto-configures most parameters for ease of use.
- * ADVANCED mode allows full control over all PeSIT parameters.
+ *
+ * <p>SIMPLE mode auto-configures most parameters for ease of use. ADVANCED mode allows full control
+ * over all PeSIT parameters.
  */
 public enum TransferMode {
 
     /**
-     * Simple mode - automatic configuration
-     * - Sync points: auto-calculated based on file size
-     * - Record length: uses server default
-     * - Entity size: negotiated automatically
-     * - Compression: disabled
-     * - Resync: disabled
+     * Simple mode - automatic configuration - Sync points: auto-calculated based on file size -
+     * Record length: uses server default - Entity size: negotiated automatically - Compression:
+     * disabled - Resync: disabled
      */
     SIMPLE("Simple", "Automatic configuration for most use cases"),
 
     /**
-     * Advanced mode - full parameter control
-     * - All PI parameters can be explicitly set
-     * - Sync points interval configurable
-     * - Record length (PI_32) configurable
-     * - Entity size (PI_25) configurable
-     * - Compression (PI_21) configurable
-     * - Resync (PI_23) configurable
+     * Advanced mode - full parameter control - All PI parameters can be explicitly set - Sync
+     * points interval configurable - Record length (PI_32) configurable - Entity size (PI_25)
+     * configurable - Compression (PI_21) configurable - Resync (PI_23) configurable
      */
     ADVANCED("Advanced", "Full control over all PeSIT parameters");
 
@@ -47,7 +40,7 @@ public enum TransferMode {
 
     /**
      * Get default sync point interval for this mode based on file size.
-     * 
+     *
      * @param fileSize File size in bytes
      * @return Sync interval in bytes, or 0 if sync points should be disabled
      */
@@ -70,7 +63,7 @@ public enum TransferMode {
 
     /**
      * Get default record length for this mode.
-     * 
+     *
      * @return Default record length (PI_32), or 0 to use server default
      */
     public int getDefaultRecordLength() {
@@ -82,7 +75,7 @@ public enum TransferMode {
 
     /**
      * Get default entity size for this mode.
-     * 
+     *
      * @return Default max entity size (PI_25), or 0 to negotiate max
      */
     public int getDefaultEntitySize() {
@@ -92,9 +85,7 @@ public enum TransferMode {
         return 0; // ADVANCED: let user configure
     }
 
-    /**
-     * Whether sync points should be enabled by default for this mode.
-     */
+    /** Whether sync points should be enabled by default for this mode. */
     public boolean isSyncPointsEnabledByDefault(long fileSize) {
         if (this == SIMPLE) {
             return fileSize >= 1024 * 1024; // Enable for files >= 1MB
@@ -102,16 +93,12 @@ public enum TransferMode {
         return false; // ADVANCED: let user configure
     }
 
-    /**
-     * Whether resync should be enabled by default for this mode.
-     */
+    /** Whether resync should be enabled by default for this mode. */
     public boolean isResyncEnabledByDefault() {
         return false; // Disabled by default in both modes
     }
 
-    /**
-     * Whether compression should be enabled by default for this mode.
-     */
+    /** Whether compression should be enabled by default for this mode. */
     public boolean isCompressionEnabledByDefault() {
         return false; // Disabled by default in both modes
     }

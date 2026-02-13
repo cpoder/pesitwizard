@@ -3,6 +3,8 @@ package com.pesitwizard.client.exception;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,17 +16,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GlobalExceptionHandler Tests")
 class GlobalExceptionHandlerTest {
 
     private GlobalExceptionHandler handler;
 
-    @Mock
-    private HttpServletRequest request;
+    @Mock private HttpServletRequest request;
 
     @BeforeEach
     void setUp() {
@@ -40,10 +38,11 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Should return 409 CONFLICT for unique constraint violation")
         void shouldReturn409ForUniqueConstraint() {
             // Given
-            Exception rootCause = new Exception(
-                    "Unique index or primary key violation: VALUES ( /* 1 */ 'Production Calendar' )");
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("Constraint violation",
-                    rootCause);
+            Exception rootCause =
+                    new Exception(
+                            "Unique index or primary key violation: VALUES ( /* 1 */ 'Production Calendar' )");
+            DataIntegrityViolationException ex =
+                    new DataIntegrityViolationException("Constraint violation", rootCause);
 
             // When
             ResponseEntity<ApiError> response = handler.handleDataIntegrityViolation(ex, request);
@@ -61,10 +60,11 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Should extract name from unique constraint violation message")
         void shouldExtractNameFromViolationMessage() {
             // Given - H2 database error format
-            Exception rootCause = new Exception(
-                    "Unique index or primary key violation: \"PUBLIC.UK_NAME_INDEX ON PUBLIC.BUSINESS_CALENDARS(NAME NULLS FIRST) VALUES ( /* 1 */ 'My Calendar' )\"");
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("Constraint violation",
-                    rootCause);
+            Exception rootCause =
+                    new Exception(
+                            "Unique index or primary key violation: \"PUBLIC.UK_NAME_INDEX ON PUBLIC.BUSINESS_CALENDARS(NAME NULLS FIRST) VALUES ( /* 1 */ 'My Calendar' )\"");
+            DataIntegrityViolationException ex =
+                    new DataIntegrityViolationException("Constraint violation", rootCause);
 
             // When
             ResponseEntity<ApiError> response = handler.handleDataIntegrityViolation(ex, request);
@@ -78,7 +78,8 @@ class GlobalExceptionHandlerTest {
         void shouldHandleForeignKeyViolation() {
             // Given
             Exception rootCause = new Exception("foreign key constraint fails");
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("FK violation", rootCause);
+            DataIntegrityViolationException ex =
+                    new DataIntegrityViolationException("FK violation", rootCause);
 
             // When
             ResponseEntity<ApiError> response = handler.handleDataIntegrityViolation(ex, request);
@@ -92,8 +93,10 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Should not expose SQL details in error message")
         void shouldNotExposeSqlDetails() {
             // Given
-            Exception rootCause = new Exception("Unique index SQL: SELECT * FROM users WHERE id = 1");
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("Test", rootCause);
+            Exception rootCause =
+                    new Exception("Unique index SQL: SELECT * FROM users WHERE id = 1");
+            DataIntegrityViolationException ex =
+                    new DataIntegrityViolationException("Test", rootCause);
 
             // When
             ResponseEntity<ApiError> response = handler.handleDataIntegrityViolation(ex, request);
@@ -112,7 +115,8 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Should return 404 NOT_FOUND for EntityNotFoundException")
         void shouldReturn404ForEntityNotFound() {
             // Given
-            EntityNotFoundException ex = new EntityNotFoundException("Calendar with ID 123 not found");
+            EntityNotFoundException ex =
+                    new EntityNotFoundException("Calendar with ID 123 not found");
 
             // When
             ResponseEntity<ApiError> response = handler.handleEntityNotFound(ex, request);

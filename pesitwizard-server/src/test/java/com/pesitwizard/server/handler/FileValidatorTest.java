@@ -3,15 +3,6 @@ package com.pesitwizard.server.handler;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.fpdu.DiagnosticCode;
 import com.pesitwizard.server.config.LogicalFileConfig;
 import com.pesitwizard.server.config.PartnerConfig;
@@ -21,16 +12,21 @@ import com.pesitwizard.server.model.SessionContext;
 import com.pesitwizard.server.model.TransferContext;
 import com.pesitwizard.server.model.ValidationResult;
 import com.pesitwizard.server.service.ConfigService;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FileValidator Tests")
 class FileValidatorTest {
 
-    @Mock
-    private PesitServerProperties properties;
+    @Mock private PesitServerProperties properties;
 
-    @Mock
-    private ConfigService configService;
+    @Mock private ConfigService configService;
 
     private FileValidator validator;
 
@@ -132,7 +128,7 @@ class FileValidatorTest {
 
         // Partner with restricted file access
         PartnerConfig partner = new PartnerConfig();
-        partner.setAllowedFiles(new String[] { "OTHER_FILE" });
+        partner.setAllowedFiles(new String[] {"OTHER_FILE"});
         ctx.setPartnerConfig(partner);
 
         VirtualFile vf = createVirtualFile("FILE1", true);
@@ -206,11 +202,12 @@ class FileValidatorTest {
 
         when(configService.findVirtualFile("FILE1")).thenReturn(Optional.empty());
 
-        LogicalFileConfig yamlConfig = LogicalFileConfig.builder()
-                .id("FILE1")
-                .enabled(true)
-                .direction(LogicalFileConfig.Direction.SEND)
-                .build();
+        LogicalFileConfig yamlConfig =
+                LogicalFileConfig.builder()
+                        .id("FILE1")
+                        .enabled(true)
+                        .direction(LogicalFileConfig.Direction.SEND)
+                        .build();
         when(properties.getLogicalFile("FILE1")).thenReturn(yamlConfig);
 
         ValidationResult result = validator.validateForSelect(ctx, transfer);
@@ -227,11 +224,12 @@ class FileValidatorTest {
 
         when(configService.findVirtualFile("FILE1")).thenReturn(Optional.empty());
 
-        LogicalFileConfig yamlConfig = LogicalFileConfig.builder()
-                .id("FILE1")
-                .enabled(true)
-                .direction(LogicalFileConfig.Direction.RECEIVE)
-                .build();
+        LogicalFileConfig yamlConfig =
+                LogicalFileConfig.builder()
+                        .id("FILE1")
+                        .enabled(true)
+                        .direction(LogicalFileConfig.Direction.RECEIVE)
+                        .build();
         when(properties.getLogicalFile("FILE1")).thenReturn(yamlConfig);
 
         ValidationResult result = validator.validateForCreate(ctx, transfer);
@@ -249,7 +247,7 @@ class FileValidatorTest {
         // Set up partner config that doesn't allow access to FILE1
         PartnerConfig partnerConfig = new PartnerConfig();
         partnerConfig.setId("PARTNER1");
-        partnerConfig.setAllowedFiles(new String[] { "OTHER_FILE" });
+        partnerConfig.setAllowedFiles(new String[] {"OTHER_FILE"});
         ctx.setPartnerConfig(partnerConfig);
 
         VirtualFile vf = createVirtualFile("FILE1", true);
@@ -273,7 +271,7 @@ class FileValidatorTest {
         // Set up partner config that doesn't allow access to FILE1
         PartnerConfig partnerConfig = new PartnerConfig();
         partnerConfig.setId("PARTNER1");
-        partnerConfig.setAllowedFiles(new String[] { "OTHER_FILE" });
+        partnerConfig.setAllowedFiles(new String[] {"OTHER_FILE"});
         ctx.setPartnerConfig(partnerConfig);
 
         VirtualFile vf = createVirtualFile("FILE1", true);
@@ -296,11 +294,12 @@ class FileValidatorTest {
 
         when(configService.findVirtualFile("FILE1")).thenReturn(Optional.empty());
 
-        LogicalFileConfig yamlConfig = LogicalFileConfig.builder()
-                .id("FILE1")
-                .enabled(false)
-                .direction(LogicalFileConfig.Direction.RECEIVE)
-                .build();
+        LogicalFileConfig yamlConfig =
+                LogicalFileConfig.builder()
+                        .id("FILE1")
+                        .enabled(false)
+                        .direction(LogicalFileConfig.Direction.RECEIVE)
+                        .build();
         when(properties.getLogicalFile("FILE1")).thenReturn(yamlConfig);
 
         ValidationResult result = validator.validateForCreate(ctx, transfer);
@@ -318,11 +317,12 @@ class FileValidatorTest {
 
         when(configService.findVirtualFile("FILE1")).thenReturn(Optional.empty());
 
-        LogicalFileConfig yamlConfig = LogicalFileConfig.builder()
-                .id("FILE1")
-                .enabled(false)
-                .direction(LogicalFileConfig.Direction.SEND)
-                .build();
+        LogicalFileConfig yamlConfig =
+                LogicalFileConfig.builder()
+                        .id("FILE1")
+                        .enabled(false)
+                        .direction(LogicalFileConfig.Direction.SEND)
+                        .build();
         when(properties.getLogicalFile("FILE1")).thenReturn(yamlConfig);
 
         ValidationResult result = validator.validateForSelect(ctx, transfer);
@@ -339,7 +339,7 @@ class FileValidatorTest {
         transfer.setFilename("FILE1");
 
         PartnerConfig partner = new PartnerConfig();
-        partner.setAllowedFiles(new String[] { "FILE1", "FILE2" });
+        partner.setAllowedFiles(new String[] {"FILE1", "FILE2"});
         ctx.setPartnerConfig(partner);
 
         VirtualFile vf = createVirtualFile("FILE1", true);
@@ -359,7 +359,7 @@ class FileValidatorTest {
         transfer.setFilename("FILE1");
 
         PartnerConfig partner = new PartnerConfig();
-        partner.setAllowedFiles(new String[] { "OTHER_FILE" });
+        partner.setAllowedFiles(new String[] {"OTHER_FILE"});
         ctx.setPartnerConfig(partner);
 
         VirtualFile vf = createVirtualFile("FILE1", true);

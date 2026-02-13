@@ -1,43 +1,47 @@
 package com.pesitwizard.server.service;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.pesitwizard.security.SecretsService;
 import com.pesitwizard.server.entity.SecretEntry;
 import com.pesitwizard.server.entity.SecretEntry.SecretScope;
 import com.pesitwizard.server.entity.SecretEntry.SecretType;
 import com.pesitwizard.server.repository.SecretRepository;
-
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service for managing encrypted secrets.
- * Uses pesitwizard-security module (supports AES and HashiCorp Vault with
- * AppRole).
+ * Service for managing encrypted secrets. Uses pesitwizard-security module (supports AES and
+ * HashiCorp Vault with AppRole).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SecretService {
 
+    private static final java.security.SecureRandom SECURE_RANDOM =
+            new java.security.SecureRandom();
+
     private final SecretRepository secretRepository;
     private final SecretsService secretsService;
 
     // ========== CRUD Operations ==========
 
-    /**
-     * Create a new secret
-     */
+    /** Create a new secret */
     @Transactional
-    public SecretEntry createSecret(String name, String plainValue, String description,
-            SecretType type, SecretScope scope, String partnerId, String serverId,
-            Instant expiresAt, String createdBy) {
+    public SecretEntry createSecret(
+            String name,
+            String plainValue,
+            String description,
+            SecretType type,
+            SecretScope scope,
+            String partnerId,
+            String serverId,
+            Instant expiresAt,
+            String createdBy) {
 
         if (secretRepository.existsByName(name)) {
             throw new IllegalArgumentException("Secret already exists: " + name);
@@ -46,22 +50,23 @@ public class SecretService {
         // Encrypt the value
         EncryptedData encrypted = encrypt(plainValue);
 
-        SecretEntry secret = SecretEntry.builder()
-                .name(name)
-                .description(description)
-                .secretType(type)
-                .encryptedValue(encrypted.ciphertext)
-                .iv(encrypted.iv)
-                .scope(scope)
-                .partnerId(partnerId)
-                .serverId(serverId)
-                .version(0L)
-                .active(true)
-                .expiresAt(expiresAt)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .createdBy(createdBy)
-                .build();
+        SecretEntry secret =
+                SecretEntry.builder()
+                        .name(name)
+                        .description(description)
+                        .secretType(type)
+                        .encryptedValue(encrypted.ciphertext)
+                        .iv(encrypted.iv)
+                        .scope(scope)
+                        .partnerId(partnerId)
+                        .serverId(serverId)
+                        .version(0L)
+                        .active(true)
+                        .expiresAt(expiresAt)
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
+                        .createdBy(createdBy)
+                        .build();
 
         secret = secretRepository.save(secret);
         log.info("Created secret: {} (type: {}, scope: {})", name, type, scope);
@@ -69,71 +74,57 @@ public class SecretService {
         return secret;
     }
 
-    /**
-     * Get decrypted secret value
-     */
+    /** Get decrypted secret value */
     public Optional<String> getSecretValue(String name) {
-        return secretRepository.findByNameAndActiveTrue(name)
+        return secretRepository
+                .findByNameAndActiveTrue(name)
                 .filter(SecretEntry::isValid)
                 .map(secret -> decrypt(secret.getEncryptedValue(), secret.getIv()));
     }
 
-    /**
-     * Get secret entry (without decrypted value)
-     */
+    /** Get secret entry (without decrypted value) */
     public Optional<SecretEntry> getSecret(String name) {
         return secretRepository.findByName(name);
     }
 
-    /**
-     * Get secret by ID
-     */
+    /** Get secret by ID */
     public Optional<SecretEntry> getSecretById(Long id) {
         return secretRepository.findById(id);
     }
 
-    /**
-     * List all secrets (without values)
-     */
+    /** List all secrets (without values) */
     public List<SecretEntry> getAllSecrets() {
         return secretRepository.findAll();
     }
 
-    /**
-     * List secrets by type
-     */
+    /** List secrets by type */
     public List<SecretEntry> getSecretsByType(SecretType type) {
         return secretRepository.findBySecretTypeOrderByNameAsc(type);
     }
 
-    /**
-     * List secrets by scope
-     */
+    /** List secrets by scope */
     public List<SecretEntry> getSecretsByScope(SecretScope scope) {
         return secretRepository.findByScopeOrderByNameAsc(scope);
     }
 
-    /**
-     * Get secrets for a partner
-     */
+    /** Get secrets for a partner */
     public List<SecretEntry> getSecretsForPartner(String partnerId) {
         return secretRepository.findActiveSecretsForPartner(partnerId);
     }
 
-    /**
-     * Get secrets for a server
-     */
+    /** Get secrets for a server */
     public List<SecretEntry> getSecretsForServer(String serverId) {
         return secretRepository.findActiveSecretsForServer(serverId);
     }
 
-    /**
-     * Update a secret value
-     */
+    /** Update a secret value */
     @Transactional
     public SecretEntry updateSecretValue(String name, String newPlainValue, String updatedBy) {
-        SecretEntry secret = secretRepository.findByName(name)
-                .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + name));
+        SecretEntry secret =
+                secretRepository
+                        .findByName(name)
+                        .orElseThrow(
+                                () -> new IllegalArgumentException("Secret not found: " + name));
 
         // Encrypt new value
         EncryptedData encrypted = encrypt(newPlainValue);
@@ -151,15 +142,20 @@ public class SecretService {
         return secret;
     }
 
-    /**
-     * Update secret metadata
-     */
+    /** Update secret metadata */
     @Transactional
-    public SecretEntry updateSecretMetadata(Long id, String description, SecretType type,
-            Boolean active, Instant expiresAt, String updatedBy) {
+    public SecretEntry updateSecretMetadata(
+            Long id,
+            String description,
+            SecretType type,
+            Boolean active,
+            Instant expiresAt,
+            String updatedBy) {
 
-        SecretEntry secret = secretRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
+        SecretEntry secret =
+                secretRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
 
         if (description != null) {
             secret.setDescription(description);
@@ -180,33 +176,31 @@ public class SecretService {
         return secretRepository.save(secret);
     }
 
-    /**
-     * Rotate a secret (update value and increment version)
-     */
+    /** Rotate a secret (update value and increment version) */
     @Transactional
     public SecretEntry rotateSecret(String name, String newPlainValue, String rotatedBy) {
         return updateSecretValue(name, newPlainValue, rotatedBy);
     }
 
-    /**
-     * Delete a secret
-     */
+    /** Delete a secret */
     @Transactional
     public void deleteSecret(Long id) {
-        SecretEntry secret = secretRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
+        SecretEntry secret =
+                secretRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
 
         secretRepository.delete(secret);
         log.info("Deleted secret: {}", secret.getName());
     }
 
-    /**
-     * Deactivate a secret
-     */
+    /** Deactivate a secret */
     @Transactional
     public SecretEntry deactivateSecret(Long id) {
-        SecretEntry secret = secretRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
+        SecretEntry secret =
+                secretRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Secret not found: " + id));
 
         secret.setActive(false);
         secret.setUpdatedAt(Instant.now());
@@ -217,8 +211,8 @@ public class SecretService {
     // ========== Encryption (delegated to pesitwizard-security) ==========
 
     /**
-     * Encrypt a plain text value using the security module.
-     * Supports both AES and Vault with AppRole.
+     * Encrypt a plain text value using the security module. Supports both AES and Vault with
+     * AppRole.
      */
     private EncryptedData encrypt(String plainText) {
         // Use the security module which handles AES/Vault transparently
@@ -229,44 +223,36 @@ public class SecretService {
         return new EncryptedData(encrypted, "");
     }
 
-    /**
-     * Decrypt an encrypted value using the security module.
-     */
+    /** Decrypt an encrypted value using the security module. */
     private String decrypt(String cipherText, String ivString) {
         // The security module handles the decryption transparently
         // ivString is ignored as IV is embedded in the encrypted string for new format
         return secretsService.decryptFromStorage(cipherText);
     }
 
-    /**
-     * Get current encryption mode (AES or VAULT).
-     */
+    /** Get current encryption mode (AES or VAULT). */
     public String getEncryptionMode() {
         return secretsService.getEncryptionMode();
     }
 
-    /**
-     * Check if encryption is enabled.
-     */
+    /** Check if encryption is enabled. */
     public boolean isEncryptionEnabled() {
         return secretsService.isEncryptionEnabled();
     }
 
     /**
-     * Generate a new AES encryption key (for manual key rotation).
-     * Note: With Vault + AppRole, key rotation is handled automatically.
+     * Generate a new AES encryption key (for manual key rotation). Note: With Vault + AppRole, key
+     * rotation is handled automatically.
      */
     public String generateEncryptionKey() {
         byte[] keyBytes = new byte[32]; // 256 bits
-        new java.security.SecureRandom().nextBytes(keyBytes);
+        SECURE_RANDOM.nextBytes(keyBytes);
         return java.util.Base64.getEncoder().encodeToString(keyBytes);
     }
 
     // ========== Statistics ==========
 
-    /**
-     * Get secret statistics
-     */
+    /** Get secret statistics */
     public SecretStatistics getStatistics() {
         SecretStatistics stats = new SecretStatistics();
         stats.setTotalSecrets(secretRepository.count());
@@ -280,12 +266,9 @@ public class SecretService {
 
     // ========== Helper Classes ==========
 
-    private record EncryptedData(String ciphertext, String iv) {
-    }
+    private record EncryptedData(String ciphertext, String iv) {}
 
-    /**
-     * Get encryption status for monitoring.
-     */
+    /** Get encryption status for monitoring. */
     public SecretsService.SecretsProviderStatus getEncryptionStatus() {
         return secretsService.getStatus();
     }

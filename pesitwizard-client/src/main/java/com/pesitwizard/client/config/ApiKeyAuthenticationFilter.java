@@ -1,25 +1,23 @@
 package com.pesitwizard.client.config;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Simple API key authentication filter for the client module.
- * Validates a static API key from configuration against the request header.
+ * Simple API key authentication filter for the client module. Validates a static API key from
+ * configuration against the request header.
  */
 @Slf4j
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
@@ -32,8 +30,11 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
         if (SecurityContextHolder.getContext().getAuthentication() != null
                 && SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
@@ -42,13 +43,14 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String providedKey = extractApiKey(request);
-        if (providedKey != null && MessageDigest.isEqual(
-                apiKeyHash.getBytes(StandardCharsets.UTF_8),
-                hashKey(providedKey).getBytes(StandardCharsets.UTF_8))) {
+        if (providedKey != null
+                && MessageDigest.isEqual(
+                        apiKeyHash.getBytes(StandardCharsets.UTF_8),
+                        hashKey(providedKey).getBytes(StandardCharsets.UTF_8))) {
 
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    "api-key-user", null,
-                    List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                            "api-key-user", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
             SecurityContextHolder.getContext().setAuthentication(auth);
             log.debug("Authenticated via API key");
         }

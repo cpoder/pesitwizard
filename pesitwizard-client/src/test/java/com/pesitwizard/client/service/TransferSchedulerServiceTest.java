@@ -4,28 +4,24 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.pesitwizard.client.entity.ScheduledTransfer;
 import com.pesitwizard.client.entity.ScheduledTransfer.ScheduleType;
 import com.pesitwizard.client.entity.TransferHistory.TransferDirection;
 import com.pesitwizard.client.repository.BusinessCalendarRepository;
 import com.pesitwizard.client.repository.FavoriteTransferRepository;
 import com.pesitwizard.client.repository.ScheduledTransferRepository;
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransferSchedulerService Tests")
@@ -33,30 +29,25 @@ class TransferSchedulerServiceTest {
 
     private static final ZoneId PARIS_ZONE = ZoneId.of("Europe/Paris");
 
-    @Mock
-    private ScheduledTransferRepository scheduleRepository;
-    @Mock
-    private FavoriteTransferRepository favoriteRepository;
-    @Mock
-    private BusinessCalendarRepository calendarRepository;
-    @Mock
-    private TransferService transferService;
-    @Mock
-    private PartnerService partnerService;
-    @Mock
-    private com.pesitwizard.security.SecretsService secretsService;
+    @Mock private ScheduledTransferRepository scheduleRepository;
+    @Mock private FavoriteTransferRepository favoriteRepository;
+    @Mock private BusinessCalendarRepository calendarRepository;
+    @Mock private TransferService transferService;
+    @Mock private PartnerService partnerService;
+    @Mock private com.pesitwizard.security.SecretsService secretsService;
 
     private TransferSchedulerService schedulerService;
 
     @BeforeEach
     void setUp() {
-        schedulerService = new TransferSchedulerService(
-                scheduleRepository,
-                favoriteRepository,
-                calendarRepository,
-                transferService,
-                partnerService,
-                secretsService);
+        schedulerService =
+                new TransferSchedulerService(
+                        scheduleRepository,
+                        favoriteRepository,
+                        calendarRepository,
+                        transferService,
+                        partnerService,
+                        secretsService);
     }
 
     @Nested
@@ -75,13 +66,14 @@ class TransferSchedulerServiceTest {
             ZonedDateTime todayTarget = now.toLocalDate().atTime(targetTime).atZone(PARIS_ZONE);
             boolean timeNotPassedYet = now.isBefore(todayTarget);
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Daily Schedule")
-                    .scheduleType(ScheduleType.DAILY)
-                    .dailyTime(targetTime)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Daily Schedule")
+                            .scheduleType(ScheduleType.DAILY)
+                            .dailyTime(targetTime)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -115,13 +107,14 @@ class TransferSchedulerServiceTest {
             LocalTime targetTime = LocalTime.of(9, 30);
             ZonedDateTime now = ZonedDateTime.now(PARIS_ZONE);
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Daily Schedule")
-                    .scheduleType(ScheduleType.DAILY)
-                    .dailyTime(targetTime)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Daily Schedule")
+                            .scheduleType(ScheduleType.DAILY)
+                            .dailyTime(targetTime)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -136,7 +129,8 @@ class TransferSchedulerServiceTest {
             assertThat(nextRun.toLocalTime()).isEqualTo(targetTime);
 
             // Should NOT be within the next few minutes (unless it happens to be 09:30 right now)
-            if (!now.toLocalTime().truncatedTo(ChronoUnit.MINUTES)
+            if (!now.toLocalTime()
+                    .truncatedTo(ChronoUnit.MINUTES)
                     .equals(targetTime.truncatedTo(ChronoUnit.MINUTES))) {
                 // If current time is not 09:30, then nextRun should not be "now"
                 long minutesDiff = Math.abs(ChronoUnit.MINUTES.between(now, nextRun));
@@ -149,13 +143,14 @@ class TransferSchedulerServiceTest {
         void onceScheduleShouldUseScheduledAt() {
             Instant scheduledAt = Instant.now().plus(2, ChronoUnit.HOURS);
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Once Schedule")
-                    .scheduleType(ScheduleType.ONCE)
-                    .scheduledAt(scheduledAt)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Once Schedule")
+                            .scheduleType(ScheduleType.ONCE)
+                            .scheduledAt(scheduledAt)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -173,13 +168,14 @@ class TransferSchedulerServiceTest {
             int intervalMinutes = 30;
             Instant before = Instant.now();
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Interval Schedule")
-                    .scheduleType(ScheduleType.INTERVAL)
-                    .intervalMinutes(intervalMinutes)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Interval Schedule")
+                            .scheduleType(ScheduleType.INTERVAL)
+                            .intervalMinutes(intervalMinutes)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -191,9 +187,7 @@ class TransferSchedulerServiceTest {
             Instant expectedMin = before.plus(intervalMinutes - 1, ChronoUnit.MINUTES);
             Instant expectedMax = Instant.now().plus(intervalMinutes + 1, ChronoUnit.MINUTES);
 
-            assertThat(result.getNextRunAt())
-                    .isAfter(expectedMin)
-                    .isBefore(expectedMax);
+            assertThat(result.getNextRunAt()).isAfter(expectedMin).isBefore(expectedMax);
         }
 
         @Test
@@ -202,14 +196,15 @@ class TransferSchedulerServiceTest {
             LocalTime targetTime = LocalTime.of(14, 0);
             int targetDayOfWeek = 3; // Wednesday
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Weekly Schedule")
-                    .scheduleType(ScheduleType.WEEKLY)
-                    .dailyTime(targetTime)
-                    .dayOfWeek(targetDayOfWeek)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Weekly Schedule")
+                            .scheduleType(ScheduleType.WEEKLY)
+                            .dailyTime(targetTime)
+                            .dayOfWeek(targetDayOfWeek)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -233,14 +228,15 @@ class TransferSchedulerServiceTest {
             LocalTime targetTime = LocalTime.of(10, 0);
             int targetDayOfMonth = 15;
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Monthly Schedule")
-                    .scheduleType(ScheduleType.MONTHLY)
-                    .dailyTime(targetTime)
-                    .dayOfMonth(targetDayOfMonth)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Monthly Schedule")
+                            .scheduleType(ScheduleType.MONTHLY)
+                            .dailyTime(targetTime)
+                            .dayOfMonth(targetDayOfMonth)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -263,12 +259,13 @@ class TransferSchedulerServiceTest {
         void hourlyScheduleShouldStartAtNextHour() {
             ZonedDateTime now = ZonedDateTime.now(PARIS_ZONE);
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Hourly Schedule")
-                    .scheduleType(ScheduleType.HOURLY)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Hourly Schedule")
+                            .scheduleType(ScheduleType.HOURLY)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -292,13 +289,14 @@ class TransferSchedulerServiceTest {
             // Every day at 06:00
             String cronExpression = "0 0 6 * * *";
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Cron Schedule")
-                    .scheduleType(ScheduleType.CRON)
-                    .cronExpression(cronExpression)
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Cron Schedule")
+                            .scheduleType(ScheduleType.CRON)
+                            .cronExpression(cronExpression)
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));
@@ -320,14 +318,15 @@ class TransferSchedulerServiceTest {
         void shouldKeepExistingNextRunAt() {
             Instant existingNextRun = Instant.now().plus(5, ChronoUnit.DAYS);
 
-            ScheduledTransfer schedule = ScheduledTransfer.builder()
-                    .name("Test Schedule")
-                    .scheduleType(ScheduleType.DAILY)
-                    .dailyTime(LocalTime.of(9, 30))
-                    .nextRunAt(existingNextRun) // Already set
-                    .direction(TransferDirection.SEND)
-                    .serverId("test-server")
-                    .build();
+            ScheduledTransfer schedule =
+                    ScheduledTransfer.builder()
+                            .name("Test Schedule")
+                            .scheduleType(ScheduleType.DAILY)
+                            .dailyTime(LocalTime.of(9, 30))
+                            .nextRunAt(existingNextRun) // Already set
+                            .direction(TransferDirection.SEND)
+                            .serverId("test-server")
+                            .build();
 
             when(scheduleRepository.save(any(ScheduledTransfer.class)))
                     .thenAnswer(i -> i.getArgument(0));

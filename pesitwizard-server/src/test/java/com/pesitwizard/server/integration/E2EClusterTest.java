@@ -4,23 +4,6 @@ import static com.pesitwizard.fpdu.ParameterIdentifier.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.net.Socket;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.mockito.Mock;
-
 import com.pesitwizard.fpdu.Fpdu;
 import com.pesitwizard.fpdu.FpduBuilder;
 import com.pesitwizard.fpdu.FpduParser;
@@ -42,19 +25,31 @@ import com.pesitwizard.server.service.PathPlaceholderService;
 import com.pesitwizard.server.service.PesitServerInstance;
 import com.pesitwizard.server.service.TransferTracker;
 import com.pesitwizard.server.ssl.SslContextFactory;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.mockito.Mock;
 
 /**
  * End-to-End Cluster Test
- * 
- * This test simulates a full cluster deployment scenario:
- * 1. Provisions multiple PeSIT server instances (simulating cluster nodes)
- * 2. Creates server configurations via the API
- * 3. Performs file transfers across the cluster
- * 4. Tests failover scenarios
- * 5. Deprovisions the cluster
- * 
- * Note: This test runs in-process without Docker/Kubernetes.
- * For full container-based testing, use scripts/e2e-test.sh
+ *
+ * <p>This test simulates a full cluster deployment scenario: 1. Provisions multiple PeSIT server
+ * instances (simulating cluster nodes) 2. Creates server configurations via the API 3. Performs
+ * file transfers across the cluster 4. Tests failover scenarios 5. Deprovisions the cluster
+ *
+ * <p>Note: This test runs in-process without Docker/Kubernetes. For full container-based testing,
+ * use scripts/e2e-test.sh
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class E2EClusterTest {
@@ -65,22 +60,21 @@ public class E2EClusterTest {
     private static final int NODE3_PORT = 5202;
     private static final int CLIENT_ID = 10;
 
-    private static final boolean INTEGRATION_ENABLED = Boolean.parseBoolean(
-            System.getProperty("pesit.integration.enabled", "false"));
+    private static final boolean INTEGRATION_ENABLED =
+            Boolean.parseBoolean(System.getProperty("pesit.integration.enabled", "false"));
 
     private PesitServerInstance node1;
     private PesitServerInstance node2;
     private PesitServerInstance node3;
 
-    @Mock
-    private SslProperties sslProperties;
+    @Mock private SslProperties sslProperties;
 
-    @Mock
-    private SslContextFactory sslContextFactory;
+    @Mock private SslContextFactory sslContextFactory;
 
     @BeforeAll
     void checkIntegrationEnabled() {
-        Assumptions.assumeTrue(INTEGRATION_ENABLED,
+        Assumptions.assumeTrue(
+                INTEGRATION_ENABLED,
                 "Integration tests disabled. Enable with -Dpesit.integration.enabled=true");
     }
 
@@ -291,7 +285,7 @@ public class E2EClusterTest {
     }
 
     private int[] getOtherPorts(int excludePort) {
-        return java.util.Arrays.stream(new int[] { NODE1_PORT, NODE2_PORT, NODE3_PORT })
+        return java.util.Arrays.stream(new int[] {NODE1_PORT, NODE2_PORT, NODE3_PORT})
                 .filter(p -> p != excludePort)
                 .toArray();
     }
@@ -312,33 +306,52 @@ public class E2EClusterTest {
         ConfigService configService = mock(ConfigService.class);
         TransferTracker transferTracker = mock(TransferTracker.class);
         PathPlaceholderService pathPlaceholderService = new PathPlaceholderService();
-        com.pesitwizard.server.service.FileSystemService fileSystemService = new com.pesitwizard.server.service.FileSystemService();
+        com.pesitwizard.server.service.FileSystemService fileSystemService =
+                new com.pesitwizard.server.service.FileSystemService();
 
         // Create split handler components
-        com.pesitwizard.security.SecretsService secretsService = mock(com.pesitwizard.security.SecretsService.class);
-        ConnectionValidator connectionValidator = new ConnectionValidator(properties, configService, secretsService);
+        com.pesitwizard.security.SecretsService secretsService =
+                mock(com.pesitwizard.security.SecretsService.class);
+        ConnectionValidator connectionValidator =
+                new ConnectionValidator(properties, configService, secretsService);
         FileValidator fileValidator = new FileValidator(properties, configService);
-        TransferOperationHandler transferOperationHandler = new TransferOperationHandler(
-                properties, fileValidator, transferTracker, pathPlaceholderService, fileSystemService);
+        TransferOperationHandler transferOperationHandler =
+                new TransferOperationHandler(
+                        properties,
+                        fileValidator,
+                        transferTracker,
+                        pathPlaceholderService,
+                        fileSystemService);
         FpduValidator fpduValidator = new FpduValidator();
-        DataTransferHandler dataTransferHandler = new DataTransferHandler(properties, transferTracker, fpduValidator);
+        DataTransferHandler dataTransferHandler =
+                new DataTransferHandler(properties, transferTracker, fpduValidator);
         MessageHandler messageHandler = new MessageHandler();
         AuditService auditService = org.mockito.Mockito.mock(AuditService.class);
-        com.pesitwizard.server.cluster.ClusterProvider clusterProvider = org.mockito.Mockito
-                .mock(com.pesitwizard.server.cluster.ClusterProvider.class);
+        com.pesitwizard.server.cluster.ClusterProvider clusterProvider =
+                org.mockito.Mockito.mock(com.pesitwizard.server.cluster.ClusterProvider.class);
 
-        PesitSessionHandler sessionHandler = new PesitSessionHandler(properties, connectionValidator,
-                transferOperationHandler, dataTransferHandler, messageHandler, transferTracker, auditService,
-                clusterProvider, fpduValidator);
-        PesitServerInstance instance = new PesitServerInstance(config, properties, sessionHandler, sslProperties,
-                sslContextFactory);
+        PesitSessionHandler sessionHandler =
+                new PesitSessionHandler(
+                        properties,
+                        connectionValidator,
+                        transferOperationHandler,
+                        dataTransferHandler,
+                        messageHandler,
+                        transferTracker,
+                        auditService,
+                        clusterProvider,
+                        fpduValidator);
+        PesitServerInstance instance =
+                new PesitServerInstance(
+                        config, properties, sessionHandler, sslProperties, sslContextFactory);
         instance.start();
 
         // Wait for the server to be fully ready
         final int serverPort = config.getPort();
-        Awaitility.await().atMost(5, TimeUnit.SECONDS)
-            .pollInterval(100, TimeUnit.MILLISECONDS)
-            .until(() -> canConnect(serverPort));
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .until(() -> canConnect(serverPort));
 
         return instance;
     }
@@ -358,12 +371,13 @@ public class E2EClusterTest {
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // CONNECT
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(CLIENT_ID)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, "E2E_TEST"))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
-                    .withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
+            Fpdu connectFpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdSrc(CLIENT_ID)
+                            .withParameter(new ParameterValue(PI_03_DEMANDEUR, "E2E_TEST"))
+                            .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
+                            .withParameter(new ParameterValue(PI_06_VERSION, 2))
+                            .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
 
             byte[] fpduBytes = FpduBuilder.buildFpdu(connectFpdu);
             out.writeShort(fpduBytes.length);
@@ -379,10 +393,12 @@ public class E2EClusterTest {
             int serverConnId = response.getIdSrc();
 
             // RELEASE
-            Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(serverConnId)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+            Fpdu releaseFpdu =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(serverConnId)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
 
             fpduBytes = FpduBuilder.buildFpdu(releaseFpdu);
             out.writeShort(fpduBytes.length);
@@ -399,8 +415,8 @@ public class E2EClusterTest {
     }
 
     private void performConcurrentTransfers() throws Exception {
-        int[] ports = { NODE1_PORT, NODE2_PORT, NODE3_PORT };
-        String[] serverIds = { "CLUSTER_NODE_1", "CLUSTER_NODE_2", "CLUSTER_NODE_3" };
+        int[] ports = {NODE1_PORT, NODE2_PORT, NODE3_PORT};
+        String[] serverIds = {"CLUSTER_NODE_1", "CLUSTER_NODE_2", "CLUSTER_NODE_3"};
 
         CountDownLatch latch = new CountDownLatch(3);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -409,16 +425,22 @@ public class E2EClusterTest {
             final int port = ports[i];
             final String serverId = serverIds[i];
 
-            new Thread(() -> {
-                try {
-                    performFileTransfer(port, serverId);
-                    successCount.incrementAndGet();
-                } catch (Exception e) {
-                    System.err.println("Transfer failed to " + serverId + ": " + e.getMessage());
-                } finally {
-                    latch.countDown();
-                }
-            }).start();
+            new Thread(
+                            () -> {
+                                try {
+                                    performFileTransfer(port, serverId);
+                                    successCount.incrementAndGet();
+                                } catch (Exception e) {
+                                    System.err.println(
+                                            "Transfer failed to "
+                                                    + serverId
+                                                    + ": "
+                                                    + e.getMessage());
+                                } finally {
+                                    latch.countDown();
+                                }
+                            })
+                    .start();
         }
 
         assertTrue(latch.await(30, TimeUnit.SECONDS), "Concurrent transfers should complete");
@@ -426,8 +448,8 @@ public class E2EClusterTest {
     }
 
     private int performLoadTest(int connectionCount) throws Exception {
-        int[] ports = { NODE1_PORT, NODE2_PORT, NODE3_PORT };
-        String[] serverIds = { "CLUSTER_NODE_1", "CLUSTER_NODE_2", "CLUSTER_NODE_3" };
+        int[] ports = {NODE1_PORT, NODE2_PORT, NODE3_PORT};
+        String[] serverIds = {"CLUSTER_NODE_1", "CLUSTER_NODE_2", "CLUSTER_NODE_3"};
 
         CountDownLatch latch = new CountDownLatch(connectionCount);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -436,16 +458,18 @@ public class E2EClusterTest {
             final int port = ports[i % 3];
             final String serverId = serverIds[i % 3];
 
-            new Thread(() -> {
-                try {
-                    performFileTransfer(port, serverId);
-                    successCount.incrementAndGet();
-                } catch (Exception e) {
-                    // Expected some failures under load
-                } finally {
-                    latch.countDown();
-                }
-            }).start();
+            new Thread(
+                            () -> {
+                                try {
+                                    performFileTransfer(port, serverId);
+                                    successCount.incrementAndGet();
+                                } catch (Exception e) {
+                                    // Expected some failures under load
+                                } finally {
+                                    latch.countDown();
+                                }
+                            })
+                    .start();
 
             // Small delay to avoid overwhelming
             Thread.sleep(50);
@@ -488,64 +512,73 @@ public class E2EClusterTest {
         CountDownLatch transfersStarted = new CountDownLatch(3);
 
         // Thread sending to Node 1 (will be shut down)
-        Thread node1Client = new Thread(() -> {
-            transfersStarted.countDown();
-            while (keepRunning.get()) {
-                try {
-                    performFileTransfer(NODE1_PORT, "CLUSTER_NODE_1");
-                    successfulTransfers.incrementAndGet();
-                    totalTransfers.incrementAndGet();
-                } catch (Exception e) {
-                    failedToNode1.incrementAndGet();
-                    totalTransfers.incrementAndGet();
-                }
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ie) {
-                    break;
-                }
-            }
-        }, "client-node1");
+        Thread node1Client =
+                new Thread(
+                        () -> {
+                            transfersStarted.countDown();
+                            while (keepRunning.get()) {
+                                try {
+                                    performFileTransfer(NODE1_PORT, "CLUSTER_NODE_1");
+                                    successfulTransfers.incrementAndGet();
+                                    totalTransfers.incrementAndGet();
+                                } catch (Exception e) {
+                                    failedToNode1.incrementAndGet();
+                                    totalTransfers.incrementAndGet();
+                                }
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ie) {
+                                    break;
+                                }
+                            }
+                        },
+                        "client-node1");
 
         // Thread sending to Node 2
-        Thread node2Client = new Thread(() -> {
-            transfersStarted.countDown();
-            while (keepRunning.get()) {
-                try {
-                    performFileTransfer(NODE2_PORT, "CLUSTER_NODE_2");
-                    successfulTransfers.incrementAndGet();
-                    successToOtherNodes.incrementAndGet();
-                    totalTransfers.incrementAndGet();
-                } catch (Exception e) {
-                    totalTransfers.incrementAndGet();
-                }
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ie) {
-                    break;
-                }
-            }
-        }, "client-node2");
+        Thread node2Client =
+                new Thread(
+                        () -> {
+                            transfersStarted.countDown();
+                            while (keepRunning.get()) {
+                                try {
+                                    performFileTransfer(NODE2_PORT, "CLUSTER_NODE_2");
+                                    successfulTransfers.incrementAndGet();
+                                    successToOtherNodes.incrementAndGet();
+                                    totalTransfers.incrementAndGet();
+                                } catch (Exception e) {
+                                    totalTransfers.incrementAndGet();
+                                }
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ie) {
+                                    break;
+                                }
+                            }
+                        },
+                        "client-node2");
 
         // Thread sending to Node 3
-        Thread node3Client = new Thread(() -> {
-            transfersStarted.countDown();
-            while (keepRunning.get()) {
-                try {
-                    performFileTransfer(NODE3_PORT, "CLUSTER_NODE_3");
-                    successfulTransfers.incrementAndGet();
-                    successToOtherNodes.incrementAndGet();
-                    totalTransfers.incrementAndGet();
-                } catch (Exception e) {
-                    totalTransfers.incrementAndGet();
-                }
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ie) {
-                    break;
-                }
-            }
-        }, "client-node3");
+        Thread node3Client =
+                new Thread(
+                        () -> {
+                            transfersStarted.countDown();
+                            while (keepRunning.get()) {
+                                try {
+                                    performFileTransfer(NODE3_PORT, "CLUSTER_NODE_3");
+                                    successfulTransfers.incrementAndGet();
+                                    successToOtherNodes.incrementAndGet();
+                                    totalTransfers.incrementAndGet();
+                                } catch (Exception e) {
+                                    totalTransfers.incrementAndGet();
+                                }
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ie) {
+                                    break;
+                                }
+                            }
+                        },
+                        "client-node3");
 
         // Start all client threads
         node1Client.start();
@@ -588,7 +621,8 @@ public class E2EClusterTest {
 
         // Verify cluster continued to work
         assertTrue(successToOtherNodes.get() > 0, "Transfers to other nodes should have succeeded");
-        assertTrue(failedToNode1.get() > 0, "Transfers to Node 1 should have failed after shutdown");
+        assertTrue(
+                failedToNode1.get() > 0, "Transfers to Node 1 should have failed after shutdown");
         System.out.println("  ✓ Cluster continued processing during Node 1 shutdown");
 
         // ========== TEST 2: Verify remaining nodes are fully operational ==========
@@ -604,20 +638,24 @@ public class E2EClusterTest {
             final int port = (i % 2 == 0) ? NODE2_PORT : NODE3_PORT;
             final String serverId = (i % 2 == 0) ? "CLUSTER_NODE_2" : "CLUSTER_NODE_3";
 
-            new Thread(() -> {
-                try {
-                    performFileTransfer(port, serverId);
-                    postShutdownSuccess.incrementAndGet();
-                } catch (Exception e) {
-                    System.err.println("  Post-shutdown transfer failed: " + e.getMessage());
-                } finally {
-                    postShutdownLatch.countDown();
-                }
-            }).start();
+            new Thread(
+                            () -> {
+                                try {
+                                    performFileTransfer(port, serverId);
+                                    postShutdownSuccess.incrementAndGet();
+                                } catch (Exception e) {
+                                    System.err.println(
+                                            "  Post-shutdown transfer failed: " + e.getMessage());
+                                } finally {
+                                    postShutdownLatch.countDown();
+                                }
+                            })
+                    .start();
         }
 
         postShutdownLatch.await(30, TimeUnit.SECONDS);
-        System.out.println("  ✓ Completed " + postShutdownSuccess.get() + "/20 transfers to remaining nodes");
+        System.out.println(
+                "  ✓ Completed " + postShutdownSuccess.get() + "/20 transfers to remaining nodes");
         assertTrue(postShutdownSuccess.get() >= 18, "At least 90% of transfers should succeed");
 
         // ========== TEST 3: Restart Node 1 and verify cluster recovers ==========
@@ -701,22 +739,29 @@ public class E2EClusterTest {
         System.out.println("\nStep 2: Starting 5 concurrent connections to Node 1...");
         for (int i = 0; i < 5; i++) {
             final int connId = i;
-            new Thread(() -> {
-                try {
-                    activeConnections.incrementAndGet();
-                    allStarted.countDown();
+            new Thread(
+                            () -> {
+                                try {
+                                    activeConnections.incrementAndGet();
+                                    allStarted.countDown();
 
-                    // Simulate a longer transfer
-                    performFileTransferWithDelay(NODE1_PORT, "DRAIN_NODE_1", 200);
+                                    // Simulate a longer transfer
+                                    performFileTransferWithDelay(NODE1_PORT, "DRAIN_NODE_1", 200);
 
-                    completedConnections.incrementAndGet();
-                } catch (Exception e) {
-                    System.out.println("  Connection " + connId + " interrupted: " + e.getMessage());
-                } finally {
-                    activeConnections.decrementAndGet();
-                    allCompleted.countDown();
-                }
-            }, "drain-client-" + i).start();
+                                    completedConnections.incrementAndGet();
+                                } catch (Exception e) {
+                                    System.out.println(
+                                            "  Connection "
+                                                    + connId
+                                                    + " interrupted: "
+                                                    + e.getMessage());
+                                } finally {
+                                    activeConnections.decrementAndGet();
+                                    allCompleted.countDown();
+                                }
+                            },
+                            "drain-client-" + i)
+                    .start();
         }
 
         // Wait for all connections to start
@@ -748,22 +793,22 @@ public class E2EClusterTest {
         System.out.println("\n✓✓✓ GRACEFUL SHUTDOWN WITH DRAIN TEST PASSED ✓✓✓\n");
     }
 
-    /**
-     * Perform a file transfer with an artificial delay to simulate longer transfers
-     */
-    private void performFileTransferWithDelay(int port, String serverId, int delayMs) throws Exception {
+    /** Perform a file transfer with an artificial delay to simulate longer transfers */
+    private void performFileTransferWithDelay(int port, String serverId, int delayMs)
+            throws Exception {
         try (Socket socket = new Socket(HOST, port)) {
             socket.setSoTimeout(10000);
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             DataInputStream in = new DataInputStream(socket.getInputStream());
 
             // CONNECT
-            Fpdu connectFpdu = new Fpdu(FpduType.CONNECT)
-                    .withIdSrc(CLIENT_ID)
-                    .withParameter(new ParameterValue(PI_03_DEMANDEUR, "DRAIN_TEST"))
-                    .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
-                    .withParameter(new ParameterValue(PI_06_VERSION, 2))
-                    .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
+            Fpdu connectFpdu =
+                    new Fpdu(FpduType.CONNECT)
+                            .withIdSrc(CLIENT_ID)
+                            .withParameter(new ParameterValue(PI_03_DEMANDEUR, "DRAIN_TEST"))
+                            .withParameter(new ParameterValue(PI_04_SERVEUR, serverId))
+                            .withParameter(new ParameterValue(PI_06_VERSION, 2))
+                            .withParameter(new ParameterValue(PI_22_TYPE_ACCES, 0));
 
             byte[] fpduBytes = FpduBuilder.buildFpdu(connectFpdu);
             out.writeShort(fpduBytes.length);
@@ -782,10 +827,12 @@ public class E2EClusterTest {
             Thread.sleep(delayMs);
 
             // RELEASE
-            Fpdu releaseFpdu = new Fpdu(FpduType.RELEASE)
-                    .withIdDst(serverConnId)
-                    .withIdSrc(0)
-                    .withParameter(new ParameterValue(PI_02_DIAG, new byte[] { 0x00, 0x00, 0x00 }));
+            Fpdu releaseFpdu =
+                    new Fpdu(FpduType.RELEASE)
+                            .withIdDst(serverConnId)
+                            .withIdSrc(0)
+                            .withParameter(
+                                    new ParameterValue(PI_02_DIAG, new byte[] {0x00, 0x00, 0x00}));
 
             fpduBytes = FpduBuilder.buildFpdu(releaseFpdu);
             out.writeShort(fpduBytes.length);

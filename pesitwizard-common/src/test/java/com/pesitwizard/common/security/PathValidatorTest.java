@@ -36,26 +36,28 @@ class PathValidatorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "../etc/passwd",
-            "..\\windows\\system32",
-            "foo/../bar",
-            "foo/..\\bar",
-            "...../etc",
-            "foo\0bar"
-    })
+    @ValueSource(
+            strings = {
+                "../etc/passwd",
+                "..\\windows\\system32",
+                "foo/../bar",
+                "foo/..\\bar",
+                "...../etc",
+                "foo\0bar"
+            })
     void containsTraversal_withTraversalAttempts_returnsTrue(String path) {
         assertTrue(PathValidator.containsTraversal(path));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "normal/path/file.txt",
-            "file.txt",
-            "some.file.with.dots.txt",
-            "file-with-dashes.txt",
-            "file_with_underscores.txt"
-    })
+    @ValueSource(
+            strings = {
+                "normal/path/file.txt",
+                "file.txt",
+                "some.file.with.dots.txt",
+                "file-with-dashes.txt",
+                "file_with_underscores.txt"
+            })
     void containsTraversal_withNormalPaths_returnsFalse(String path) {
         assertFalse(PathValidator.containsTraversal(path));
     }
@@ -113,13 +115,12 @@ class PathValidatorTest {
 
     @Test
     void validatePath_withTraversal_throwsException() {
-        assertThrows(SecurityException.class, () ->
-            PathValidator.validatePath("../../../etc/passwd"));
+        assertThrows(
+                SecurityException.class, () -> PathValidator.validatePath("../../../etc/passwd"));
     }
 
     @Test
     void validatePath_withNull_throwsException() {
-        assertThrows(SecurityException.class, () ->
-            PathValidator.validatePath(null));
+        assertThrows(SecurityException.class, () -> PathValidator.validatePath(null));
     }
 }

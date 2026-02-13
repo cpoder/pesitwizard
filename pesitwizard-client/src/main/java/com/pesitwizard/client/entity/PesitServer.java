@@ -1,7 +1,7 @@
 package com.pesitwizard.client.entity;
 
-import java.time.Instant;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,17 +14,14 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-/**
- * Entity representing a configured PeSIT server
- */
+/** Entity representing a configured PeSIT server */
 @Entity
 @Table(name = "pesit_servers")
 @Data
@@ -41,22 +38,19 @@ public class PesitServer {
     @Column(unique = true)
     private String name;
 
-    @NotBlank
-    private String host;
+    @NotBlank private String host;
 
     @NotNull
     @Min(1)
     @Max(65535)
     private Integer port;
 
-    @NotBlank
-    private String serverId;
+    @NotBlank private String serverId;
 
     private String description;
 
     /** Enable TLS/SSL */
-    @Builder.Default
-    private boolean tlsEnabled = false;
+    @Builder.Default private boolean tlsEnabled = false;
 
     /** Truststore data (PKCS12 format) for TLS */
     @Column(columnDefinition = "bytea")
@@ -80,26 +74,24 @@ public class PesitServer {
     @ToString.Exclude
     private String keystorePassword;
 
-    /** Whether to verify the server certificate's hostname (CN/SAN) matches the target host.
-     *  Defaults to true (secure). Disable only for testing or legacy servers with misconfigured certificates. */
-    @Builder.Default
-    private boolean hostnameVerification = true;
+    /**
+     * Whether to verify the server certificate's hostname (CN/SAN) matches the target host.
+     * Defaults to true (secure). Disable only for testing or legacy servers with misconfigured
+     * certificates.
+     */
+    @Builder.Default private boolean hostnameVerification = true;
 
     /** Connection timeout in milliseconds */
-    @Builder.Default
-    private Integer connectionTimeout = 30000;
+    @Builder.Default private Integer connectionTimeout = 30000;
 
     /** Read timeout in milliseconds */
-    @Builder.Default
-    private Integer readTimeout = 60000;
+    @Builder.Default private Integer readTimeout = 60000;
 
     /** Whether this server is enabled */
-    @Builder.Default
-    private boolean enabled = true;
+    @Builder.Default private boolean enabled = true;
 
     /** Default server flag */
-    @Builder.Default
-    private boolean defaultServer = false;
+    @Builder.Default private boolean defaultServer = false;
 
     @Column(updatable = false)
     private Instant createdAt;
