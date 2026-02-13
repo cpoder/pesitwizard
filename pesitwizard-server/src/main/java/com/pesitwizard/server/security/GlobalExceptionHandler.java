@@ -67,9 +67,7 @@ public class GlobalExceptionHandler {
                         .map(
                                 error ->
                                         new FieldValidationError(
-                                                error.getField(),
-                                                error.getDefaultMessage(),
-                                                null))
+                                                error.getField(), error.getDefaultMessage(), null))
                         .collect(Collectors.toList());
 
         String message =

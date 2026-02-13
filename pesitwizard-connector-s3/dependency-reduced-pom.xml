@@ -120,6 +120,6 @@
     <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.source>21</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jacoco.minimum.coverage>0.20</jacoco.minimum.coverage>
+    <jacoco.minimum.coverage>0.30</jacoco.minimum.coverage>
   </properties>
 </project>

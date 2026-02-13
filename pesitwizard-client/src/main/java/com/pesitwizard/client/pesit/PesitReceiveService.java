@@ -415,12 +415,17 @@ public class PesitReceiveService {
 
         // C-8: Validate received file size against expected size
         if (expectedSize > 0 && totalBytes != expectedSize) {
-            log.warn("File size mismatch: expected {} bytes, received {} bytes", expectedSize, totalBytes);
-            // Only fail if we received LESS data (more data is allowed per PeSIT spec for variable records)
+            log.warn(
+                    "File size mismatch: expected {} bytes, received {} bytes",
+                    expectedSize,
+                    totalBytes);
+            // Only fail if we received LESS data (more data is allowed per PeSIT spec for variable
+            // records)
             if (totalBytes < expectedSize) {
                 throw new IOException(
-                    String.format("Transfer incomplete: expected %d bytes but received %d bytes",
-                        expectedSize, totalBytes));
+                        String.format(
+                                "Transfer incomplete: expected %d bytes but received %d bytes",
+                                expectedSize, totalBytes));
             }
         }
 

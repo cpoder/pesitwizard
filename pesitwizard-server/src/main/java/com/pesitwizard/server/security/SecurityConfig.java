@@ -181,8 +181,9 @@ public class SecurityConfig {
         validators.add(JwtValidators.createDefault());
 
         if (oauth2.getAudience() != null && !oauth2.getAudience().isBlank()) {
-            validators.add(new JwtClaimValidator<List<String>>(
-                    "aud", aud -> aud != null && aud.contains(oauth2.getAudience())));
+            validators.add(
+                    new JwtClaimValidator<List<String>>(
+                            "aud", aud -> aud != null && aud.contains(oauth2.getAudience())));
             log.info("JWT audience validation enabled: {}", oauth2.getAudience());
         }
 
