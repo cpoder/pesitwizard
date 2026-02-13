@@ -2,8 +2,8 @@ apiVersion: v2
 name: pesitwizard-server
 description: PeSIT Wizard Server - PeSIT file transfer server (standalone mode)
 type: application
-version: 0.1.0
-appVersion: "1.0.0"
+version: 1.1.0
+appVersion: "1.1.0"
 keywords:
   - pesitwizard
   - pesit
