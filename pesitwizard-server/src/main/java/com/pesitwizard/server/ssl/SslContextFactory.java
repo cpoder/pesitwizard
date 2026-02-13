@@ -6,17 +6,25 @@ import com.pesitwizard.server.entity.CertificateStore;
 import com.pesitwizard.server.entity.CertificateStore.StoreType;
 import com.pesitwizard.server.repository.CertificateStoreRepository;
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.cert.CertPathBuilder;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXBuilderParameters;
+import java.security.cert.PKIXRevocationChecker;
+import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
@@ -190,8 +198,7 @@ public class SslContextFactory {
                             caCert.getSubjectX500Principal().getName());
                 }
 
-                tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(trustStore);
+                tmf = initTrustManagerFactory(trustStore);
             }
 
             // Create SSL context
@@ -286,12 +293,11 @@ public class SslContextFactory {
                             : decryptPassword(keystore.getStorePassword());
             kmf.init(ks, keyPassword != null ? keyPassword.toCharArray() : null);
 
-            // Initialize trust manager
+            // Initialize trust manager (with optional CRL/OCSP revocation checking)
             TrustManagerFactory tmf = null;
             if (truststore != null) {
                 KeyStore ts = loadKeyStore(truststore);
-                tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(ts);
+                tmf = initTrustManagerFactory(ts);
             }
 
             // Create SSL context
@@ -759,6 +765,65 @@ public class SslContextFactory {
         } catch (java.security.GeneralSecurityException | java.io.IOException e) {
             throw new SslConfigurationException("Failed to remove entry: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Initialize a TrustManagerFactory, optionally with CRL/OCSP revocation checking. When
+     * revocation checking is enabled, uses PKIX CertPathBuilder with PKIXRevocationChecker.
+     */
+    private TrustManagerFactory initTrustManagerFactory(KeyStore trustStore)
+            throws java.security.GeneralSecurityException {
+        SslProperties.RevocationProperties revocation = sslProperties.getRevocation();
+
+        if (revocation != null && revocation.isEnabled()) {
+            log.info(
+                    "Enabling certificate revocation checking (OCSP={}, preferCRLs={}, softFail={})",
+                    revocation.isOcspEnabled(),
+                    revocation.isPreferCrls(),
+                    revocation.isSoftFail());
+
+            CertPathBuilder cpb = CertPathBuilder.getInstance("PKIX");
+            PKIXRevocationChecker rc = (PKIXRevocationChecker) cpb.getRevocationChecker();
+
+            Set<PKIXRevocationChecker.Option> options =
+                    EnumSet.noneOf(PKIXRevocationChecker.Option.class);
+            if (revocation.isSoftFail()) {
+                options.add(PKIXRevocationChecker.Option.SOFT_FAIL);
+            }
+            if (revocation.isPreferCrls()) {
+                options.add(PKIXRevocationChecker.Option.PREFER_CRLS);
+            }
+            if (!revocation.isOcspEnabled()) {
+                options.add(PKIXRevocationChecker.Option.NO_FALLBACK);
+            }
+            rc.setOptions(options);
+
+            if (revocation.getOcspResponderUrl() != null
+                    && !revocation.getOcspResponderUrl().isBlank()) {
+                try {
+                    rc.setOcspResponder(new URI(revocation.getOcspResponderUrl()));
+                    log.info("OCSP responder URL: {}", revocation.getOcspResponderUrl());
+                } catch (java.net.URISyntaxException e) {
+                    log.warn(
+                            "Invalid OCSP responder URL '{}', using AIA extension from certificate",
+                            revocation.getOcspResponderUrl());
+                }
+            }
+
+            PKIXBuilderParameters params =
+                    new PKIXBuilderParameters(trustStore, new X509CertSelector());
+            params.addCertPathChecker(rc);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("PKIX");
+            tmf.init(new CertPathTrustManagerParameters(params));
+            return tmf;
+        }
+
+        // Standard trust manager without revocation checking
+        TrustManagerFactory tmf =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(trustStore);
+        return tmf;
     }
 
     /**

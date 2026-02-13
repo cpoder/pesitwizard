@@ -103,6 +103,18 @@ pesit:
     verify-certificate-chain: true
     # Enabled cipher suites (empty = use defaults)
     cipher-suites: []
+    # Certificate revocation checking (CRL/OCSP)
+    revocation:
+      # Enable revocation checking (env: PESIT_SSL_REVOCATION_ENABLED)
+      enabled: ${PESIT_SSL_REVOCATION_ENABLED:false}
+      # Enable OCSP (Online Certificate Status Protocol)
+      ocsp-enabled: ${PESIT_SSL_REVOCATION_OCSP:true}
+      # Custom OCSP responder URL (overrides AIA extension in cert)
+      ocsp-responder-url: ${PESIT_SSL_REVOCATION_OCSP_URL:}
+      # Prefer CRLs over OCSP when both are available
+      prefer-crls: ${PESIT_SSL_REVOCATION_PREFER_CRLS:false}
+      # Soft-fail: allow certificate if revocation status cannot be determined
+      soft-fail: ${PESIT_SSL_REVOCATION_SOFT_FAIL:true}
     # Environment variable based certificates (for Kubernetes deployments)
     keystore-data: ${PESIT_SSL_KEYSTORE_DATA:}
     keystore-password: ${PESIT_SSL_KEYSTORE_PASSWORD:}

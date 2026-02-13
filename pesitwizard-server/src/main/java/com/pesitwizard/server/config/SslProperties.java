@@ -62,4 +62,28 @@ public class SslProperties {
 
     /** Enabled cipher suites (empty = use defaults) */
     private List<String> cipherSuites = new ArrayList<>();
+
+    /** Certificate revocation checking (CRL/OCSP) */
+    private RevocationProperties revocation = new RevocationProperties();
+
+    @Data
+    public static class RevocationProperties {
+        /** Enable certificate revocation checking */
+        private boolean enabled = false;
+
+        /** Enable OCSP (Online Certificate Status Protocol) */
+        private boolean ocspEnabled = true;
+
+        /** Custom OCSP responder URL (overrides AIA extension in certificate) */
+        private String ocspResponderUrl;
+
+        /** Prefer CRLs over OCSP when both are available */
+        private boolean preferCrls = false;
+
+        /**
+         * Soft-fail mode: if revocation status cannot be determined (network error, no CRL/OCSP),
+         * allow the certificate instead of rejecting it. Recommended for initial rollout.
+         */
+        private boolean softFail = true;
+    }
 }
