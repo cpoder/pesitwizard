@@ -11,6 +11,8 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +32,8 @@ import lombok.NoArgsConstructor;
             @Index(name = "idx_transfer_filename", columnList = "filename"),
             @Index(name = "idx_transfer_started", columnList = "startedAt"),
             @Index(name = "idx_transfer_server", columnList = "serverId"),
-            @Index(name = "idx_transfer_session", columnList = "sessionId")
+            @Index(name = "idx_transfer_session", columnList = "sessionId"),
+            @Index(name = "idx_transfer_server_status", columnList = "serverId,status")
         })
 @Data
 @Builder
@@ -88,7 +91,10 @@ public class TransferRecord {
     @Builder.Default private Long bytesTransferred = 0L;
 
     /** Transfer progress percentage (0-100) */
-    @Builder.Default private Integer progressPercent = 0;
+    @Min(0)
+    @Max(100)
+    @Builder.Default
+    private Integer progressPercent = 0;
 
     /** Last sync point position */
     @Builder.Default private Long lastSyncPoint = 0L;
@@ -204,7 +210,7 @@ public class TransferRecord {
         this.bytesTransferred = bytes;
         this.updatedAt = Instant.now();
         if (fileSize != null && fileSize > 0) {
-            this.progressPercent = (int) ((bytes * 100) / fileSize);
+            this.progressPercent = (int) Math.min(100, Math.max(0, (bytes * 100) / fileSize));
         }
     }
 

@@ -15,7 +15,7 @@
 
     <properties>
         <!-- TODO: increase to 0.50 as test coverage improves -->
-        <jacoco.minimum.coverage>0.15</jacoco.minimum.coverage>
+        <jacoco.minimum.coverage>0.20</jacoco.minimum.coverage>
     </properties>
 
     <name>PeSIT Wizard Common</name>

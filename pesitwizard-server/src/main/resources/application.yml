@@ -11,7 +11,9 @@
 spring:
   application:
     name: pesitwizard-server
-  
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   # Default: H2 Database configuration (for local development)
   datasource:
     url: jdbc:h2:file:./data/pesitwizard-db;DB_CLOSE_DELAY=-1
@@ -48,6 +50,10 @@ spring:
 # Server configuration
 server:
   port: 8080  # HTTP management port (REST API)
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: always
   # Request size limits
   tomcat:
     max-http-form-post-size: 100MB
@@ -90,10 +96,9 @@ pesit:
     client-auth: ${PESIT_SSL_CLIENT_AUTH:NONE}
     # TLS protocol version (TLSv1.2, TLSv1.3)
     protocol: ${PESIT_SSL_PROTOCOL:TLSv1.3}
-    # Allowed TLS protocol versions (S3-01: only TLSv1.2+ are secure)
+    # Allowed TLS protocol versions (TLSv1.3 only for production security)
     protocols:
       - TLSv1.3
-      - TLSv1.2
     # Verify client certificate chain against CA
     verify-certificate-chain: true
     # Enabled cipher suites (empty = use defaults)
@@ -114,9 +119,9 @@ pesit:
     # CA key alias
     ca-key-alias: pesit-ca
     # CA keystore password (use env var in production)
-    ca-keystore-password: ${PESIT_CA_PASSWORD:changeit}
+    ca-keystore-password: ${PESIT_CA_PASSWORD:}
     # CA truststore password
-    ca-truststore-password: ${PESIT_CA_TRUSTSTORE_PASSWORD:changeit}
+    ca-truststore-password: ${PESIT_CA_TRUSTSTORE_PASSWORD:}
     # CA certificate validity (days) - default 10 years
     ca-validity-days: 3650
     # Default certificate validity (days) - default 1 year
@@ -202,8 +207,8 @@ pesit:
         id: CXCLIENT
         description: IBM Sterling Connect:Express client
         enabled: true
-        # WARNING: Development-only default password. Change in production!
-        password: test123
+        # REQUIRED: Set via environment variable
+        password: ${PESIT_PARTNER_CXCLIENT_PASSWORD:}
         access-type: BOTH
         max-connections: 10
         allowed-files: []
@@ -213,8 +218,8 @@ pesit:
         id: SECUREP
         description: Partner requiring authentication
         enabled: true
-        # WARNING: Development-only default password. Change in production!
-        password: secret123
+        # REQUIRED: Set via environment variable
+        password: ${PESIT_PARTNER_SECUREP_PASSWORD:}
         access-type: WRITE
         max-connections: 5
         allowed-files:
@@ -343,15 +348,15 @@ pesit.security:
     enabled: ${PESIT_BASIC_AUTH_ENABLED:false}
     users:
       admin:
-        password: ${PESIT_ADMIN_PASSWORD:changeme}
+        password: ${PESIT_ADMIN_PASSWORD:}
         roles:
           - ADMIN
       operator:
-        password: ${PESIT_OPERATOR_PASSWORD:changeme}
+        password: ${PESIT_OPERATOR_PASSWORD:}
         roles:
           - OPERATOR
       user:
-        password: ${PESIT_USER_PASSWORD:changeme}
+        password: ${PESIT_USER_PASSWORD:}
         roles:
           - USER
   
@@ -402,7 +407,7 @@ pesit.security:
   # Rate limiting configuration
   rate-limiting:
     # Enable rate limiting (recommended for production)
-    enabled: ${PESIT_RATE_LIMITING_ENABLED:false}
+    enabled: ${PESIT_RATE_LIMITING_ENABLED:true}
     # Requests per minute per IP
     requests-per-minute: ${PESIT_RATE_LIMIT_RPM:100}
     # Burst multiplier (allows temporary spikes)
@@ -487,7 +492,7 @@ management:
     # Only enable if endpoint is configured
     enabled: ${pesit.observability.tracing.enabled:false}
     sampling:
-      probability: 1.0
+      probability: ${OTEL_SAMPLING_PROBABILITY:0.1}
 
 # OpenAPI / Swagger UI
 springdoc:
@@ -501,6 +506,6 @@ springdoc:
 logging:
   level:
     root: INFO
-    com.pesitwizard: DEBUG
+    com.pesitwizard: ${LOG_LEVEL:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

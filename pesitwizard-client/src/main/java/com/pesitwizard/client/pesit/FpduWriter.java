@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -28,7 +30,8 @@ public class FpduWriter {
     private final int recordLength; // PI_32 article/record size (0 = variable)
     private final boolean useMultiArticle; // Use DTFMA for variable records
 
-    private long totalBytesSent = 0;
+    private final AtomicLong totalBytesSent = new AtomicLong(0);
+    private final ConcurrentHashMap<Integer, Long> confirmedSyncPoints = new ConcurrentHashMap<>();
 
     /** Create a writer for fixed-length records (simple DTF). */
     public FpduWriter(PesitSession session, int serverConnectionId, int maxEntitySize) {
@@ -63,14 +66,29 @@ public class FpduWriter {
                 this.useMultiArticle);
     }
 
-    /** Get maximum data size per DTF FPDU. */
+    /** Get maximum data size per DTF FPDU, capped at 65536. */
     public int getMaxDataPerDtf() {
-        return maxEntitySize - FPDU_HEADER_SIZE;
+        return Math.min(maxEntitySize - FPDU_HEADER_SIZE, 65536);
     }
 
     /** Get total bytes sent so far. */
     public long getTotalBytesSent() {
-        return totalBytesSent;
+        return totalBytesSent.get();
+    }
+
+    /** Record a confirmed sync point (after receiving ACK_SYN). */
+    public void confirmSyncPoint(int syncNumber) {
+        confirmedSyncPoints.put(syncNumber, totalBytesSent.get());
+    }
+
+    /** Get the byte position at a confirmed sync point. Returns -1 if unknown. */
+    public long getBytesAtSyncPoint(int syncNumber) {
+        return confirmedSyncPoints.getOrDefault(syncNumber, -1L);
+    }
+
+    /** Get the last confirmed sync point byte position, or 0 if none. */
+    public long getLastConfirmedSyncPosition() {
+        return confirmedSyncPoints.values().stream().mapToLong(Long::longValue).max().orElse(0L);
     }
 
     /**
@@ -94,11 +112,11 @@ public class FpduWriter {
             writeDtf(chunk);
 
             if (callback != null) {
-                callback.onChunkSent(bytesRead, totalBytesSent);
+                callback.onChunkSent(bytesRead, totalBytesSent.get());
             }
         }
 
-        return totalBytesSent;
+        return totalBytesSent.get();
     }
 
     /**
@@ -182,8 +200,8 @@ public class FpduWriter {
             Thread.currentThread().interrupt();
             throw new IOException("Interrupted while sending DTF", e);
         }
-        totalBytesSent += data.length;
-        log.debug("Sent DTF: {} bytes, total: {}", data.length, totalBytesSent);
+        long newTotal = totalBytesSent.addAndGet(data.length);
+        log.debug("Sent DTF: {} bytes, total: {}", data.length, newTotal);
     }
 
     /** Send a DTFMA (multi-article DTF) FPDU. */
@@ -193,12 +211,12 @@ public class FpduWriter {
         if (dtfmaData != null) {
             session.sendRawFpdu(dtfmaData);
             int dataSize = articles.stream().mapToInt(a -> a.length).sum();
-            totalBytesSent += dataSize;
+            long newTotal = totalBytesSent.addAndGet(dataSize);
             log.debug(
                     "Sent DTFMA: {} articles, {} bytes data, total: {}",
                     articles.size(),
                     dataSize,
-                    totalBytesSent);
+                    newTotal);
         } else {
             // Fallback: send as individual DTFs
             log.warn("DTFMA too large, falling back to individual DTFs");

@@ -23,7 +23,7 @@ public class TlsTransportChannel extends AbstractSocketTransportChannel {
 
     private final SSLContext sslContext;
     private boolean hostnameVerification = true;
-    private String[] enabledProtocols = new String[] {"TLSv1.3", "TLSv1.2"};
+    private String[] enabledProtocols = new String[] {"TLSv1.3"};
 
     /**
      * When false (default), uses standard PeSIT over TLS: FPDUs are sent directly without an

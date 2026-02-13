@@ -131,8 +131,8 @@ public class PesitServerInstance {
                         config.getServerId(),
                         sslProperties.getProtocols());
             } else {
-                // Fallback: only allow TLSv1.2 and TLSv1.3
-                sslServerSocket.setEnabledProtocols(new String[] {"TLSv1.3", "TLSv1.2"});
+                // Fallback: only allow TLSv1.3
+                sslServerSocket.setEnabledProtocols(new String[] {"TLSv1.3"});
                 log.info(
                         "[{}] TLS protocols restricted to: [TLSv1.3, TLSv1.2]",
                         config.getServerId());

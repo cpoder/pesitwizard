@@ -11,11 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 public class TransferContext {
 
     @Getter private final String transferId;
-    @Getter private ClientState state = ClientState.CN01_REPOS;
-    @Getter private long bytesTransferred = 0;
-    @Getter private long totalBytes = 0;
-    @Getter private int lastSyncPoint = 0;
-    @Getter private long bytesAtLastSyncPoint = 0;
+    private volatile ClientState state = ClientState.CN01_REPOS;
+    private long bytesTransferred = 0;
+    @Getter private final long totalBytes;
+    private int lastSyncPoint = 0;
+    private long bytesAtLastSyncPoint = 0;
 
     /** Map of sync point number → byte position for RESYN rollback */
     private final Map<Integer, Long> syncPointPositions = new ConcurrentHashMap<>();
@@ -26,6 +26,7 @@ public class TransferContext {
 
     public TransferContext(String transferId, TransferEventBus eventBus) {
         this.transferId = transferId;
+        this.totalBytes = 0;
         this.eventBus = eventBus;
     }
 
@@ -35,7 +36,23 @@ public class TransferContext {
         this.eventBus = eventBus;
     }
 
-    public void transition(ClientState newState) {
+    public synchronized ClientState getState() {
+        return state;
+    }
+
+    public synchronized long getBytesTransferred() {
+        return bytesTransferred;
+    }
+
+    public synchronized int getLastSyncPoint() {
+        return lastSyncPoint;
+    }
+
+    public synchronized long getBytesAtLastSyncPoint() {
+        return bytesAtLastSyncPoint;
+    }
+
+    public synchronized void transition(ClientState newState) {
         if (!state.canTransitionTo(newState)) {
             log.error("Invalid transition: {} -> {}", state.getCode(), newState.getCode());
             throw new IllegalStateException(state.getCode() + " -> " + newState.getCode());
@@ -48,7 +65,7 @@ public class TransferContext {
         }
     }
 
-    public void addBytes(long bytes) {
+    public synchronized void addBytes(long bytes) {
         bytesTransferred += bytes;
         long now = System.currentTimeMillis();
         if (eventBus != null && now - lastProgressUpdate >= PROGRESS_INTERVAL_MS) {
@@ -57,7 +74,7 @@ public class TransferContext {
         }
     }
 
-    public void syncPoint(int syncNum, long bytePos) {
+    public synchronized void syncPoint(int syncNum, long bytePos) {
         lastSyncPoint = syncNum;
         bytesAtLastSyncPoint = bytePos;
         syncPointPositions.put(syncNum, bytePos);
@@ -74,14 +91,14 @@ public class TransferContext {
         return syncPointPositions.getOrDefault(syncPoint, -1L);
     }
 
-    public void error(String message, String diagCode) {
+    public synchronized void error(String message, String diagCode) {
         state = ClientState.ERROR;
         if (eventBus != null) {
             eventBus.error(transferId, message, diagCode);
         }
     }
 
-    public void completed() {
+    public synchronized void completed() {
         if (eventBus != null) {
             eventBus.progress(transferId, bytesTransferred, totalBytes);
             eventBus.completed(transferId, bytesTransferred);
@@ -155,7 +172,7 @@ public class TransferContext {
         transition(ClientState.TDE07_DATA_END);
     }
 
-    public void transEndSent() {
+    public synchronized void transEndSent() {
         if (state == ClientState.TDL07_DATA_END) {
             transition(ClientState.TDL08A_TRANS_END_PENDING);
         } else {

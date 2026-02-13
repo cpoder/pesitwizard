@@ -1,13 +1,16 @@
 package com.pesitwizard.client.pesit;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class PesitStateMachine {
-    @Getter private ClientState currentState = ClientState.CN01_REPOS;
+    private volatile ClientState currentState = ClientState.CN01_REPOS;
 
-    public void transition(ClientState newState) {
+    public synchronized ClientState getCurrentState() {
+        return currentState;
+    }
+
+    public synchronized void transition(ClientState newState) {
         if (!currentState.canTransitionTo(newState)) {
             throw new IllegalStateException(currentState.getCode() + " -> " + newState.getCode());
         }
@@ -15,23 +18,23 @@ public class PesitStateMachine {
         currentState = newState;
     }
 
-    public void reset() {
+    public synchronized void reset() {
         currentState = ClientState.CN01_REPOS;
     }
 
-    public void error() {
+    public synchronized void error() {
         currentState = ClientState.ERROR;
     }
 
-    public boolean canSendData() {
+    public synchronized boolean canSendData() {
         return currentState.canSendData();
     }
 
-    public boolean canReceiveData() {
+    public synchronized boolean canReceiveData() {
         return currentState.canReceiveData();
     }
 
-    public boolean isConnected() {
+    public synchronized boolean isConnected() {
         return currentState.isConnected();
     }
 }

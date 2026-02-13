@@ -63,6 +63,13 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
     @Getter private volatile boolean connected = false;
 
+    /** Last known full cluster size for quorum calculation */
+    private volatile int lastKnownClusterSize = 1;
+
+    /** Minimum cluster size that requires quorum (below this, standalone mode is assumed) */
+    @Value("${pesitwizard.cluster.quorum-min-size:2}")
+    private int quorumMinSize;
+
     private final ServerOwnershipRepository ownershipRepository;
     private final List<ClusterEventListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -190,10 +197,42 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
         Address localAddress = channel.getAddress();
 
         boolean wasLeader = leader;
-        leader = coordinator != null && coordinator.equals(localAddress);
+
+        // Track the largest cluster size seen (only grows, never shrinks)
+        if (newView.size() > lastKnownClusterSize) {
+            lastKnownClusterSize = newView.size();
+        }
+
+        boolean isCoordinator = coordinator != null && coordinator.equals(localAddress);
+
+        // Quorum check: only accept leadership if we have majority
+        boolean hasQuorum;
+        if (lastKnownClusterSize < quorumMinSize) {
+            // Small cluster (1 node or configured below min): no quorum needed
+            hasQuorum = true;
+        } else {
+            int quorumSize = (lastKnownClusterSize / 2) + 1;
+            hasQuorum = newView.size() >= quorumSize;
+        }
+
+        if (isCoordinator && hasQuorum) {
+            leader = true;
+        } else if (isCoordinator && !hasQuorum) {
+            leader = false;
+            log.warn(
+                    "This node is coordinator but DOES NOT HAVE QUORUM ({}/{} needed). "
+                            + "Refusing leadership to prevent split-brain.",
+                    newView.size(),
+                    (lastKnownClusterSize / 2) + 1);
+        } else {
+            leader = false;
+        }
 
         if (leader && !wasLeader) {
-            log.info("This node is now the LEADER");
+            log.info(
+                    "This node is now the LEADER (quorum: {}/{})",
+                    newView.size(),
+                    lastKnownClusterSize);
             notifyListeners(ClusterEvent.becameLeader(nodeName));
         } else if (!leader && wasLeader) {
             log.info("This node is no longer the leader");

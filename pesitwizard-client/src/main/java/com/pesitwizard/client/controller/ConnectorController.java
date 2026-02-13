@@ -11,6 +11,7 @@ import com.pesitwizard.connector.ConnectorException;
 import com.pesitwizard.connector.ConnectorFactory;
 import com.pesitwizard.connector.StorageConnector;
 import com.pesitwizard.security.SecretsService;
+import jakarta.validation.Valid;
 import java.nio.file.Path;
 import java.security.Principal;
 import java.time.Instant;
@@ -226,7 +227,7 @@ public class ConnectorController {
     }
 
     @PostMapping("/connections")
-    public ResponseEntity<?> createConnection(@RequestBody ConnectionRequest request) {
+    public ResponseEntity<?> createConnection(@Valid @RequestBody ConnectionRequest request) {
         if (connectionRepository.existsByName(request.name())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Connection name already exists"));
@@ -254,7 +255,7 @@ public class ConnectorController {
 
     @PutMapping("/connections/{id}")
     public ResponseEntity<?> updateConnection(
-            @PathVariable String id, @RequestBody ConnectionRequest request) {
+            @PathVariable String id, @Valid @RequestBody ConnectionRequest request) {
         return connectionRepository
                 .findById(id)
                 .map(

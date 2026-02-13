@@ -47,8 +47,14 @@ public class FileSystemController {
         try {
             Path targetPath = Paths.get(effectivePath).normalize();
 
+            // Security: resolve symlinks to prevent symlink-based escape
+            if (Files.exists(targetPath)) {
+                targetPath = targetPath.toRealPath();
+            }
+            Path realBasePath = Paths.get(basePath).toRealPath();
+
             // Security: only allow browsing under configured base path
-            if (!targetPath.startsWith(basePath)) {
+            if (!targetPath.startsWith(realBasePath)) {
                 log.warn("Attempted to browse outside allowed path: {}", effectivePath);
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
@@ -152,9 +158,10 @@ public class FileSystemController {
     public ResponseEntity<?> mkdir(@RequestParam String path) {
         try {
             Path targetPath = Paths.get(path).normalize();
+            Path realBasePath = Paths.get(basePath).toRealPath();
 
-            // Security: only allow creating under configured base path
-            if (!targetPath.startsWith(basePath)) {
+            // Security: resolve symlinks and only allow creating under base path
+            if (!targetPath.normalize().startsWith(realBasePath)) {
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
             }

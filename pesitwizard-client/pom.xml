@@ -23,7 +23,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <opentelemetry.version>1.40.0</opentelemetry.version>
         <!-- TODO: increase to 0.50 as test coverage improves -->
-        <jacoco.minimum.coverage>0.30</jacoco.minimum.coverage>
+        <jacoco.minimum.coverage>0.35</jacoco.minimum.coverage>
     </properties>
 
     <dependencies>

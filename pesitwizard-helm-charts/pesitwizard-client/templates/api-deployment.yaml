@@ -72,18 +72,23 @@ spec:
                   name: {{ .Values.tls.existingSecret | default (printf "%s-tls" (include "pesitwizard-client.fullname" .)) }}
                   key: truststore-password
             {{- end }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 24
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
-            initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
-            initialDelaySeconds: 30
             periodSeconds: 5
             failureThreshold: 10
           resources:

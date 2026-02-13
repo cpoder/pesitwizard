@@ -109,8 +109,11 @@ public class FpduReader {
             // Peek at length to validate
             int fpduLen = buffer.getShort(buffer.position()) & 0xFFFF;
             if (fpduLen < 6 || fpduLen > buffer.remaining()) {
-                log.warn("Invalid FPDU length: {} (remaining: {})", fpduLen, buffer.remaining());
-                break;
+                throw new FpduParseException(
+                        String.format(
+                                "Invalid FPDU length %d in concatenated frame (remaining: %d bytes, parsed %d FPDUs so far). "
+                                        + "Remaining data would be silently discarded.",
+                                fpduLen, buffer.remaining(), fpduCount));
             }
 
             // Parse FPDU (FpduParser reads length and advances buffer position)

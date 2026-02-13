@@ -85,7 +85,7 @@ public class FpduParser {
                 byte[] rawData = new byte[dataLen];
                 buffer.get(rawData);
                 fpdu.setData(rawData);
-                log.info("{} FPDU contains {} bytes of data", fpdu.getFpduType(), dataLen);
+                log.debug("{} FPDU contains {} bytes of data", fpdu.getFpduType(), dataLen);
             }
             return fpdu;
         }
@@ -93,16 +93,16 @@ public class FpduParser {
         while (buffer.hasRemaining()) {
             int paramId = buffer.get() & 0xFF;
             if (!buffer.hasRemaining()) {
-                log.warn("Incomplete parameter: ID={} without length byte", paramId);
-                break;
+                throw new FpduParseException(
+                        String.format("Incomplete parameter PI_%d: no length byte", paramId));
             }
             int paramLength = buffer.get() & 0xFF;
             if (paramLength == 0xFF) {
-                if (!buffer.hasRemaining()) {
-                    log.warn(
-                            "Incomplete parameter: ID={} with length byte 0xFF without short length",
-                            paramId);
-                    break;
+                if (buffer.remaining() < 2) {
+                    throw new FpduParseException(
+                            String.format(
+                                    "Incomplete parameter PI_%d: extended length (0xFF) but only %d bytes remaining",
+                                    paramId, buffer.remaining()));
                 }
                 paramLength = buffer.getShort() & 0xFFFF;
             }
@@ -117,19 +117,17 @@ public class FpduParser {
             byte[] paramData = new byte[paramLength];
             if (paramLength > 0) {
                 if (paramLength > buffer.remaining()) {
-                    log.warn(
-                            "Incomplete parameter: ID={} with length {} exceeds remaining buffer size {}",
-                            paramId,
-                            paramLength,
-                            buffer.remaining());
-                    break;
+                    throw new FpduParseException(
+                            String.format(
+                                    "Truncated parameter PI_%d: declared length %d exceeds remaining buffer (%d bytes)",
+                                    paramId, paramLength, buffer.remaining()));
                 }
                 buffer.get(paramData);
             }
             if (ParameterIdentifier.fromId(paramId) != null) {
                 ParameterIdentifier paramIdEnum = ParameterIdentifier.fromId(paramId);
                 ParameterValue paramValue = new ParameterValue(paramIdEnum, paramData);
-                log.info(
+                log.debug(
                         "PI {} found which is {} and has a size of {} bytes with value {}",
                         paramId,
                         paramIdEnum,
@@ -138,7 +136,7 @@ public class FpduParser {
                 fpdu.getParameters().add(paramValue);
             } else if (ParameterGroupIdentifier.fromId(paramId) != null) {
                 ParameterGroupIdentifier groupId = ParameterGroupIdentifier.fromId(paramId);
-                log.info("PGI {} found which is {}", paramId, groupId);
+                log.debug("PGI {} found which is {}", paramId, groupId);
                 ParameterValue groupParameterValue =
                         new ParameterValue(groupId, new ParameterValue[0]);
                 fpdu.getParameters().add(groupParameterValue);

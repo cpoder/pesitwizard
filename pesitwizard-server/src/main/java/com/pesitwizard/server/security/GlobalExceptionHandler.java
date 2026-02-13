@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
                                         new FieldValidationError(
                                                 error.getField(),
                                                 error.getDefaultMessage(),
-                                                error.getRejectedValue()))
+                                                null))
                         .collect(Collectors.toList());
 
         String message =
@@ -101,7 +101,7 @@ public class GlobalExceptionHandler {
                                         new FieldValidationError(
                                                 extractFieldName(violation),
                                                 violation.getMessage(),
-                                                violation.getInvalidValue()))
+                                                null))
                         .collect(Collectors.toList());
 
         String message =

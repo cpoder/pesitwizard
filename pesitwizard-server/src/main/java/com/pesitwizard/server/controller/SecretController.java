@@ -142,7 +142,7 @@ public class SecretController {
     /** Update secret value */
     @PutMapping("/name/{name}/value")
     public ResponseEntity<?> updateSecretValue(
-            @PathVariable String name, @RequestBody UpdateSecretValueRequest request) {
+            @PathVariable String name, @Valid @RequestBody UpdateSecretValueRequest request) {
         try {
             SecretEntry secret = secretService.updateSecretValue(name, request.getValue(), "api");
             log.info("Updated secret value: {}", name);
@@ -155,7 +155,7 @@ public class SecretController {
     /** Update secret metadata */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateSecretMetadata(
-            @PathVariable Long id, @RequestBody UpdateSecretMetadataRequest request) {
+            @PathVariable Long id, @Valid @RequestBody UpdateSecretMetadataRequest request) {
         try {
             SecretEntry secret =
                     secretService.updateSecretMetadata(
@@ -174,7 +174,7 @@ public class SecretController {
     /** Rotate a secret */
     @PostMapping("/name/{name}/rotate")
     public ResponseEntity<?> rotateSecret(
-            @PathVariable String name, @RequestBody UpdateSecretValueRequest request) {
+            @PathVariable String name, @Valid @RequestBody UpdateSecretValueRequest request) {
         try {
             SecretEntry secret = secretService.rotateSecret(name, request.getValue(), "api");
             log.info("Rotated secret: {} (version: {})", name, secret.getVersion());

@@ -97,6 +97,11 @@ public enum DiagnosticCode {
         if (pi2.getParameter() != PI_02_DIAG) {
             throw new IllegalArgumentException("Expected PI_02_DIAG, got " + pi2.getParameter());
         }
+        if (pi2.getValue() == null || pi2.getValue().length < 3) {
+            throw new IllegalArgumentException(
+                    "PI_02_DIAG requires at least 3 bytes, got "
+                            + (pi2.getValue() == null ? 0 : pi2.getValue().length));
+        }
         int code = (pi2.getValue()[0] & 0xFF);
         int reason = (pi2.getValue()[1] & 0xFF) << 8 | pi2.getValue()[2] & 0xFF;
         for (DiagnosticCode diagnosticCode : DiagnosticCode.values()) {

@@ -93,10 +93,16 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             return apiKey;
         }
 
-        // Try query parameter
+        // Try query parameter (deprecated: API keys in URLs are logged by proxies/servers)
         String queryParam = securityProperties.getApiKey().getQueryParam();
         apiKey = request.getParameter(queryParam);
         if (apiKey != null && !apiKey.isBlank()) {
+            log.warn(
+                    "API key passed via query parameter '{}' for {} — this is insecure. "
+                            + "Use the {} header instead.",
+                    queryParam,
+                    request.getRequestURI(),
+                    headerName);
             return apiKey;
         }
 
@@ -109,16 +115,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    /** Get client IP address (considering proxies) */
+    /**
+     * Get client IP address. Uses the direct remote address for security. X-Forwarded-For is only
+     * used for logging context, not for authentication or rate limiting decisions, because it can
+     * be spoofed by untrusted clients.
+     */
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) {
-            return xRealIp;
-        }
+        // Always use the direct connection address for security-sensitive decisions
         return request.getRemoteAddr();
     }
 

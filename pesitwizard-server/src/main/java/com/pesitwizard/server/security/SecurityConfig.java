@@ -2,6 +2,7 @@ package com.pesitwizard.server.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
@@ -160,13 +166,33 @@ public class SecurityConfig {
         return converter;
     }
 
-    /** JWT decoder for OAuth2 */
+    /** JWT decoder for OAuth2 with audience and issuer validation */
     @Bean
     @ConditionalOnProperty(prefix = "pesit.security.oauth2", name = "jwk-set-uri")
     public JwtDecoder jwtDecoder() {
-        String jwkSetUri = securityProperties.getOauth2().getJwkSetUri();
+        SecurityProperties.OAuth2Config oauth2 = securityProperties.getOauth2();
+        String jwkSetUri = oauth2.getJwkSetUri();
         log.info("Configuring JWT decoder with JWK Set URI: {}", jwkSetUri);
-        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+
+        // Add audience and issuer validation if configured
+        List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
+        validators.add(JwtValidators.createDefault());
+
+        if (oauth2.getAudience() != null && !oauth2.getAudience().isBlank()) {
+            validators.add(new JwtClaimValidator<List<String>>(
+                    "aud", aud -> aud != null && aud.contains(oauth2.getAudience())));
+            log.info("JWT audience validation enabled: {}", oauth2.getAudience());
+        }
+
+        if (oauth2.getIssuerUri() != null && !oauth2.getIssuerUri().isBlank()) {
+            validators.add(JwtValidators.createDefaultWithIssuer(oauth2.getIssuerUri()));
+            log.info("JWT issuer validation enabled: {}", oauth2.getIssuerUri());
+        }
+
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
+        return decoder;
     }
 
     /** CORS configuration */

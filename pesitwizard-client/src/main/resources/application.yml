@@ -3,8 +3,10 @@
 spring:
   application:
     name: pesitwizard-client
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:nosecurity}
+    active: ${SPRING_PROFILES_ACTIVE:apikey}
 
   # Database configuration
   datasource:
@@ -25,10 +27,10 @@ spring:
   flyway:
     enabled: false
 
-  # H2 Console
+  # H2 Console (disabled by default for security)
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
 
   # Security - OAuth2/OIDC (configure for production)
@@ -41,6 +43,7 @@ spring:
 # Server configuration
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
   error:
     # Do not include stack traces in error responses (security)
     include-stacktrace: never
