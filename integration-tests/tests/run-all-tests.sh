@@ -2,7 +2,7 @@
 # PeSIT Wizard - Integration Test Runner
 # Runs all API integration tests and generates report
 
-set -e
+set -e  # for setup; disabled during test execution
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPORT_DIR="${SCRIPT_DIR}/../reports"
@@ -26,6 +26,9 @@ SERVER_API="${SERVER_API:-http://localhost:30080}"
 CLIENT_API="${CLIENT_API:-http://localhost:30081}"
 PESIT_HOST="${PESIT_HOST:-localhost}"
 PESIT_PORT="${PESIT_PORT:-30500}"
+
+# Server API key for authenticated requests
+SERVER_API_KEY="${SERVER_API_KEY:-integration-test-api-key}"
 
 mkdir -p "${REPORT_DIR}"
 
@@ -51,9 +54,9 @@ log_test() {
     local status=$1
     local test_name=$2
     local details=$3
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     case $status in
         "PASS")
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -74,11 +77,16 @@ log_test() {
     esac
 }
 
+# Helper: curl with API key auth for server endpoints
+server_curl() {
+    curl -sf -H "X-API-Key: ${SERVER_API_KEY}" "$@" 2>/dev/null
+}
+
 wait_for_service() {
     local url=$1
     local max_attempts=${2:-30}
     local attempt=0
-    
+
     echo "Waiting for service at ${url}..."
     while [ $attempt -lt $max_attempts ]; do
         if curl -sf "${url}/actuator/health" > /dev/null 2>&1; then
@@ -113,6 +121,11 @@ echo "Running Tests"
 echo "=========================================="
 echo ""
 
+# Disable set -e for test execution: test scripts use curl which returns
+# non-zero on HTTP errors. Tests handle failures via log_test PASS/FAIL,
+# and the runner checks $FAILED_TESTS at the end.
+set +e
+
 # Run test suites
 echo "### Server API Tests" >> "${REPORT_FILE}"
 source "${SCRIPT_DIR}/test-server-api.sh"
@@ -136,6 +149,8 @@ source "${SCRIPT_DIR}/test-partners.sh"
 echo "" >> "${REPORT_FILE}"
 echo "### Audit & Monitoring Tests" >> "${REPORT_FILE}"
 source "${SCRIPT_DIR}/test-audit.sh"
+
+set -e  # Re-enable for summary/report generation
 
 # Summary
 echo ""

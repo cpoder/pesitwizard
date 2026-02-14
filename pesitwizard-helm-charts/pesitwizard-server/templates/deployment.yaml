@@ -58,11 +58,11 @@ spec:
             - name: SPRING_DATASOURCE_PASSWORD
               value: {{ .Values.database.password | quote }}
             {{- end }}
-            {{- if .Values.pesit }}
-            - name: PESIT_SERVER_ID
-              value: {{ .Values.pesit.server.serverId | default "SERVER-01" | quote }}
-            {{- end }}
             {{- if .Values.config }}
+            {{- if .Values.config.pesit }}
+            - name: PESIT_SERVER_SERVERID
+              value: {{ .Values.config.pesit.serverId | default "PESITSRV" | quote }}
+            {{- end }}
             {{- if .Values.config.security }}
             {{- if .Values.config.security.masterKey }}
             - name: PESITWIZARD_SECURITY_MASTER_KEY
@@ -133,6 +133,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
             - name: tmp
               mountPath: /tmp
             {{- range .Values.extraVolumeMounts }}
@@ -146,6 +148,8 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        - name: logs
+          emptyDir: {}
         - name: tmp
           emptyDir: {}
         {{- range .Values.extraVolumes }}

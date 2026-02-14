@@ -22,6 +22,9 @@ config:
   pesit:
     serverId: TEST-SERVER
     password: integration-test-pesit-pw
+  security:
+    masterKey: "dGVzdC1tYXN0ZXIta2V5LWZvci1pbnRlZ3JhdGlvbg=="
+    encryptionSalt: "dGVzdC1lbmNyeXB0aW9uLXNhbHQtZm9yLWludGVncmE="
 
 persistence:
   enabled: true
@@ -43,6 +46,8 @@ serviceAccount:
 env:
   - name: LOGGING_LEVEL_ROOT
     value: "INFO"
+  - name: SPRING_AUTOCONFIGURE_EXCLUDE
+    value: "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
   - name: PESIT_ADMIN_PASSWORD
     value: "integration-test-admin-pw"
   - name: PESIT_OPERATOR_PASSWORD
@@ -53,3 +58,7 @@ env:
     value: "integration-test-ca-pw"
   - name: PESIT_CA_TRUSTSTORE_PASSWORD
     value: "integration-test-ts-pw"
+  - name: PESIT_BASIC_AUTH_ENABLED
+    value: "true"
+  - name: PESIT_API_KEY_ADMIN
+    value: "integration-test-api-key"

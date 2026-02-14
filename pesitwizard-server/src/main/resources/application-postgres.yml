@@ -12,7 +12,7 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pesitwizard?sslmode=prefer}
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME:pesitwizard}
-    password: ${SPRING_DATASOURCE_PASSWORD:pesitwizard}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     
     # Connection pool settings (HikariCP)
     hikari:
@@ -47,6 +47,13 @@ spring:
   h2:
     console:
       enabled: false
+
+# Disable Swagger UI in production
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
 
 # Disable YAML-based partner/file import in multi-tenant mode
 # Configuration is managed via pesitwizard-admin

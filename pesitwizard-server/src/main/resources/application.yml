@@ -377,10 +377,7 @@ pesit.security:
     - /actuator/health
     - /actuator/health/**
     - /actuator/info
-    - /api/servers/**
-    - /v3/api-docs/**
-    - /swagger-ui/**
-    - /swagger-ui.html
+    # Swagger UI requires authentication (disabled in production via application-postgres.yml)
     # WARNING: h2-console must be disabled in production
     # - /h2-console/**
     # REMOVED: /api/v1/deployment/** - requires authentication
@@ -389,7 +386,7 @@ pesit.security:
   # WARNING: Restrict origins in production!
   cors:
     enabled: true
-    allowed-origins: ${PESIT_CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${PESIT_CORS_ORIGINS:}
     allowed-methods:
       - GET
       - POST

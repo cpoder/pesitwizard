@@ -47,3 +47,7 @@ serviceAccount:
 env:
   - name: LOGGING_LEVEL_ROOT
     value: "INFO"
+  - name: PESITWIZARD_SECURITY_MASTER_KEY
+    value: "dGVzdC1tYXN0ZXIta2V5LWZvci1pbnRlZ3JhdGlvbg=="
+  - name: PESITWIZARD_SECURITY_ENCRYPTION_SALT
+    value: "dGVzdC1lbmNyeXB0aW9uLXNhbHQtZm9yLWludGVncmE="

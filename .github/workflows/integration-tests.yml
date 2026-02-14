@@ -74,7 +74,20 @@ jobs:
             pesitwizard-helm-charts/pesitwizard-server \
             -n pesitwizard \
             -f integration-tests/helm-values/server-values.yaml \
-            --wait --timeout 5m
+            --wait --timeout 5m || {
+              echo "=== Helm deployment failed, showing debug info ==="
+              echo "--- Pods ---"
+              kubectl get pods -n pesitwizard -o wide
+              echo "--- Events ---"
+              kubectl get events -n pesitwizard --sort-by='.lastTimestamp' | tail -20
+              echo "--- Server Pod Describe ---"
+              kubectl describe pods -n pesitwizard -l app.kubernetes.io/name=pesitwizard-server 2>/dev/null || true
+              echo "--- Server Logs (current) ---"
+              kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=200 2>/dev/null || true
+              echo "--- Server Logs (previous) ---"
+              kubectl logs -n pesitwizard deployment/pesitwizard-server --previous --tail=200 2>/dev/null || true
+              exit 1
+            }
 
       - name: Deploy PeSIT Client
         run: |
@@ -121,14 +134,20 @@ jobs:
           echo "=== Pod Status ==="
           kubectl get pods -n pesitwizard -o wide
           echo ""
+          echo "=== Pod Descriptions ==="
+          kubectl describe pods -n pesitwizard || true
+          echo ""
           echo "=== Events ==="
           kubectl get events -n pesitwizard --sort-by='.lastTimestamp' | tail -30
           echo ""
-          echo "=== Server Logs ==="
-          kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=100 || true
+          echo "=== Server Logs (current) ==="
+          kubectl logs -n pesitwizard deployment/pesitwizard-server --tail=200 || true
+          echo ""
+          echo "=== Server Logs (previous container) ==="
+          kubectl logs -n pesitwizard deployment/pesitwizard-server --previous --tail=200 || true
           echo ""
           echo "=== Client API Logs ==="
-          kubectl logs -n pesitwizard deployment/pesitwizard-client-api --tail=100 || true
+          kubectl logs -n pesitwizard deployment/pesitwizard-client-api --tail=200 || true
 
       - name: Cleanup k3d cluster
         if: always()

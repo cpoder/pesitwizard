@@ -35,9 +35,11 @@ public class PesitHealthIndicator implements HealthIndicator {
         boolean clusterConnected = clusterProvider.isConnected();
         int clusterSize = clusterProvider.getClusterSize();
         String nodeName = clusterProvider.getNodeName();
+        boolean isLeader = clusterProvider.isLeader();
         details.put("clusterEnabled", clusterEnabled);
         details.put("clusterConnected", clusterConnected);
         details.put("clusterSize", clusterSize);
+        details.put("clusterLeader", isLeader);
         details.put("nodeName", nodeName);
 
         // Determine overall health

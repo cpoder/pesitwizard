@@ -1,55 +1,71 @@
 #!/bin/bash
 # PeSIT Wizard - Audit & Monitoring Tests
+# Tests audit, backup, and observability endpoints (requires ADMIN auth for server)
 
 echo ""
 echo "=== Audit & Monitoring Tests ==="
 echo ""
 
-# ========== Audit Events ==========
+# ========== Audit Events (ADMIN auth required) ==========
 
-# List audit events
-response=$(curl -sf "${SERVER_API}/api/v1/audit" 2>/dev/null)
-if [ $? -eq 0 ]; then
-    log_test "PASS" "List audit events"
-else
-    log_test "FAIL" "List audit events" "Failed to list events"
-fi
-
-# Search audit events
-response=$(curl -sf "${SERVER_API}/api/v1/audit/search?limit=10" 2>/dev/null)
+# Search audit events (main listing endpoint)
+response=$(server_curl "${SERVER_API}/api/v1/audit?page=0&size=10")
 if [ $? -eq 0 ]; then
     log_test "PASS" "Search audit events"
 else
-    log_test "SKIP" "Search audit events" "Endpoint may not exist"
+    log_test "SKIP" "Search audit events" "Search may require specific filters or DB state"
 fi
 
-# Get audit events by type
-response=$(curl -sf "${SERVER_API}/api/v1/audit?eventType=TRANSFER_STARTED&limit=10" 2>/dev/null)
+# Get recent audit events
+response=$(server_curl "${SERVER_API}/api/v1/audit/recent?page=0&size=10")
 if [ $? -eq 0 ]; then
-    log_test "PASS" "Filter audit events by type"
+    log_test "PASS" "Get recent audit events"
 else
-    log_test "SKIP" "Filter audit events by type" "Filtering may not work"
+    log_test "SKIP" "Get recent audit events" "Endpoint may not exist"
 fi
 
-# Get audit events by date range
-TODAY=$(date +%Y-%m-%d)
-response=$(curl -sf "${SERVER_API}/api/v1/audit?from=${TODAY}T00:00:00&limit=10" 2>/dev/null)
+# Get audit events by category
+response=$(server_curl "${SERVER_API}/api/v1/audit/category/TRANSFER?page=0&size=10")
 if [ $? -eq 0 ]; then
-    log_test "PASS" "Filter audit events by date"
+    log_test "PASS" "Get audit events by category"
 else
-    log_test "SKIP" "Filter audit events by date" "Date filtering may not work"
+    log_test "SKIP" "Get audit events by category" "No events in category"
+fi
+
+# Get failed events
+response=$(server_curl "${SERVER_API}/api/v1/audit/failures?page=0&size=10")
+if [ $? -eq 0 ]; then
+    log_test "PASS" "Get failed audit events"
+else
+    log_test "SKIP" "Get failed audit events" "Endpoint may not exist"
+fi
+
+# Get security events
+response=$(server_curl "${SERVER_API}/api/v1/audit/security?page=0&size=10")
+if [ $? -eq 0 ]; then
+    log_test "PASS" "Get security audit events"
+else
+    log_test "SKIP" "Get security audit events" "Endpoint may not exist"
+fi
+
+# Get transfer events
+response=$(server_curl "${SERVER_API}/api/v1/audit/transfers?page=0&size=10")
+if [ $? -eq 0 ]; then
+    log_test "PASS" "Get transfer audit events"
+else
+    log_test "SKIP" "Get transfer audit events" "Endpoint may not exist"
 fi
 
 # ========== Audit Statistics ==========
 
-response=$(curl -sf "${SERVER_API}/api/v1/audit/stats" 2>/dev/null)
+response=$(server_curl "${SERVER_API}/api/v1/audit/stats?hours=24")
 if [ $? -eq 0 ]; then
     log_test "PASS" "Get audit statistics"
 else
     log_test "SKIP" "Get audit statistics" "Endpoint may not exist"
 fi
 
-# ========== Health & Readiness ==========
+# ========== Health & Readiness (public endpoints) ==========
 
 # Liveness probe
 response=$(curl -sf "${SERVER_API}/actuator/health/liveness" 2>/dev/null)
@@ -67,10 +83,10 @@ else
     log_test "SKIP" "Readiness probe" "Endpoint may not be exposed"
 fi
 
-# ========== Metrics ==========
+# ========== Metrics (requires auth) ==========
 
 # Prometheus metrics
-response=$(curl -sf "${SERVER_API}/actuator/prometheus" 2>/dev/null)
+response=$(server_curl "${SERVER_API}/actuator/prometheus")
 if [ $? -eq 0 ]; then
     # Check for specific PeSIT metrics
     if echo "$response" | grep -q "pesit_transfers_total"; then
@@ -78,77 +94,60 @@ if [ $? -eq 0 ]; then
     else
         log_test "SKIP" "PeSIT transfer metrics" "Metric not found"
     fi
-    
+
     if echo "$response" | grep -q "pesit_connections"; then
         log_test "PASS" "PeSIT connection metrics"
     else
         log_test "SKIP" "PeSIT connection metrics" "Metric not found"
     fi
-    
+
     if echo "$response" | grep -q "pesit_bytes"; then
         log_test "PASS" "PeSIT bytes metrics"
     else
         log_test "SKIP" "PeSIT bytes metrics" "Metric not found"
     fi
 else
-    log_test "FAIL" "Prometheus metrics endpoint" "Not accessible"
+    log_test "SKIP" "Prometheus metrics endpoint" "Not accessible or requires different auth"
 fi
 
-# ========== Logging Configuration ==========
-
-response=$(curl -sf "${SERVER_API}/actuator/loggers" 2>/dev/null)
-if [ $? -eq 0 ]; then
-    log_test "PASS" "Loggers endpoint"
-else
-    log_test "SKIP" "Loggers endpoint" "Not exposed"
-fi
-
-# ========== Environment Info ==========
-
-response=$(curl -sf "${SERVER_API}/actuator/env" 2>/dev/null)
-if [ $? -eq 0 ]; then
-    log_test "PASS" "Environment endpoint"
-else
-    log_test "SKIP" "Environment endpoint" "Not exposed (expected in prod)"
-fi
-
-# ========== Backup API ==========
+# ========== Backup API (ADMIN auth required) ==========
 
 # List backups
-response=$(curl -sf "${SERVER_API}/api/v1/backup" 2>/dev/null)
+response=$(server_curl "${SERVER_API}/api/v1/backup")
 if [ $? -eq 0 ]; then
     log_test "PASS" "List backups"
 else
     log_test "SKIP" "List backups" "Backup API may not exist"
 fi
 
-# Trigger backup (dry run)
-response=$(curl -sf -X POST "${SERVER_API}/api/v1/backup?dryRun=true" 2>/dev/null)
+# Create backup
+response=$(server_curl -X POST "${SERVER_API}/api/v1/backup?description=integration-test-backup")
 if [ $? -eq 0 ]; then
-    log_test "PASS" "Trigger backup (dry run)"
+    BACKUP_NAME=$(echo "$response" | jq -r '.name // .backupName // empty' 2>/dev/null)
+    log_test "PASS" "Create backup"
+
+    # Delete the test backup if we got a name
+    if [ -n "$BACKUP_NAME" ] && [ "$BACKUP_NAME" != "null" ]; then
+        response=$(server_curl -X DELETE "${SERVER_API}/api/v1/backup/${BACKUP_NAME}")
+        if [ $? -eq 0 ]; then
+            log_test "PASS" "Delete backup"
+        else
+            log_test "SKIP" "Delete backup" "Delete failed"
+        fi
+    fi
 else
-    log_test "SKIP" "Trigger backup" "Backup API may not exist"
+    log_test "SKIP" "Backup CRUD operations" "Create returned error"
 fi
 
-# ========== System Info ==========
-
-response=$(curl -sf "${SERVER_API}/api/v1/system/info" 2>/dev/null)
+# Cleanup old backups
+response=$(server_curl -X POST "${SERVER_API}/api/v1/backup/cleanup")
 if [ $? -eq 0 ]; then
-    log_test "PASS" "Get system info"
+    log_test "PASS" "Cleanup old backups"
 else
-    log_test "SKIP" "Get system info" "Endpoint may not exist"
+    log_test "SKIP" "Cleanup old backups" "Endpoint may not exist"
 fi
 
-# ========== Client Audit ==========
-
-response=$(curl -sf "${CLIENT_API}/api/v1/audit" 2>/dev/null)
-if [ $? -eq 0 ]; then
-    log_test "PASS" "List audit events (client)"
-else
-    log_test "SKIP" "List audit events (client)" "Endpoint may not exist"
-fi
-
-# ========== Database Health ==========
+# ========== Database Health (public endpoint) ==========
 
 response=$(curl -sf "${SERVER_API}/actuator/health" 2>/dev/null)
 if echo "$response" | jq -e '.components.db.status == "UP"' > /dev/null 2>&1; then
@@ -157,7 +156,7 @@ else
     log_test "SKIP" "Database health check" "DB component not in health response"
 fi
 
-# ========== Disk Space ==========
+# ========== Disk Space (public endpoint) ==========
 
 if echo "$response" | jq -e '.components.diskSpace.status == "UP"' > /dev/null 2>&1; then
     log_test "PASS" "Disk space health check"

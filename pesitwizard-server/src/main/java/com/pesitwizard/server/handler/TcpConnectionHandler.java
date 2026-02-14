@@ -77,90 +77,95 @@ public class TcpConnectionHandler implements Runnable {
                 log.info("[{}] Session recording enabled", sessionContext.getSessionId());
             }
 
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            try (DataInputStream in = new DataInputStream(socket.getInputStream());
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
 
-            // Create the appropriate channel based on transport type
-            PesitChannel channel =
-                    isTls ? new TlsPesitChannel(in, out) : new TcpPesitChannel(in, out);
-            sessionContext.setChannel(channel);
+                // Create the appropriate channel based on transport type
+                PesitChannel channel =
+                        isTls ? new TlsPesitChannel(in, out) : new TcpPesitChannel(in, out);
+                sessionContext.setChannel(channel);
 
-            FpduReader fpduReader = new FpduReader(channel);
+                FpduReader fpduReader = new FpduReader(channel);
 
-            log.info(
-                    "[{}] Connection from {} (TLS={}, framing={})",
-                    sessionContext.getSessionId(),
-                    remoteAddress,
-                    isTls,
-                    isTls ? "TLS" : "TCP");
+                log.info(
+                        "[{}] Connection from {} (TLS={}, framing={})",
+                        sessionContext.getSessionId(),
+                        remoteAddress,
+                        isTls,
+                        isTls ? "TLS" : "TCP");
 
-            if (isTls) {
-                // TLS: probe first bytes to detect pre-connection handshake
-                byte[] probe = new byte[1024];
-                int probeLen = in.read(probe, 0, probe.length);
+                if (isTls) {
+                    // TLS: probe first bytes to detect pre-connection handshake
+                    byte[] probe = new byte[1024];
+                    int probeLen = in.read(probe, 0, probe.length);
 
-                if (probeLen <= 0) {
-                    log.warn(
-                            "[{}] No data received from TLS client", sessionContext.getSessionId());
-                    return;
+                    if (probeLen <= 0) {
+                        log.warn(
+                                "[{}] No data received from TLS client",
+                                sessionContext.getSessionId());
+                        return;
+                    }
+
+                    byte[] firstData = new byte[probeLen];
+                    System.arraycopy(probe, 0, firstData, 0, probeLen);
+                    handleFirstMessage(firstData, channel, fpduReader);
+                } else {
+                    // TCP: read first FPDU (with external length prefix)
+                    byte[] firstData = channel.readFrame();
+                    handleFirstMessage(firstData, channel, fpduReader);
                 }
 
-                byte[] firstData = new byte[probeLen];
-                System.arraycopy(probe, 0, firstData, 0, probeLen);
-                handleFirstMessage(firstData, channel, fpduReader);
-            } else {
-                // TCP: read first FPDU (with external length prefix)
-                byte[] firstData = channel.readFrame();
-                handleFirstMessage(firstData, channel, fpduReader);
-            }
+                // Main protocol loop
+                boolean sessionActive = true;
+                while (!socket.isClosed() && sessionActive) {
+                    try {
+                        Fpdu fpdu = fpduReader.read();
+                        if (fpdu == null) {
+                            log.debug("[{}] No FPDU received", sessionContext.getSessionId());
+                            break;
+                        }
 
-            // Main protocol loop
-            boolean sessionActive = true;
-            while (!socket.isClosed() && sessionActive) {
-                try {
-                    Fpdu fpdu = fpduReader.read();
-                    if (fpdu == null) {
-                        log.debug("[{}] No FPDU received", sessionContext.getSessionId());
+                        log.debug(
+                                "[{}] Received FPDU: type={} (encoding: {})",
+                                sessionContext.getSessionId(),
+                                fpdu.getFpduType(),
+                                sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
+
+                        // Record received FPDU if recording is enabled
+                        if (recorder != null) {
+                            recorder.record(Direction.RECEIVED, fpdu);
+                        }
+
+                        // Process the FPDU
+                        byte[] response =
+                                sessionHandler.processIncomingFpdu(sessionContext, fpdu);
+
+                        // Send response if any (READ streams directly, so response may be null)
+                        if (response != null) {
+                            channel.writeFrame(response);
+
+                            // Record sent FPDU if recording is enabled
+                            if (recorder != null) {
+                                recorder.recordRaw(Direction.SENT, response);
+                            }
+                        }
+
+                        // Check if session ended normally
+                        if (sessionContext.getState() == ServerState.CN01_REPOS
+                                || sessionContext.isAborted()) {
+                            log.info(
+                                    "[{}] Session ended normally",
+                                    sessionContext.getSessionId());
+                            sessionActive = false;
+                        }
+
+                    } catch (SocketTimeoutException e) {
+                        log.warn("[{}] Read timeout", sessionContext.getSessionId());
+                        break;
+                    } catch (EOFException e) {
+                        log.info("[{}] Client disconnected", sessionContext.getSessionId());
                         break;
                     }
-
-                    log.debug(
-                            "[{}] Received FPDU: type={} (encoding: {})",
-                            sessionContext.getSessionId(),
-                            fpdu.getFpduType(),
-                            sessionContext.isEbcdicEncoding() ? "EBCDIC" : "ASCII");
-
-                    // Record received FPDU if recording is enabled
-                    if (recorder != null) {
-                        recorder.record(Direction.RECEIVED, fpdu);
-                    }
-
-                    // Process the FPDU
-                    byte[] response = sessionHandler.processIncomingFpdu(sessionContext, fpdu);
-
-                    // Send response if any (READ streams directly, so response may be null)
-                    if (response != null) {
-                        channel.writeFrame(response);
-
-                        // Record sent FPDU if recording is enabled
-                        if (recorder != null) {
-                            recorder.recordRaw(Direction.SENT, response);
-                        }
-                    }
-
-                    // Check if session ended normally
-                    if (sessionContext.getState() == ServerState.CN01_REPOS
-                            || sessionContext.isAborted()) {
-                        log.info("[{}] Session ended normally", sessionContext.getSessionId());
-                        sessionActive = false;
-                    }
-
-                } catch (SocketTimeoutException e) {
-                    log.warn("[{}] Read timeout", sessionContext.getSessionId());
-                    break;
-                } catch (EOFException e) {
-                    log.info("[{}] Client disconnected", sessionContext.getSessionId());
-                    break;
                 }
             }
 

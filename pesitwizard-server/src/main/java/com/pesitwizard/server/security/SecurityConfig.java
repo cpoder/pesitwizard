@@ -69,11 +69,13 @@ public class SecurityConfig {
 
         http
                 // CSRF protection with cookie-based token for SPA compatibility
+                // API endpoints use stateless auth (API keys, JWT) so CSRF is not needed
                 .csrf(
                         csrf ->
                                 csrf.csrfTokenRepository(
                                                 CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                                        .ignoringRequestMatchers("/api/**", "/actuator/**"))
 
                 // Configure CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
