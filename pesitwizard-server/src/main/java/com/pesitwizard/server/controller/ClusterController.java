@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** REST API controller for cluster management and status. */
 @Slf4j
 @RestController
-@RequestMapping("/api/cluster")
+@RequestMapping("/api/v1/cluster")
 @RequiredArgsConstructor
 public class ClusterController {
 

@@ -60,7 +60,7 @@ Target PeSIT servers are configured via the API or the web interface.
 ### Via API
 
 ```bash
-curl -X POST http://localhost:8080/api/servers \
+curl -X POST http://localhost:8080/api/v1/servers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "BNP Paribas",

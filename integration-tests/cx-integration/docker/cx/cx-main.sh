@@ -84,14 +84,14 @@ if [ "${RUN_TRANSFER_TESTS:-false}" = "true" ]; then
     # Create and start PW server instance
     echo "Creating PW server instance..."
     curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
-        "$PW_API/api/servers" \
+        "$PW_API/api/v1/servers" \
         -d '{"serverId":"PWSERVER","port":5001,"receiveDirectory":"/data/received","sendDirectory":"/data/send","maxEntitySize":32768,"syncPointsEnabled":true,"syncIntervalKb":256,"autoStart":true}' || true
 
     sleep 3
 
     # Start the server if not auto-started
     echo "Starting PW server..."
-    curl -s -X POST -H "X-API-Key: $API_KEY" "$PW_API/api/servers/PWSERVER/start" || true
+    curl -s -X POST -H "X-API-Key: $API_KEY" "$PW_API/api/v1/servers/PWSERVER/start" || true
 
     # Wait for PW server PeSIT port to be ready
     echo "Waiting for PW PeSIT server to be ready..."

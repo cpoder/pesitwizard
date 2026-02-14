@@ -33,10 +33,10 @@ else
     log_test "SKIP" "Server metrics (Prometheus)" "Endpoint not exposed or requires different auth"
 fi
 
-# ========== PeSIT Server Management (/api/servers) ==========
+# ========== PeSIT Server Management (/api/v1/servers) ==========
 
 # List servers
-response=$(server_curl "${SERVER_API}/api/servers")
+response=$(server_curl "${SERVER_API}/api/v1/servers")
 if [ $? -eq 0 ]; then
     log_test "PASS" "List PeSIT servers"
 else
@@ -56,7 +56,7 @@ SERVER_JSON='{
 # Use verbose curl to capture both response body and HTTP status
 create_response=$(curl -s -w "\n%{http_code}" -H "X-API-Key: ${SERVER_API_KEY}" \
     -H "Content-Type: application/json" \
-    -X POST "${SERVER_API}/api/servers" \
+    -X POST "${SERVER_API}/api/v1/servers" \
     -d "${SERVER_JSON}" 2>/dev/null)
 create_http_code=$(echo "$create_response" | tail -1)
 create_body=$(echo "$create_response" | sed '$d')
@@ -73,7 +73,7 @@ fi
 
 # Get server by ID
 if [ -n "$TEST_SERVER_ID" ]; then
-    response=$(server_curl "${SERVER_API}/api/servers/${TEST_SERVER_ID}")
+    response=$(server_curl "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}")
     if [ $? -eq 0 ]; then
         log_test "PASS" "Get PeSIT server by ID"
     else
@@ -84,7 +84,7 @@ fi
 # Update server
 if [ -n "$TEST_SERVER_ID" ]; then
     UPDATE_JSON='{"serverId": "INTTEST", "port": 5199, "maxConnections": 100, "receiveDirectory": "/data/received", "sendDirectory": "/data/send", "autoStart": false}'
-    response=$(server_curl -X PUT "${SERVER_API}/api/servers/${TEST_SERVER_ID}" \
+    response=$(server_curl -X PUT "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}" \
         -H "Content-Type: application/json" \
         -d "${UPDATE_JSON}")
     if [ $? -eq 0 ]; then
@@ -96,7 +96,7 @@ fi
 
 # Get server status
 if [ -n "$TEST_SERVER_ID" ]; then
-    response=$(server_curl "${SERVER_API}/api/servers/${TEST_SERVER_ID}/status")
+    response=$(server_curl "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}/status")
     if [ $? -eq 0 ]; then
         log_test "PASS" "Get server status"
     else
@@ -106,13 +106,13 @@ fi
 
 # Start server (may fail if port in use, that's OK)
 if [ -n "$TEST_SERVER_ID" ]; then
-    response=$(server_curl -X POST "${SERVER_API}/api/servers/${TEST_SERVER_ID}/start")
+    response=$(server_curl -X POST "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}/start")
     if [ $? -eq 0 ]; then
         log_test "PASS" "Start PeSIT server"
         sleep 2  # Wait for server to start
 
         # Stop server
-        response=$(server_curl -X POST "${SERVER_API}/api/servers/${TEST_SERVER_ID}/stop")
+        response=$(server_curl -X POST "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}/stop")
         if [ $? -eq 0 ]; then
             log_test "PASS" "Stop PeSIT server"
         else
@@ -125,7 +125,7 @@ fi
 
 # Delete server
 if [ -n "$TEST_SERVER_ID" ]; then
-    response=$(server_curl -X DELETE "${SERVER_API}/api/servers/${TEST_SERVER_ID}")
+    response=$(server_curl -X DELETE "${SERVER_API}/api/v1/servers/${TEST_SERVER_ID}")
     if [ $? -eq 0 ]; then
         log_test "PASS" "Delete PeSIT server"
     else
@@ -146,7 +146,7 @@ fi
 # ========== Dashboard/Stats ==========
 
 # Cluster status (public in server)
-response=$(curl -sf "${SERVER_API}/api/cluster/status" 2>/dev/null)
+response=$(curl -sf "${SERVER_API}/api/v1/cluster/status" 2>/dev/null)
 if [ $? -eq 0 ]; then
     log_test "PASS" "Get cluster status"
 else

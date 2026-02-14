@@ -9,7 +9,7 @@ Authentication: Basic Auth (`admin:admin` by default)
 ### List Servers
 
 ```http
-GET /api/servers
+GET /api/v1/servers
 Authorization: Basic YWRtaW46YWRtaW4=
 ```
 
@@ -30,7 +30,7 @@ Authorization: Basic YWRtaW46YWRtaW4=
 ### Create a Server
 
 ```http
-POST /api/servers
+POST /api/v1/servers
 Content-Type: application/json
 
 {
@@ -46,7 +46,7 @@ Content-Type: application/json
 ### Start a Server
 
 ```http
-POST /api/servers/{serverId}/start
+POST /api/v1/servers/{serverId}/start
 ```
 
 **Response**:
@@ -61,13 +61,13 @@ POST /api/servers/{serverId}/start
 ### Stop a Server
 
 ```http
-POST /api/servers/{serverId}/stop
+POST /api/v1/servers/{serverId}/stop
 ```
 
 ### Server Status
 
 ```http
-GET /api/servers/{serverId}/status
+GET /api/v1/servers/{serverId}/status
 ```
 
 **Response**:
@@ -202,7 +202,7 @@ DELETE /api/v1/config/files/{id}
 ### Cluster Status
 
 ```http
-GET /api/cluster/status
+GET /api/v1/cluster/status
 ```
 
 **Response**:

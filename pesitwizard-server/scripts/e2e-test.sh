@@ -247,7 +247,7 @@ check_cluster_status() {
     sleep 3
     
     # Check cluster status
-    CLUSTER_STATUS=$(curl -s http://localhost:18080/api/cluster/status)
+    CLUSTER_STATUS=$(curl -s http://localhost:18080/api/v1/cluster/status)
     echo "$CLUSTER_STATUS" | python3 -m json.tool 2>/dev/null || echo "$CLUSTER_STATUS"
     
     # Kill port-forward
@@ -269,7 +269,7 @@ create_test_server() {
     
     # Create a PeSIT server instance
     log_info "Creating PeSIT server instance..."
-    RESPONSE=$(curl -s -X POST http://localhost:18080/api/servers \
+    RESPONSE=$(curl -s -X POST http://localhost:18080/api/v1/servers \
         -H "Content-Type: application/json" \
         -d '{
             "serverId": "E2E_TEST_SERVER",
@@ -282,12 +282,12 @@ create_test_server() {
     
     # Start the server
     log_info "Starting PeSIT server..."
-    RESPONSE=$(curl -s -X POST http://localhost:18080/api/servers/E2E_TEST_SERVER/start)
+    RESPONSE=$(curl -s -X POST http://localhost:18080/api/v1/servers/E2E_TEST_SERVER/start)
     echo "$RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$RESPONSE"
     
     # Check status
     log_info "Server status:"
-    RESPONSE=$(curl -s http://localhost:18080/api/servers/E2E_TEST_SERVER/status)
+    RESPONSE=$(curl -s http://localhost:18080/api/v1/servers/E2E_TEST_SERVER/status)
     echo "$RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$RESPONSE"
     
     # Kill port-forward

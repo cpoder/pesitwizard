@@ -186,14 +186,14 @@ Leader election uses database locking:
 
 Check current leader:
 ```bash
-curl http://any-node:8080/api/cluster/leader
+curl http://any-node:8080/api/v1/cluster/leader
 ```
 
 ### Server Ownership
 
 Each PeSIT server instance is "owned" by a cluster node:
 ```bash
-curl http://any-node:8080/api/cluster/ownership
+curl http://any-node:8080/api/v1/cluster/ownership
 ```
 
 Response:
@@ -263,7 +263,7 @@ For planned maintenance:
 1. **Drain connections:**
    ```bash
    # Stop accepting new connections
-   curl -X POST http://leader:8080/api/servers/PWSERVER/stop
+   curl -X POST http://leader:8080/api/v1/servers/PWSERVER/stop
    ```
 
 2. **Wait for active transfers to complete:**
@@ -278,7 +278,7 @@ For planned maintenance:
 
 4. **Verify new leader:**
    ```bash
-   curl http://any-node:8080/api/cluster/leader
+   curl http://any-node:8080/api/v1/cluster/leader
    ```
 
 ### Recovery After Failover
@@ -288,7 +288,7 @@ For planned maintenance:
 3. Node joins as standby automatically
 4. Verify cluster status:
    ```bash
-   curl http://any-node:8080/api/cluster/members
+   curl http://any-node:8080/api/v1/cluster/members
    ```
 
 ## Monitoring
@@ -298,7 +298,7 @@ For planned maintenance:
 - `/actuator/health` - Overall health
 - `/actuator/health/liveness` - Kubernetes liveness probe
 - `/actuator/health/readiness` - Kubernetes readiness probe
-- `/api/cluster/status` - Cluster-specific health
+- `/api/v1/cluster/status` - Cluster-specific health
 
 ### Key Metrics
 

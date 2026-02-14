@@ -137,8 +137,7 @@ public class TcpConnectionHandler implements Runnable {
                         }
 
                         // Process the FPDU
-                        byte[] response =
-                                sessionHandler.processIncomingFpdu(sessionContext, fpdu);
+                        byte[] response = sessionHandler.processIncomingFpdu(sessionContext, fpdu);
 
                         // Send response if any (READ streams directly, so response may be null)
                         if (response != null) {
@@ -153,9 +152,7 @@ public class TcpConnectionHandler implements Runnable {
                         // Check if session ended normally
                         if (sessionContext.getState() == ServerState.CN01_REPOS
                                 || sessionContext.isAborted()) {
-                            log.info(
-                                    "[{}] Session ended normally",
-                                    sessionContext.getSessionId());
+                            log.info("[{}] Session ended normally", sessionContext.getSessionId());
                             sessionActive = false;
                         }
 

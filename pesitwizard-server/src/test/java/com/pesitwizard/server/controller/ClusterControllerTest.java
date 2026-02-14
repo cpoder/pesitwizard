@@ -35,7 +35,7 @@ class ClusterControllerTest {
         when(clusterProvider.getClusterMembers()).thenReturn(List.of("node-1", "node-2", "node-3"));
         when(clusterProvider.getAllServerOwnership()).thenReturn(Map.of("server-1", "node-1"));
 
-        mockMvc.perform(get("/api/cluster/status"))
+        mockMvc.perform(get("/api/v1/cluster/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clusterEnabled").value(true))
                 .andExpect(jsonPath("$.nodeName").value("node-1"))
@@ -50,7 +50,7 @@ class ClusterControllerTest {
         when(clusterProvider.getClusterSize()).thenReturn(2);
         when(clusterProvider.isLeader()).thenReturn(false);
 
-        mockMvc.perform(get("/api/cluster/members"))
+        mockMvc.perform(get("/api/v1/cluster/members"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(2))
                 .andExpect(jsonPath("$.members").isArray());
@@ -65,7 +65,7 @@ class ClusterControllerTest {
                                 "server-1", "node-1",
                                 "server-2", "node-2"));
 
-        mockMvc.perform(get("/api/cluster/ownership"))
+        mockMvc.perform(get("/api/v1/cluster/ownership"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.server-1").value("node-1"));
     }
@@ -76,7 +76,7 @@ class ClusterControllerTest {
         when(clusterProvider.getNodeName()).thenReturn("node-1");
         when(clusterProvider.isLeader()).thenReturn(true);
 
-        mockMvc.perform(get("/api/cluster/leader"))
+        mockMvc.perform(get("/api/v1/cluster/leader"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nodeName").value("node-1"))
                 .andExpect(jsonPath("$.isLeader").value(true));
@@ -93,7 +93,7 @@ class ClusterControllerTest {
         when(clusterProvider.getClusterMembers()).thenReturn(List.of("standalone"));
         when(clusterProvider.getAllServerOwnership()).thenReturn(Map.of());
 
-        mockMvc.perform(get("/api/cluster/status"))
+        mockMvc.perform(get("/api/v1/cluster/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clusterEnabled").value(false))
                 .andExpect(jsonPath("$.clusterSize").value(1));

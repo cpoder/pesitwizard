@@ -82,7 +82,7 @@ curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
 # Create and start PW server instance
 echo "   Creating PW server PWSERVER..."
 curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
-    "$PW_SERVER_API/api/servers" \
+    "$PW_SERVER_API/api/v1/servers" \
     -d '{
         "serverId": "PWSERVER",
         "port": 5001,
@@ -99,12 +99,12 @@ sleep 5
 
 # Check server status
 echo "   Checking PW server status..."
-SERVER_STATUS=$(curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/servers/PWSERVER/status" | jq -r '.status // "UNKNOWN"')
+SERVER_STATUS=$(curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/servers/PWSERVER/status" | jq -r '.status // "UNKNOWN"')
 echo "   PW Server status: $SERVER_STATUS"
 
 if [ "$SERVER_STATUS" != "RUNNING" ]; then
     echo "   Starting PW server..."
-    curl -s -X POST -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/servers/PWSERVER/start" | jq -r '.message // .error'
+    curl -s -X POST -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/servers/PWSERVER/start" | jq -r '.message // .error'
     sleep 3
 fi
 

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** REST API controller for managing PeSIT server instances. */
 @Slf4j
 @RestController
-@RequestMapping("/api/servers")
+@RequestMapping("/api/v1/servers")
 @RequiredArgsConstructor
 public class PesitServerController {
 

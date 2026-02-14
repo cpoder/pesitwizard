@@ -183,9 +183,9 @@ echo "  Test file created (~1MB)"
 
 # Get the PeSIT server ID and ensure it's started
 echo "  Checking PeSIT server status..."
-SERVER_ID=$(curl -sf "${SERVER_API}/api/servers" 2>/dev/null | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2 || echo "")
+SERVER_ID=$(curl -sf "${SERVER_API}/api/v1/servers" 2>/dev/null | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2 || echo "")
 if [ -n "$SERVER_ID" ]; then
-    curl -sf -X POST "${SERVER_API}/api/servers/${SERVER_ID}/start" >/dev/null 2>&1 || true
+    curl -sf -X POST "${SERVER_API}/api/v1/servers/${SERVER_ID}/start" >/dev/null 2>&1 || true
     echo -e "${GREEN}  PeSIT server started (ID: $SERVER_ID)${NC}"
 fi
 

@@ -17,13 +17,13 @@ fail() { echo "✗ $1"; ((FAILED++)); }
 
 # Setup: Ensure server is running
 echo "=== Setup ==="
-SERVER_STATUS=$(curl -sf "$SERVER_API/api/servers/1" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "UNKNOWN")
+SERVER_STATUS=$(curl -sf "$SERVER_API/api/v1/servers/1" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "UNKNOWN")
 echo "Server status: $SERVER_STATUS"
 
 if [ "$SERVER_STATUS" = "RUNNING" ]; then
     pass "Server is running"
 else
-    curl -sf -X POST "$SERVER_API/api/servers/1/start" >/dev/null 2>&1
+    curl -sf -X POST "$SERVER_API/api/v1/servers/1/start" >/dev/null 2>&1
     pass "Server start requested"
 fi
 

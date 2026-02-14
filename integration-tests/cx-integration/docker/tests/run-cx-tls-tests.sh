@@ -236,13 +236,13 @@ echo "   Partners and virtual files configured."
 echo ""
 echo "Test 9b: Create PW Server instance"
 # First check if a server already exists
-EXISTING_SERVER=$(curl -s "$PW_SERVER_API/api/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].serverId // "none"')
-SERVER_STATUS=$(curl -s "$PW_SERVER_API/api/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].status // "UNKNOWN"')
+EXISTING_SERVER=$(curl -s "$PW_SERVER_API/api/v1/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].serverId // "none"')
+SERVER_STATUS=$(curl -s "$PW_SERVER_API/api/v1/servers" -H "X-API-Key: $API_KEY" | jq -r '.[0].status // "UNKNOWN"')
 if [ "$EXISTING_SERVER" != "none" ]; then
     echo "   Server already exists: $EXISTING_SERVER (status: $SERVER_STATUS)"
     if [ "$SERVER_STATUS" = "STOPPED" ]; then
         echo "   Starting server..."
-        curl -s -X POST "$PW_SERVER_API/api/servers/$EXISTING_SERVER/start" -H "X-API-Key: $API_KEY" > /dev/null
+        curl -s -X POST "$PW_SERVER_API/api/v1/servers/$EXISTING_SERVER/start" -H "X-API-Key: $API_KEY" > /dev/null
         sleep 3
     fi
     test_result "PW Server instance exists" "pass"
@@ -250,7 +250,7 @@ else
     # Create a new server instance
     # Note: TLS is configured globally via application.yml (PESIT_SSL_ENABLED)
     # The keystore/truststore names come from application config, not per-server
-    SERVER_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/servers" \
+    SERVER_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/servers" \
         -H "X-API-Key: $API_KEY" \
         -H "Content-Type: application/json" \
         -d '{
@@ -270,7 +270,7 @@ else
 
         # Start the server (TLS will be used if PESIT_SSL_ENABLED=true)
         echo "   Starting server..."
-        START_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/servers/$SERVER_ID/start" -H "X-API-Key: $API_KEY")
+        START_RESULT=$(curl -s -X POST "$PW_SERVER_API/api/v1/servers/$SERVER_ID/start" -H "X-API-Key: $API_KEY")
         START_STATUS=$(echo "$START_RESULT" | jq -r '.status // "error"')
         if [ "$START_STATUS" = "RUNNING" ]; then
             echo "   Server started successfully"
@@ -530,7 +530,7 @@ else
     curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/transfers?direction=RECEIVE&limit=5" 2>/dev/null | jq '.' || true
     # Check PW Server running status
     echo "   PW Server instances:"
-    curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/servers" 2>/dev/null | jq '.' || true
+    curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/servers" 2>/dev/null | jq '.' || true
     # Check CX LOG for transfer errors (last 30 lines)
     echo "   CX transfer log (last 30 lines):"
     if [ -f /tmp/cx-send/.transfer_log ]; then

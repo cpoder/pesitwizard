@@ -51,7 +51,7 @@ class PesitServerControllerTest {
         void shouldGetAllServers() throws Exception {
             when(serverManager.getAllServers()).thenReturn(List.of(testServer));
 
-            mockMvc.perform(get("/api/servers"))
+            mockMvc.perform(get("/api/v1/servers"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].serverId").value("server-1"));
         }
@@ -61,7 +61,7 @@ class PesitServerControllerTest {
         void shouldGetServerById() throws Exception {
             when(serverManager.getServer("server-1")).thenReturn(Optional.of(testServer));
 
-            mockMvc.perform(get("/api/servers/server-1"))
+            mockMvc.perform(get("/api/v1/servers/server-1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.serverId").value("server-1"));
         }
@@ -71,7 +71,7 @@ class PesitServerControllerTest {
         void shouldReturn404ForNonExistent() throws Exception {
             when(serverManager.getServer("non-existent")).thenReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/servers/non-existent")).andExpect(status().isNotFound());
+            mockMvc.perform(get("/api/v1/servers/non-existent")).andExpect(status().isNotFound());
         }
     }
 
@@ -85,7 +85,7 @@ class PesitServerControllerTest {
             when(serverManager.createServer(any(PesitServerConfig.class))).thenReturn(testServer);
 
             mockMvc.perform(
-                            post("/api/servers")
+                            post("/api/v1/servers")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(testServer)))
                     .andExpect(status().isCreated())
@@ -99,7 +99,7 @@ class PesitServerControllerTest {
                     .thenThrow(new IllegalArgumentException("Invalid config"));
 
             mockMvc.perform(
-                            post("/api/servers")
+                            post("/api/v1/servers")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(testServer)))
                     .andExpect(status().isBadRequest())
@@ -113,7 +113,7 @@ class PesitServerControllerTest {
                     .thenReturn(testServer);
 
             mockMvc.perform(
-                            put("/api/servers/server-1")
+                            put("/api/v1/servers/server-1")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(testServer)))
                     .andExpect(status().isOk());
@@ -126,7 +126,7 @@ class PesitServerControllerTest {
                     .thenThrow(new IllegalStateException("Server is running"));
 
             mockMvc.perform(
-                            put("/api/servers/server-1")
+                            put("/api/v1/servers/server-1")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(testServer)))
                     .andExpect(status().isConflict());
@@ -137,7 +137,7 @@ class PesitServerControllerTest {
         void shouldDeleteServer() throws Exception {
             doNothing().when(serverManager).deleteServer("server-1");
 
-            mockMvc.perform(delete("/api/servers/server-1")).andExpect(status().isNoContent());
+            mockMvc.perform(delete("/api/v1/servers/server-1")).andExpect(status().isNoContent());
         }
 
         @Test
@@ -147,7 +147,8 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .deleteServer("non-existent");
 
-            mockMvc.perform(delete("/api/servers/non-existent")).andExpect(status().isNotFound());
+            mockMvc.perform(delete("/api/v1/servers/non-existent"))
+                    .andExpect(status().isNotFound());
         }
     }
 
@@ -160,7 +161,7 @@ class PesitServerControllerTest {
         void shouldStartServer() throws Exception {
             doNothing().when(serverManager).startServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/start"))
+            mockMvc.perform(post("/api/v1/servers/server-1/start"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("RUNNING"));
         }
@@ -172,7 +173,7 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .startServer("non-existent");
 
-            mockMvc.perform(post("/api/servers/non-existent/start"))
+            mockMvc.perform(post("/api/v1/servers/non-existent/start"))
                     .andExpect(status().isNotFound());
         }
 
@@ -183,7 +184,8 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .startServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/start")).andExpect(status().isConflict());
+            mockMvc.perform(post("/api/v1/servers/server-1/start"))
+                    .andExpect(status().isConflict());
         }
 
         @Test
@@ -191,7 +193,7 @@ class PesitServerControllerTest {
         void shouldStopServer() throws Exception {
             doNothing().when(serverManager).stopServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/stop"))
+            mockMvc.perform(post("/api/v1/servers/server-1/stop"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("STOPPED"));
         }
@@ -203,7 +205,7 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .stopServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/stop")).andExpect(status().isConflict());
+            mockMvc.perform(post("/api/v1/servers/server-1/stop")).andExpect(status().isConflict());
         }
     }
 
@@ -219,7 +221,7 @@ class PesitServerControllerTest {
             when(serverManager.isServerRunning("server-1")).thenReturn(true);
             when(serverManager.getActiveConnections("server-1")).thenReturn(5);
 
-            mockMvc.perform(get("/api/servers/server-1/status"))
+            mockMvc.perform(get("/api/v1/servers/server-1/status"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("RUNNING"))
                     .andExpect(jsonPath("$.running").value(true))
@@ -231,7 +233,7 @@ class PesitServerControllerTest {
         void shouldReturn404ForStatusOfNonExistent() throws Exception {
             when(serverManager.getServer("non-existent")).thenReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/servers/non-existent/status"))
+            mockMvc.perform(get("/api/v1/servers/non-existent/status"))
                     .andExpect(status().isNotFound());
         }
     }
@@ -247,7 +249,7 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .startServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/start"))
+            mockMvc.perform(post("/api/v1/servers/server-1/start"))
                     .andExpect(status().isInternalServerError());
         }
 
@@ -258,7 +260,7 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .stopServer("server-1");
 
-            mockMvc.perform(post("/api/servers/server-1/stop"))
+            mockMvc.perform(post("/api/v1/servers/server-1/stop"))
                     .andExpect(status().isInternalServerError());
         }
 
@@ -269,7 +271,7 @@ class PesitServerControllerTest {
                     .when(serverManager)
                     .stopServer("non-existent");
 
-            mockMvc.perform(post("/api/servers/non-existent/stop"))
+            mockMvc.perform(post("/api/v1/servers/non-existent/stop"))
                     .andExpect(status().isNotFound());
         }
     }

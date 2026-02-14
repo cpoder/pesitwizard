@@ -10,7 +10,7 @@ This guide covers common issues and their solutions when running PeSIT Wizard.
 **Solutions:**
 1. Verify the server is running:
    ```bash
-   curl http://localhost:8080/api/servers
+   curl http://localhost:8080/api/v1/servers
    ```
    Check that the server status is "RUNNING".
 

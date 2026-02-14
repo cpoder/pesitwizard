@@ -64,7 +64,7 @@ if curl -s http://localhost:8080/actuator/health &> /dev/null; then
     check_ok "Server is running on port 8080"
 
     # Check server status
-    SERVER_STATUS=$(curl -s http://localhost:8080/api/servers 2>/dev/null)
+    SERVER_STATUS=$(curl -s http://localhost:8080/api/v1/servers 2>/dev/null)
     if [ -n "$SERVER_STATUS" ]; then
         echo "  Server instances:"
         echo "$SERVER_STATUS" | grep -o '"serverId":"[^"]*"' | cut -d'"' -f4 | while read sid; do

@@ -30,10 +30,10 @@ curl -sf -X POST "$SERVER_API/api/filesystem/mkdir?path=/data/send/test" >/dev/n
 curl -sf -X POST "$SERVER_API/api/filesystem/mkdir?path=/data/received/test" >/dev/null 2>&1 || true
 
 # Create a PeSIT server if none exists
-SERVER_COUNT=$(curl -sf "$SERVER_API/api/servers" 2>/dev/null | grep -c '"serverId"' || echo "0")
+SERVER_COUNT=$(curl -sf "$SERVER_API/api/v1/servers" 2>/dev/null | grep -c '"serverId"' || echo "0")
 if [ "$SERVER_COUNT" -eq "0" ]; then
     echo "Creating PeSIT server..."
-    curl -sf -X POST "$SERVER_API/api/servers" \
+    curl -sf -X POST "$SERVER_API/api/v1/servers" \
         -H "Content-Type: application/json" \
         -d '{"serverId":"TESTSRV","name":"Test Server","port":5100,"autoStart":true}' >/dev/null 2>&1
     pass "Created PeSIT server"
@@ -42,10 +42,10 @@ else
 fi
 
 # Get server ID
-SERVER_ID=$(curl -sf "$SERVER_API/api/servers" 2>/dev/null | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+SERVER_ID=$(curl -sf "$SERVER_API/api/v1/servers" 2>/dev/null | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
 if [ -n "$SERVER_ID" ]; then
     # Start server if not running
-    curl -sf -X POST "$SERVER_API/api/servers/$SERVER_ID/start" >/dev/null 2>&1 || true
+    curl -sf -X POST "$SERVER_API/api/v1/servers/$SERVER_ID/start" >/dev/null 2>&1 || true
     pass "Server started (ID: $SERVER_ID)"
 else
     fail "Could not get server ID"

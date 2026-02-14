@@ -50,7 +50,7 @@ fi
 # Create PeSIT Server
 echo ""
 echo "=== PeSIT Server Management ==="
-SERVER_RESP=$(curl -sf -X POST "$SERVER_API/api/servers" \
+SERVER_RESP=$(curl -sf -X POST "$SERVER_API/api/v1/servers" \
     -H "Content-Type: application/json" \
     -d '{"serverId":"TEST01","name":"Test Server","port":5200,"autoStart":false}' 2>/dev/null || echo "")
 if echo "$SERVER_RESP" | grep -q '"serverId":"TEST01"'; then
@@ -60,7 +60,7 @@ else
 fi
 
 # Start Server
-if curl -sf -X POST "$SERVER_API/api/servers/1/start" >/dev/null 2>&1; then
+if curl -sf -X POST "$SERVER_API/api/v1/servers/1/start" >/dev/null 2>&1; then
     pass "Started PeSIT server"
 else
     fail "Failed to start PeSIT server (may already be running)"

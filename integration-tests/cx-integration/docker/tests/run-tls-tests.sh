@@ -26,7 +26,7 @@ TESTS_FAILED=0
 # Test 1: Verify PW Server TLS is enabled
 echo ""
 echo "Test 1: PW Server TLS configuration"
-SERVER_SSL=$(curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/servers" | jq -r '.[0].sslEnabled // false')
+SERVER_SSL=$(curl -s -H "X-API-Key: $API_KEY" "$PW_SERVER_API/api/v1/servers" | jq -r '.[0].sslEnabled // false')
 if [ "$SERVER_SSL" = "true" ] || curl -s "$PW_SERVER_API/actuator/env" | grep -q "ssl.enabled.*true"; then
     echo "   [PASS] PW Server has TLS enabled"
     TESTS_PASSED=$((TESTS_PASSED + 1))

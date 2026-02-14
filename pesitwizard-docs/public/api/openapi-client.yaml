@@ -17,7 +17,7 @@ tags:
     description: Envoi et réception de fichiers
 
 paths:
-  /api/servers:
+  /api/v1/servers:
     get:
       tags: [Servers]
       summary: Liste des serveurs configurés
@@ -47,7 +47,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Server'
 
-  /api/servers/{id}:
+  /api/v1/servers/{id}:
     parameters:
       - name: id
         in: path
@@ -85,7 +85,7 @@ paths:
         '204':
           description: Serveur supprimé
 
-  /api/servers/{id}/test:
+  /api/v1/servers/{id}/test:
     post:
       tags: [Servers]
       summary: Tester la connexion

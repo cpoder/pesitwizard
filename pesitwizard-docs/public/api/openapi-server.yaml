@@ -24,7 +24,7 @@ tags:
     description: Transfer history
 
 paths:
-  /api/servers:
+  /api/v1/servers:
     get:
       tags: [Servers]
       summary: List PeSIT servers
@@ -50,7 +50,7 @@ paths:
         '201':
           description: Server created
 
-  /api/servers/{serverId}/start:
+  /api/v1/servers/{serverId}/start:
     post:
       tags: [Servers]
       summary: Start a server
@@ -68,7 +68,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServerAction'
 
-  /api/servers/{serverId}/stop:
+  /api/v1/servers/{serverId}/stop:
     post:
       tags: [Servers]
       summary: Stop a server
@@ -82,7 +82,7 @@ paths:
         '200':
           description: Server stopped
 
-  /api/servers/{serverId}/status:
+  /api/v1/servers/{serverId}/status:
     get:
       tags: [Servers]
       summary: Get server status
@@ -224,7 +224,7 @@ paths:
         '204':
           description: Virtual file deleted
 
-  /api/cluster/status:
+  /api/v1/cluster/status:
     get:
       tags: [Cluster]
       summary: Cluster status

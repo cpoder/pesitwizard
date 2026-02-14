@@ -23,7 +23,7 @@ pesit:
 
 Per-server override:
 ```bash
-curl -X POST http://localhost:8080/api/servers \
+curl -X POST http://localhost:8080/api/v1/servers \
   -H "Content-Type: application/json" \
   -d '{"serverId":"FAST","port":5002,"maxEntitySize":32768}'
 ```

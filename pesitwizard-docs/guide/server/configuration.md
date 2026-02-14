@@ -42,7 +42,7 @@ A PeSIT Wizard server can host multiple "logical PeSIT servers" on different por
 ### Via API
 
 ```bash
-curl -X POST http://localhost:8080/api/servers \
+curl -X POST http://localhost:8080/api/v1/servers \
   -u admin:admin \
   -H "Content-Type: application/json" \
   -d '{
