@@ -542,5 +542,86 @@ class SftpConnectorTest {
             f.setAccessible(true);
             f.set(target, value);
         }
+
+        @Test
+        @DisplayName("basePath prefix applied to path resolution")
+        void withBasePath_resolvesPathCorrectly() throws Exception {
+            setField(connector, "basePath", "/data/transfers");
+
+            SftpATTRS attrs = mock(SftpATTRS.class);
+            when(mockChannel.stat("/data/transfers/file.txt")).thenReturn(attrs);
+
+            assertThat(connector.exists("file.txt")).isTrue();
+            verify(mockChannel).stat("/data/transfers/file.txt");
+        }
+
+        @Test
+        @DisplayName("basePath escape rejected")
+        void withBasePath_escapeRejected() throws Exception {
+            setField(connector, "basePath", "/data/transfers");
+
+            assertThatThrownBy(() -> connector.exists("../../etc/passwd"))
+                    .isInstanceOf(ConnectorException.class);
+        }
+
+        @Test
+        @DisplayName("ensureConnected reconnects stale session")
+        void ensureConnected_reconnectsWhenSessionDead() throws Exception {
+            setField(connector, "maxRetries", 0);
+            setUpReconnection();
+
+            // First time: session is disconnected, so ensureConnected triggers reconnect
+            when(mockSession.isConnected()).thenReturn(false).thenReturn(true);
+            when(mockChannel.isConnected()).thenReturn(false).thenReturn(true);
+            when(mockChannel.pwd()).thenReturn("/home");
+
+            assertThat(connector.testConnection()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("SftpConnectorFactory")
+    class FactoryTests {
+
+        private final SftpConnectorFactory factory = new SftpConnectorFactory();
+
+        @Test
+        void getType_returnsSftp() {
+            assertThat(factory.getType()).isEqualTo("sftp");
+        }
+
+        @Test
+        void getName_returnsSFTP() {
+            assertThat(factory.getName()).isEqualTo("SFTP");
+        }
+
+        @Test
+        void getVersion_returns100() {
+            assertThat(factory.getVersion()).isEqualTo("1.0.0");
+        }
+
+        @Test
+        void getDescription_notNull() {
+            assertThat(factory.getDescription()).isNotNull().isNotEmpty();
+        }
+
+        @Test
+        void create_returnsSftpConnector() {
+            assertThat(factory.create()).isInstanceOf(SftpConnector.class);
+        }
+
+        @Test
+        void getRequiredParameters_containsHostAndUsername() {
+            assertThat(factory.getRequiredParameters())
+                    .extracting(ConfigParameter::getName)
+                    .containsExactly("host", "username");
+        }
+
+        @Test
+        void getOptionalParameters_containsPasswordAndPort() {
+            assertThat(factory.getOptionalParameters())
+                    .extracting(ConfigParameter::getName)
+                    .contains("password", "port");
+        }
     }
 }

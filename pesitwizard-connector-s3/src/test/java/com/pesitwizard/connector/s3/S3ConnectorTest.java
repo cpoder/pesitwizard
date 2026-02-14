@@ -1,14 +1,27 @@
 package com.pesitwizard.connector.s3;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 import com.pesitwizard.connector.ConfigParameter;
 import com.pesitwizard.connector.ConnectorException;
+import com.pesitwizard.connector.FileMetadata;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
 class S3ConnectorTest {
 
@@ -250,5 +263,279 @@ class S3ConnectorTest {
         assertThatCode(() -> connector.mkdir("somedir")).doesNotThrowAnyException();
 
         connector.close();
+    }
+
+    @Nested
+    @ExtendWith(MockitoExtension.class)
+    class WithMockS3Client {
+
+        @Mock private S3Client mockS3;
+
+        private S3Connector s3Connector;
+
+        @BeforeEach
+        void setUp() throws Exception {
+            s3Connector = new S3Connector();
+            // Inject mock S3Client and set initialized=true via reflection
+            setField(s3Connector, "s3", mockS3);
+            setField(s3Connector, "bucket", "test-bucket");
+            setField(s3Connector, "prefix", "");
+            setField(s3Connector, "initialized", true);
+        }
+
+        private void setField(Object target, String fieldName, Object value) throws Exception {
+            Field f = S3Connector.class.getDeclaredField(fieldName);
+            f.setAccessible(true);
+            f.set(target, value);
+        }
+
+        // --- testConnection ---
+
+        @Test
+        void testConnection_success_returnsTrue() throws ConnectorException {
+            when(mockS3.headBucket(any(HeadBucketRequest.class)))
+                    .thenReturn(HeadBucketResponse.builder().build());
+
+            assertThat(s3Connector.testConnection()).isTrue();
+        }
+
+        @Test
+        void testConnection_s3Exception_returnsFalse() throws ConnectorException {
+            when(mockS3.headBucket(any(HeadBucketRequest.class)))
+                    .thenThrow(S3Exception.builder().message("denied").build());
+
+            assertThat(s3Connector.testConnection()).isFalse();
+        }
+
+        // --- exists ---
+
+        @Test
+        void exists_objectExists_returnsTrue() throws ConnectorException {
+            when(mockS3.headObject(any(HeadObjectRequest.class)))
+                    .thenReturn(HeadObjectResponse.builder().build());
+
+            assertThat(s3Connector.exists("file.txt")).isTrue();
+        }
+
+        @Test
+        void exists_noSuchKey_returnsFalse() throws ConnectorException {
+            when(mockS3.headObject(any(HeadObjectRequest.class)))
+                    .thenThrow(NoSuchKeyException.builder().message("not found").build());
+
+            assertThat(s3Connector.exists("missing.txt")).isFalse();
+        }
+
+        // --- getMetadata ---
+
+        @Test
+        void getMetadata_found_returnsFileMetadata() throws ConnectorException {
+            Instant now = Instant.now();
+            when(mockS3.headObject(any(HeadObjectRequest.class)))
+                    .thenReturn(
+                            HeadObjectResponse.builder()
+                                    .contentLength(1024L)
+                                    .lastModified(now)
+                                    .build());
+
+            FileMetadata meta = s3Connector.getMetadata("doc.pdf");
+            assertThat(meta.getName()).isEqualTo("doc.pdf");
+            assertThat(meta.getSize()).isEqualTo(1024L);
+            assertThat(meta.getLastModified()).isEqualTo(now);
+            assertThat(meta.isDirectory()).isFalse();
+        }
+
+        @Test
+        void getMetadata_notFound_throwsFileNotFound() {
+            when(mockS3.headObject(any(HeadObjectRequest.class)))
+                    .thenThrow(NoSuchKeyException.builder().message("nope").build());
+
+            assertThatThrownBy(() -> s3Connector.getMetadata("missing.txt"))
+                    .isInstanceOf(ConnectorException.class)
+                    .satisfies(
+                            e ->
+                                    assertThat(((ConnectorException) e).getErrorCode())
+                                            .isEqualTo(
+                                                    ConnectorException.ErrorCode.FILE_NOT_FOUND));
+        }
+
+        // --- list ---
+
+        @Test
+        void list_returnsFilesAndDirs() throws ConnectorException {
+            Instant now = Instant.now();
+            ListObjectsV2Response response =
+                    ListObjectsV2Response.builder()
+                            .contents(
+                                    S3Object.builder()
+                                            .key("data/file1.txt")
+                                            .size(100L)
+                                            .lastModified(now)
+                                            .build())
+                            .commonPrefixes(CommonPrefix.builder().prefix("data/subdir/").build())
+                            .isTruncated(false)
+                            .build();
+            when(mockS3.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+
+            List<FileMetadata> result = s3Connector.list("data");
+            assertThat(result).hasSize(2);
+            assertThat(result).anyMatch(m -> "file1.txt".equals(m.getName()) && !m.isDirectory());
+            assertThat(result).anyMatch(m -> "subdir".equals(m.getName()) && m.isDirectory());
+        }
+
+        @Test
+        void list_pagination_aggregatesResults() throws ConnectorException {
+            ListObjectsV2Response page1 =
+                    ListObjectsV2Response.builder()
+                            .contents(
+                                    S3Object.builder()
+                                            .key("data/a.txt")
+                                            .size(10L)
+                                            .lastModified(Instant.now())
+                                            .build())
+                            .isTruncated(true)
+                            .nextContinuationToken("tok1")
+                            .build();
+            ListObjectsV2Response page2 =
+                    ListObjectsV2Response.builder()
+                            .contents(
+                                    S3Object.builder()
+                                            .key("data/b.txt")
+                                            .size(20L)
+                                            .lastModified(Instant.now())
+                                            .build())
+                            .isTruncated(false)
+                            .build();
+            when(mockS3.listObjectsV2(any(ListObjectsV2Request.class)))
+                    .thenReturn(page1)
+                    .thenReturn(page2);
+
+            List<FileMetadata> result = s3Connector.list("data");
+            assertThat(result).hasSize(2);
+        }
+
+        // --- read ---
+
+        @SuppressWarnings("unchecked")
+        @Test
+        void read_returnsInputStream() throws ConnectorException {
+            ResponseInputStream<GetObjectResponse> mockStream = mock(ResponseInputStream.class);
+            when(mockS3.getObject(any(GetObjectRequest.class))).thenReturn(mockStream);
+
+            InputStream stream = s3Connector.read("file.txt");
+            assertThat(stream).isNotNull();
+        }
+
+        @Test
+        void read_withOffset_usesRangeHeader() throws ConnectorException {
+            @SuppressWarnings("unchecked")
+            ResponseInputStream<GetObjectResponse> mockStream = mock(ResponseInputStream.class);
+            when(mockS3.getObject(any(GetObjectRequest.class))).thenReturn(mockStream);
+
+            s3Connector.read("file.txt", 1024);
+
+            verify(mockS3)
+                    .getObject(
+                            argThat(
+                                    (GetObjectRequest req) ->
+                                            "bytes=1024-".equals(req.range())
+                                                    && "file.txt".equals(req.key())));
+        }
+
+        // --- delete ---
+
+        @Test
+        void delete_callsDeleteObject() throws ConnectorException {
+            s3Connector.delete("old.txt");
+
+            verify(mockS3)
+                    .deleteObject(
+                            argThat(
+                                    (DeleteObjectRequest req) ->
+                                            "test-bucket".equals(req.bucket())
+                                                    && "old.txt".equals(req.key())));
+        }
+
+        // --- rename ---
+
+        @Test
+        void rename_copiesThenDeletes() throws ConnectorException {
+            when(mockS3.copyObject(any(CopyObjectRequest.class)))
+                    .thenReturn(CopyObjectResponse.builder().build());
+
+            s3Connector.rename("src.txt", "dst.txt");
+
+            verify(mockS3)
+                    .copyObject(
+                            argThat(
+                                    (CopyObjectRequest req) ->
+                                            "src.txt".equals(req.sourceKey())
+                                                    && "dst.txt".equals(req.destinationKey())));
+            verify(mockS3)
+                    .deleteObject(
+                            argThat((DeleteObjectRequest req) -> "src.txt".equals(req.key())));
+        }
+
+        // --- prefix resolution ---
+
+        @Test
+        void withPrefix_resolvesPathCorrectly() throws Exception {
+            setField(s3Connector, "prefix", "myprefix");
+
+            when(mockS3.headObject(any(HeadObjectRequest.class)))
+                    .thenReturn(HeadObjectResponse.builder().build());
+
+            s3Connector.exists("file.txt");
+
+            verify(mockS3)
+                    .headObject(
+                            argThat(
+                                    (HeadObjectRequest req) ->
+                                            "myprefix/file.txt".equals(req.key())));
+        }
+    }
+
+    @Nested
+    class S3ConnectorFactoryTests {
+
+        private S3ConnectorFactory factory = new S3ConnectorFactory();
+
+        @Test
+        void getType_returnsS3() {
+            assertThat(factory.getType()).isEqualTo("s3");
+        }
+
+        @Test
+        void getName_returnsExpected() {
+            assertThat(factory.getName()).isEqualTo("AWS S3 / MinIO");
+        }
+
+        @Test
+        void getVersion_returns100() {
+            assertThat(factory.getVersion()).isEqualTo("1.0.0");
+        }
+
+        @Test
+        void getDescription_notNull() {
+            assertThat(factory.getDescription()).isNotNull().isNotEmpty();
+        }
+
+        @Test
+        void create_returnsS3Connector() {
+            assertThat(factory.create()).isInstanceOf(S3Connector.class);
+        }
+
+        @Test
+        void getRequiredParameters_containsBucket() {
+            assertThat(factory.getRequiredParameters())
+                    .extracting(ConfigParameter::getName)
+                    .contains("bucket");
+        }
+
+        @Test
+        void getOptionalParameters_containsCredentials() {
+            assertThat(factory.getOptionalParameters())
+                    .extracting(ConfigParameter::getName)
+                    .containsExactly("accessKey", "secretKey");
+        }
     }
 }

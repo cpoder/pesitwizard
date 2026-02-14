@@ -18,9 +18,10 @@ database:
   username: pesitwizard
   password: pesitwizard-test-password
 
-pesit:
-  server:
+config:
+  pesit:
     serverId: TEST-SERVER
+    password: integration-test-pesit-pw
 
 persistence:
   enabled: true
