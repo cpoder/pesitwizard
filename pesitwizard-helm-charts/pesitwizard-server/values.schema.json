@@ -61,9 +61,9 @@
           "type": "object",
           "properties": {
             "serverId": { "type": "string", "minLength": 1, "maxLength": 25, "description": "PeSIT server identifier" },
-            "password": { "type": "string", "minLength": 1, "description": "PeSIT server password (change from default!)" }
+            "password": { "type": "string", "description": "PeSIT server password (change from default!)" }
           },
-          "required": ["serverId", "password"]
+          "required": ["serverId"]
         },
         "security": {
           "type": "object",
