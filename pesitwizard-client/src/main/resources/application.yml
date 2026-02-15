@@ -97,6 +97,11 @@ otel:
 pesitwizard:
   security:
     api-key: ${PESITWIZARD_SECURITY_API_KEY:}
+  # Base directory the UI file browser is allowed to browse.
+  # This restricts browsing to a specific path for security.
+  # Env var: PESITWIZARD_STORAGE_LOCAL_BROWSE_PATH
+  storage:
+    local-browse-path: ${PESITWIZARD_STORAGE_LOCAL_BROWSE_PATH:./data}
   # CORS allowed origins (comma-separated).
   # Must be configured for production, e.g. https://myapp.example.com
   # Env var: PESITWIZARD_CORS_ALLOWED_ORIGINS

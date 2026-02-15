@@ -75,6 +75,47 @@ docker compose up -d
 
 For a two-node cluster setup, see the `docker-compose.yml` in the `pesitwizard-server` module directory.
 
+### File Storage Directories
+
+The server uses two directories for file transfers:
+
+| Directory | Default Path | Purpose |
+|-----------|-------------|---------|
+| Receive | `/data/received` | Where received files are stored |
+| Send | `/data/send` | Where files to send must be placed |
+
+These paths can be overridden with environment variables:
+
+```bash
+-e PESIT_SERVER_RECEIVE_DIRECTORY=/data/received
+-e PESIT_SERVER_SEND_DIRECTORY=/data/send
+```
+
+**Bind-mounting host directories** (recommended for production):
+
+```bash
+docker run -d \
+  --name pesitwizard-server \
+  -p 6502:6502 \
+  -p 8080:8080 \
+  -v /opt/pesit/received:/data/received \
+  -v /opt/pesit/send:/data/send \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/pesitwizard \
+  -e SPRING_DATASOURCE_USERNAME=pesitwizard \
+  -e SPRING_DATASOURCE_PASSWORD=pesitwizard \
+  ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
+```
+
+Or in Docker Compose:
+
+```yaml
+volumes:
+  - /opt/pesit/received:/data/received
+  - /opt/pesit/send:/data/send
+```
+
+Individual logical files can override these directories in the application configuration (see [Configuration](/guide/server/configuration)).
+
 ## Kubernetes Deployment
 
 ### Create the Namespace
@@ -194,6 +235,9 @@ spec:
           value: pesitwizard
         - name: PESIT_CLUSTER_ENABLED
           value: "true"
+        volumeMounts:
+        - name: data
+          mountPath: /data
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -204,6 +248,21 @@ spec:
             path: /actuator/health/liveness
             port: 8080
           initialDelaySeconds: 60
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: pesitwizard-data-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pesitwizard-data-pvc
+  namespace: pesitwizard
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: Service

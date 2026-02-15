@@ -77,6 +77,32 @@ docker compose up -d
 
 The UI is available at http://localhost:3001 and the API at http://localhost:8080.
 
+### File Storage Directories
+
+The client uses configurable directories for file transfers and browsing:
+
+| Property | Default | Env Variable | Purpose |
+|----------|---------|-------------|---------|
+| `pesit.client.receive-directory` | `./received` | `PESIT_CLIENT_RECEIVE_DIRECTORY` | Where received files are stored |
+| `pesitwizard.storage.local-browse-path` | `./data` | `PESITWIZARD_STORAGE_LOCAL_BROWSE_PATH` | Base directory the UI file browser can access |
+
+The **local browse path** controls which directory the UI's file picker can browse when selecting files to send. It must be set for the file browser to work.
+
+**Bind-mounting host directories** (recommended for production):
+
+```yaml
+# In docker-compose.yml
+services:
+  pesitwizard-client-api:
+    volumes:
+      - /opt/pesit/data:/data
+    environment:
+      PESIT_CLIENT_RECEIVE_DIRECTORY: /data/received
+      PESITWIZARD_STORAGE_LOCAL_BROWSE_PATH: /data
+```
+
+Files to send are specified per-transfer via the REST API (as a local file path or storage connector reference). The UI file browser uses `local-browse-path` to let users pick files visually.
+
 ### With HashiCorp Vault
 
 For secure secrets management with HashiCorp Vault:
