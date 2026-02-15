@@ -13,9 +13,9 @@ on:
         required: false
         default: '100'
         type: string
-  schedule:
-    # Weekly soak test on Sundays at midnight UTC
-    - cron: '0 0 * * 0'
+  # schedule:
+    # Weekly soak test — disabled until EKS staging cluster is provisioned
+    # - cron: '0 0 * * 0'
 
 env:
   AWS_REGION: eu-west-1
