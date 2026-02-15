@@ -7,7 +7,7 @@
 
     <groupId>com.pesitwizard</groupId>
     <artifactId>pesitwizard-parent</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>PeSIT Wizard</name>
