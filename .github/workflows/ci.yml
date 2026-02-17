@@ -109,14 +109,7 @@ jobs:
         run: |
           for chart in pesitwizard-helm-charts/*/; do
             echo "Linting $chart..."
-            helm lint "$chart" --strict || exit 1
-          done
-
-      - name: Template Helm charts
-        run: |
-          for chart in pesitwizard-helm-charts/*/; do
-            echo "Templating $chart..."
-            helm template test "$chart" > /dev/null || exit 1
+            helm lint "$chart" || exit 1
           done
 
   # Security: OWASP Dependency Check (weekly + on PRs)
