@@ -23,7 +23,7 @@ app.use(createPinia())
 app.use(router)
 
 // Global error handler - prevents unhandled errors from crashing the app
-app.config.errorHandler = (err, instance, info) => {
+app.config.errorHandler = (err, _instance, info) => {
   console.error(`[Vue Error] ${info}:`, err)
 }
 
