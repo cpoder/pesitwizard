@@ -3,7 +3,7 @@
 # =============================================================================
 
 # Stage 1: Build custom minimal JRE with jlink
-FROM eclipse-temurin:21-jdk-alpine AS jre-builder
+FROM eclipse-temurin:25-jdk-alpine AS jre-builder
 
 # Create minimal JRE with only required modules for Spring Boot + Netty + Security
 RUN jlink \
