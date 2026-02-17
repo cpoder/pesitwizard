@@ -21,7 +21,7 @@
     "lucide-vue-next": "^0.556.0",
     "pinia": "^3.0.4",
     "sockjs-client": "^1.6.1",
-    "vue": "^3.5.24",
+    "vue": "^3.5.28",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
