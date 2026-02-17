@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="MDC_PATTERN" value="%X{traceId:-} %X{requestId:-}" />
+
+    <!-- Default: console with human-readable format -->
+    <springProfile name="default,dev,apikey,nosecurity">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss} %-5level [${MDC_PATTERN}] %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="com.pesitwizard" level="${LOG_LEVEL:-INFO}" />
+        <logger name="org.springframework.security" level="WARN" />
+
+        <root level="WARN">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+
+    <!-- JSON logging for log aggregation (ELK, Loki, etc.) -->
+    <springProfile name="json-logging">
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="ch.qos.logback.classic.encoder.JsonEncoder" />
+        </appender>
+
+        <logger name="com.pesitwizard" level="${LOG_LEVEL:-INFO}" />
+        <logger name="org.springframework" level="WARN" />
+
+        <root level="WARN">
+            <appender-ref ref="CONSOLE_JSON" />
+        </root>
+    </springProfile>
+
+    <!-- Production: structured single-line + file rotation -->
+    <springProfile name="production,prod,postgres">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="com.pesitwizard" level="${LOG_LEVEL:-INFO}" />
+        <logger name="org.springframework" level="WARN" />
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+</configuration>

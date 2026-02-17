@@ -6,8 +6,8 @@ api:
   
   image:
     repository: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client
-    tag: latest
-    pullPolicy: Always
+    tag: ""  # REQUIRED: Set to a specific version (e.g., 1.2.2) or use --set api.image.tag=<version>
+    pullPolicy: IfNotPresent
   
   service:
     type: ClusterIP
@@ -28,8 +28,8 @@ ui:
   
   image:
     repository: ghcr.io/pesitwizard/pesitwizard/pesitwizard-client-ui
-    tag: latest
-    pullPolicy: Always
+    tag: ""  # REQUIRED: Set to a specific version (e.g., 1.2.2) or use --set ui.image.tag=<version>
+    pullPolicy: IfNotPresent
   
   service:
     type: ClusterIP

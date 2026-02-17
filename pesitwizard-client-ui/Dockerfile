@@ -21,3 +21,6 @@ ENV API_HOST=pesitwizard-client-api
 ENV API_PORT=8080
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -q --spider http://localhost:8080/ || exit 1

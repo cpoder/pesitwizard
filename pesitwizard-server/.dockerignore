@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+.vscode
+*.md
+target/surefire-reports
+target/site
+src/test
+.env*
+*.log
+recordings/
+received/
+send/
+backups/

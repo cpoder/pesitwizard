@@ -27,6 +27,21 @@
         </root>
     </springProfile>
 
+    <!-- ========== JSON logging profile (for log aggregation: ELK, Loki, etc.) ========== -->
+    <springProfile name="json-logging">
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="ch.qos.logback.classic.encoder.JsonEncoder" />
+        </appender>
+
+        <logger name="com.pesitwizard" level="${LOG_LEVEL:-INFO}" />
+        <logger name="org.springframework" level="WARN" />
+        <logger name="org.hibernate" level="WARN" />
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON" />
+        </root>
+    </springProfile>
+
     <!-- ========== Production profile ========== -->
     <springProfile name="production,prod,postgres">
         <!-- Console: structured single-line for container log aggregators -->

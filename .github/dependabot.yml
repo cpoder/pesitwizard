@@ -33,3 +33,28 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+
+  # Docker images
+  - package-ecosystem: "docker"
+    directory: "/pesitwizard-server"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/pesitwizard-client"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/pesitwizard-client-ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"

@@ -22,4 +22,9 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 
+// Global error handler - prevents unhandled errors from crashing the app
+app.config.errorHandler = (err, instance, info) => {
+  console.error(`[Vue Error] ${info}:`, err)
+}
+
 app.mount('#app')

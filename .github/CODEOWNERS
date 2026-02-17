@@ -1,0 +1,17 @@
+# PeSIT Wizard Code Owners
+* @pesitwizard/maintainers
+
+# Security-critical paths
+pesitwizard-security/ @pesitwizard/security-team
+**/security/ @pesitwizard/security-team
+**/SecurityConfig.java @pesitwizard/security-team
+
+# Protocol implementation
+pesitwizard-pesit/ @pesitwizard/protocol-team
+
+# Helm charts and deployment
+pesitwizard-helm-charts/ @pesitwizard/platform-team
+**/Dockerfile* @pesitwizard/platform-team
+
+# CI/CD
+.github/ @pesitwizard/platform-team
