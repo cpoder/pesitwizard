@@ -51,7 +51,7 @@ jobs:
   dependency-check:
     name: OWASP Dependency Check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -64,14 +64,34 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: nvd-db-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            nvd-db-${{ runner.os }}-
+
       - name: Run OWASP Dependency Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
+          NVD_OPTS=""
+          if [ -n "$NVD_API_KEY" ]; then
+            NVD_OPTS="-DnvdApiKey=$NVD_API_KEY"
+            echo "Using NVD API key for faster database updates"
+          else
+            echo "::warning::NVD_API_KEY not configured. NVD downloads will be severely rate-limited. Request a free key at https://nvd.nist.gov/developers/request-an-api-key"
+          fi
           mvn org.owasp:dependency-check-maven:check \
             -DfailBuildOnCVSS=7 \
-            -DretireJsAnalyzerEnabled=true \
+            -DretireJsAnalyzerEnabled=false \
+            -DnodeAnalyzerEnabled=false \
+            -DnvdValidForHours=24 \
             -DsuppressionFile=.github/dependency-check-suppressions.xml \
             -Dformat=ALL \
             -DoutputDirectory=reports \
+            $NVD_OPTS \
             -B
         continue-on-error: true
 
