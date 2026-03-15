@@ -2,24 +2,24 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'PeSIT Wizard',
-  description: 'Solution moderne de transfert de fichiers bancaires',
-  lang: 'fr-FR',
-  
+  description: 'Modern open-source PeSIT file transfer solution',
+  lang: 'en-US',
+
   // Ignore localhost links used in development examples
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
     /^\/guide\/server\/clustering/
   ],
-  
+
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
 
   themeConfig: {
     logo: '/logo.svg',
-    
+
     nav: [
-      { text: 'Accueil', link: '/' },
+      { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/' },
       { text: 'API', link: '/api/' },
       { text: 'GitHub', link: 'https://github.com/pesitwizard/pesitwizard' }
@@ -30,8 +30,8 @@ export default defineConfig({
         {
           text: 'Introduction',
           items: [
-            { text: 'Qu\'est-ce que PeSIT ?', link: '/guide/' },  // PeSIT est le protocole
-            { text: 'Démarrage rapide', link: '/guide/quickstart' },
+            { text: 'What is PeSIT?', link: '/guide/' },
+            { text: 'Quick Start', link: '/guide/quickstart' },
             { text: 'Architecture', link: '/guide/architecture' }
           ]
         },
@@ -40,8 +40,8 @@ export default defineConfig({
           items: [
             { text: 'Installation', link: '/guide/client/installation' },
             { text: 'Configuration', link: '/guide/client/configuration' },
-            { text: 'Utilisation', link: '/guide/client/usage' },
-            { text: 'Intégration ERP', link: '/guide/client/erp-integration' }
+            { text: 'Usage', link: '/guide/client/usage' },
+            { text: 'ERP Integration', link: '/guide/client/erp-integration' }
           ]
         },
         {
@@ -49,17 +49,17 @@ export default defineConfig({
           items: [
             { text: 'Installation', link: '/guide/server/installation' },
             { text: 'Configuration', link: '/guide/server/configuration' },
-            { text: 'Sécurité', link: '/guide/server/security' },
-            { text: 'Gestion des secrets', link: '/guide/server/secrets' },
-            { text: 'Connecteurs de stockage', link: '/guide/server/connectors' },
-            { text: 'Observabilité', link: '/guide/server/observability' }
+            { text: 'Security', link: '/guide/server/security' },
+            { text: 'Secrets Management', link: '/guide/server/secrets' },
+            { text: 'Storage Connectors', link: '/guide/server/connectors' },
+            { text: 'Observability', link: '/guide/server/observability' }
           ]
         },
         {
-          text: 'Opérations',
+          text: 'Operations',
           items: [
-            { text: 'Dépannage', link: '/guide/troubleshooting' },
-            { text: 'Runbook opérationnel', link: '/guide/operations' },
+            { text: 'Troubleshooting', link: '/guide/troubleshooting' },
+            { text: 'Operations Runbook', link: '/guide/operations' },
             { text: 'Performance', link: '/guide/performance' },
             { text: 'Connect:Express', link: '/guide/connect-express' }
           ]
@@ -69,8 +69,8 @@ export default defineConfig({
         {
           text: 'API Reference',
           items: [
-            { text: 'Vue d\'ensemble', link: '/api/' },
-            { text: 'Authentification', link: '/api/authentication' },
+            { text: 'Overview', link: '/api/' },
+            { text: 'Authentication', link: '/api/authentication' },
             { text: 'Client API', link: '/api/client' },
             { text: 'Server API', link: '/api/server' }
           ]
@@ -83,7 +83,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'PeSIT Wizard - Solution PeSIT moderne pour les entreprises',
+      message: 'PeSIT Wizard - Modern PeSIT solution for enterprises',
       copyright: 'Copyright © 2025'
     },
 
