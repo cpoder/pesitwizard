@@ -69,17 +69,22 @@ The REST API starts on **port 8080**. The PeSIT protocol listener must be create
 # Create a PeSIT server instance (port 6502, or 5001 for TLS)
 curl -X POST http://localhost:8080/api/v1/servers \
   -H "Content-Type: application/json" \
-  -d '{"serverId":"MYSERVER","port":6502,"receiveDirectory":"/data/received","autoStart":true}'
-
-# Create a virtual file (maps PeSIT logical name to a physical file)
-curl -X POST http://localhost:8080/api/v1/config/files \
-  -H "Content-Type: application/json" \
-  -d '{"id":"MYFILE","direction":"RECEIVE","receiveDirectory":"/data/received"}'
+  -d '{"serverId":"MYSERVER","port":6502,"autoStart":true}'
 
 # Create a partner (required for any incoming connection)
 curl -X POST http://localhost:8080/api/v1/config/partners \
   -H "Content-Type: application/json" \
   -d '{"id":"PARTNER1","enabled":true,"accessType":"BOTH"}'
+
+# Create a virtual file for receiving (maps PeSIT logical name to local path)
+curl -X POST http://localhost:8080/api/v1/config/files \
+  -H "Content-Type: application/json" \
+  -d '{"id":"INCOMING","direction":"RECEIVE","receiveDirectory":"/data/received","receiveFilenamePattern":"${virtualFile}_${timestamp}"}'
+
+# Create a virtual file for sending (maps PeSIT logical name to a physical file)
+curl -X POST http://localhost:8080/api/v1/config/files \
+  -H "Content-Type: application/json" \
+  -d '{"id":"OUTGOING","direction":"SEND","sendFile":"/data/send/report.csv"}'
 ```
 
 ### REST API
