@@ -108,7 +108,7 @@ curl -X POST http://localhost:8080/api/v1/config/files \
   -d '{
     "fileId": "PAYMENTS",
     "name": "Payment files",
-    "sendDirectory": "/data/send/payments",
+    "sendFile": "/data/send/payments",
     "receiveDirectory": "/data/received/payments",
     "filenamePattern": "*.xml"
   }'
@@ -120,7 +120,7 @@ curl -X POST http://localhost:8080/api/v1/config/files \
 |-----------|-------------|
 | `fileId` | Virtual file identifier (PI_12) |
 | `name` | Display name |
-| `sendDirectory` | Directory for files to send |
+| `sendFile` | Physical file path to send |
 | `receiveDirectory` | Directory for received files |
 | `filenamePattern` | Filename pattern |
 

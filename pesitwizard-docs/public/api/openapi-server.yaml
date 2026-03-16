@@ -402,7 +402,7 @@ components:
           type: string
         name:
           type: string
-        sendDirectory:
+        sendFile:
           type: string
         receiveDirectory:
           type: string
@@ -419,7 +419,7 @@ components:
           type: string
         name:
           type: string
-        sendDirectory:
+        sendFile:
           type: string
         receiveDirectory:
           type: string
@@ -431,7 +431,7 @@ components:
       properties:
         name:
           type: string
-        sendDirectory:
+        sendFile:
           type: string
         receiveDirectory:
           type: string

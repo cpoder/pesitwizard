@@ -42,7 +42,7 @@ pesit:
         enabled: true
         direction: BOTH
         receive-directory: ./target/integration-received
-        send-directory: ./target/integration-send
+        send-file: ./target/integration-send/TESTFILE
         receive-filename-pattern: "${filename}"
         overwrite: true
 

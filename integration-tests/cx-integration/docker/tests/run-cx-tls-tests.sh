@@ -229,7 +229,7 @@ curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
     -d '{"id":"PWSEND","description":"Receive files from CX","enabled":true,"direction":"RECEIVE","receiveDirectory":"/data/received","receiveFilenamePattern":"PWSEND_${timestamp}","overwrite":true,"recordLength":4096,"recordFormat":0}' > /dev/null 2>&1 || true
 curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
     "$PW_SERVER_API/api/v1/config/files" \
-    -d '{"id":"PWRECV","description":"Send files to CX","enabled":true,"direction":"SEND","sendDirectory":"/data/send","recordLength":4096,"recordFormat":0}' > /dev/null 2>&1 || true
+    -d '{"id":"PWRECV","description":"Send files to CX","enabled":true,"direction":"SEND","sendFile":"/data/send/PWRECV","recordLength":4096,"recordFormat":0}' > /dev/null 2>&1 || true
 echo "   Partners and virtual files configured."
 
 # Create PW Server instance

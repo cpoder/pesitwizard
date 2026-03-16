@@ -89,7 +89,7 @@ pesit:
     TEST_FILE:
       direction: BOTH
       receive-directory: /data/received
-      send-directory: /data/send
+      send-file: /data/send/TEST_FILE
       enabled: true
 EOF
 

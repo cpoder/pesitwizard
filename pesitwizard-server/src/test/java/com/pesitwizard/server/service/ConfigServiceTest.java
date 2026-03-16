@@ -57,7 +57,7 @@ class ConfigServiceTest {
                         .enabled(true)
                         .direction(VirtualFile.Direction.BOTH)
                         .receiveDirectory("/data/recv")
-                        .sendDirectory("/data/send")
+                        .sendFile("/data/send")
                         .build();
     }
 

@@ -243,7 +243,7 @@ class ConfigControllerTest {
         @DisplayName("should reject virtual file with invalid ID")
         void shouldRejectVirtualFileWithInvalidId() throws Exception {
             VirtualFile invalidFile =
-                    VirtualFile.builder().id("toolongfileid").sendDirectory("/data").build();
+                    VirtualFile.builder().id("toolongfileid").sendFile("/data").build();
 
             mockMvc.perform(
                             post("/api/v1/config/files")
@@ -255,7 +255,7 @@ class ConfigControllerTest {
         @Test
         @DisplayName("should reject virtual file update with invalid ID")
         void shouldRejectVirtualFileUpdateWithInvalidId() throws Exception {
-            VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
+            VirtualFile file = VirtualFile.builder().id("FILE1").sendFile("/data").build();
 
             mockMvc.perform(
                             put("/api/v1/config/files/invalid-id")
@@ -268,7 +268,7 @@ class ConfigControllerTest {
         @DisplayName("should return conflict when creating duplicate virtual file")
         void shouldReturnConflictForDuplicateVirtualFile() throws Exception {
             when(configService.virtualFileExists("FILE1")).thenReturn(true);
-            VirtualFile file = VirtualFile.builder().id("FILE1").sendDirectory("/data").build();
+            VirtualFile file = VirtualFile.builder().id("FILE1").sendFile("/data").build();
 
             mockMvc.perform(
                             post("/api/v1/config/files")

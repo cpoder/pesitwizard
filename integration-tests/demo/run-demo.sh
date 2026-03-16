@@ -148,7 +148,7 @@ curl -sf -X POST "${SERVER_API}/api/v1/config/files" \
         "enabled": true,
         "direction": "BOTH",
         "receiveDirectory": "/data/received",
-        "sendDirectory": "/data/send",
+        "sendFile": "/data/send/DEMOFILE",
         "receiveFilenamePattern": "${filename}_${timestamp}",
         "overwrite": true,
         "recordLength": 1024,

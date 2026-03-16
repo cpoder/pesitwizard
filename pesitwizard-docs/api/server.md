@@ -157,7 +157,7 @@ GET /api/v1/config/files
   {
     "fileId": "TRANSFERS",
     "name": "Transfer files",
-    "sendDirectory": "/data/send/transfers",
+    "sendFile": "/data/send/transfers",
     "receiveDirectory": "/data/received/transfers",
     "filenamePattern": "*.xml"
   }
@@ -173,7 +173,7 @@ Content-Type: application/json
 {
   "fileId": "TRANSFERS",
   "name": "Transfer files",
-  "sendDirectory": "/data/send/transfers",
+  "sendFile": "/data/send/transfers",
   "receiveDirectory": "/data/received/transfers",
   "filenamePattern": "*.xml"
 }

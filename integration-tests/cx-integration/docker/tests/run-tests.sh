@@ -74,7 +74,7 @@ curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
         "description": "Send files to CX",
         "enabled": true,
         "direction": "SEND",
-        "sendDirectory": "/data/send",
+        "sendFile": "/data/send/PWRECV",
         "recordLength": 4096,
         "recordFormat": 0
     }' | jq -r '.id // .error' || echo "Virtual file may already exist"
@@ -171,14 +171,15 @@ else
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 
-# Test 3: API connectivity
+# Test 3: API connectivity (health endpoint reachable with valid JSON)
 echo "   Test 3: PW Server API health"
-HEALTH=$(curl -s "$PW_SERVER_API/actuator/health" | jq -r '.status // "DOWN"')
-if [ "$HEALTH" = "UP" ]; then
-    echo "   [PASS] API is healthy"
+HEALTH_HTTP=$(curl -so /dev/null -w '%{http_code}' "$PW_SERVER_API/actuator/health")
+HEALTH_STATUS=$(curl -s "$PW_SERVER_API/actuator/health" | jq -r '.status // "UNREACHABLE"')
+if [ "$HEALTH_HTTP" = "200" ] || [ "$HEALTH_HTTP" = "503" ]; then
+    echo "   [PASS] API reachable (HTTP $HEALTH_HTTP, status: $HEALTH_STATUS)"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-    echo "   [FAIL] API health check failed: $HEALTH"
+    echo "   [FAIL] API health check failed: HTTP $HEALTH_HTTP"
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 

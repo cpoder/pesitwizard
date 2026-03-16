@@ -7,17 +7,17 @@ services:
     container_name: pw-server
     environment:
       - PESIT_API_KEY=integration-test-key
-      - SPRING_PROFILES_ACTIVE=integration-test
+      - SPRING_PROFILES_ACTIVE=integration-test,dev
     ports:
-      - "5001:5001"  # PeSIT protocol
-      - "8080:8080"  # REST API
+      - "${PW_SERVER_PESIT_PORT:-5001}:5001"  # PeSIT protocol
+      - "${PW_SERVER_API_PORT:-8080}:8080"    # REST API
     volumes:
       - pw-received:/data/received
       - pw-send:/data/send
     networks:
       - pesit-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD-SHELL", "curl -so /dev/null -w '%{http_code}' http://localhost:8080/actuator/health | grep -qE '200|503'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -32,7 +32,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=integration-test
     ports:
-      - "9081:9081"  # REST API
+      - "${PW_CLIENT_API_PORT:-9081}:9081"  # REST API
     volumes:
       - pw-client-send:/data/send
       - pw-client-received:/data/received
@@ -57,7 +57,7 @@ services:
     environment:
       - RUN_TRANSFER_TESTS=true
     ports:
-      - "5000:5000"  # PeSIT protocol
+      - "${CX_SERVER_PORT:-5000}:5000"  # PeSIT protocol
     volumes:
       - cx-send:/tmp/cx-send
       - cx-received:/tmp/cx-received

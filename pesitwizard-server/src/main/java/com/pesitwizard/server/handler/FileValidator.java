@@ -115,7 +115,7 @@ public class FileValidator {
                     .enabled(vf.isEnabled())
                     .direction(LogicalFileConfig.Direction.valueOf(vf.getDirection().name()))
                     .receiveDirectory(vf.getReceiveDirectory())
-                    .sendDirectory(vf.getSendDirectory())
+                    .sendFile(vf.getSendFile())
                     .receiveFilenamePattern(vf.getReceiveFilenamePattern())
                     .overwrite(vf.isOverwrite())
                     .maxFileSize(vf.getMaxFileSize())

@@ -136,7 +136,7 @@ class LogicalFileConfigTest {
                         .enabled(false)
                         .direction(LogicalFileConfig.Direction.RECEIVE)
                         .receiveDirectory("/data/in")
-                        .sendDirectory("/data/out")
+                        .sendFile("/data/out")
                         .receiveFilenamePattern("${filename}")
                         .overwrite(true)
                         .maxFileSize(1024000L)
@@ -149,7 +149,7 @@ class LogicalFileConfigTest {
         assertFalse(config.isEnabled());
         assertEquals(LogicalFileConfig.Direction.RECEIVE, config.getDirection());
         assertEquals("/data/in", config.getReceiveDirectory());
-        assertEquals("/data/out", config.getSendDirectory());
+        assertEquals("/data/out", config.getSendFile());
         assertEquals("${filename}", config.getReceiveFilenamePattern());
         assertTrue(config.isOverwrite());
         assertEquals(1024000L, config.getMaxFileSize());

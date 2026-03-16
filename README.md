@@ -63,17 +63,23 @@ mvn package -DskipTests
 java -jar target/pesitwizard-server-1.0.0-SNAPSHOT.jar
 ```
 
-The server starts on:
-- **Port 6502** : PeSIT protocol
-- **Port 5001** : PeSIT protocol over TLS (when SSL enabled)
-- **Port 8080** : REST API
-
-### Send a File
+The REST API starts on **port 8080**. The PeSIT protocol listener must be created and started via the API:
 
 ```bash
-# With the Java client
-cd pesitwizard-client
-mvn exec:java -Dexec.args="send -h localhost -p 6502 -f /path/to/file.txt"
+# Create a PeSIT server instance (port 6502, or 5001 for TLS)
+curl -X POST http://localhost:8080/api/v1/servers \
+  -H "Content-Type: application/json" \
+  -d '{"serverId":"MYSERVER","port":6502,"receiveDirectory":"/data/received","autoStart":true}'
+
+# Create a virtual file (maps PeSIT logical name to a physical file)
+curl -X POST http://localhost:8080/api/v1/config/files \
+  -H "Content-Type: application/json" \
+  -d '{"id":"MYFILE","direction":"RECEIVE","receiveDirectory":"/data/received"}'
+
+# Create a partner (required for any incoming connection)
+curl -X POST http://localhost:8080/api/v1/config/partners \
+  -H "Content-Type: application/json" \
+  -d '{"id":"PARTNER1","enabled":true,"accessType":"BOTH"}'
 ```
 
 ### REST API

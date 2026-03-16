@@ -378,12 +378,12 @@ public class TransferOperationHandler {
 
     /** Prepare send path for outgoing file */
     private Path prepareSendPath(SessionContext ctx, TransferContext transfer) {
-        // S3-06: Sanitize FPDU filename to prevent path traversal
-        String filename = PathValidator.validateFilename(transfer.getFilename());
         LogicalFileConfig fileConfig = ctx.getLogicalFileConfig();
-        if (fileConfig != null && fileConfig.getSendDirectory() != null) {
-            return Paths.get(fileConfig.getSendDirectory()).resolve(filename);
+        if (fileConfig != null && fileConfig.getSendFile() != null) {
+            return Paths.get(fileConfig.getSendFile());
         }
+        // Fallback: resolve filename in server default send directory
+        String filename = PathValidator.validateFilename(transfer.getFilename());
         return Paths.get(properties.getSendDirectory()).resolve(filename);
     }
 }

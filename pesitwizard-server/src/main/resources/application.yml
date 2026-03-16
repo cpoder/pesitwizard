@@ -255,7 +255,7 @@ pesit:
         enabled: true
         direction: BOTH
         receive-directory: ./received/test
-        send-directory: ./send/test
+        send-file: ./send/test/FILE
         receive-filename-pattern: "${virtualfile}_${timestamp}"
         overwrite: true
       
@@ -266,7 +266,7 @@ pesit:
         enabled: true
         direction: BOTH
         receive-directory: ./received/test
-        send-directory: ./send/test
+        send-file: ./send/test/TESTFILE
         receive-filename-pattern: "${virtualfile}_${timestamp}"
         overwrite: true
       
@@ -304,7 +304,7 @@ pesit:
         description: Outgoing report files
         enabled: true
         direction: SEND
-        send-directory: ./send/reports
+        send-file: ./send/reports/REPORTS
 
       # Example: Bidirectional file (8 chars max, no underscore)
       EXCHANGE:
@@ -313,7 +313,7 @@ pesit:
         enabled: true
         direction: BOTH
         receive-directory: ./received/exchange
-        send-directory: ./send/exchange
+        send-file: ./send/exchange/EXCHANGE
         receive-filename-pattern: "${virtualfile}_${date}"
         overwrite: true
     

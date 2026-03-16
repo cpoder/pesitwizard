@@ -30,8 +30,8 @@ public class LogicalFileConfig {
     /** Local directory for received files (for RECEIVE direction) */
     private String receiveDirectory;
 
-    /** Local directory/file for sending (for SEND direction) */
-    private String sendDirectory;
+    /** Physical file path to send for SELECT operations */
+    private String sendFile;
 
     /** Filename pattern for received files (supports placeholders) */
     @Builder.Default private String receiveFilenamePattern = "${filename}_${timestamp}";

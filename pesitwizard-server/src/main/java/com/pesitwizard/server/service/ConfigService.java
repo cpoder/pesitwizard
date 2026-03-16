@@ -90,7 +90,7 @@ public class ConfigService {
                                                         VirtualFile.Direction.valueOf(
                                                                 config.getDirection().name()))
                                                 .receiveDirectory(config.getReceiveDirectory())
-                                                .sendDirectory(config.getSendDirectory())
+                                                .sendFile(config.getSendFile())
                                                 .receiveFilenamePattern(
                                                         config.getReceiveFilenamePattern())
                                                 .overwrite(config.isOverwrite())

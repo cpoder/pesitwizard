@@ -92,7 +92,7 @@ public class TransferFlowIntegrationTest {
                             .enabled(true)
                             .direction(VirtualFile.Direction.BOTH)
                             .receiveDirectory(staticReceiveDirectory.toString())
-                            .sendDirectory(staticSendDirectory.toString())
+                            .sendFile(staticSendDirectory.toString())
                             .receiveFilenamePattern("${filename}")
                             .overwrite(true)
                             .build();

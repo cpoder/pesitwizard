@@ -73,7 +73,7 @@ if [ "${RUN_TRANSFER_TESTS:-false}" = "true" ]; then
     echo "Creating virtual file PWRECV (send to CX)..."
     curl -s -X POST -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
         "$PW_API/api/v1/config/files" \
-        -d '{"id":"PWRECV","description":"Send to CX","enabled":true,"direction":"SEND","sendDirectory":"/data/send","recordLength":4096,"recordFormat":0}' || true
+        -d '{"id":"PWRECV","description":"Send to CX","enabled":true,"direction":"SEND","sendFile":"/data/send/PWRECV","recordLength":4096,"recordFormat":0}' || true
 
     # Create remote partner for CX (so PW can connect to CX as client)
     echo "Creating remote partner CXSERVER..."
