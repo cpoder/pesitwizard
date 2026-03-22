@@ -115,7 +115,9 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    /** Sanitize a value for safe logging by removing CRLF characters that could forge log entries. */
+    /**
+     * Sanitize a value for safe logging by removing CRLF characters that could forge log entries.
+     */
     private static String sanitizeForLog(String value) {
         if (value == null) {
             return null;

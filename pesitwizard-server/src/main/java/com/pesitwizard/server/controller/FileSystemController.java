@@ -164,8 +164,7 @@ public class FileSystemController {
             }
 
             if (Files.exists(targetPath)) {
-                return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Path already exists"));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Path already exists"));
             }
 
             Files.createDirectories(targetPath);
