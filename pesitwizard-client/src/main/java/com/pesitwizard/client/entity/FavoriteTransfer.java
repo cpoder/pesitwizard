@@ -27,7 +27,6 @@ import lombok.ToString;
             @Index(name = "idx_favorite_name", columnList = "name"),
             @Index(name = "idx_favorite_server", columnList = "serverId")
         })
-@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -72,7 +71,7 @@ public class FavoriteTransfer {
     /**
      * @deprecated Use filename instead
      */
-    @Deprecated private String localPath;
+    private String localPath;
 
     /** Remote filename (virtual file ID) */
     private String remoteFilename;

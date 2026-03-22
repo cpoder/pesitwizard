@@ -28,7 +28,6 @@ import lombok.ToString;
             @Index(name = "idx_scheduled_enabled", columnList = "enabled"),
             @Index(name = "idx_scheduled_next_run", columnList = "nextRunAt")
         })
-@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -76,7 +75,7 @@ public class ScheduledTransfer {
     /**
      * @deprecated Use filename instead
      */
-    @Deprecated private String localPath;
+    private String localPath;
 
     /** Remote filename (virtual file ID) */
     private String remoteFilename;

@@ -83,7 +83,6 @@ public class TransferSchedulerService {
     }
 
     /** Execute a scheduled transfer */
-    @SuppressWarnings("deprecation")
     @Transactional
     public void executeSchedule(ScheduledTransfer schedule) {
         schedule.setLastRunStatus(RunStatus.RUNNING);
@@ -403,7 +402,6 @@ public class TransferSchedulerService {
     }
 
     /** Create a schedule from a favorite */
-    @SuppressWarnings("deprecation")
     @Transactional
     public Optional<ScheduledTransfer> createFromFavorite(
             String favoriteId, ScheduleType type, Instant scheduledAt, Integer intervalMinutes) {

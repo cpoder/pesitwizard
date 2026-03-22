@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /** DTO for initiating a file transfer */
-@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,7 +43,7 @@ public class TransferRequest {
     /**
      * @deprecated Use filename instead. Kept for backward compatibility.
      */
-    @Deprecated private String localPath;
+    private String localPath;
 
     /** Remote filename (virtual file ID on PeSIT server) */
     @NotBlank(message = "Remote filename is required")
