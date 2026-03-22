@@ -193,7 +193,7 @@ class CryptoUtilsTest {
             java.security.cert.Certificate[] chain = {leafCert, caCert};
             byte[] ksBytes =
                     KeystoreUtils.createKeystoreWithChain(
-                            leafCert, leafKeyPair.getPrivate(), chain, "server", "pass");
+                            leafKeyPair.getPrivate(), chain, "server", "pass");
 
             KeyStore ks = KeystoreUtils.loadKeystore(ksBytes, "pass");
             java.security.cert.Certificate[] loadedChain = ks.getCertificateChain("server");

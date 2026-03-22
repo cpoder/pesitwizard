@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /** DTO for initiating a file transfer */
+@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

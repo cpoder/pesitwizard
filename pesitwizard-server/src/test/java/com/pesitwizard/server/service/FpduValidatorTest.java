@@ -36,9 +36,8 @@ class FpduValidatorTest {
             transfer.setRecordLength(1024);
 
             byte[] data = new byte[512];
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
 
-            ValidationResult result = validator.validateDtf(fpdu, transfer, data);
+            ValidationResult result = validator.validateDtf(transfer, data);
 
             assertTrue(result.valid());
             assertNull(result.errorCode());
@@ -51,9 +50,8 @@ class FpduValidatorTest {
             transfer.setRecordLength(1024);
 
             byte[] data = new byte[1024];
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
 
-            ValidationResult result = validator.validateDtf(fpdu, transfer, data);
+            ValidationResult result = validator.validateDtf(transfer, data);
 
             assertTrue(result.valid());
         }
@@ -65,9 +63,8 @@ class FpduValidatorTest {
             transfer.setRecordLength(1024);
 
             byte[] data = new byte[2048];
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
 
-            ValidationResult result = validator.validateDtf(fpdu, transfer, data);
+            ValidationResult result = validator.validateDtf(transfer, data);
 
             assertFalse(result.valid());
             assertEquals(DiagnosticCode.D2_220, result.errorCode());
@@ -82,9 +79,8 @@ class FpduValidatorTest {
             transfer.setRecordLength(0);
 
             byte[] data = new byte[1000000];
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
 
-            ValidationResult result = validator.validateDtf(fpdu, transfer, data);
+            ValidationResult result = validator.validateDtf(transfer, data);
 
             assertTrue(result.valid());
         }
@@ -93,9 +89,8 @@ class FpduValidatorTest {
         @DisplayName("should reject when no transfer context")
         void shouldRejectWhenNoTransferContext() {
             byte[] data = new byte[100];
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
 
-            ValidationResult result = validator.validateDtf(fpdu, null, data);
+            ValidationResult result = validator.validateDtf(null, data);
 
             assertFalse(result.valid());
             assertEquals(DiagnosticCode.D3_311, result.errorCode());
@@ -107,9 +102,7 @@ class FpduValidatorTest {
             TransferContext transfer = new TransferContext();
             transfer.setRecordLength(1024);
 
-            Fpdu fpdu = new Fpdu(FpduType.DTF);
-
-            ValidationResult result = validator.validateDtf(fpdu, transfer, null);
+            ValidationResult result = validator.validateDtf(transfer, null);
 
             assertTrue(result.valid());
         }
@@ -493,7 +486,7 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(0);
             // No sync point interval configured = unlimited
 
-            ValidationResult result = validator.validateDataWithoutSyncPoint(transfer, 100000, 0);
+            ValidationResult result = validator.validateDataWithoutSyncPoint(100000, 0);
 
             assertTrue(result.valid());
         }
@@ -505,8 +498,7 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(0);
 
             // 50KB transferred, interval is 64KB, last sync at 0 -> OK
-            ValidationResult result =
-                    validator.validateDataWithoutSyncPoint(transfer, 50000, 65536);
+            ValidationResult result = validator.validateDataWithoutSyncPoint(50000, 65536);
 
             assertTrue(result.valid());
         }
@@ -518,8 +510,7 @@ class FpduValidatorTest {
             transfer.setBytesTransferred(0); // Last sync at 0
 
             // 100KB transferred since last sync, interval is 64KB -> ERROR
-            ValidationResult result =
-                    validator.validateDataWithoutSyncPoint(transfer, 100000, 65536);
+            ValidationResult result = validator.validateDataWithoutSyncPoint(100000, 65536);
 
             assertFalse(result.valid());
             assertEquals(DiagnosticCode.D2_222, result.errorCode());
@@ -535,8 +526,7 @@ class FpduValidatorTest {
 
             // New chunk of 40KB, but we're counting from last sync
             // If last sync was at 50KB and we're now at 90KB, that's 40KB since sync
-            ValidationResult result =
-                    validator.validateDataWithoutSyncPoint(transfer, 40000, 65536);
+            ValidationResult result = validator.validateDataWithoutSyncPoint(40000, 65536);
 
             assertTrue(result.valid());
         }

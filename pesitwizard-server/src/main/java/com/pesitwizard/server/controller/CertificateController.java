@@ -544,8 +544,7 @@ public class CertificateController {
             @RequestParam(required = false) String partnerId) {
         try {
             SignedCertificate signed =
-                    caService.signCertificateRequest(
-                            csrPem, purpose, validityDays, partnerId, "api");
+                    caService.signCertificateRequest(csrPem, purpose, validityDays, partnerId);
             log.info(
                     "Certificate signed: {} (expires: {})",
                     signed.getSubjectDn(),

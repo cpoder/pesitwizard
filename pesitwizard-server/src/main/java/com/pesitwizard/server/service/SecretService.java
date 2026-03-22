@@ -79,7 +79,7 @@ public class SecretService {
         return secretRepository
                 .findByNameAndActiveTrue(name)
                 .filter(SecretEntry::isValid)
-                .map(secret -> decrypt(secret.getEncryptedValue(), secret.getIv()));
+                .map(secret -> decrypt(secret.getEncryptedValue()));
     }
 
     /** Get secret entry (without decrypted value) */
@@ -224,9 +224,9 @@ public class SecretService {
     }
 
     /** Decrypt an encrypted value using the security module. */
-    private String decrypt(String cipherText, String _ivString) {
+    private String decrypt(String cipherText) {
         // The security module handles the decryption transparently
-        // ivString is ignored as IV is embedded in the encrypted string for new format
+        // IV is embedded in the encrypted string for new format
         return secretsService.decryptFromStorage(cipherText);
     }
 

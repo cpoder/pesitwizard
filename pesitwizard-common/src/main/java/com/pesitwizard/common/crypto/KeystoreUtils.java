@@ -26,15 +26,11 @@ public class KeystoreUtils {
     public static byte[] createKeystore(
             X509Certificate cert, PrivateKey key, String alias, String password)
             throws CryptoException {
-        return createKeystoreWithChain(cert, key, new Certificate[] {cert}, alias, password);
+        return createKeystoreWithChain(key, new Certificate[] {cert}, alias, password);
     }
 
     public static byte[] createKeystoreWithChain(
-            X509Certificate _cert,
-            PrivateKey key,
-            Certificate[] chain,
-            String alias,
-            String password)
+            PrivateKey key, Certificate[] chain, String alias, String password)
             throws CryptoException {
         try {
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);

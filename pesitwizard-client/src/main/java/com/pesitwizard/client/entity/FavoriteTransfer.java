@@ -27,6 +27,7 @@ import lombok.ToString;
             @Index(name = "idx_favorite_name", columnList = "name"),
             @Index(name = "idx_favorite_server", columnList = "serverId")
         })
+@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

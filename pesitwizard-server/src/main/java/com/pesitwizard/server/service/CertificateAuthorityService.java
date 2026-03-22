@@ -231,11 +231,7 @@ public class CertificateAuthorityService {
     /** Sign a CSR with the CA certificate */
     @Transactional
     public SignedCertificate signCertificateRequest(
-            String csrPem,
-            CertificatePurpose purpose,
-            int validityDays,
-            String partnerId,
-            String _signedBy)
+            String csrPem, CertificatePurpose purpose, int validityDays, String partnerId)
             throws SslConfigurationException {
 
         try {
@@ -322,8 +318,7 @@ public class CertificateAuthorityService {
 
             // Sign the CSR
             SignedCertificate signed =
-                    signCertificateRequest(
-                            request.getCsrPem(), purpose, validityDays, partnerId, createdBy);
+                    signCertificateRequest(request.getCsrPem(), purpose, validityDays, partnerId);
 
             // Parse certificate and private key
             X509Certificate cert = parseCertificate(signed.getCertificatePem());
@@ -336,7 +331,6 @@ public class CertificateAuthorityService {
             String keystorePassword = generatePassword();
             byte[] keystoreData =
                     createKeystoreWithChain(
-                            cert,
                             privateKey,
                             new Certificate[] {cert, caCert},
                             commonName,
@@ -482,13 +476,9 @@ public class CertificateAuthorityService {
     }
 
     private byte[] createKeystoreWithChain(
-            X509Certificate cert,
-            PrivateKey privateKey,
-            Certificate[] chain,
-            String alias,
-            String password)
+            PrivateKey privateKey, Certificate[] chain, String alias, String password)
             throws CryptoException {
-        return KeystoreUtils.createKeystoreWithChain(cert, privateKey, chain, alias, password);
+        return KeystoreUtils.createKeystoreWithChain(privateKey, chain, alias, password);
     }
 
     private String toPem(Object obj) throws CryptoException {

@@ -54,11 +54,6 @@ public class FpduParser {
         }
     }
 
-    @Deprecated
-    public FpduParser(byte[] data, @SuppressWarnings("unused") boolean _ebcdicEncoding) {
-        this(data); // Ignore ebcdicEncoding flag - FPDU parameters are ASCII
-    }
-
     public Fpdu parse() {
         Fpdu fpdu = new Fpdu();
         int phase = buffer.get() & 0xFF;

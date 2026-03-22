@@ -39,9 +39,7 @@ class DataTransferHandlerTest {
         handler = new DataTransferHandler(properties, transferTracker, fpduValidator);
 
         // Default stubs for validator - return OK for all validations
-        lenient()
-                .when(fpduValidator.validateDtf(any(), any(), any()))
-                .thenReturn(ValidationResult.ok());
+        lenient().when(fpduValidator.validateDtf(any(), any())).thenReturn(ValidationResult.ok());
         lenient()
                 .when(fpduValidator.validateMaxEntitySize(any(), any()))
                 .thenReturn(ValidationResult.ok());
@@ -52,9 +50,8 @@ class DataTransferHandlerTest {
     void handleWriteShouldTransitionToReceivingState() {
         SessionContext ctx = new SessionContext("test-session");
         ctx.setState(ServerState.OF02_TRANSFER_READY);
-        Fpdu fpdu = new Fpdu(FpduType.WRITE);
 
-        Fpdu response = handler.handleWrite(ctx, fpdu);
+        Fpdu response = handler.handleWrite(ctx);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_WRITE, response.getFpduType());

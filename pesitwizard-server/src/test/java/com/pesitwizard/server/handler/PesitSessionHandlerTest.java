@@ -467,7 +467,7 @@ class PesitSessionHandlerTest {
         @DisplayName("should delegate WRITE to DataTransferHandler")
         void shouldDelegateWrite() throws Exception {
             Fpdu ackWrite = FpduResponseBuilder.buildAckWrite(transferReadyCtx, 0);
-            when(dataTransferHandler.handleWrite(any(), any())).thenReturn(ackWrite);
+            when(dataTransferHandler.handleWrite(any())).thenReturn(ackWrite);
 
             Fpdu writeFpdu =
                     new Fpdu(FpduType.WRITE)
@@ -481,14 +481,14 @@ class PesitSessionHandlerTest {
             byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData);
 
             assertNotNull(response);
-            verify(dataTransferHandler).handleWrite(eq(transferReadyCtx), any(Fpdu.class));
+            verify(dataTransferHandler).handleWrite(eq(transferReadyCtx));
         }
 
         @Test
         @DisplayName("should delegate CLOSE to TransferOperationHandler")
         void shouldDelegateClose() throws Exception {
             Fpdu ackClose = FpduResponseBuilder.buildAckClose(transferReadyCtx);
-            when(transferOperationHandler.handleClose(any(), any())).thenReturn(ackClose);
+            when(transferOperationHandler.handleClose(any())).thenReturn(ackClose);
 
             Fpdu closeFpdu =
                     new Fpdu(FpduType.CLOSE)
@@ -501,7 +501,7 @@ class PesitSessionHandlerTest {
             byte[] response = handler.processIncomingFpdu(transferReadyCtx, rawData);
 
             assertNotNull(response);
-            verify(transferOperationHandler).handleClose(eq(transferReadyCtx), any(Fpdu.class));
+            verify(transferOperationHandler).handleClose(eq(transferReadyCtx));
         }
     }
 

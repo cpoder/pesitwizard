@@ -129,7 +129,7 @@ class PesitMetricsTest {
         metrics.serverStarted("server1", 5000);
         assertEquals(1, metrics.getRunningServers());
 
-        metrics.serverStopped("server1");
+        metrics.serverStopped();
         assertEquals(0, metrics.getRunningServers());
     }
 

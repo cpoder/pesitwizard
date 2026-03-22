@@ -93,9 +93,7 @@ class TransferOperationHandlerTest {
         SessionContext ctx = new SessionContext("test-session");
         ctx.setState(ServerState.OF02_TRANSFER_READY);
 
-        Fpdu fpdu = new Fpdu(FpduType.CLOSE);
-
-        Fpdu response = handler.handleClose(ctx, fpdu);
+        Fpdu response = handler.handleClose(ctx);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_CLOSE, response.getFpduType());
@@ -195,9 +193,7 @@ class TransferOperationHandlerTest {
         ctx.setState(ServerState.OF02_TRANSFER_READY);
         // No transfer
 
-        Fpdu fpdu = new Fpdu(FpduType.CLOSE);
-
-        Fpdu response = handler.handleClose(ctx, fpdu);
+        Fpdu response = handler.handleClose(ctx);
 
         assertNotNull(response);
         assertEquals(FpduType.ACK_CLOSE, response.getFpduType());

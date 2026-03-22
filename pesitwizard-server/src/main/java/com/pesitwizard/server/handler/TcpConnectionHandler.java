@@ -204,7 +204,7 @@ public class TcpConnectionHandler implements Runnable {
             if (preConnMsg.startsWith("PESIT")) {
                 sessionContext.setEbcdicEncoding(true);
                 log.info("[{}] Client uses EBCDIC encoding", sessionContext.getSessionId());
-                handlePreConnection(asciiData, channel);
+                handlePreConnection(channel);
                 sessionContext.setPreConnectionHandled(true);
                 return;
             }
@@ -220,7 +220,7 @@ public class TcpConnectionHandler implements Runnable {
      *
      * <p>Response: "ACK0" (4 bytes in EBCDIC), framed according to channel type.
      */
-    private void handlePreConnection(byte[] asciiData, PesitChannel channel) throws IOException {
+    private void handlePreConnection(PesitChannel channel) throws IOException {
         log.info("[{}] Pre-connection handshake received", sessionContext.getSessionId());
 
         // Send ACK0 response in EBCDIC, using channel's framing

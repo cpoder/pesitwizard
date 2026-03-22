@@ -35,7 +35,7 @@ public class DataTransferHandler {
     private final FpduValidator fpduValidator;
 
     /** Handle WRITE FPDU */
-    public Fpdu handleWrite(SessionContext ctx, Fpdu _fpdu) {
+    public Fpdu handleWrite(SessionContext ctx) {
         log.info("[{}] WRITE: starting data reception", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
         return FpduResponseBuilder.buildAckWrite(ctx, 0);
@@ -342,10 +342,10 @@ public class DataTransferHandler {
     public Fpdu handleTDE02B(SessionContext ctx, Fpdu fpdu) throws IOException {
         return switch (fpdu.getFpduType()) {
             case DTF, DTFDA, DTFMA, DTFFA -> handleDtf(ctx, fpdu);
-            case DTF_END -> handleDtfEnd(ctx, fpdu);
+            case DTF_END -> handleDtfEnd(ctx);
             case SYN -> handleSyn(ctx, fpdu);
             case RESYN -> handleResyn(ctx, fpdu);
-            case IDT -> handleIdt(ctx, fpdu);
+            case IDT -> handleIdt(ctx);
             default -> {
                 log.warn(
                         "[{}] Unexpected FPDU {} in TDE02B",
@@ -359,7 +359,7 @@ public class DataTransferHandler {
     /** TDL02B - SENDING DATA: Waiting for TRANS.END from client */
     public Fpdu handleTDL02B(SessionContext ctx, Fpdu fpdu) {
         return switch (fpdu.getFpduType()) {
-            case TRANS_END -> handleTransEndFromClient(ctx, fpdu);
+            case TRANS_END -> handleTransEndFromClient(ctx);
             default -> {
                 log.warn(
                         "[{}] Unexpected FPDU {} in TDL02B (expected TRANS_END)",
@@ -419,7 +419,7 @@ public class DataTransferHandler {
         int dataLength = data != null ? data.length : 0;
 
         // D2-220: Validate article length against announced record length
-        FpduValidator.ValidationResult validation = fpduValidator.validateDtf(fpdu, transfer, data);
+        FpduValidator.ValidationResult validation = fpduValidator.validateDtf(transfer, data);
         if (!validation.valid()) {
             log.warn("[{}] DTF validation failed: {}", ctx.getSessionId(), validation.message());
             return FpduResponseBuilder.buildAbort(
@@ -491,7 +491,7 @@ public class DataTransferHandler {
     }
 
     /** Handle DTF.END FPDU - no response needed */
-    private Fpdu handleDtfEnd(SessionContext ctx, Fpdu _fpdu) {
+    private Fpdu handleDtfEnd(SessionContext ctx) {
         log.info("[{}] DTF.END: end of data transfer", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE07_WRITE_END);
         return null;
@@ -568,7 +568,7 @@ public class DataTransferHandler {
     }
 
     /** Handle IDT (Interrupt Data Transfer) FPDU */
-    private Fpdu handleIdt(SessionContext ctx, Fpdu _fpdu) {
+    private Fpdu handleIdt(SessionContext ctx) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long bytesAtInterrupt = transfer != null ? transfer.getBytesTransferred() : 0;
         int syncPointAtInterrupt = transfer != null ? transfer.getCurrentSyncPoint() : 0;
@@ -594,7 +594,7 @@ public class DataTransferHandler {
     }
 
     /** Handle TRANS.END from client (after server sent file data) */
-    private Fpdu handleTransEndFromClient(SessionContext ctx, Fpdu _fpdu) {
+    private Fpdu handleTransEndFromClient(SessionContext ctx) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long byteCount = transfer != null ? transfer.getBytesTransferred() : 0;
         int recordCount = transfer != null ? transfer.getRecordsTransferred() : 0;

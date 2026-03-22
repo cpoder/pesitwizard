@@ -28,6 +28,7 @@ import lombok.ToString;
             @Index(name = "idx_scheduled_enabled", columnList = "enabled"),
             @Index(name = "idx_scheduled_next_run", columnList = "nextRunAt")
         })
+@SuppressWarnings("deprecation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

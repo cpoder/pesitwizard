@@ -242,7 +242,7 @@ public class PesitMetrics {
                 .register(registry);
     }
 
-    public void serverStopped(String _serverId) {
+    public void serverStopped() {
         runningServers.decrementAndGet();
     }
 

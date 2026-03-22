@@ -235,7 +235,7 @@ public class TransferOperationHandler {
     }
 
     /** Handle CLOSE (CRF) FPDU */
-    public Fpdu handleClose(SessionContext ctx, Fpdu _fpdu) {
+    public Fpdu handleClose(SessionContext ctx) {
         // Close the output stream to flush data to disk
         TransferContext transfer = ctx.getCurrentTransfer();
         if (transfer != null) {

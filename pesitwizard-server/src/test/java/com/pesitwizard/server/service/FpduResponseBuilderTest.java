@@ -32,8 +32,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACONNECT response")
         void shouldBuildAconnect() {
-            Fpdu response =
-                    FpduResponseBuilder.buildAconnect(sessionContext, 2, true, true, 4096, 32);
+            Fpdu response = FpduResponseBuilder.buildAconnect(sessionContext, 2, true, true, 32);
 
             assertEquals(FpduType.ACONNECT, response.getFpduType());
             assertEquals(1, response.getIdDst());
@@ -45,8 +44,7 @@ class FpduResponseBuilderTest {
         @Test
         @DisplayName("should build ACONNECT without options")
         void shouldBuildAconnectWithoutOptions() {
-            Fpdu response =
-                    FpduResponseBuilder.buildAconnect(sessionContext, 2, false, false, 4096, 32);
+            Fpdu response = FpduResponseBuilder.buildAconnect(sessionContext, 2, false, false, 32);
 
             assertEquals(FpduType.ACONNECT, response.getFpduType());
         }

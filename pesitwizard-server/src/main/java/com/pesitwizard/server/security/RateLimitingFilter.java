@@ -131,7 +131,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                             if (existing != null) {
                                 return new BucketEntry(existing.bucket(), Instant.now());
                             }
-                            return new BucketEntry(createIpBucket(k), Instant.now());
+                            return new BucketEntry(createIpBucket(), Instant.now());
                         });
         return tryConsume(entry.bucket(), clientIp, "IP", response);
     }
@@ -207,7 +207,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return false;
     }
 
-    private Bucket createIpBucket(String _ip) {
+    private Bucket createIpBucket() {
         int requestsPerMinute = rateLimitingProperties.getRequestsPerMinute();
         int burstMultiplier = rateLimitingProperties.getBurstMultiplier();
 

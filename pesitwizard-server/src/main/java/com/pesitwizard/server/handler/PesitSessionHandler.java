@@ -229,7 +229,6 @@ public class PesitSessionHandler {
                 properties.getProtocolVersion(),
                 properties.isSyncPointsEnabled() && ctx.isSyncPointsEnabled(),
                 properties.isResyncEnabled() && ctx.isResyncEnabled(),
-                properties.getMaxEntitySize(),
                 negotiatedSyncInterval);
     }
 
@@ -294,7 +293,7 @@ public class PesitSessionHandler {
             case SELECT -> transferOperationHandler.handleSelect(ctx, fpdu);
             case MSG -> messageHandler.handleMsg(ctx, fpdu);
             case MSGDM -> messageHandler.handleMsgDm(ctx, fpdu);
-            case RELEASE -> handleRelease(ctx, fpdu);
+            case RELEASE -> handleRelease(ctx);
             default -> {
                 log.warn("[{}] Unexpected FPDU {} in CN03", ctx.getSessionId(), fpdu.getFpduType());
                 yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
@@ -317,9 +316,9 @@ public class PesitSessionHandler {
     /** OF02 - TRANSFER READY: Waiting for WRITE, READ, or CLOSE */
     private Fpdu handleOF02(SessionContext ctx, Fpdu fpdu) throws IOException {
         return switch (fpdu.getFpduType()) {
-            case WRITE -> dataTransferHandler.handleWrite(ctx, fpdu);
+            case WRITE -> dataTransferHandler.handleWrite(ctx);
             case READ -> dataTransferHandler.handleRead(ctx, fpdu);
-            case CLOSE -> transferOperationHandler.handleClose(ctx, fpdu);
+            case CLOSE -> transferOperationHandler.handleClose(ctx);
             default -> {
                 log.warn("[{}] Unexpected FPDU {} in OF02", ctx.getSessionId(), fpdu.getFpduType());
                 yield FpduResponseBuilder.buildAbort(ctx, DiagnosticCode.D3_311);
@@ -328,7 +327,7 @@ public class PesitSessionHandler {
     }
 
     /** Handle RELEASE FPDU */
-    private Fpdu handleRelease(SessionContext ctx, Fpdu _fpdu) {
+    private Fpdu handleRelease(SessionContext ctx) {
         log.info("[{}] RELEASE received, closing session", ctx.getSessionId());
         ctx.transitionTo(ServerState.CN01_REPOS);
         return FpduResponseBuilder.buildRelconf(ctx);

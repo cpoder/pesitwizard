@@ -181,8 +181,7 @@ public class CaMtlsIntegrationTest {
                             request.getCsrPem(),
                             CertificateStore.CertificatePurpose.CLIENT,
                             365,
-                            "EXTERNAL_PARTNER",
-                            "test");
+                            "EXTERNAL_PARTNER");
 
             assertThat(signed).isNotNull();
             assertThat(signed.getCertificatePem()).startsWith("-----BEGIN CERTIFICATE-----");
