@@ -304,8 +304,7 @@ public class PesitReceiveService {
         try {
             if (restartBytePos > 0) {
                 // Resolve to real path (file must exist for restart) to prevent symlink attacks
-                String safePath = Path.of(destPath).toRealPath().toString();
-                raf = new RandomAccessFile(safePath, "rw");
+                raf = new RandomAccessFile(Path.of(destPath).toRealPath().toFile(), "rw");
                 // Validate restart position before seeking
                 long fileLen = raf.length();
                 if (restartBytePos > fileLen) {
