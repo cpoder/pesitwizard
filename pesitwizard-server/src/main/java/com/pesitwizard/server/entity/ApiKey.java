@@ -154,8 +154,11 @@ public class ApiKey {
         }
     }
 
-    private long ipToLong(String ip) {
+    private long ipToLong(String ip) throws NumberFormatException {
         String[] parts = ip.split("\\.");
+        if (parts.length != 4) {
+            throw new NumberFormatException("Invalid IPv4 address: " + ip);
+        }
         return (Long.parseLong(parts[0]) << 24)
                 + (Long.parseLong(parts[1]) << 16)
                 + (Long.parseLong(parts[2]) << 8)

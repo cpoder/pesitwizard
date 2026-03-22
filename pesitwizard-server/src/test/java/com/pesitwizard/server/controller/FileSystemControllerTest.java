@@ -103,7 +103,7 @@ class FileSystemControllerTest {
     void mkdirShouldFailIfPathExists() throws Exception {
         mockMvc.perform(get("/api/v1/filesystem/mkdir?path=" + basePath))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Path already exists: " + basePath));
+                .andExpect(jsonPath("$.error").value("Path already exists"));
     }
 
     @Test
@@ -127,7 +127,7 @@ class FileSystemControllerTest {
 
         mockMvc.perform(get("/api/v1/filesystem/browse?path=" + testFile))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Path is not a directory: " + testFile));
+                .andExpect(jsonPath("$.error").value("Path is not a directory"));
 
         Files.deleteIfExists(testFile);
     }

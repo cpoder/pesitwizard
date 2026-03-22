@@ -101,7 +101,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                     "API key passed via query parameter '{}' for {} — this is insecure. "
                             + "Use the {} header instead.",
                     queryParam,
-                    request.getRequestURI(),
+                    sanitizeForLog(request.getRequestURI()),
                     headerName);
             return apiKey;
         }
@@ -113,6 +113,14 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    /** Sanitize a value for safe logging by removing CRLF characters that could forge log entries. */
+    private static String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\r\\n]", "_");
     }
 
     /**

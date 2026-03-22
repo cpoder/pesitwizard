@@ -47,43 +47,38 @@ public class FileSystemController {
         // Use base path as default if no path specified
         String effectivePath = (path == null || path.isEmpty()) ? basePath : path;
         try {
-            Path targetPath = Paths.get(effectivePath).normalize();
+            Path realBasePath = Paths.get(basePath).toRealPath();
+            Path targetPath = realBasePath.resolve(Paths.get(effectivePath)).normalize();
 
             // Security: resolve symlinks to prevent symlink-based escape
             if (Files.exists(targetPath)) {
                 targetPath = targetPath.toRealPath();
             }
-            Path realBasePath = Paths.get(basePath).toRealPath();
 
             // Security: only allow browsing under configured base path
             if (!targetPath.startsWith(realBasePath)) {
-                log.warn("Attempted to browse outside allowed path: {}", effectivePath);
+                log.warn(
+                        "Attempted to browse outside allowed path: {}",
+                        targetPath.toString().replaceAll("[\\r\\n]", "_"));
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
             }
 
             if (!Files.exists(targetPath)) {
-                // If path doesn't exist, try to create it (for subdirectories under base path)
-                if (targetPath.startsWith(basePath)) {
-                    try {
-                        Files.createDirectories(targetPath);
-                        log.info("Created directory: {}", targetPath);
-                    } catch (IOException e) {
-                        return ResponseEntity.badRequest()
-                                .body(
-                                        new ErrorResponse(
-                                                "Directory does not exist and could not be created: "
-                                                        + path));
-                    }
-                } else {
+                try {
+                    Files.createDirectories(targetPath);
+                    log.info("Created directory: {}", targetPath);
+                } catch (IOException e) {
                     return ResponseEntity.badRequest()
-                            .body(new ErrorResponse("Path does not exist: " + path));
+                            .body(
+                                    new ErrorResponse(
+                                            "Directory does not exist and could not be created"));
                 }
             }
 
             if (!Files.isDirectory(targetPath)) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Path is not a directory: " + path));
+                        .body(new ErrorResponse("Path is not a directory"));
             }
 
             List<FileEntry> entries = new ArrayList<>();
@@ -149,7 +144,7 @@ public class FileSystemController {
                             .build());
 
         } catch (IOException e) {
-            log.error("Error browsing path {}: {}", path, e.getMessage());
+            log.error("Error browsing path: {}", e.getMessage());
             return ResponseEntity.internalServerError()
                     .body(new ErrorResponse("Error browsing path: " + e.getMessage()));
         }
@@ -159,27 +154,27 @@ public class FileSystemController {
     @GetMapping("/mkdir")
     public ResponseEntity<?> mkdir(@RequestParam String path) {
         try {
-            Path targetPath = Paths.get(path).normalize();
             Path realBasePath = Paths.get(basePath).toRealPath();
+            Path targetPath = realBasePath.resolve(Paths.get(path)).normalize();
 
-            // Security: resolve symlinks and only allow creating under base path
-            if (!targetPath.normalize().startsWith(realBasePath)) {
+            // Security: only allow creating under base path
+            if (!targetPath.startsWith(realBasePath)) {
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
             }
 
             if (Files.exists(targetPath)) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Path already exists: " + path));
+                        .body(new ErrorResponse("Path already exists"));
             }
 
             Files.createDirectories(targetPath);
             log.info("Created directory: {}", targetPath);
 
-            return ResponseEntity.ok(new SuccessResponse("Directory created: " + path));
+            return ResponseEntity.ok(new SuccessResponse("Directory created successfully"));
 
         } catch (IOException e) {
-            log.error("Error creating directory {}: {}", path, e.getMessage());
+            log.error("Error creating directory: {}", e.getMessage());
             return ResponseEntity.internalServerError()
                     .body(new ErrorResponse("Error creating directory: " + e.getMessage()));
         }

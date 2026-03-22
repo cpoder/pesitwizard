@@ -59,9 +59,9 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
 
     private JChannel channel;
 
-    @Getter private volatile boolean leader = false;
+    private volatile boolean leader = false;
 
-    @Getter private volatile boolean connected = false;
+    private volatile boolean connected = false;
 
     /** Last known full cluster size for quorum calculation */
     private volatile int lastKnownClusterSize = 1;
@@ -186,6 +186,16 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
             connected = false;
             log.info("Disconnected from cluster");
         }
+    }
+
+    @Override
+    public boolean isLeader() {
+        return leader;
+    }
+
+    @Override
+    public boolean isConnected() {
+        return connected;
     }
 
     /** Called when cluster view changes (member join/leave) */

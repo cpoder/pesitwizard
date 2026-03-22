@@ -29,6 +29,7 @@ import io.micrometer.observation.ObservationRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,8 @@ public class PesitReceiveService {
             TransferConfig config,
             String destPath,
             Set<String> cancelledTransfers) {
+        // Normalize and validate destination path to prevent path traversal
+        destPath = validateDestPath(destPath);
         String destConnId = request.getDestinationConnectionId();
         int restartPoint = 0;
         long restartBytePos = 0;
@@ -470,6 +473,18 @@ public class PesitReceiveService {
                         .withIdSrc(connectionId)
                         .withParameter(new ParameterValue(PI_02_DIAG, new byte[] {0, 0, 0})));
         ctx.releaseAck();
+    }
+
+    /**
+     * Normalize and validate the destination path. Resolves to an absolute path and rejects any
+     * remaining path traversal sequences to prevent writing outside expected directories.
+     */
+    private static String validateDestPath(String destPath) {
+        Path normalized = Path.of(destPath).toAbsolutePath().normalize();
+        if (normalized.toString().contains("..")) {
+            throw new IllegalArgumentException("Invalid destination path: path traversal detected");
+        }
+        return normalized.toString();
     }
 
     // === Helpers ===

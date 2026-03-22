@@ -214,7 +214,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return Bucket.builder()
                 .addLimit(
                         Bandwidth.builder()
-                                .capacity(requestsPerMinute * burstMultiplier)
+                                .capacity((long) requestsPerMinute * burstMultiplier)
                                 .refillGreedy(requestsPerMinute, Duration.ofMinutes(1))
                                 .build())
                 .build();
@@ -231,7 +231,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return Bucket.builder()
                 .addLimit(
                         Bandwidth.builder()
-                                .capacity(requestsPerMinute * burstMultiplier)
+                                .capacity((long) requestsPerMinute * burstMultiplier)
                                 .refillGreedy(requestsPerMinute, Duration.ofMinutes(1))
                                 .build())
                 .build();
