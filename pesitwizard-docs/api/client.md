@@ -131,7 +131,7 @@ Content-Type: application/json
   "status": "COMPLETED",
   "direction": "RECEIVE",
   "filename": "STATEMENT_20250110.XML",
-  "localPath": "/data/received/STATEMENT_20250110.XML",
+  "filename": "/data/received/STATEMENT_20250110.XML",
   "size": 8542
 }
 ```

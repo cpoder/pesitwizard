@@ -327,7 +327,7 @@ public class TransferService {
             PesitServer server,
             TransferConfig config,
             TransferDirection direction,
-            String localPath,
+            String localFilename,
             String remotePath,
             String partnerId,
             String correlationId) {
@@ -336,7 +336,7 @@ public class TransferService {
                 .serverName(server.getName())
                 .partnerId(partnerId)
                 .direction(direction)
-                .localFilename(localPath)
+                .localFilename(localFilename)
                 .remoteFilename(remotePath)
                 .transferConfigId(config.getId())
                 .transferConfigName(config.getName())

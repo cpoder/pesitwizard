@@ -31,7 +31,6 @@ interface Favorite {
   sourceConnectionId?: string
   destinationConnectionId?: string
   filename?: string
-  localPath?: string  // deprecated
   remoteFilename?: string
   usageCount: number
   lastUsedAt?: string
@@ -250,7 +249,7 @@ function openEditModal(favorite: Favorite) {
     partnerId: favorite.partnerId || '',
     sourceConnectionId: favorite.sourceConnectionId || '',
     destinationConnectionId: favorite.destinationConnectionId || '',
-    filename: favorite.filename || favorite.localPath || '',
+    filename: favorite.filename || '',
     remoteFilename: favorite.remoteFilename || '',
     direction: favorite.direction
   }
@@ -314,7 +313,7 @@ async function createSchedule() {
       serverName: selectedFavoriteForSchedule.value.serverName,
       partnerId: selectedFavoriteForSchedule.value.partnerId,
       direction: selectedFavoriteForSchedule.value.direction,
-      localPath: selectedFavoriteForSchedule.value.localPath,
+      filename: selectedFavoriteForSchedule.value.filename,
       remoteFilename: selectedFavoriteForSchedule.value.remoteFilename,
       scheduleType: scheduleType.value,
       workingDaysOnly: workingDaysOnly.value,
@@ -419,10 +418,10 @@ async function createSchedule() {
               {{ favorite.remoteFilename }}
             </span>
           </div>
-          <div v-if="favorite.localPath" class="flex justify-between">
+          <div v-if="favorite.filename" class="flex justify-between">
             <span class="text-gray-500">{{ favorite.direction === 'SEND' ? 'Source' : 'Destination' }}</span>
-            <span class="font-medium truncate max-w-[150px] font-mono text-xs" :title="favorite.localPath">
-              {{ favorite.localPath }}
+            <span class="font-medium truncate max-w-[150px] font-mono text-xs" :title="favorite.filename">
+              {{ favorite.filename }}
             </span>
           </div>
           <div class="flex justify-between">

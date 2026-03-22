@@ -89,12 +89,6 @@ public class TransferSchedulerService {
         scheduleRepository.save(schedule);
 
         try {
-            // Use filename if available, fallback to deprecated localPath
-            String filename =
-                    schedule.getFilename() != null
-                            ? schedule.getFilename()
-                            : schedule.getLocalPath();
-
             // Resolve password: schedule-level first, then Partner entity fallback
             String password = null;
             if (schedule.getPassword() != null && !schedule.getPassword().isBlank()) {
@@ -108,7 +102,7 @@ public class TransferSchedulerService {
                             .server(schedule.getServerId())
                             .partnerId(schedule.getPartnerId())
                             .password(password)
-                            .filename(filename)
+                            .filename(schedule.getFilename())
                             .sourceConnectionId(schedule.getSourceConnectionId())
                             .destinationConnectionId(schedule.getDestinationConnectionId())
                             .remoteFilename(schedule.getRemoteFilename())
@@ -409,10 +403,6 @@ public class TransferSchedulerService {
                 .findById(favoriteId)
                 .map(
                         favorite -> {
-                            String filename =
-                                    favorite.getFilename() != null
-                                            ? favorite.getFilename()
-                                            : favorite.getLocalPath();
                             ScheduledTransfer schedule =
                                     ScheduledTransfer.builder()
                                             .name("Schedule: " + favorite.getName())
@@ -421,7 +411,7 @@ public class TransferSchedulerService {
                                             .serverName(favorite.getServerName())
                                             .partnerId(favorite.getPartnerId())
                                             .direction(favorite.getDirection())
-                                            .filename(filename)
+                                            .filename(favorite.getFilename())
                                             .sourceConnectionId(favorite.getSourceConnectionId())
                                             .destinationConnectionId(
                                                     favorite.getDestinationConnectionId())

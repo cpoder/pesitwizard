@@ -338,8 +338,6 @@ components:
           $ref: '#/components/schemas/TransferDirection'
         filename:
           type: string
-        localPath:
-          type: string
         size:
           type: integer
         startTime:

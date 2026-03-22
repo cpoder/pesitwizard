@@ -97,7 +97,7 @@ send_file() {
     local request_json
     request_json=$(cat <<EOF
 {
-  "localPath": "$local_path",
+  "filename": "$local_path",
   "remoteHost": "$CX_HOST",
   "remotePort": $CX_PORT,
   "remoteDpcsid": "$CX_DPCSID",

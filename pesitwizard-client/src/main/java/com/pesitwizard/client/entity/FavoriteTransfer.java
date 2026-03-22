@@ -68,11 +68,6 @@ public class FavoriteTransfer {
     /** Filename (relative path on connector, or local path if no connector) */
     private String filename;
 
-    /**
-     * @deprecated Use filename instead
-     */
-    private String localPath;
-
     /** Remote filename (virtual file ID) */
     private String remoteFilename;
 

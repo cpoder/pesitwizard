@@ -79,9 +79,8 @@ PARTNER_DB_ID=$(echo "$response" | jq -r '.id // empty' 2>/dev/null)
 # Test send endpoint (will fail without actual file, but tests endpoint availability)
 TRANSFER_JSON='{
     "partnerId": "LOCALSRV",
-    "localPath": "/tmp/test-file.txt",
-    "remotePath": "/receive/test-file.txt",
-    "fileName": "test-file.txt"
+    "filename": "/tmp/test-file.txt",
+    "remoteFilename": "test-file.txt"
 }'
 
 response=$(curl -sf -X POST "${CLIENT_API}/api/v1/transfers/send" \

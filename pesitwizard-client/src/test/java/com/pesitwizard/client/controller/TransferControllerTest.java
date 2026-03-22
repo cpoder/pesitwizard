@@ -60,7 +60,7 @@ class TransferControllerTest {
     void sendFile_missingServer_shouldFail() throws Exception {
         var request =
                 Map.of(
-                        "localPath", "/tmp/test.txt",
+                        "filename", "/tmp/test.txt",
                         "remoteFilename", "test.txt");
 
         mockMvc.perform(

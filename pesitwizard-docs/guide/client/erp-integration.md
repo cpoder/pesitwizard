@@ -52,7 +52,7 @@ curl -X POST http://localhost:8080/api/webhooks \
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "direction": "RECEIVE",
     "filename": "STATEMENT_20250110.XML",
-    "localPath": "/data/received/STATEMENT_20250110.XML",
+    "filename": "/data/received/STATEMENT_20250110.XML",
     "size": 8542
   }
 }

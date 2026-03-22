@@ -28,7 +28,7 @@ interface Schedule {
   serverName?: string
   partnerId?: string
   direction: 'SEND' | 'RECEIVE'
-  localPath?: string
+  filename?: string
   remoteFilename?: string
   scheduleType: 'ONCE' | 'INTERVAL' | 'CRON' | 'DAILY' | 'HOURLY'
   intervalMinutes?: number

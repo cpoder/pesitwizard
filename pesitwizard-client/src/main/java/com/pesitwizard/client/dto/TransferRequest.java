@@ -40,11 +40,6 @@ public class TransferRequest {
     @NotBlank(message = "Filename is required")
     private String filename;
 
-    /**
-     * @deprecated Use filename instead. Kept for backward compatibility.
-     */
-    private String localPath;
-
     /** Remote filename (virtual file ID on PeSIT server) */
     @NotBlank(message = "Remote filename is required")
     private String remoteFilename;
