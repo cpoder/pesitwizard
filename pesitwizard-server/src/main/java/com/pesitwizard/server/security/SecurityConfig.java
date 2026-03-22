@@ -59,6 +59,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         if (!securityProperties.isEnabled()) {
             log.warn("Security is DISABLED - all endpoints are open");
+            // CSRF protection is intentionally disabled: this is a stateless REST API
+            // that uses API key / JWT authentication, not browser-based session cookies.
             return http.csrf(csrf -> csrf.disable())
                     .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                     .build();

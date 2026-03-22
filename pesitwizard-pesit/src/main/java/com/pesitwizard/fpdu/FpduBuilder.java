@@ -12,8 +12,9 @@ import java.util.List;
  */
 public class FpduBuilder {
     public static byte[] buildFpdu(FpduType fpduType, int idDest, int idSrc, byte[] data) {
-        ByteBuffer fpdu = ByteBuffer.allocate(6 + data.length);
-        fpdu.putShort((short) (6 + data.length)); // Total length
+        int totalLength = Math.addExact(6, data.length);
+        ByteBuffer fpdu = ByteBuffer.allocate(totalLength);
+        fpdu.putShort((short) totalLength); // Total length
         fpdu.put((byte) fpduType.getPhase());
         fpdu.put((byte) fpduType.getType());
         fpdu.put((byte) idDest);

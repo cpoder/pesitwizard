@@ -157,6 +157,9 @@ public class PesitMessageService {
             String messageName)
             throws IOException, InterruptedException {
         byte[] data = message.getBytes(StandardCharsets.UTF_8);
+        if (data.length <= 0) {
+            throw new IOException("Message data must not be empty");
+        }
         String filename =
                 messageName != null
                         ? messageName
@@ -176,6 +179,7 @@ public class PesitMessageService {
 
         // CREATE
         int transferId = TRANSFER_ID_COUNTER.getAndIncrement() % 0xFFFFFF;
+        int fileSizeKB = (int) Math.min(Math.addExact((long) data.length, 1023L) / 1024, 0xFFFFFF);
         session.sendFpduWithAck(
                 new com.pesitwizard.fpdu.CreateMessageBuilder()
                         .filename(filename)
@@ -183,7 +187,7 @@ public class PesitMessageService {
                         .variableFormat()
                         .recordLength(506)
                         .maxEntitySize(512)
-                        .fileSizeKB((data.length + 1023) / 1024)
+                        .fileSizeKB(fileSizeKB)
                         .build(serverConnId));
 
         // OPEN, WRITE

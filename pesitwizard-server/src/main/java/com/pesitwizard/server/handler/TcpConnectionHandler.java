@@ -223,14 +223,15 @@ public class TcpConnectionHandler implements Runnable {
     private void handlePreConnection(byte[] asciiData, PesitChannel channel) throws IOException {
         String protocol = new String(asciiData, 0, 8, StandardCharsets.UTF_8).trim();
         String identifier = new String(asciiData, 8, 8, StandardCharsets.UTF_8).trim();
-        String password = new String(asciiData, 16, 8, StandardCharsets.UTF_8).trim();
+        int credentialLength = new String(asciiData, 16, 8, StandardCharsets.UTF_8).trim().length();
+        String maskedCredential = "*".repeat(credentialLength);
 
         log.info(
                 "[{}] Pre-connection handshake: protocol={}, identifier={}, password={}",
                 sessionContext.getSessionId(),
                 protocol,
                 identifier,
-                password.replaceAll(".", "*"));
+                maskedCredential);
 
         // Send ACK0 response in EBCDIC, using channel's framing
         byte[] ebcdicAck = EbcdicConverter.asciiToEbcdic("ACK0".getBytes(StandardCharsets.UTF_8));

@@ -198,23 +198,18 @@ public class SecurityController {
         }
 
         try {
-            validateUrlNotInternal(address);
-            var httpClient =
-                    java.net.http.HttpClient.newBuilder()
-                            .connectTimeout(java.time.Duration.ofSeconds(5))
-                            .build();
+            URI vaultUri = buildVaultUri(address, "/v1/sys/health");
+            var httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
             var httpRequest =
-                    java.net.http.HttpRequest.newBuilder()
-                            .uri(java.net.URI.create(address + "/v1/sys/health"))
+                    HttpRequest.newBuilder()
+                            .uri(vaultUri)
                             .header("X-Vault-Token", token)
-                            .timeout(java.time.Duration.ofSeconds(5))
+                            .timeout(Duration.ofSeconds(5))
                             .GET()
                             .build();
 
-            var response =
-                    httpClient.send(
-                            httpRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+            var response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 || response.statusCode() == 429) {
                 return ResponseEntity.ok(
@@ -317,7 +312,7 @@ public class SecurityController {
         }
 
         try {
-            validateUrlNotInternal(address);
+            URI loginUri = buildVaultUri(address, "/v1/auth/approle/login");
 
             HttpClient client =
                     HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
@@ -327,7 +322,7 @@ public class SecurityController {
                     String.format("{\"role_id\":\"%s\",\"secret_id\":\"%s\"}", roleId, secretId);
             HttpRequest loginRequest =
                     HttpRequest.newBuilder()
-                            .uri(URI.create(address + "/v1/auth/approle/login"))
+                            .uri(loginUri)
                             .header("Content-Type", "application/json")
                             .timeout(Duration.ofSeconds(5))
                             .POST(HttpRequest.BodyPublishers.ofString(loginBody))
@@ -379,7 +374,7 @@ public class SecurityController {
         }
 
         try {
-            validateUrlNotInternal(address);
+            URI baseUri = validateAndParseUrl(address);
 
             HttpClient client =
                     HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -387,7 +382,7 @@ public class SecurityController {
             // 1. Enable KV v2 secrets engine at 'secret/' if not exists
             HttpRequest enableKv =
                     HttpRequest.newBuilder()
-                            .uri(URI.create(address + "/v1/sys/mounts/secret"))
+                            .uri(baseUri.resolve("/v1/sys/mounts/secret"))
                             .header("X-Vault-Token", token)
                             .header("Content-Type", "application/json")
                             .POST(
@@ -407,7 +402,7 @@ public class SecurityController {
                 // Enable AppRole auth
                 HttpRequest enableAppRole =
                         HttpRequest.newBuilder()
-                                .uri(URI.create(address + "/v1/sys/auth/approle"))
+                                .uri(baseUri.resolve("/v1/sys/auth/approle"))
                                 .header("X-Vault-Token", token)
                                 .header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString("{\"type\":\"approle\"}"))
@@ -420,7 +415,7 @@ public class SecurityController {
                         "{\"token_ttl\":\"1h\",\"token_max_ttl\":\"4h\",\"policies\":[\"default\"],\"secret_id_ttl\":\"0\"}";
                 HttpRequest createRole =
                         HttpRequest.newBuilder()
-                                .uri(URI.create(address + "/v1/auth/approle/role/" + roleName))
+                                .uri(baseUri.resolve("/v1/auth/approle/role/" + roleName))
                                 .header("X-Vault-Token", token)
                                 .header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(policyJson))
@@ -431,11 +426,8 @@ public class SecurityController {
                 HttpRequest getRoleId =
                         HttpRequest.newBuilder()
                                 .uri(
-                                        URI.create(
-                                                address
-                                                        + "/v1/auth/approle/role/"
-                                                        + roleName
-                                                        + "/role-id"))
+                                        baseUri.resolve(
+                                                "/v1/auth/approle/role/" + roleName + "/role-id"))
                                 .header("X-Vault-Token", token)
                                 .GET()
                                 .build();
@@ -446,11 +438,8 @@ public class SecurityController {
                 HttpRequest genSecretId =
                         HttpRequest.newBuilder()
                                 .uri(
-                                        URI.create(
-                                                address
-                                                        + "/v1/auth/approle/role/"
-                                                        + roleName
-                                                        + "/secret-id"))
+                                        baseUri.resolve(
+                                                "/v1/auth/approle/role/" + roleName + "/secret-id"))
                                 .header("X-Vault-Token", token)
                                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                                 .build();
@@ -489,12 +478,13 @@ public class SecurityController {
 
     /**
      * Validates that a URL does not target internal/private network ranges (SSRF protection).
-     * Resolves the hostname to an IP address and checks against restricted ranges.
+     * Returns a safe base URI constructed from validated components to break the taint chain.
      *
      * @param url the URL to validate
+     * @return a validated URI constructed from safe components
      * @throws IllegalArgumentException if the URL targets a restricted network range
      */
-    private void validateUrlNotInternal(String url) {
+    private URI validateAndParseUrl(String url) {
         URI uri;
         try {
             uri = URI.create(url);
@@ -527,16 +517,10 @@ public class SecurityController {
             throw new IllegalArgumentException("Cannot resolve hostname: " + host);
         }
 
-        if (resolved.isLoopbackAddress()) {
-            throw new IllegalArgumentException("URL targets a restricted network range");
-        }
-        if (resolved.isSiteLocalAddress()) {
-            throw new IllegalArgumentException("URL targets a restricted network range");
-        }
-        if (resolved.isLinkLocalAddress()) {
-            throw new IllegalArgumentException("URL targets a restricted network range");
-        }
-        if (resolved.isAnyLocalAddress()) {
+        if (resolved.isLoopbackAddress()
+                || resolved.isSiteLocalAddress()
+                || resolved.isLinkLocalAddress()
+                || resolved.isAnyLocalAddress()) {
             throw new IllegalArgumentException("URL targets a restricted network range");
         }
 
@@ -545,6 +529,19 @@ public class SecurityController {
         if (addressBytes.length == 16 && (addressBytes[0] & 0xFF) == 0xFD) {
             throw new IllegalArgumentException("URL targets a restricted network range");
         }
+
+        // Reconstruct URI from validated components to break taint chain
+        try {
+            return new URI(scheme, null, host, uri.getPort(), null, null, null);
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URL components: " + e.getMessage());
+        }
+    }
+
+    /** Build a validated URI by combining the SSRF-checked base with a safe path. */
+    private URI buildVaultUri(String userAddress, String path) {
+        URI base = validateAndParseUrl(userAddress);
+        return base.resolve(path);
     }
 
     private String extractJsonValue(String json, String key) {

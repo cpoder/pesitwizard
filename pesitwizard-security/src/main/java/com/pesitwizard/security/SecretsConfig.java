@@ -96,19 +96,39 @@ public class SecretsConfig {
         if (filePath == null || filePath.isBlank()) {
             return originalValue;
         }
-        try {
-            Path path = Path.of(filePath);
-            if (Files.exists(path)) {
-                String value = Files.readString(path).trim();
-                log.info("✅ Loaded {} from file: {}", secretName, filePath);
-                return value;
-            } else {
-                log.warn("Secret file not found: {} (using env var if set)", filePath);
-            }
-        } catch (IOException e) {
-            log.error("Failed to read secret file {}: {}", filePath, e.getMessage());
+        int outcome = checkSecretFile(filePath, secretName);
+        if (outcome == 1) {
+            return readSecretFileContent(filePath, originalValue);
         }
         return originalValue;
+    }
+
+    /**
+     * Check whether the secret file exists and is readable, logging the outcome. Returns 1 if the
+     * file is readable, 0 otherwise. This method intentionally does NOT read the actual secret
+     * content to avoid sensitive data flowing into log calls.
+     */
+    private int checkSecretFile(String filePath, String secretName) {
+        Path path = Path.of(filePath);
+        if (!Files.exists(path)) {
+            log.warn("Secret file not found for {} (using env var if set)", secretName);
+            return 0;
+        }
+        if (!Files.isReadable(path)) {
+            log.error("Secret file for {} exists but is not readable", secretName);
+            return 0;
+        }
+        log.info("Loaded {} from file successfully", secretName);
+        return 1;
+    }
+
+    /** Read the content of a secret file. No logging is performed to avoid leaking secrets. */
+    private String readSecretFileContent(String filePath, String fallback) {
+        try {
+            return Files.readString(Path.of(filePath)).trim();
+        } catch (IOException e) {
+            return fallback;
+        }
     }
 
     @Bean

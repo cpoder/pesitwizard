@@ -55,7 +55,8 @@ public class FileIntegrityService {
     /** Compute checksum for a file with specified algorithm */
     public String computeChecksum(Path filePath, HashAlgorithm algorithm) throws IOException {
         try {
-            MessageDigest digest = MessageDigest.getInstance(algorithmToJavaName(algorithm));
+            MessageDigest digest =
+                    MessageDigest.getInstance(algorithmToJavaName(rejectWeakAlgorithm(algorithm)));
 
             try (InputStream is = Files.newInputStream(filePath)) {
                 byte[] buffer = new byte[bufferSize];
@@ -79,7 +80,8 @@ public class FileIntegrityService {
     /** Compute checksum for byte array with specified algorithm */
     public String computeChecksum(byte[] data, HashAlgorithm algorithm) {
         try {
-            MessageDigest digest = MessageDigest.getInstance(algorithmToJavaName(algorithm));
+            MessageDigest digest =
+                    MessageDigest.getInstance(algorithmToJavaName(rejectWeakAlgorithm(algorithm)));
             return HexFormat.of().formatHex(digest.digest(data));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Unsupported algorithm: " + algorithm, e);
@@ -350,10 +352,19 @@ public class FileIntegrityService {
         };
     }
 
+    /** Reject weak hash algorithms (MD5, SHA-1) and fall back to SHA-256 */
+    private HashAlgorithm rejectWeakAlgorithm(HashAlgorithm algorithm) {
+        if (algorithm == HashAlgorithm.MD5 || algorithm == HashAlgorithm.SHA_1) {
+            log.warn("Weak hash algorithm {} requested, using SHA-256 instead", algorithm);
+            return HashAlgorithm.SHA_256;
+        }
+        return algorithm;
+    }
+
     private String algorithmToJavaName(HashAlgorithm algorithm) {
         return switch (algorithm) {
-            case MD5 -> "MD5";
-            case SHA_1 -> "SHA-1";
+            case MD5 -> throw new IllegalArgumentException("MD5 is not allowed");
+            case SHA_1 -> throw new IllegalArgumentException("SHA-1 is not allowed");
             case SHA_256 -> "SHA-256";
             case SHA_512 -> "SHA-512";
         };

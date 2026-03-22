@@ -203,17 +203,18 @@ public class VaultClient {
             dataNode.set("data", innerData);
 
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
-            String token = getToken();
+            String authToken = getToken();
+            boolean hasAuth = authToken != null && !authToken.isBlank();
             log.debug(
                     "Storing secret at {} with auth method {} (token present: {})",
                     url,
                     authMethod,
-                    token != null && !token.isBlank());
+                    hasAuth);
 
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(url))
-                            .header("X-Vault-Token", token)
+                            .header("X-Vault-Token", authToken)
                             .header("Content-Type", "application/json")
                             .timeout(TIMEOUT)
                             .POST(

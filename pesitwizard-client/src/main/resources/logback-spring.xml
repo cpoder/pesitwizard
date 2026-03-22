@@ -6,7 +6,7 @@
     <springProfile name="default,dev,apikey,nosecurity">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{HH:mm:ss} %-5level [${MDC_PATTERN}] %msg%n</pattern>
+                <pattern>%d{HH:mm:ss} %-5level [${MDC_PATTERN}] %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 
@@ -36,7 +36,7 @@
     <springProfile name="production,prod,postgres">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 

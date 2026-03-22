@@ -301,8 +301,9 @@ public class VaultSecretsProvider implements SecretsProvider {
 
         // Check cache first
         CachedSecret cached = secretCache.get(key);
-        if (cached != null && !cached.isExpired()) {
-            log.debug("Cache hit for secret: {}", key);
+        boolean cacheHit = cached != null && !cached.isExpired();
+        if (cacheHit) {
+            log.debug("Cache hit for Vault secret lookup");
             return cached.value();
         }
 
@@ -320,28 +321,36 @@ public class VaultSecretsProvider implements SecretsProvider {
 
             HttpResponse<String> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
+            int statusCode = response.statusCode();
+            if (statusCode == 200) {
                 recordSuccess();
-                JsonNode root = objectMapper.readTree(response.body());
-                JsonNode data = root.path("data").path("data").path("value");
-                if (!data.isMissingNode()) {
-                    String value = data.asText();
-                    secretCache.put(key, new CachedSecret(value, Instant.now().plus(CACHE_TTL)));
-                    return value;
-                }
-            } else if (response.statusCode() == 404) {
-                log.debug("Secret not found: {}", key);
+                return parseSecretFromResponse(response, key);
+            } else if (statusCode == 404) {
+                log.debug("Secret not found in Vault for key");
             } else {
                 recordFailure();
-                log.error("Failed to get secret: {} - {}", key, response.statusCode());
+                log.error("Failed to get secret from Vault - HTTP {}", statusCode);
             }
             return null;
         } catch (java.io.IOException | InterruptedException e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             recordFailure();
-            log.error("Failed to get secret: {}", e.getMessage());
+            log.error("Failed to get secret from Vault: {}", e.getMessage());
             return null;
         }
+    }
+
+    /** Parse the secret value from a Vault HTTP response and cache it. No logging here. */
+    private String parseSecretFromResponse(HttpResponse<String> response, String key)
+            throws java.io.IOException {
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode data = root.path("data").path("data").path("value");
+        if (!data.isMissingNode()) {
+            String result = data.asText();
+            secretCache.put(key, new CachedSecret(result, Instant.now().plus(CACHE_TTL)));
+            return result;
+        }
+        return null;
     }
 
     @Override

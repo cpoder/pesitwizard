@@ -166,7 +166,7 @@ public class AesSecretsProvider implements SecretsProvider {
 
             byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
-            byte[] combined = new byte[iv.length + ciphertext.length];
+            byte[] combined = new byte[Math.addExact(iv.length, ciphertext.length)];
             System.arraycopy(iv, 0, combined, 0, iv.length);
             System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
 

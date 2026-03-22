@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class PathPlaceholderService {
 
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]++)}");
 
     /** Resolve all placeholders in a path */
     public String resolvePath(String path, PlaceholderContext context) {

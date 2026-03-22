@@ -68,12 +68,14 @@ public class ProductionCredentialValidator implements ApplicationRunner {
         validateCaPasswords(violations);
 
         if (!violations.isEmpty()) {
-            for (String violation : violations) {
-                log.error("FATAL: {}", violation);
-            }
+            int violationCount = violations.size();
+            log.error(
+                    "FATAL: {} default credential(s) detected in production mode."
+                            + " Change all default passwords before starting.",
+                    violationCount);
             throw new IllegalStateException(
                     "Application startup blocked: "
-                            + violations.size()
+                            + violationCount
                             + " default credential(s) detected in production mode. "
                             + "Change the following before starting: "
                             + violations);
@@ -112,10 +114,9 @@ public class ProductionCredentialValidator implements ApplicationRunner {
                 violations.add(
                         "pesit.security.basic-auth.users."
                                 + username
-                                + ".password is still set to the default value \""
-                                + user.getPassword()
-                                + "\". Set the environment variable or override this property before "
-                                + "running in production.");
+                                + ".password is still set to a default value."
+                                + " Set the environment variable or override this property before"
+                                + " running in production.");
             }
         }
     }
@@ -132,19 +133,17 @@ public class ProductionCredentialValidator implements ApplicationRunner {
         if (caProperties.getCaKeystorePassword() != null
                 && INSECURE_CA_PASSWORDS.contains(caProperties.getCaKeystorePassword())) {
             violations.add(
-                    "pesit.ca.ca-keystore-password is still set to the default value \""
-                            + caProperties.getCaKeystorePassword()
-                            + "\". Set PESIT_CA_PASSWORD or override this property before "
-                            + "running in production.");
+                    "pesit.ca.ca-keystore-password is still set to a default value."
+                            + " Set PESIT_CA_PASSWORD or override this property before"
+                            + " running in production.");
         }
 
         if (caProperties.getCaTruststorePassword() != null
                 && INSECURE_CA_PASSWORDS.contains(caProperties.getCaTruststorePassword())) {
             violations.add(
-                    "pesit.ca.ca-truststore-password is still set to the default value \""
-                            + caProperties.getCaTruststorePassword()
-                            + "\". Set PESIT_CA_TRUSTSTORE_PASSWORD or override this property before "
-                            + "running in production.");
+                    "pesit.ca.ca-truststore-password is still set to a default value."
+                            + " Set PESIT_CA_TRUSTSTORE_PASSWORD or override this property before"
+                            + " running in production.");
         }
     }
 }

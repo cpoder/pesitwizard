@@ -14,7 +14,7 @@
     <springProfile name="default,dev">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [${MDC_PATTERN}] - %msg%n</pattern>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [${MDC_PATTERN}] - %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 
@@ -47,7 +47,7 @@
         <!-- Console: structured single-line for container log aggregators -->
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 
@@ -61,7 +61,7 @@
                 <totalSizeCap>500MB</totalSizeCap>
             </rollingPolicy>
             <encoder>
-                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %msg%n</pattern>
+                <pattern>%d{ISO8601} %-5level [%thread] %logger{36} [${MDC_PATTERN}] - %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 
@@ -75,7 +75,7 @@
                 <totalSizeCap>1GB</totalSizeCap>
             </rollingPolicy>
             <encoder>
-                <pattern>%d{ISO8601} %-5level [%thread] [${MDC_PATTERN}] - %msg%n</pattern>
+                <pattern>%d{ISO8601} %-5level [%thread] [${MDC_PATTERN}] - %replace(%msg){'[\r\n]', '_'}%n</pattern>
             </encoder>
         </appender>
 

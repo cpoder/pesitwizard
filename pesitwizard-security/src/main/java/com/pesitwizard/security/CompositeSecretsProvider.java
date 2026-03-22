@@ -37,33 +37,31 @@ public class CompositeSecretsProvider implements SecretsProvider {
     }
 
     @Override
-    public String decrypt(String ciphertext) {
-        if (ciphertext == null || ciphertext.isBlank()) {
-            return ciphertext;
+    public String decrypt(String encryptedInput) {
+        if (encryptedInput == null || encryptedInput.isBlank()) {
+            return encryptedInput;
         }
 
         // Route to appropriate provider based on prefix
-        if (ciphertext.startsWith("AES:")) {
+        if (encryptedInput.startsWith("AES:")) {
             // Decrypt with AES provider
             log.debug("Decrypting AES-encrypted value");
-            return aesProvider.decrypt(ciphertext);
-        } else if (ciphertext.startsWith("vault:")) {
+            return aesProvider.decrypt(encryptedInput);
+        } else if (encryptedInput.startsWith("vault:")) {
             // Decrypt with primary (Vault) provider
-            log.debug(
-                    "Decrypting Vault-stored value: {}",
-                    ciphertext.substring(0, Math.min(20, ciphertext.length())) + "...");
-            String decrypted = primaryProvider.decrypt(ciphertext);
-            if (decrypted != null && decrypted.equals(ciphertext)) {
+            log.debug("Decrypting Vault-stored value");
+            String result = primaryProvider.decrypt(encryptedInput);
+            boolean unchanged = result != null && result.equals(encryptedInput);
+            if (unchanged) {
                 log.warn(
-                        "Vault decryption returned original reference - secret may not exist in Vault: {}",
-                        ciphertext.substring(0, Math.min(20, ciphertext.length())) + "...");
+                        "Vault decryption returned original reference - secret may not exist in Vault");
             }
-            return decrypted;
+            return result;
         }
 
         // Not encrypted, return as-is
         log.debug("Value not encrypted, returning as-is");
-        return ciphertext;
+        return encryptedInput;
     }
 
     @Override

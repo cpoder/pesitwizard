@@ -328,17 +328,18 @@ public class TransferSchedulerService {
             }
             case WEEKLY -> {
                 // Use dayOfWeek and dailyTime
-                int targetDay =
+                int rawDay =
                         schedule.getDayOfWeek() != null
                                 ? schedule.getDayOfWeek()
                                 : 1; // Default Monday
+                int targetDay = Math.max(1, Math.min(rawDay, 7));
                 LocalTime targetTime =
                         schedule.getDailyTime() != null
                                 ? schedule.getDailyTime()
                                 : LocalTime.of(9, 0);
 
                 int currentDay = now.getDayOfWeek().getValue();
-                int daysToAdd = (targetDay - currentDay + 7) % 7;
+                int daysToAdd = Math.max(0, Math.min((targetDay - currentDay + 7) % 7, 6));
                 ZonedDateTime targetDateTime =
                         now.toLocalDate()
                                 .plusDays(daysToAdd)

@@ -402,7 +402,7 @@ public class BackupService {
         byte[] ciphertext = cipher.doFinal(plaintext);
 
         // Write IV + ciphertext
-        byte[] combined = new byte[iv.length + ciphertext.length];
+        byte[] combined = new byte[Math.addExact(iv.length, ciphertext.length)];
         System.arraycopy(iv, 0, combined, 0, iv.length);
         System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
         Files.write(output, combined);

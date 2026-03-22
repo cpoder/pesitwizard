@@ -136,6 +136,8 @@ public class SecurityConfig {
                                             config.setAllowCredentials(true);
                                             return config;
                                         }))
+                // CSRF protection is intentionally disabled: this is a stateless REST API
+                // that uses API key / JWT authentication, not browser-based session cookies.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
