@@ -39,6 +39,31 @@ public class FileSystemController {
     }
 
     /**
+     * Validate and resolve a user-provided path to a safe path under the base directory. Returns
+     * the validated path, or throws {@link SecurityException} if the path escapes the base
+     * directory.
+     */
+    private Path validatePath(String userPath) throws IOException {
+        Path realBasePath = Paths.get(basePath).toRealPath();
+        Path candidate = realBasePath.resolve(userPath).normalize();
+
+        // Pre-check: normalized path must be under base path
+        if (!candidate.startsWith(realBasePath)) {
+            throw new SecurityException("Path escapes base directory");
+        }
+
+        // Post-check: resolve symlinks if path exists, then re-verify
+        if (Files.exists(candidate)) {
+            candidate = candidate.toRealPath();
+            if (!candidate.startsWith(realBasePath)) {
+                throw new SecurityException("Symlink escapes base directory");
+            }
+        }
+
+        return candidate;
+    }
+
+    /**
      * List files and directories at the given path. For security, only paths under the configured
      * base path are allowed.
      */
@@ -47,19 +72,11 @@ public class FileSystemController {
         // Use base path as default if no path specified
         String effectivePath = (path == null || path.isEmpty()) ? basePath : path;
         try {
-            Path realBasePath = Paths.get(basePath).toRealPath();
-            Path targetPath = realBasePath.resolve(Paths.get(effectivePath)).normalize();
-
-            // Security: resolve symlinks to prevent symlink-based escape
-            if (Files.exists(targetPath)) {
-                targetPath = targetPath.toRealPath();
-            }
-
-            // Security: only allow browsing under configured base path
-            if (!targetPath.startsWith(realBasePath)) {
-                log.warn(
-                        "Attempted to browse outside allowed path: {}",
-                        targetPath.toString().replaceAll("[\\r\\n]", "_"));
+            Path targetPath;
+            try {
+                targetPath = validatePath(effectivePath);
+            } catch (SecurityException e) {
+                log.warn("Attempted to browse outside allowed path");
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
             }
@@ -67,7 +84,7 @@ public class FileSystemController {
             if (!Files.exists(targetPath)) {
                 try {
                     Files.createDirectories(targetPath);
-                    log.info("Created directory: {}", targetPath);
+                    log.info("Created directory under base path");
                 } catch (IOException e) {
                     return ResponseEntity.badRequest()
                             .body(
@@ -154,11 +171,10 @@ public class FileSystemController {
     @GetMapping("/mkdir")
     public ResponseEntity<?> mkdir(@RequestParam String path) {
         try {
-            Path realBasePath = Paths.get(basePath).toRealPath();
-            Path targetPath = realBasePath.resolve(Paths.get(path)).normalize();
-
-            // Security: only allow creating under base path
-            if (!targetPath.startsWith(realBasePath)) {
+            Path targetPath;
+            try {
+                targetPath = validatePath(path);
+            } catch (SecurityException e) {
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Access denied: path must be under " + basePath));
             }
@@ -168,7 +184,7 @@ public class FileSystemController {
             }
 
             Files.createDirectories(targetPath);
-            log.info("Created directory: {}", targetPath);
+            log.info("Created directory under base path");
 
             return ResponseEntity.ok(new SuccessResponse("Directory created successfully"));
 
