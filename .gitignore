@@ -39,3 +39,4 @@ integration-tests/cx-integration/docker/BOOT-INF/
 # H2 database files
 **/*.mv.db
 **/*.trace.db
+.claude/worktrees/
