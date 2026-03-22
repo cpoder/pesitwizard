@@ -328,7 +328,7 @@ public class PesitSessionHandler {
     }
 
     /** Handle RELEASE FPDU */
-    private Fpdu handleRelease(SessionContext ctx, Fpdu fpdu) {
+    private Fpdu handleRelease(SessionContext ctx, Fpdu _fpdu) {
         log.info("[{}] RELEASE received, closing session", ctx.getSessionId());
         ctx.transitionTo(ServerState.CN01_REPOS);
         return FpduResponseBuilder.buildRelconf(ctx);

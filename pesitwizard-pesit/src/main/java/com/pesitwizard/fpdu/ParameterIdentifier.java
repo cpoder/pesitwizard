@@ -82,6 +82,16 @@ public enum ParameterIdentifier implements Parameter {
         this.name = name;
     }
 
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
     public static ParameterIdentifier fromId(int id) {
         for (ParameterIdentifier pi : values()) {
             if (pi.id == id) {

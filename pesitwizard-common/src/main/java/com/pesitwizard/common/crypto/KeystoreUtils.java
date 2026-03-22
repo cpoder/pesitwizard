@@ -30,7 +30,7 @@ public class KeystoreUtils {
     }
 
     public static byte[] createKeystoreWithChain(
-            X509Certificate cert,
+            X509Certificate _cert,
             PrivateKey key,
             Certificate[] chain,
             String alias,

@@ -40,6 +40,7 @@ public interface TransportChannel extends AutoCloseable {
      *
      * @throws IOException if closing fails
      */
+    @Override
     void close() throws IOException;
 
     /**

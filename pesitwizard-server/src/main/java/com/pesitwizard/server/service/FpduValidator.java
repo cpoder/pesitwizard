@@ -36,7 +36,7 @@ public class FpduValidator {
      * Validate DTF (Data Transfer) FPDU. Rules: - D2-220: Article length must not exceed announced
      * record length (PI 32) - D2-222: Data without sync point must not exceed configured limit
      */
-    public ValidationResult validateDtf(Fpdu fpdu, TransferContext transfer, byte[] data) {
+    public ValidationResult validateDtf(Fpdu _fpdu, TransferContext transfer, byte[] data) {
         if (transfer == null) {
             return ValidationResult.error(DiagnosticCode.D3_311, "No active transfer context");
         }
@@ -238,7 +238,7 @@ public class FpduValidator {
      * @param syncIntervalBytes Configured sync point interval (0 = no limit)
      */
     public ValidationResult validateDataWithoutSyncPoint(
-            TransferContext transfer, long bytesSinceLastSync, long syncIntervalBytes) {
+            TransferContext _transfer, long bytesSinceLastSync, long syncIntervalBytes) {
         // No limit configured
         if (syncIntervalBytes <= 0) {
             return ValidationResult.ok();

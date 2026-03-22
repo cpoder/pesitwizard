@@ -3,6 +3,8 @@ package com.pesitwizard.fpdu;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import lombok.Getter;
 
@@ -107,6 +109,28 @@ public class ParameterValue {
         this.bytes = combined;
     }
 
+    /** Return a defensive copy of the encoded bytes. */
+    public byte[] getBytes() {
+        return bytes != null ? Arrays.copyOf(bytes, bytes.length) : null;
+    }
+
+    /** Return a defensive copy of the value bytes. */
+    public byte[] getValue() {
+        return value != null ? Arrays.copyOf(value, value.length) : null;
+    }
+
+    /**
+     * Return an unmodifiable view of the sub-values list. Use {@link #addValue} to add sub-values.
+     */
+    public List<ParameterValue> getValues() {
+        return Collections.unmodifiableList(values);
+    }
+
+    /** Add a sub-value to this PGI parameter. */
+    public void addValue(ParameterValue parameterValue) {
+        this.values.add(parameterValue);
+    }
+
     /**
      * Decode the value bytes as a big-endian unsigned integer. Works correctly regardless of the
      * byte array length.
@@ -148,6 +172,7 @@ public class ParameterValue {
                 .orElse(null);
     }
 
+    @Override
     public String toString() {
         if (parameter instanceof ParameterGroupIdentifier) {
             return String.format("%s\n%s", parameter.getName(), values);

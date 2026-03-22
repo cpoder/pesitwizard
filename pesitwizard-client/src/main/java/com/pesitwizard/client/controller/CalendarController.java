@@ -80,7 +80,7 @@ public class CalendarController {
                 .findById(id)
                 .map(
                         calendar -> {
-                            calendar.getHolidays().addAll(holidays);
+                            calendar.addHolidays(holidays);
                             return ResponseEntity.ok(calendarRepository.save(calendar));
                         })
                 .orElse(ResponseEntity.notFound().build());
@@ -93,7 +93,7 @@ public class CalendarController {
                 .findById(id)
                 .map(
                         calendar -> {
-                            calendar.getHolidays().removeAll(holidays);
+                            calendar.removeHolidays(holidays);
                             return ResponseEntity.ok(calendarRepository.save(calendar));
                         })
                 .orElse(ResponseEntity.notFound().build());

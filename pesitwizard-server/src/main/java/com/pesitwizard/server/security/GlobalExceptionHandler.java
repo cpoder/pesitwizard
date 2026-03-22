@@ -277,7 +277,7 @@ public class GlobalExceptionHandler {
     /** Handle bad credentials specifically. */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
-            BadCredentialsException ex, HttpServletRequest request) {
+            BadCredentialsException _ex, HttpServletRequest request) {
 
         log.warn("Bad credentials for {}", request.getRequestURI());
 

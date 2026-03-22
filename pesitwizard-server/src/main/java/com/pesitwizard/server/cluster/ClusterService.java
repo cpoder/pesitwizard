@@ -354,6 +354,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
      * concurrent acquisition across cluster nodes. The unique constraint on serverId ensures only
      * one node can own a server.
      */
+    @Override
     @Transactional
     public boolean acquireServerOwnership(String serverId) {
         if (!clusterEnabled) {
@@ -391,6 +392,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
      * Release ownership of a server (when stopping it). Deletes the database record to allow
      * another node to acquire.
      */
+    @Override
     @Transactional
     public void releaseServerOwnership(String serverId) {
         if (!clusterEnabled) {
@@ -406,6 +408,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /** Check if this node owns a server */
+    @Override
     public boolean ownsServer(String serverId) {
         if (!clusterEnabled) {
             return true;
@@ -414,16 +417,19 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /** Get the node that owns a server */
+    @Override
     public String getServerOwner(String serverId) {
         return serverOwnership.get(serverId);
     }
 
     /** Get all server ownership mappings */
+    @Override
     public Map<String, String> getAllServerOwnership() {
         return Map.copyOf(serverOwnership);
     }
 
     /** Get cluster members */
+    @Override
     public List<String> getClusterMembers() {
         if (!clusterEnabled || channel == null) {
             return List.of(nodeName);
@@ -434,6 +440,7 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /** Get cluster size */
+    @Override
     public int getClusterSize() {
         if (!clusterEnabled || channel == null) {
             return 1;
@@ -442,26 +449,31 @@ public class ClusterService implements ClusterProvider, Receiver, Closeable {
     }
 
     /** Get this node's name */
+    @Override
     public String getNodeName() {
         return nodeName;
     }
 
     /** Check if cluster mode is enabled */
+    @Override
     public boolean isClusterEnabled() {
         return clusterEnabled;
     }
 
     /** Add a cluster event listener */
+    @Override
     public void addListener(ClusterEventListener listener) {
         listeners.add(listener);
     }
 
     /** Remove a cluster event listener */
+    @Override
     public void removeListener(ClusterEventListener listener) {
         listeners.remove(listener);
     }
 
     /** Broadcast a message to all cluster members */
+    @Override
     public void broadcast(ClusterMessage message) {
         if (!clusterEnabled || channel == null) {
             return;

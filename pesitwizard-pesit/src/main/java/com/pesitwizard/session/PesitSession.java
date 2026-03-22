@@ -30,6 +30,7 @@ public class PesitSession implements AutoCloseable {
         this.strict = strict;
     }
 
+    @Override
     public void close() throws IOException {
         this.channel.close();
     }

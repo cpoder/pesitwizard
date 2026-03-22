@@ -26,7 +26,7 @@ public class FpduResponseBuilder {
             int protocolVersion,
             boolean syncPoints,
             boolean resync,
-            int maxEntitySize,
+            int _maxEntitySize,
             int syncIntervalKb) {
         // Per FpduType.ACONNECT definition:
         // Mandatory: PI_06 (version)

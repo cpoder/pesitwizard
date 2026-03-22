@@ -57,6 +57,21 @@ public class BusinessCalendar {
     @Builder.Default
     private Set<LocalDate> holidays = new HashSet<>();
 
+    /** Return a defensive copy of the holidays set. */
+    public Set<LocalDate> getHolidays() {
+        return new HashSet<>(holidays);
+    }
+
+    /** Add holidays to this calendar. */
+    public void addHolidays(Set<LocalDate> dates) {
+        holidays.addAll(dates);
+    }
+
+    /** Remove holidays from this calendar. */
+    public void removeHolidays(Set<LocalDate> dates) {
+        holidays.removeAll(dates);
+    }
+
     @Builder.Default private LocalTime businessHoursStart = LocalTime.of(8, 0);
 
     @Builder.Default private LocalTime businessHoursEnd = LocalTime.of(18, 0);

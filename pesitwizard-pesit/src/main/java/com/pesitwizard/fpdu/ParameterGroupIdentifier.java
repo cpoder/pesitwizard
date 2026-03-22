@@ -48,10 +48,12 @@ public enum ParameterGroupIdentifier implements Parameter {
         this.containedPIs = pis;
     }
 
+    @Override
     public int getId() {
         return id;
     }
 
+    @Override
     public String getName() {
         return name;
     }

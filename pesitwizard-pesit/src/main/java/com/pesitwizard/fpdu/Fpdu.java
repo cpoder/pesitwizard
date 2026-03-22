@@ -1,6 +1,8 @@
 package com.pesitwizard.fpdu;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import lombok.Data;
 
@@ -19,8 +21,22 @@ public class Fpdu {
         this.fpduType = fpduType;
     }
 
-    public boolean hasParameter(ParameterIdentifier parameter) {
-        return parameters.stream().anyMatch(pv -> pv.getParameter().equals(parameter));
+    /**
+     * Return an unmodifiable view of the parameters list. Use {@link #addParameter} or {@link
+     * #withParameter} to add parameters.
+     */
+    public List<ParameterValue> getParameters() {
+        return Collections.unmodifiableList(parameters);
+    }
+
+    /** Return a defensive copy of the raw data bytes. */
+    public byte[] getData() {
+        return data != null ? Arrays.copyOf(data, data.length) : null;
+    }
+
+    /** Add a parameter to this FPDU. */
+    public void addParameter(ParameterValue parameterValue) {
+        this.parameters.add(parameterValue);
     }
 
     public boolean hasParameter(Parameter parameter) {
@@ -54,6 +70,7 @@ public class Fpdu {
         return this;
     }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Fpdu{fpduType=")

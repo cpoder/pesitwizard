@@ -75,7 +75,7 @@ public class ScheduledTransfer {
     /**
      * @deprecated Use filename instead
      */
-    @Deprecated private String localPath;
+    private String localPath;
 
     /** Remote filename (virtual file ID) */
     private String remoteFilename;

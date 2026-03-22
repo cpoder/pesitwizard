@@ -74,7 +74,7 @@ public class EbcdicConverter {
         // EBCDIC data has high bytes (>= 0x80) throughout, especially in what should be the header
         // Check first 6 bytes - if they have high bytes, it's EBCDIC
         int highBytesInHeader = 0;
-        for (int i = 0; i < 6 && i < data.length; i++) {
+        for (int i = 0; i < 6; i++) {
             if ((data[i] & 0xFF) >= 0x80) {
                 highBytesInHeader++;
             }

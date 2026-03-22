@@ -224,7 +224,7 @@ public class SecretService {
     }
 
     /** Decrypt an encrypted value using the security module. */
-    private String decrypt(String cipherText, String ivString) {
+    private String decrypt(String cipherText, String _ivString) {
         // The security module handles the decryption transparently
         // ivString is ignored as IV is embedded in the encrypted string for new format
         return secretsService.decryptFromStorage(cipherText);

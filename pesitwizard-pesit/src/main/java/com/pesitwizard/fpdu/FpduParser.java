@@ -55,7 +55,7 @@ public class FpduParser {
     }
 
     @Deprecated
-    public FpduParser(byte[] data, boolean ebcdicEncoding) {
+    public FpduParser(byte[] data, @SuppressWarnings("unused") boolean _ebcdicEncoding) {
         this(data); // Ignore ebcdicEncoding flag - FPDU parameters are ASCII
     }
 
@@ -133,13 +133,13 @@ public class FpduParser {
                         paramIdEnum,
                         paramLength,
                         paramValue.toString());
-                fpdu.getParameters().add(paramValue);
+                fpdu.addParameter(paramValue);
             } else if (ParameterGroupIdentifier.fromId(paramId) != null) {
                 ParameterGroupIdentifier groupId = ParameterGroupIdentifier.fromId(paramId);
                 log.debug("PGI {} found which is {}", paramId, groupId);
                 ParameterValue groupParameterValue =
                         new ParameterValue(groupId, new ParameterValue[0]);
-                fpdu.getParameters().add(groupParameterValue);
+                fpdu.addParameter(groupParameterValue);
                 ByteBuffer groupBuffer = ByteBuffer.wrap(paramData);
                 while (groupBuffer.hasRemaining()) {
                     int groupParamId = groupBuffer.get() & 0xFF;
@@ -171,7 +171,7 @@ public class FpduParser {
                                 groupParamIdEnum,
                                 groupParamLength,
                                 groupParamValue.toString());
-                        groupParameterValue.getValues().add(groupParamValue);
+                        groupParameterValue.addValue(groupParamValue);
                     } else {
                         throw new UnknownParameterException(
                                 groupParamId, groupParamLength, "PGI " + groupId.name());

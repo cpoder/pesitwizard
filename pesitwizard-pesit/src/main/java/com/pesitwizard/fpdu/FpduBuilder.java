@@ -33,8 +33,7 @@ public class FpduBuilder {
      * @param fpduType FPDU type
      * @param idDest Destination connection ID
      * @param idSrc Source connection ID (or 0 for file-level FPDUs)
-     * @param pis Parameter Identifier builders
-     * @param pgis Parameter Group Identifier builders
+     * @param pis Parameter values (PI and PGI builders)
      * @return Complete FPDU byte array
      */
     public static byte[] buildFpdu(

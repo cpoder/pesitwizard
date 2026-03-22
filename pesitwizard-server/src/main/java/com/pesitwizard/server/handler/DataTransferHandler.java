@@ -35,7 +35,7 @@ public class DataTransferHandler {
     private final FpduValidator fpduValidator;
 
     /** Handle WRITE FPDU */
-    public Fpdu handleWrite(SessionContext ctx, Fpdu fpdu) {
+    public Fpdu handleWrite(SessionContext ctx, Fpdu _fpdu) {
         log.info("[{}] WRITE: starting data reception", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE02B_RECEIVING_DATA);
         return FpduResponseBuilder.buildAckWrite(ctx, 0);
@@ -311,7 +311,7 @@ public class DataTransferHandler {
             return null;
         }
 
-        FpduParser parser = new FpduParser(data, ctx.isEbcdicEncoding());
+        FpduParser parser = new FpduParser(data);
         Fpdu fpdu = parser.parse();
 
         if (fpdu.getFpduType() == FpduType.ACK_SYN) {
@@ -491,7 +491,7 @@ public class DataTransferHandler {
     }
 
     /** Handle DTF.END FPDU - no response needed */
-    private Fpdu handleDtfEnd(SessionContext ctx, Fpdu fpdu) {
+    private Fpdu handleDtfEnd(SessionContext ctx, Fpdu _fpdu) {
         log.info("[{}] DTF.END: end of data transfer", ctx.getSessionId());
         ctx.transitionTo(ServerState.TDE07_WRITE_END);
         return null;
@@ -568,7 +568,7 @@ public class DataTransferHandler {
     }
 
     /** Handle IDT (Interrupt Data Transfer) FPDU */
-    private Fpdu handleIdt(SessionContext ctx, Fpdu fpdu) {
+    private Fpdu handleIdt(SessionContext ctx, Fpdu _fpdu) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long bytesAtInterrupt = transfer != null ? transfer.getBytesTransferred() : 0;
         int syncPointAtInterrupt = transfer != null ? transfer.getCurrentSyncPoint() : 0;
@@ -594,7 +594,7 @@ public class DataTransferHandler {
     }
 
     /** Handle TRANS.END from client (after server sent file data) */
-    private Fpdu handleTransEndFromClient(SessionContext ctx, Fpdu fpdu) {
+    private Fpdu handleTransEndFromClient(SessionContext ctx, Fpdu _fpdu) {
         TransferContext transfer = ctx.getCurrentTransfer();
         long byteCount = transfer != null ? transfer.getBytesTransferred() : 0;
         int recordCount = transfer != null ? transfer.getRecordsTransferred() : 0;

@@ -235,7 +235,7 @@ public class CertificateAuthorityService {
             CertificatePurpose purpose,
             int validityDays,
             String partnerId,
-            String signedBy)
+            String _signedBy)
             throws SslConfigurationException {
 
         try {

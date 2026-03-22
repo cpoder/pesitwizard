@@ -70,23 +70,48 @@ public class SftpConnector implements StorageConnector {
     @Override
     public void initialize(Map<String, String> config) throws ConnectorException {
         host = config.get("host");
-        port = Integer.parseInt(config.getOrDefault("port", "22"));
         username = config.get("username");
         password = config.get("password");
         privateKeyPath = config.get("privateKey");
         basePath = config.getOrDefault("basePath", "");
         knownHostsFile = config.get("knownHostsFile");
-        connectTimeout =
-                Integer.parseInt(
-                        config.getOrDefault(
-                                "connectTimeout", String.valueOf(DEFAULT_CONNECT_TIMEOUT_MS)));
-        keepaliveInterval =
-                Integer.parseInt(
-                        config.getOrDefault(
-                                "keepaliveInterval", String.valueOf(DEFAULT_KEEPALIVE_INTERVAL_S)));
-        maxRetries =
-                Integer.parseInt(
-                        config.getOrDefault("maxRetries", String.valueOf(DEFAULT_MAX_RETRIES)));
+        try {
+            port = Integer.parseInt(config.getOrDefault("port", "22"));
+        } catch (NumberFormatException e) {
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.INVALID_CONFIG,
+                    "Invalid port number: " + config.get("port"));
+        }
+        try {
+            connectTimeout =
+                    Integer.parseInt(
+                            config.getOrDefault(
+                                    "connectTimeout", String.valueOf(DEFAULT_CONNECT_TIMEOUT_MS)));
+        } catch (NumberFormatException e) {
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.INVALID_CONFIG,
+                    "Invalid connectTimeout: " + config.get("connectTimeout"));
+        }
+        try {
+            keepaliveInterval =
+                    Integer.parseInt(
+                            config.getOrDefault(
+                                    "keepaliveInterval",
+                                    String.valueOf(DEFAULT_KEEPALIVE_INTERVAL_S)));
+        } catch (NumberFormatException e) {
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.INVALID_CONFIG,
+                    "Invalid keepaliveInterval: " + config.get("keepaliveInterval"));
+        }
+        try {
+            maxRetries =
+                    Integer.parseInt(
+                            config.getOrDefault("maxRetries", String.valueOf(DEFAULT_MAX_RETRIES)));
+        } catch (NumberFormatException e) {
+            throw new ConnectorException(
+                    ConnectorException.ErrorCode.INVALID_CONFIG,
+                    "Invalid maxRetries: " + config.get("maxRetries"));
+        }
 
         if (host == null)
             throw new ConnectorException(
