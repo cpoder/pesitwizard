@@ -204,12 +204,7 @@ public class VaultClient {
 
             String url = vaultAddr + "/v1/" + secretsPath + "/" + key;
             String authToken = getToken();
-            boolean hasAuth = authToken != null && !authToken.isBlank();
-            log.debug(
-                    "Storing secret at {} with auth method {} (token present: {})",
-                    url,
-                    authMethod,
-                    hasAuth);
+            log.debug("Storing secret at {} with auth method {}", url, authMethod);
 
             HttpRequest request =
                     HttpRequest.newBuilder()

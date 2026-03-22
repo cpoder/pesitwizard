@@ -1,6 +1,9 @@
 # Runtime stage - uses pre-built JAR
 FROM eclipse-temurin:21-jre-alpine
 
+# Security: upgrade all OS packages to patch known CVEs (zlib, busybox, etc.)
+RUN apk update && apk upgrade --no-cache && rm -rf /var/cache/apk/*
+
 # Add non-root user
 RUN addgroup -g 1000 pesit && \
     adduser -u 1000 -G pesit -s /bin/sh -D pesit

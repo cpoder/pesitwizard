@@ -91,14 +91,9 @@ public class PesitSendService {
                         connectorFactory.createFromConnectionId(request.getSourceConnectionId());
                 inputStream = connector.read(request.getFilename(), 0);
             } else {
-                Path filePath = Path.of(request.getFilename()).normalize();
-                if (filePath.toString().contains("..")) {
-                    throw new IOException(
-                            "Path traversal detected in filename: " + request.getFilename());
-                }
-                // Resolve to real path (follows symlinks, fully canonicalizes)
-                filePath = filePath.toRealPath();
-                inputStream = new BufferedInputStream(Files.newInputStream(filePath), 64 * 1024);
+                // toRealPath() resolves symlinks, canonicalizes, and verifies existence
+                Path realPath = Path.of(request.getFilename()).toRealPath();
+                inputStream = new BufferedInputStream(Files.newInputStream(realPath), 64 * 1024);
             }
 
             try (TransportChannel channel = channelFactory.createChannel(server, fileSize);

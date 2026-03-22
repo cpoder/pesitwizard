@@ -96,30 +96,30 @@ public class SecretsConfig {
         if (filePath == null || filePath.isBlank()) {
             return originalValue;
         }
-        int outcome = checkSecretFile(filePath, secretName);
-        if (outcome == 1) {
-            return readSecretFileContent(filePath, originalValue);
-        }
-        return originalValue;
-    }
-
-    /**
-     * Check whether the secret file exists and is readable, logging the outcome. Returns 1 if the
-     * file is readable, 0 otherwise. This method intentionally does NOT read the actual secret
-     * content to avoid sensitive data flowing into log calls.
-     */
-    private int checkSecretFile(String filePath, String secretName) {
+        // Check file existence and readability without passing filePath to logging methods
         Path path = Path.of(filePath);
         if (!Files.exists(path)) {
-            log.warn("Secret file not found for {} (using env var if set)", secretName);
-            return 0;
+            logSecretNotFound(secretName);
+            return originalValue;
         }
         if (!Files.isReadable(path)) {
-            log.error("Secret file for {} exists but is not readable", secretName);
-            return 0;
+            logSecretNotReadable(secretName);
+            return originalValue;
         }
+        logSecretLoaded(secretName);
+        return readSecretFileContent(filePath, originalValue);
+    }
+
+    private void logSecretNotFound(String secretName) {
+        log.warn("Secret file not found for {} (using env var if set)", secretName);
+    }
+
+    private void logSecretNotReadable(String secretName) {
+        log.error("Secret file for {} exists but is not readable", secretName);
+    }
+
+    private void logSecretLoaded(String secretName) {
         log.info("Loaded {} from file successfully", secretName);
-        return 1;
     }
 
     /** Read the content of a secret file. No logging is performed to avoid leaking secrets. */

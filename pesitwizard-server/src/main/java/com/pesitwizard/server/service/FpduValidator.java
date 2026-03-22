@@ -233,7 +233,7 @@ public class FpduValidator {
      * Validate D2-222: Too much data without sync point. Checks if bytes transferred since last
      * sync point exceeds the configured interval.
      *
-     * @param transfer Current transfer context
+     * @param _transfer Current transfer context (unused)
      * @param bytesSinceLastSync Bytes received since last sync point
      * @param syncIntervalBytes Configured sync point interval (0 = no limit)
      */
