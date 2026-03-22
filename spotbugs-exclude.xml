@@ -30,4 +30,11 @@
     <Match>
         <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
     </Match>
+
+    <!-- RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE: Lombok @Data generates null checks
+         in equals()/hashCode() for fields initialized with non-null defaults. -->
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+        <Source name="~.*\.java"/>
+    </Match>
 </FindBugsFilter>
