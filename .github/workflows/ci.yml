@@ -212,7 +212,7 @@ jobs:
     
     steps:
       - name: Download coverage artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: jacoco-reports
           path: coverage-report
