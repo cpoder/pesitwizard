@@ -68,7 +68,7 @@
         <!-- CVE overrides for Spring Boot managed dependencies -->
         <jackson-bom.version>2.21.2</jackson-bom.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
-        <bucket4j.version>8.7.0</bucket4j.version>
+        <bucket4j.version>8.10.1</bucket4j.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
         <awaitility.version>4.3.0</awaitility.version>
