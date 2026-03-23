@@ -75,7 +75,7 @@
         <lombok.version>1.18.34</lombok.version>
         <!-- Code quality plugin versions -->
         <spotbugs-maven-plugin.version>4.8.6.6</spotbugs-maven-plugin.version>
-        <spotless-maven-plugin.version>2.44.4</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.4.0</spotless-maven-plugin.version>
         <google-java-format.version>1.25.2</google-java-format.version>
         <owasp-dependency-check.version>12.1.0</owasp-dependency-check.version>
     </properties>
