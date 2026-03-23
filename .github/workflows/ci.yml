@@ -52,7 +52,7 @@ jobs:
         run: mvn -B clean install -U
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-reports
           path: |
@@ -132,7 +132,7 @@ jobs:
         run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DossindexAnalyzerEnabled=false -DsuppressionFile=.github/dependency-check-suppressions.xml
 
       - name: Upload Dependency Check Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dependency-check-report
