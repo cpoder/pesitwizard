@@ -244,4 +244,4 @@ jobs:
           path: coverage-report
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
