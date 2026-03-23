@@ -83,6 +83,16 @@
     <!-- S4-10: Centralized dependency management -->
     <dependencyManagement>
         <dependencies>
+            <!-- CVE overrides: jackson-bom BEFORE Spring Boot BOM — first BOM wins
+                 in Maven dependencyManagement (property overrides don't work with
+                 BOM imports when there's no parent POM) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- Spring Boot BOM - manages Spring, JUnit, Mockito, AssertJ, Jackson, SLF4J, Logback, Lombok, Micrometer, Testcontainers -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
