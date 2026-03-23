@@ -19,7 +19,7 @@ RUN jlink \
 FROM alpine:3.23
 
 # Install minimal dependencies and upgrade all packages for security patches
-RUN apk add --no-cache ca-certificates tzdata && apk upgrade --no-cache
+RUN apk add --no-cache ca-certificates tzdata wget && apk upgrade --no-cache
 
 # Copy custom JRE
 COPY --from=jre-builder /opt/jre-minimal /opt/java
