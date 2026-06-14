@@ -16,7 +16,7 @@ RUN jlink \
     --output /opt/jre-minimal
 
 # Stage 2: Final minimal runtime image
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Install minimal dependencies and upgrade all packages for security patches
 RUN apk add --no-cache ca-certificates tzdata wget && apk upgrade --no-cache
