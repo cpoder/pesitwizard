@@ -1,103 +1,57 @@
-# API Reference
+# REST API
 
-## Overview
+Everything the console does is a REST call. The node exposes two surfaces, both backed by the same
+store. Responses are JSON.
 
-PeSIT Wizard exposes two REST APIs:
+## Authentication
 
-| API | Port | Base URL | Description |
-|-----|------|----------|-------------|
-| **Client API** | 8080 | `/api/v1` | File send/receive |
-| **Server API** | 8080 | `/api` | Server configuration |
+The **admin API** is guarded by an API key: send `X-API-Key: <PESIT_API_KEY>` on every request. If
+`PESIT_API_KEY` is unset the admin API is open (development only). The operational endpoints
+(`/actuator/health`, `/metrics`, `/ocsp`) and the transfer API need no key.
 
-## Interactive Documentation
+## Admin API — `--api-port` (default 8080)
 
-Each API exposes Swagger/OpenAPI documentation:
+| Method & path | Purpose |
+|---|---|
+| `GET/POST /api/v1/config/partners` · `…/{id}` | Partners (PI 3) |
+| `GET/POST /api/v1/config/files` · `…/{id}` | Virtual files (PI 12) |
+| `GET/POST /api/v1/config/remote-partners` · `…/{id}` | Remote partner policy |
+| `GET/POST /api/v1/config/connectors` · `…/{id}` · `…/{id}/test` | Storage connectors |
+| `GET/POST /api/v1/servers` · `…/{id}/start\|stop\|status` | Listeners |
+| `GET /api/v1/transfers` · `…/{id}` · `…/active` · `…/stats` | Inbound transfer records |
+| `GET/POST /api/v1/certificates/*` | Keystores, truststores, local CA, Vault, rotation, CRL |
+| `GET/POST /api/v1/schedules` · `…/{id}` · `…/{id}/run` | Scheduled transfers |
+| `GET /api/v1/cluster` · `…/transfers` | Cluster membership and aggregated history |
+| `GET /api/v1/audit` · `GET /api/v1/backup` · `POST /api/v1/backup/restore` | Audit log, backup / restore |
 
-- Client: http://localhost:8080/swagger-ui.html
-- Server: http://localhost:8080/swagger-ui.html
+The transfer API below is also mounted here under `/client/api/v1/...` for the single-origin console.
 
-## OpenAPI Specifications
+## Transfer API — `--transfer-port` (default 9081)
 
-OAS (OpenAPI Specification) files are available:
+| Method & path | Purpose |
+|---|---|
+| `GET/POST /api/v1/servers` · `…/{id}` | Remote servers to connect out to |
+| `POST /api/v1/transfers/send\|receive\|message` | Start an outgoing transfer or message |
+| `GET /api/v1/transfers` · `…/{id}` | Outbound history |
+| `POST /api/v1/transfers/{id}/cancel\|retry` | Cancel or restart a transfer |
 
-- [Client API (OAS 3.0)](/api/openapi-client.yaml)
-- [Server API (OAS 3.0)](/api/openapi-server.yaml)
+## Operational endpoints (unauthenticated, admin port)
 
-## Response Format
+| Path | Purpose |
+|---|---|
+| `GET /actuator/health` (+ `/liveness`, `/readiness`) | Kubernetes probes |
+| `GET /metrics` | Prometheus metrics |
+| `POST /ocsp` · `GET /ocsp/{b64}` | OCSP responder (RFC 6960) |
 
-All APIs return JSON:
-
-```json
-{
-  "data": { ... },
-  "error": null,
-  "timestamp": "2025-01-10T10:30:00Z"
-}
-```
-
-### HTTP Codes
-
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Invalid request |
-| 401 | Not authenticated |
-| 403 | Not authorized |
-| 404 | Not found |
-| 500 | Server error |
-
-### Errors
-
-```json
-{
-  "error": {
-    "code": "PARTNER_NOT_FOUND",
-    "message": "Partner 'UNKNOWN' not found",
-    "details": null
-  },
-  "timestamp": "2025-01-10T10:30:00Z"
-}
-```
-
-## Pagination
-
-List endpoints support pagination:
+## Example
 
 ```bash
-GET /api/transfers?page=0&size=20&sort=startTime,desc
-```
-
-Response:
-```json
-{
-  "content": [...],
-  "totalElements": 150,
-  "totalPages": 8,
-  "number": 0,
-  "size": 20
-}
-```
-
-## Filtering
-
-Use query parameters to filter:
-
-```bash
-GET /api/transfers?status=COMPLETED&direction=SEND&from=2025-01-01
-```
-
-## Rate Limiting
-
-Rate limiting is **disabled** by default. It can be enabled by setting `PESIT_RATE_LIMITING_ENABLED=true`.
-
-When enabled, the APIs are limited to:
-- 100 requests/minute per IP (public API)
-- 1000 requests/minute per token (authenticated API)
-
-Response headers:
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1704880260
+KEY=secret; A=http://localhost:8080
+# create a partner
+curl -s -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
+  "$A/api/v1/config/partners" -X POST -d '{"id":"BANK_A","enabled":true,"accessType":"BOTH"}'
+# start an outgoing transfer (transfer API mounted under /client)
+curl -s -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
+  "$A/client/api/v1/transfers/send" -X POST \
+  -d '{"server":"bank-a","partnerId":"PWSRV01","filename":"/data/send/f.dat","remoteFilename":"PAYMENTS"}'
 ```

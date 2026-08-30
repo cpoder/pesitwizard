@@ -1,76 +1,78 @@
-# Quick Start
+# Quick start
 
-This guide will help you complete your first PeSIT Wizard transfer in under 15 minutes.
+PeSIT Wizard is a single binary (`pesitwizard`). There is nothing to license and no registry to log
+in to — grab it from GitHub and run it.
 
-## Prerequisites
-
-- Docker and Docker Compose
-- Access to a PeSIT Wizard server (your bank or our test server)
-
-## 1. Launch the PeSIT Wizard Client
+## Run the node
 
 ```bash
-# Download and launch the client
-docker run -d \
-  --name pesitwizard-client \
-  -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:h2:file:./data/pesitwizard-client \
-  ghcr.io/pesitwizard/pesitwizard/pesitwizard-client:latest
+PESIT_API_KEY=secret pesitwizard        # runs the node (default subcommand: serve)
 ```
 
-The web interface is accessible at http://localhost:8080
+One process exposes two REST surfaces backed by the same store, plus the web console:
 
-## 2. Configure a Target Server
+- **Admin API** on `--api-port` (default 8080, `X-API-Key`): partners, virtual files, listeners,
+  inbound transfer records, and the **web console at `/`**.
+- **Transfer API** on `--transfer-port` (default 9081): remote servers,
+  `/api/v1/transfers/send|receive|message`, outbound history.
 
-In the web interface, go to **Servers** > **Add**:
+Open `http://localhost:8080/`, paste the API key in the field at the top right, and the dashboard
+populates.
 
-| Field | Value |
-|-------|-------|
-| Name | My Bank |
-| Host | pesitwizard.mybank.com |
-| Port | 6502 |
-| Server ID | BANK_SERVER |
-| Client ID | MY_COMPANY |
-| Password | (provided by the bank) |
-
-## 3. Send a File
-
-1. Go to **Transfers** > **Send**
-2. Select the configured server
-3. Choose the file to send
-4. Enter the remote name (e.g., `PAYMENT_20250110.XML`)
-5. Click **Send**
-
-## 4. Receive a File
-
-1. Go to **Transfers** > **Receive**
-2. Select the server
-3. Enter the remote file name (e.g., `STATEMENT_20250110.XML`)
-4. Click **Receive**
-
-## Test Environment
-
-To test without bank access, you can launch our test server:
+### With Docker
 
 ```bash
-# Launch a PeSIT Wizard test server
-# Uses port 8081 for REST API to avoid conflict with the client on 8080
-docker run -d \
-  --name pesitwizard-server \
-  -p 6502:6502 \
-  -p 5001:5001 \
-  -p 8081:8080 \
-  ghcr.io/pesitwizard/pesitwizard/pesitwizard-server:latest
+docker run -p 8080:8080 -p 9081:9081 -p 5001:5001 \
+  -e PESIT_API_KEY=secret \
+  ghcr.io/pesitwizard/pesitwizard:latest
 ```
 
-Then configure the client with:
-- Host: `localhost`
-- Port: `6502`
-- Server ID: `PESIT_SERVER`
-- Client ID: `TEST_CLIENT`
+## Configure your first transfer
 
-## Next Steps
+Everything the console does is a REST call. A minimal inbound setup — a partner, a virtual file to
+receive into, and a listener:
 
-- [Advanced client configuration](/guide/client/configuration)
-- [ERP integration](/guide/client/erp-integration)
-- [Production deployment](/guide/server/installation)
+```bash
+KEY=secret
+A=http://localhost:8080
+H=(-H "X-API-Key: $KEY" -H 'Content-Type: application/json')
+
+curl -s "${H[@]}" "$A/api/v1/config/partners" -X POST \
+  -d '{"id":"BANK_A","enabled":true,"accessType":"BOTH"}'
+
+curl -s "${H[@]}" "$A/api/v1/config/files" -X POST \
+  -d '{"id":"INVOICES","enabled":true,"direction":"RECEIVE","recordLength":4096,"recordFormat":128}'
+
+curl -s "${H[@]}" "$A/api/v1/servers" -X POST \
+  -d '{"serverId":"PESIT-IN","port":5001,"receiveDirectory":"/data/received","sendDirectory":"/data/send","autoStart":true}'
+```
+
+Or provide a YAML bootstrap file with `PESIT_CONFIG=/path/config.yaml`:
+
+```yaml
+partners:
+  - id: BANK_A
+    enabled: true
+    accessType: BOTH
+files:
+  - id: INVOICES
+    enabled: true
+    direction: RECEIVE
+servers:
+  - serverId: PESIT-IN
+    port: 5001
+    receiveDirectory: /data/received
+    sendDirectory: /data/send
+    autoStart: true
+```
+
+Sending `SIGHUP` re-reads that file and re-applies it without a restart.
+
+## Send a one-shot transfer from the CLI
+
+```bash
+pesitwizard send    --host cx --port 5000 --server-id CETOM1 --partner PWSRV01 file.dat --remote PWRECV
+pesitwizard receive --host cx --port 5000 --server-id CETOM1 --partner PWSRV01 PWSEND --file out.dat
+```
+
+Next: the [guide](/guide/).

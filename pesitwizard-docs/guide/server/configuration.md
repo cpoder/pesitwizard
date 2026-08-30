@@ -1,186 +1,56 @@
-# Server Configuration
+# Configuration
 
-## Environment Variables
+Everything is configured through the web console at `/` or the REST API, and persisted in the
+embedded store. This page covers the building blocks: listeners, partners and virtual files.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SPRING_DATASOURCE_URL` | JDBC PostgreSQL URL | - |
-| `SPRING_DATASOURCE_USERNAME` | DB user | pesitwizard |
-| `SPRING_DATASOURCE_PASSWORD` | DB password | pesitwizard |
-| `PESIT_CLUSTER_ENABLED` | Enable clustering | false |
-| `POD_NAME` | Pod name (K8s) | - |
-| `POD_NAMESPACE` | Namespace (K8s) | default |
+![Dashboard](/screenshots/dashboard.png)
 
-## application.yml File
+## The web console
 
-```yaml
-server:
-  port: 8080
+Open `http://<host>:8080/`, paste the API key in the field at the top right (kept in the browser's
+`localStorage`), and the dashboard populates. Tabs: Dashboard, Listeners, Partners, Virtual files,
+Remote servers, Connectors, Send / Receive, Certificates, Schedules, Transfers, Cluster, System.
+A light / dark / system theme toggle sits at the bottom of the sidebar.
 
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/pesitwizard
-    username: pesitwizard
-    password: pesitwizard
+## Listeners
 
-pesitwizard:
-  # Clustering configuration
-  cluster:
-    enabled: true
-    name: pesitwizard-cluster
+A **listener** accepts incoming PeSIT connections. Create one in the Listeners tab or under
+`/api/v1/servers`: `serverId` (PI 4), `port`, `receiveDirectory` / `sendDirectory`, `maxEntitySize`,
+synchronisation options (`syncPointsEnabled`, `syncWindow`), TLS (`sslEnabled`, `tcpipHeader`,
+keystore / truststore names) and `autoStart`.
 
-  # API security
-  admin:
-    username: admin
-    password: admin
-```
+## Partners
 
-## PeSIT Server Configuration
+A **partner** is a remote party allowed to exchange files (PI 3).
 
-A PeSIT Wizard server can host multiple "logical PeSIT servers" on different ports.
+![Partners](/screenshots/partners.png)
 
-### Via API
+| Field | Meaning |
+|-------|---------|
+| `id` | The partner identifier (PI 3) presented on connection. |
+| `accessType` | `READ`, `WRITE` or `BOTH`. |
+| `password` | Optional password (PI 5), checked when `checkCredentials` is set. |
+| `preconnectPassword` | Pre-connection password for Connect:Express partners of type T / O. |
 
-```bash
-curl -X POST http://localhost:8080/api/v1/servers \
-  -u admin:admin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serverId": "PESIT_SERVER",
-    "port": 6502,
-    "tlsPort": 5001,
-    "autoStart": true,
-    "maxConnections": 100,
-    "readTimeout": 60000
-  }'
-```
+## Virtual files
 
-### Parameters
+A **virtual file** is a logical file exposed to partners (PI 12) — a name mapped to a physical
+location and protocol options.
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `serverId` | Server identifier (PI_04) | - |
-| `port` | TCP listening port | 6502 |
-| `tlsPort` | TLS listening port | 5001 |
-| `autoStart` | Start automatically | true |
-| `maxConnections` | Max simultaneous connections | 100 |
-| `readTimeout` | Read timeout (ms) | 60000 |
+![Virtual files](/screenshots/virtual-files.png)
 
-## Partner Configuration
+| Field | Meaning |
+|-------|---------|
+| `id` | The virtual file name (PI 12). |
+| `direction` | `RECEIVE` (partners write it), `SEND` (partners read it) or `BOTH`. |
+| `recordFormat` / `recordLength` | Fixed / variable and the record length (PI 31 / 32). |
+| `text` | Line records (LF stripped on send, appended on receive) instead of binary chunks. |
+| `ebcdic` | Translate article bytes Latin-1 ↔ EBCDIC CP037 on the wire (PI 16 = 1). |
+| `receiveDirectory` / `receiveFilenamePattern` | Where received files land and their name pattern (`${virtualFile}`, `${transferId}`, `${date}`, `${partnerId}` …). |
+| `sendFile` | The physical file served when a partner reads it. |
+| `connector` / `connectorPath` | Back the file with a [storage connector](/guide/server/connectors). |
 
-Partners are the clients authorized to connect.
+## Bootstrap file
 
-### Via API
-
-```bash
-curl -X POST http://localhost:8080/api/v1/config/partners \
-  -u admin:admin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "partnerId": "CLIENT_COMPANY",
-    "name": "My Client",
-    "password": "secret123",
-    "enabled": true,
-    "allowedOperations": ["READ", "WRITE"]
-  }'
-```
-
-### Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `partnerId` | Partner identifier (PI_03) |
-| `name` | Display name |
-| `password` | Password (PI_05) |
-| `enabled` | Partner active |
-| `allowedOperations` | Allowed operations (READ, WRITE) |
-
-## Virtual File Configuration
-
-Virtual files define the storage paths.
-
-### Via API
-
-```bash
-curl -X POST http://localhost:8080/api/v1/config/files \
-  -u admin:admin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fileId": "PAYMENTS",
-    "name": "Payment files",
-    "sendFile": "/data/send/payments",
-    "receiveDirectory": "/data/received/payments",
-    "filenamePattern": "*.xml"
-  }'
-```
-
-### Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `fileId` | Virtual file identifier (PI_12) |
-| `name` | Display name |
-| `sendFile` | Physical file path to send |
-| `receiveDirectory` | Directory for received files |
-| `filenamePattern` | Filename pattern |
-
-## Storage Directories
-
-```
-/data
-├── send/           # Files to send
-│   ├── payments/
-│   └── statements/
-├── received/       # Received files
-│   ├── payments/
-│   └── statements/
-└── temp/           # Temporary files
-```
-
-### Volume Configuration (Kubernetes)
-
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pesitwizard-data
-spec:
-  accessModes: [ReadWriteOnce]
-  resources:
-    requests:
-      storage: 50Gi
-```
-
-## Logs and Monitoring
-
-### Log Levels
-
-```yaml
-logging:
-  level:
-    com.pesitwizard: INFO
-    com.pesitwizard.server.handler: DEBUG  # Session details
-    com.pesitwizard.protocol: DEBUG        # PeSIT messages
-```
-
-### Prometheus Metrics
-
-The server exposes metrics on `/actuator/prometheus`:
-
-- `pesitwizard.connections.active`: Active connections
-- `pesitwizard.transfers.total`: Total number of transfers
-- `pesitwizard.transfers.bytes.total`: Total volume transferred
-- `pesitwizard.errors.total`: Number of errors
-
-### Health Checks
-
-```bash
-# Readiness (ready to receive traffic)
-curl http://localhost:8080/actuator/health/readiness
-
-# Liveness (application alive)
-curl http://localhost:8080/actuator/health/liveness
-
-# Full health
-curl http://localhost:8080/actuator/health
-```
+A YAML file passed with `PESIT_CONFIG` seeds `partners`, `files`, `remotePartners` and `servers` at
+start-up, and is re-applied on `SIGHUP` — handy for GitOps-style configuration.

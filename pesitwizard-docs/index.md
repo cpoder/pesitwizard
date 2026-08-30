@@ -3,73 +3,68 @@ layout: home
 
 hero:
   name: PeSIT Wizard
-  text: PeSIT Bank Transfers
-  tagline: Open source solution to automate your file exchanges with banks.
+  text: Open-source PeSIT E file transfer
+  tagline: A single self-contained node that both listens and initiates PeSIT transfers — with a built-in web console, REST API, clustering, PKI and storage connectors. Apache-2.0.
   actions:
     - theme: brand
-      text: Get Started
+      text: Quick start
       link: /guide/quickstart
     - theme: alt
+      text: Guide
+      link: /guide/
+    - theme: alt
       text: GitHub
-      link: https://github.com/pesitwizard/pesitwizard
+      link: https://github.com/pesitwizard/pesitwizard-rs
 
 features:
-  - icon: 📡
-    title: PeSIT Protocol
-    details: Complete implementation of PeSIT D and E protocol for bank exchanges.
-  - icon: ⚡
-    title: Easy to Deploy
-    details: Simple configuration, complete documentation. No PeSIT expert needed.
-  - icon: 🔌
-    title: REST API
-    details: Easily integrate your ERP and accounting software via our REST API.
-  - icon: 🐳
-    title: Docker Ready
-    details: Docker images available for rapid deployment.
-  - icon: 🔒
-    title: Secure
-    details: TLS 1.3, certificate authentication, end-to-end encryption.
-  - icon: 📖
-    title: Open Source
-    details: Apache 2.0 License. Source code available on GitHub.
+  - icon: 🧩
+    title: One self-contained node
+    details: A single binary that listens for incoming transfers and initiates outgoing ones, with the web console built in. Run it directly, as a container, or on Kubernetes.
+  - icon: 🔁
+    title: Full PeSIT E protocol
+    details: CRC, compression, article segmentation, synchronisation points with windowing, restart / resynchronisation, EBCDIC translation and TLS. Validated against IBM Sterling Connect:Express.
+  - icon: 🖥️
+    title: Built-in web console
+    details: Configure listeners, partners, virtual files, connectors and certificates, and follow transfers live — served by the node itself, no separate front-end to host.
+  - icon: 🔐
+    title: Certificates & PKI
+    details: A local CA, native HashiCorp Vault PKI, certificate rotation, CRL and an online OCSP responder — all in the box.
+  - icon: 🗄️
+    title: Storage connectors
+    details: Back a virtual file with S3, SFTP or a local directory. Received files are staged and uploaded; sent files are fetched and streamed.
+  - icon: 🌐
+    title: Clustering over NATS
+    details: Run several nodes as a cluster over NATS / JetStream — live configuration replication, leader election and schedules distributed across members.
 ---
 
 ## Why PeSIT Wizard?
 
-The **PeSIT** protocol (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation) is the standard used by French banks for secure file exchanges.
+The **PeSIT** protocol (*Protocole d'Échange pour un Système Interbancaire de Télécompensation*) is the
+standard used by French banks for secure file exchanges. **PeSIT Wizard** is a modern implementation
+of **PeSIT E**, written in Rust and **fully open source** under Apache-2.0 — no editions, no license
+keys, every feature in one binary.
 
-**PeSIT Wizard** is a modern open source implementation of the PeSIT protocol:
-- **Free**: Apache 2.0 License
-- **Simple**: Complete documentation, REST API
-- **Modern**: Java 21, Spring Boot, Docker
+It is a drop-in alternative to legacy solutions such as Axway CFT / IBM Sterling Connect:Express: it
+speaks the same protocol on the wire (validated against Connect:Express 1.5), exposes everything over
+a REST API and a built-in web console, and runs anywhere a single binary or container can.
 
-## Use Cases
+## Use cases
 
-### Automated Transfers
-Automatically send your SEPA transfer files to your bank from your ERP.
+- **Automated transfers** — push your SEPA payment files to your bank from your ERP, on a schedule.
+- **Statement retrieval** — pull your account statements every morning into your accounting system.
+- **Multi-bank centralisation** — manage all your exchanges with several banks from one node.
 
-### Statement Retrieval
-Automatically retrieve your account statements each morning to integrate them into your accounting system.
+## One node, no split
 
-### Multi-Bank Centralization
-Manage all your exchanges with multiple banks from a single interface.
-
-## Components
-
-| Module | Description |
-|--------|-------------|
-| **pesitwizard-server** | Complete PeSIT server |
-| **pesitwizard-client** | Java client for sending/receiving files |
-| **pesitwizard-client-ui** | Graphical interface for the client |
-| **pesitwizard-pesit** | Protocol implementation library |
-
----
+Earlier releases shipped a separate server, client and admin console. PeSIT Wizard is now a **single
+`pesitwizard` node** that both listens and initiates, exposes two REST surfaces backed by one store,
+and serves its own web console. There is nothing else to deploy.
 
 <div style="text-align: center; margin-top: 2rem;">
   <a href="/guide/quickstart" style="display: inline-block; padding: 12px 24px; background: #3451b2; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; margin-right: 1rem;">
-    Documentation
+    Quick start
   </a>
-  <a href="https://github.com/pesitwizard/pesitwizard" style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
+  <a href="https://github.com/pesitwizard/pesitwizard-rs" style="display: inline-block; padding: 12px 24px; background: #24292e; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">
     GitHub
   </a>
 </div>

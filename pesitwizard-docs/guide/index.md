@@ -1,38 +1,42 @@
-# What is PeSIT?
+# What is PeSIT Wizard?
 
-**PeSIT** (Protocole d'Echange pour un Systeme Interbancaire de Telecompensation) is a file transfer protocol developed by the French banking sector in the 1980s.
+**PeSIT Wizard** is a modern, fully open-source implementation of the **PeSIT E** file-transfer
+protocol, written in Rust. It ships as a single self-contained node — the `pesitwizard` binary — that
+both **listens** for incoming transfers and **initiates** outgoing ones, with a built-in web console
+and a REST API.
 
-## History
+## The PeSIT protocol
 
-The protocol was created by the **GSIT** (Groupement pour un Systeme Interbancaire de Telecompensation) to enable file exchanges between banks and their corporate clients.
+PeSIT (*Protocole d'Échange pour un Système Interbancaire de Télécompensation*) is the standard
+file-transfer protocol used by French banks and on the SIT network. PeSIT Wizard implements **PeSIT
+E** — the TLS-capable version — and is validated for interoperability against IBM Sterling
+Connect:Express 1.5.
 
-## Characteristics
+See the [protocol reference](/guide/reference/protocol) for the full feature list.
 
-- **Reliability**: Error recovery mechanisms, synchronization points
-- **Security**: Partner authentication, encryption (PeSIT-E over TLS)
-- **Traceability**: Complete transfer history
-- **Interoperability**: Standard recognized by all French banks
+## One node
 
-## Versions
+A single process does everything:
 
-| Version | Transport | Security |
-|---------|-----------|----------|
-| PeSIT D | TCP/IP | Simple authentication |
-| PeSIT E | TCP/IP + TLS | Encryption, certificates |
+- **Listens** for partners connecting in and receives or serves files (the server role).
+- **Initiates** outgoing transfers to remote servers (the client role).
+- **Serves** a web console at `/` and two REST surfaces backed by one shared store.
 
-## Who Uses PeSIT?
+There is no separate server, client or admin console to install, and no commercial edition — every
+feature is in the one binary under Apache-2.0.
 
-- **Banks**: BNP Paribas, Societe Generale, BPCE, Credit Agricole...
-- **Companies**: To automate banking file exchanges
-- **Software vendors**: Integration in ERP and accounting software
-- **Service providers**: Processing centers, PSPs
+## What it can do
 
-## Our Solution: PeSIT Wizard
+- Full **PeSIT E**: CRC, compression, segmentation, synchronisation points with windowing, restart /
+  resynchronisation, text / binary record formats, EBCDIC translation, TLS and pre-connection.
+- **Partners**, **virtual files** and **listeners** configured over REST or the console.
+- **Storage connectors** (S3 / SFTP / local) backing virtual files.
+- **Certificates & PKI**: a local CA, native HashiCorp Vault PKI, rotation, CRL and an OCSP responder.
+- **Clustering** over NATS / JetStream with configuration replication and distributed schedules.
+- **Operations**: Prometheus metrics, health probes, an audit log, and signed configuration backups.
 
-**PeSIT Wizard** implements the PeSIT protocol in a modern architecture:
+## Next steps
 
-- **PeSIT Wizard Client**: To send/receive files to/from banks
-- **PeSIT Wizard Server**: To receive files from partners
-- **Administration Console**: To manage the entire system
-
-[Get started quickly -->](/guide/quickstart)
+- [Quick start](/guide/quickstart) — run a node and configure your first transfer in minutes.
+- [Architecture](/guide/architecture) — how the node is built.
+- [The node](/guide/server/installation) — running and operating it.

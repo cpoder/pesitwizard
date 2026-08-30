@@ -2,13 +2,12 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'PeSIT Wizard',
-  description: 'Modern open-source PeSIT file transfer solution',
+  description: 'A modern, fully open-source PeSIT E file-transfer node',
   lang: 'en-US',
 
   // Ignore localhost links used in development examples
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
-    /^\/guide\/server\/clustering/
   ],
 
   head: [
@@ -20,71 +19,59 @@ export default defineConfig({
 
     nav: [
       { text: 'Home', link: '/' },
+      { text: 'Quick start', link: '/guide/quickstart' },
       { text: 'Guide', link: '/guide/' },
       { text: 'API', link: '/api/' },
-      { text: 'GitHub', link: 'https://github.com/pesitwizard/pesitwizard' }
+      { text: 'GitHub', link: 'https://github.com/pesitwizard/pesitwizard-rs' }
     ],
 
     sidebar: {
-      '/guide/': [
+      '/': [
         {
           text: 'Introduction',
           items: [
-            { text: 'What is PeSIT?', link: '/guide/' },
-            { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'What is PeSIT Wizard?', link: '/guide/' },
+            { text: 'Quick start', link: '/guide/quickstart' },
             { text: 'Architecture', link: '/guide/architecture' }
           ]
         },
         {
-          text: 'PeSIT Wizard Client',
+          text: 'Guide',
           items: [
-            { text: 'Installation', link: '/guide/client/installation' },
-            { text: 'Configuration', link: '/guide/client/configuration' },
-            { text: 'Usage', link: '/guide/client/usage' },
-            { text: 'ERP Integration', link: '/guide/client/erp-integration' }
-          ]
-        },
-        {
-          text: 'PeSIT Wizard Server',
-          items: [
-            { text: 'Installation', link: '/guide/server/installation' },
+            { text: 'The node', link: '/guide/server/installation' },
             { text: 'Configuration', link: '/guide/server/configuration' },
-            { text: 'Security', link: '/guide/server/security' },
-            { text: 'Secrets Management', link: '/guide/server/secrets' },
-            { text: 'Storage Connectors', link: '/guide/server/connectors' },
+            { text: 'Partners & transfers', link: '/guide/client/usage' },
+            { text: 'Storage connectors', link: '/guide/server/connectors' },
+            { text: 'Certificates & PKI', link: '/guide/server/security' },
+            { text: 'Clustering (NATS)', link: '/guide/server/clustering' },
             { text: 'Observability', link: '/guide/server/observability' }
           ]
         },
         {
           text: 'Operations',
           items: [
-            { text: 'Troubleshooting', link: '/guide/troubleshooting' },
-            { text: 'Operations Runbook', link: '/guide/operations' },
-            { text: 'Performance', link: '/guide/performance' },
-            { text: 'Connect:Express', link: '/guide/connect-express' }
+            { text: 'Deployment', link: '/guide/deployment' },
+            { text: 'Connect:Express interop', link: '/guide/connect-express' },
+            { text: 'Troubleshooting', link: '/guide/troubleshooting' }
           ]
-        }
-      ],
-      '/api/': [
+        },
         {
-          text: 'API Reference',
+          text: 'Reference',
           items: [
-            { text: 'Overview', link: '/api/' },
-            { text: 'Authentication', link: '/api/authentication' },
-            { text: 'Client API', link: '/api/client' },
-            { text: 'Server API', link: '/api/server' }
+            { text: 'PeSIT E protocol', link: '/guide/reference/protocol' },
+            { text: 'REST API', link: '/api/' }
           ]
         }
       ]
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/pesitwizard/pesitwizard' }
+      { icon: 'github', link: 'https://github.com/pesitwizard/pesitwizard-rs' }
     ],
 
     footer: {
-      message: 'PeSIT Wizard - Modern PeSIT solution for enterprises',
-      copyright: 'Copyright © 2025'
+      message: 'PeSIT Wizard — open source under Apache-2.0',
+      copyright: 'Copyright © 2026'
     },
 
     search: {

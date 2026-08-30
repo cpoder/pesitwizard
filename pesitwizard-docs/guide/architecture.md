@@ -1,142 +1,44 @@
 # Architecture
 
-## Overview
+PeSIT Wizard is a single Rust process — the `pesitwizard` binary — organised as a small workspace of
+crates.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        PeSIT Wizard                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
-│  │ Client UI    │     │ Admin UI     │     │ Server       │    │
-│  │ (Vue.js)     │     │ (Vue.js)     │     │ (Spring Boot)│    │
-│  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘    │
-│         │                    │                    │             │
-│         ▼                    ▼                    ▼             │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
-│  │ Client API   │     │ Admin API    │     │ PeSIT Wizard │    │
-│  │ (Spring Boot)│     │ (Spring Boot)│     │ Protocol     │    │
-│  │ Port 8080    │     │ Port 8080    │     │ Port 6502    │    │
-│  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘    │
-│         │                    │                    │             │
-│         └────────────────────┼────────────────────┘             │
-│                              │                                  │
-│                              ▼                                  │
-│                       ┌──────────────┐                          │
-│                       │ PostgreSQL   │                          │
-│                       │ Database     │                          │
-│                       └──────────────┘                          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Crates
 
-## Components
+| Crate | Responsibility |
+|-------|----------------|
+| `pesit-core` | Protocol model: parameters, FPDUs, CRC, compression, article codecs, state tables (no I/O). |
+| `pesit-io` | The async session engines (requester / responder) over tokio. |
+| `pesit-app` | The embedded configuration store and REST utilities. |
+| `pesit-client` | The outbound transfer engine (as a library). |
+| `pesit-pki` | X.509 inspection, a local CA, native Vault PKI, OCSP and backup signing. |
+| `pesit-cluster` | NATS / JetStream membership, leader election and configuration replication. |
+| `pesit-connector` | S3 / SFTP / local storage staging. |
+| `pesit-node` | The `pesitwizard` binary: listeners + outbound engine + REST APIs + web console. |
 
-### PeSIT Wizard Client
+## One process, two REST surfaces
 
-The **client** allows sending and receiving files to/from external PeSIT Wizard servers (banks).
+The node runs the listener manager and the outbound transfer engine over **one shared store**, and
+exposes two REST surfaces:
 
-| Component | Description | Port |
-|-----------|-------------|------|
-| pesitwizard-client | Spring Boot backend | 8080 |
-| pesitwizard-client-ui | Vue.js interface | 3001 |
+- the **admin API** on `--api-port` (partners, virtual files, listeners, inbound records,
+  certificates, connectors, schedules, cluster, audit, backup — and the web console at `/`),
+- the **transfer API** on `--transfer-port` (remote servers, send / receive / message, outbound
+  history).
 
-**Features**:
-- File sending (payments, direct debits)
-- File receiving (statements, notices)
-- Transfer history
-- Multi-server configuration
+The transfer API is also mounted under `/client` on the admin port, so the single-origin web console
+reaches both. Unauthenticated operational endpoints (`/actuator/health`, `/metrics`, `/ocsp`) sit on
+the admin port.
 
-### PeSIT Wizard Server
+## State machine
 
-The **server** allows receiving files from external partners.
+The PeSIT session engines are driven by the protocol **state tables as data** (the same shape as the
+Connect:Express tables), shared by the listening and initiating roles and run by an event loop over
+network and application events. This is what lets the node handle RESYN / IDT collisions, windowed
+synchronisation and restart correctly.
 
-| Component | Description | Port |
-|-----------|-------------|------|
-| pesitwizard-server | PeSIT Server + API | 6502 (PeSIT), 5001 (PeSIT TLS), 8080 (HTTP) |
+## Storage
 
-**Features**:
-- File receiving
-- File sending (on demand)
-- Partner management
-- Virtual files
-- High-availability clustering
-
-## Kubernetes Deployment
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Kubernetes Cluster                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                    Namespace: pesitwizard            │    │
-│  │                                                      │    │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │    │
-│  │  │ Pod 1   │  │ Pod 2   │  │ Pod 3   │             │    │
-│  │  │ (Leader)│  │         │  │         │             │    │
-│  │  └────┬────┘  └─────────┘  └─────────┘             │    │
-│  │       │                                             │    │
-│  │       │ pesitwizard-leader=true                     │    │
-│  │       ▼                                             │    │
-│  │  ┌─────────────────────────────────────────┐        │    │
-│  │  │         LoadBalancer Service             │        │    │
-│  │  │  (selector: pesitwizard-leader=true)     │        │    │
-│  │  └─────────────────────────────────────────┘        │    │
-│  │                                                      │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### High Availability
-
-- **3 replicas** by default
-- **Leader election** via JGroups
-- **Automatic labeling** of the leader pod
-- **LoadBalancer** routes to the leader only
-
-## Database
-
-Each PeSIT Wizard cluster has its own PostgreSQL schema:
-
-```
-pesitwizard (database)
-├── admin (schema)
-│   ├── pesitwizard_clusters
-│   ├── container_registries
-│   └── container_orchestrators
-│
-└── cluster_<uuid> (schema)
-    ├── pesitwizard_server_configs
-    ├── partners
-    ├── virtual_files
-    └── transfer_history
-```
-
-## Data Flows
-
-### Sending a File (Client to Bank)
-
-```
-1. User uploads file via UI
-2. Client API stores the file temporarily
-3. Client API opens PeSIT connection to the bank
-4. CONNECT/ACONNECT exchange
-5. CREATE/ACK exchange
-6. Data transfer (DTF)
-7. Close (DESELECT, RELEASE)
-8. History updated in database
-```
-
-### Receiving a File (Bank to Client)
-
-```
-1. User requests file via UI
-2. Client API opens PeSIT connection to the bank
-3. CONNECT/ACONNECT exchange (read mode)
-4. SELECT/ACK exchange
-5. Data reception (DTF)
-6. File stored locally
-7. History updated in database
-```
+Configuration lives in an embedded store (`--db`). Checkpoints for restart are persisted per transfer
+under the checkpoint directories. Connector-backed virtual files stage to a local working file so
+checkpoint / restart, CRC and record formats keep working.
